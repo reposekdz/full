@@ -17,7 +17,8 @@ import {
   Briefcase,
   DollarSign,
   BarChart3,
-  ClipboardList
+  ClipboardList,
+  LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -30,11 +31,22 @@ import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 interface LeftSidebarProps {
   currentPage?: string;
   onNavigate?: (page: string) => void;
+  onLogout?: () => void;
 }
 
-const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate }) => {
-  const { user } = useAuth();
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate, onLogout }) => {
+  const { user, logout } = useAuth();
   const [expandedSections, setExpandedSections] = useState<string[]>(['quick-links']);
+
+  const handleLogout = () => {
+    logout();
+    if (onLogout) {
+      onLogout();
+    }
+    if (onNavigate) {
+      onNavigate('home');
+    }
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev =>
@@ -323,6 +335,18 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate }) =>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Logout Button */}
+          {user && (
+            <Button
+              onClick={handleLogout}
+              className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white border-2 border-red-200 shadow-lg"
+              size="lg"
+            >
+              <LogOut className="h-5 w-5 mr-2" />
+              Sohoka
+            </Button>
           )}
         </div>
       </ScrollArea>

@@ -21,7 +21,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Edit,
-  Eye
+  Eye,
+  Trash2,
+  UserPlus,
+  Phone,
+  Mail,
+  MapPin
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -31,6 +36,25 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import { mockStudents } from '@/app/data/mockStudents';
+import { Student, Trade, TradeLevel } from '@/app/types/student';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from '@/app/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select';
+import { Label } from '@/app/components/ui/label';
 
 interface DirectorStudyDashboardProps {
   onNavigate: (page: string) => void;
@@ -39,6 +63,13 @@ interface DirectorStudyDashboardProps {
 
 const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | 'all'>('all');
+  const [selectedLevel, setSelectedLevel] = useState<TradeLevel | 'all'>('all');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const stats = [
     {
@@ -141,6 +172,33 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     { subject: 'English', progress: 88, status: 'ahead' },
   ];
 
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          student.studentCode.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTrade = selectedTrade === 'all' || student.trade === selectedTrade;
+    const matchesLevel = selectedLevel === 'all' || student.level === selectedLevel;
+    return matchesSearch && matchesTrade && matchesLevel;
+  });
+
+  const handleDeleteStudent = (studentId: string) => {
+    if (confirm('Are you sure you want to remove this student?')) {
+      setStudents(students.filter(s => s.id !== studentId));
+    }
+  };
+
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setIsViewDialogOpen(true);
+  };
+
+  const getAvailableLevels = (): TradeLevel[] => {
+    if (selectedTrade === 'all') return [];
+    if (selectedTrade === 'SOD') return ['Level 3 SOD', 'Level 4 SOD', 'Level 5 SOD'];
+    if (selectedTrade === 'BDC') return ['Level 3 BDC', 'Level 4 BDC', 'Level 5 BDC'];
+    if (selectedTrade === 'AUT') return ['Level 3 AUT', 'Level 4A AUT', 'Level 4B AUT', 'Level 5A AUT', 'Level 5B AUT'];
+    return [];
+  };
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
       <LeftSidebar currentPage="dashboard-director-study" onNavigate={onNavigate} />
@@ -208,9 +266,12 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto bg-white border-2 border-yellow-200 p-1">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto bg-white border-2 border-yellow-200 p-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
+              </TabsTrigger>
+              <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Abanyeshuri
               </TabsTrigger>
               <TabsTrigger value="classes" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Amaklasi
@@ -314,6 +375,306 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Students Tab */}
+            <TabsContent value="students" className="space-y-6">
+              <Card className="border-2 border-yellow-200">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Gucunga Abanyeshuri</CardTitle>
+                      <CardDescription>Reba, ongeraho, hindura, n\'ukure abanyeshuri</CardDescription>
+                    </div>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-gradient-to-r from-yellow-500 to-green-500 text-white">
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          Ongeraho Umunyeshuri
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Ongeraho Umunyeshuri Mushya</DialogTitle>
+                          <DialogDescription>
+                            Uzuza amakuru y\'umunyeshuri mushya
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Izina</Label>
+                              <Input id="name" placeholder="Izina ryuzuye" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email</Label>
+                              <Input id="email" type="email" placeholder="email@example.com" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="trade">Umwuga</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Hitamo umwuga" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SOD">Software Development (SOD)</SelectItem>
+                                  <SelectItem value="BDC">Building & Construction (BDC)</SelectItem>
+                                  <SelectItem value="AUT">Automobile Technology (AUT)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="level">Urwego</Label>
+                              <Select>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Hitamo urwego" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Level 3 SOD">Level 3</SelectItem>
+                                  <SelectItem value="Level 4 SOD">Level 4</SelectItem>
+                                  <SelectItem value="Level 5 SOD">Level 5</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="parent-phone">Telefoni y\'Umubyeyi</Label>
+                            <Input id="parent-phone" placeholder="+250..." />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                            Hagarika
+                          </Button>
+                          <Button className="bg-gradient-to-r from-yellow-500 to-green-500 text-white">
+                            Bika
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <div className="flex items-center space-x-3 mt-4">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Shakisha umunyeshuri (izina cyangwa code)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    <Select value={selectedTrade} onValueChange={(value) => { setSelectedTrade(value as Trade | 'all'); setSelectedLevel('all'); }}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Hitamo umwuga" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Imyuga Yose</SelectItem>
+                        <SelectItem value="SOD">SOD</SelectItem>
+                        <SelectItem value="BDC">BDC</SelectItem>
+                        <SelectItem value="AUT">AUT</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedLevel} onValueChange={(value) => setSelectedLevel(value as TradeLevel | 'all')} disabled={selectedTrade === 'all'}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Hitamo urwego" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Inzego Zose</SelectItem>
+                        {getAvailableLevels().map(level => (
+                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-3">
+                      {filteredStudents.map((student) => (
+                        <Card key={student.id} className="border-2 border-yellow-100 hover:border-yellow-300 hover:shadow-md transition-all">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <Avatar className="h-14 w-14 border-2 border-yellow-400">
+                                  <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold text-lg">
+                                    {student.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h4 className="font-bold text-gray-900">{student.name}</h4>
+                                  <p className="text-sm text-gray-600">{student.studentCode}</p>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs">
+                                      {student.trade}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {student.level}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-6">
+                                <div className="text-center">
+                                  <p className="text-2xl font-black text-yellow-600">{student.overallAverage}%</p>
+                                  <p className="text-xs text-gray-500">Impera</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-2xl font-black text-green-600">{student.attendanceRate}%</p>
+                                  <p className="text-xs text-gray-500">Kwitabira</p>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <Button size="sm" variant="outline" onClick={() => handleViewStudent(student)}>
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Reba
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="border-yellow-300 text-yellow-700 hover:bg-yellow-50">
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Hindura
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="border-red-300 text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDeleteStudent(student.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Kuraho
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            {student.parent && (
+                              <div className="mt-3 pt-3 border-t border-yellow-100 flex items-center space-x-4 text-sm text-gray-600">
+                                <div className="flex items-center">
+                                  <Users className="h-3 w-3 mr-1" />
+                                  <span>Umubyeyi: {student.parent.name}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Phone className="h-3 w-3 mr-1" />
+                                  <span>{student.parent.phoneNumber}</span>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {filteredStudents.length === 0 && (
+                        <div className="text-center py-12">
+                          <Users className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                          <p className="text-gray-500">Nta munyeshuri wabonetse</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Student Details Dialog */}
+              <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  {selectedStudent && (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl">Amakuru y'{selectedStudent.name}</DialogTitle>
+                        <DialogDescription>
+                          Code: {selectedStudent.studentCode}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <h3 className="font-bold text-sm text-gray-700 mb-2">Amakuru Rusange</h3>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Email:</span>
+                                <span className="font-medium">{selectedStudent.email}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Umwuga:</span>
+                                <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
+                                  {selectedStudent.trade}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Urwego:</span>
+                                <span className="font-medium">{selectedStudent.level}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Status:</span>
+                                <Badge variant="outline">{selectedStudent.status}</Badge>
+                              </div>
+                            </div>
+                          </div>
+                          {selectedStudent.parent && (
+                            <div>
+                              <h3 className="font-bold text-sm text-gray-700 mb-2">Umubyeyi</h3>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Izina:</span>
+                                  <span className="font-medium">{selectedStudent.parent.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Telefoni:</span>
+                                  <span className="font-medium">{selectedStudent.parent.phoneNumber}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Isano:</span>
+                                  <span className="font-medium">{selectedStudent.parent.relationship}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <h3 className="font-bold text-sm text-gray-700 mb-3">Amanota</h3>
+                          <div className="space-y-2">
+                            {selectedStudent.grades.map((grade, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 border-2 border-yellow-100 rounded-lg">
+                                <div>
+                                  <p className="font-medium">{grade.subject}</p>
+                                  <p className="text-xs text-gray-500">Umwarimu: {grade.teacher}</p>
+                                </div>
+                                <div className="text-right">
+                                  <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-lg">
+                                    {grade.score}/{grade.maxScore}
+                                  </Badge>
+                                  <p className="text-xs text-gray-500 mt-1">{grade.grade}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {selectedStudent.conducts.length > 0 && (
+                          <div>
+                            <h3 className="font-bold text-sm text-gray-700 mb-3">Imyitwarire</h3>
+                            <div className="space-y-2">
+                              {selectedStudent.conducts.map((conduct) => (
+                                <div key={conduct.id} className={`p-3 border-2 rounded-lg ${
+                                  conduct.type === 'positive' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                                }`}>
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-medium">{conduct.title}</h4>
+                                    <Badge className={conduct.type === 'positive' ? 'bg-green-500' : 'bg-red-500'}>
+                                      {conduct.type}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">{conduct.description}</p>
+                                  <p className="text-xs text-gray-500 mt-2">
+                                    {conduct.date} - Raporo: {conduct.reportedBy}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             {/* Classes Tab */}
