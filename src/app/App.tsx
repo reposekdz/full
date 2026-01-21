@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { AuthProvider, useAuth, UserRole } from '@/app/contexts/AuthContext';
+import { ContentProvider } from '@/app/contexts/ContentContext';
 import Header from '@/app/components/Header';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
@@ -14,6 +15,7 @@ import RegisterPage from '@/app/pages/RegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
+import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
 import BDCTradePage from '@/app/pages/trades/BDCTradePage';
 import AUTTradePage from '@/app/pages/trades/AUTTradePage';
@@ -106,6 +108,8 @@ const AppContent: React.FC = () => {
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       case 'search':
         return <SearchPage onNavigate={handleNavigate} />;
+      case 'admin-panel':
+        return <AdminPage />;
       default:
         if (user) {
           return renderDashboard();
@@ -133,7 +137,9 @@ const App: React.FC = () => {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <AppContent />
+        <ContentProvider>
+          <AppContent />
+        </ContentProvider>
       </AuthProvider>
     </LanguageProvider>
   );

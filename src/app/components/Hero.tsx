@@ -2,41 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { useContent } from '@/app/contexts/ContentContext';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-
-const slides = [
-  {
-    image: 'https://images.unsplash.com/photo-1758270704524-596810e891b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMGNsYXNzcm9vbSUyMGxlYXJuaW5nfGVufDF8fHx8MTc2ODc2NTA2NXww&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'EMPOWERING FUTURE SKILLS',
-    subtitle: 'Building Tomorrow\'s Professionals Today',
-    badge: 'TVET Excellence',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2Z0d2FyZSUyMGRldmVsb3BtZW50JTIwY29kaW5nfGVufDF8fHx8MTc2ODcxODI3MXww&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'SOFTWARE DEVELOPMENT',
-    subtitle: 'Master Coding & Technology',
-    badge: 'SOD Program',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1672072830247-85ac23671e96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBidWlsZGluZyUyMHNpdGV8ZW58MXx8fHwxNzY4NzMwNzQ0fDA',
-    title: 'BUILDING CONSTRUCTION',
-    subtitle: 'Create Tomorrow\'s Infrastructure',
-    badge: 'BDC Program',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1636761358757-0a616eb9e17e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdXRvbW9iaWxlJTIwbWVjaGFuaWMlMjB3b3Jrc2hvcHxlbnwxfHx8fDE3Njg4MDYyMTl8MA',
-    title: 'AUTOMOBILE TECHNOLOGY',
-    subtitle: 'Drive Your Future Forward',
-    badge: 'AUT Program',
-  },
-];
 
 const Hero: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const { t } = useLanguage();
+  const { slides, loading } = useContent();
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -48,6 +23,14 @@ const Hero: React.FC = () => {
 
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+
+  if (loading || slides.length === 0) {
+    return (
+      <div className="relative h-[600px] bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-[600px] overflow-hidden bg-gray-900">
@@ -62,7 +45,7 @@ const Hero: React.FC = () => {
           className="absolute inset-0"
         >
           <ImageWithFallback
-            src={slides[currentSlide].image}
+            src={slides[currentSlide].image_url}
             alt={slides[currentSlide].title}
             className="w-full h-full object-cover"
           />
@@ -82,7 +65,7 @@ const Hero: React.FC = () => {
               transition={{ delay: 0.2 }}
             >
               <Badge className="mb-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1">
-                {slides[currentSlide].badge}
+                TVET Excellence
               </Badge>
               <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight">
                 {slides[currentSlide].title}
@@ -92,7 +75,7 @@ const Hero: React.FC = () => {
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8">
-                  {t('getStarted')}
+                  {slides[currentSlide].button_text || t('getStarted')}
                 </Button>
                 <Button size="lg" variant="outline" className="rounded-full px-8 bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
                   {t('learnMore')}
@@ -117,7 +100,7 @@ const Hero: React.FC = () => {
                   }`}
                 >
                   <ImageWithFallback
-                    src={slide.image}
+                    src={slide.image_url}
                     alt={slide.title}
                     className="w-full h-full object-cover"
                   />
@@ -126,7 +109,7 @@ const Hero: React.FC = () => {
                   }`} />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className="text-white font-bold text-center px-2 text-sm">
-                      {slide.badge}
+                      {slide.title}
                     </p>
                   </div>
                 </motion.div>
