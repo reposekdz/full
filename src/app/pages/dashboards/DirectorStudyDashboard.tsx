@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   BookOpen, 
@@ -36,8 +36,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
-import { mockStudents } from '@/app/data/mockStudents';
-import { Student, Trade, TradeLevel } from '@/app/types/student';
+import dosService from '@/app/services/dosService';
 import {
   Dialog,
   DialogContent,
@@ -63,18 +62,107 @@ interface DirectorStudyDashboardProps {
 
 const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [students, setStudents] = useState<Student[]>(mockStudents);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | 'all'>('all');
-  const [selectedLevel, setSelectedLevel] = useState<TradeLevel | 'all'>('all');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedTrade, setSelectedTrade] = useState<string>('all');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    per_page: 20,
+    total: 0,
+    total_pages: 0
+  });
 
-  const stats = [
+  // Load data on component mount
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Load students when filters change
+  useEffect(() => {
+    loadStudents();
+  }, [searchQuery, selectedTrade, selectedLevel, pagination.current_page]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [analyticsData, tradesData] = await Promise.all([
+        dosService.getAnalyticsOverview(),
+        dosService.getTrades()
+      ]);
+      
+      setAnalytics(analyticsData.data);
+      setTrades(tradesData.data);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStudents = async () => {
+    try {
+      const params: any = {
+        page: pagination.current_page,
+        limit: pagination.per_page
+      };
+      
+      if (searchQuery) params.search = searchQuery;
+      if (selectedTrade !== 'all') params.trade = selectedTrade;
+      if (selectedLevel !== 'all') params.level = selectedLevel;
+      
+      const response = await dosService.getStudents(params);
+      setStudents(response.data.students);
+      setPagination(response.data.pagination);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    }
+  };
+
+  const handleCreateStudent = async (studentData: any) => {
+    try {
+      await dosService.createStudent(studentData);
+      setIsAddDialogOpen(false);
+      loadStudents();
+      loadDashboardData(); // Refresh analytics
+    } catch (error) {
+      console.error('Error creating student:', error);
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: number) => {
+    if (confirm('Are you sure you want to remove this student?')) {
+      try {
+        await dosService.deleteStudent(studentId);
+        loadStudents();
+        loadDashboardData(); // Refresh analytics
+      } catch (error) {
+        console.error('Error deleting student:', error);
+      }
+    }
+  };
+
+  const handleViewStudent = async (student: any) => {
+    try {
+      const response = await dosService.getStudentDetails(student.id);
+      setSelectedStudent(response.data);
+      setIsViewDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading student details:', error);
+    }
+  };
+
+  // Generate stats from analytics data
+  const stats = analytics ? [
     {
       title: 'Abanyeshuri Bose',
-      value: '1,248',
+      value: analytics.overall_statistics?.total_students?.toString() || '0',
       change: '+12%',
       trend: 'up',
       icon: Users,
@@ -83,7 +171,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
     {
       title: 'Abarimu',
-      value: '84',
+      value: analytics.overall_statistics?.total_teachers?.toString() || '0',
       change: '+3%',
       trend: 'up',
       icon: GraduationCap,
@@ -91,8 +179,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       bgColor: 'bg-green-50'
     },
     {
-      title: 'Amasomo',
-      value: '42',
+      title: 'Amaklasi',
+      value: analytics.overall_statistics?.total_classes?.toString() || '0',
       change: '+5%',
       trend: 'up',
       icon: BookOpen,
@@ -101,14 +189,14 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
     {
       title: 'Impera Rusange',
-      value: '87.5%',
+      value: `${Math.round(analytics.overall_statistics?.overall_average_grade || 0)}%`,
       change: '+2.3%',
       trend: 'up',
       icon: TrendingUp,
       color: 'from-orange-500 to-red-500',
       bgColor: 'bg-orange-50'
     },
-  ];
+  ] : [];
 
   const recentActivities = [
     {
@@ -172,32 +260,28 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     { subject: 'English', progress: 88, status: 'ahead' },
   ];
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          student.studentCode.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTrade = selectedTrade === 'all' || student.trade === selectedTrade;
-    const matchesLevel = selectedLevel === 'all' || student.level === selectedLevel;
-    return matchesSearch && matchesTrade && matchesLevel;
-  });
+  const filteredStudents = students;
 
-  const handleDeleteStudent = (studentId: string) => {
-    if (confirm('Are you sure you want to remove this student?')) {
-      setStudents(students.filter(s => s.id !== studentId));
-    }
-  };
-
-  const handleViewStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setIsViewDialogOpen(true);
-  };
-
-  const getAvailableLevels = (): TradeLevel[] => {
+  const getAvailableLevels = () => {
     if (selectedTrade === 'all') return [];
-    if (selectedTrade === 'SOD') return ['Level 3 SOD', 'Level 4 SOD', 'Level 5 SOD'];
-    if (selectedTrade === 'BDC') return ['Level 3 BDC', 'Level 4 BDC', 'Level 5 BDC'];
-    if (selectedTrade === 'AUT') return ['Level 3 AUT', 'Level 4A AUT', 'Level 4B AUT', 'Level 5A AUT', 'Level 5B AUT'];
-    return [];
+    const trade = trades.find(t => t.trade_code === selectedTrade);
+    if (!trade) return [];
+    return trades.filter(t => t.trade_code === selectedTrade).map(t => `${t.level_number}${t.level_suffix || ''}`);
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
+        <LeftSidebar currentPage="dashboard-director-study" onNavigate={onNavigate} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Gukuramo amakuru...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
@@ -464,18 +548,18 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                         className="w-full"
                       />
                     </div>
-                    <Select value={selectedTrade} onValueChange={(value) => { setSelectedTrade(value as Trade | 'all'); setSelectedLevel('all'); }}>
+                    <Select value={selectedTrade} onValueChange={(value) => { setSelectedTrade(value); setSelectedLevel('all'); }}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Hitamo umwuga" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Imyuga Yose</SelectItem>
-                        <SelectItem value="SOD">SOD</SelectItem>
-                        <SelectItem value="BDC">BDC</SelectItem>
-                        <SelectItem value="AUT">AUT</SelectItem>
+                        {[...new Set(trades.map(t => t.trade_code))].map(tradeCode => (
+                          <SelectItem key={tradeCode} value={tradeCode}>{tradeCode}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <Select value={selectedLevel} onValueChange={(value) => setSelectedLevel(value as TradeLevel | 'all')} disabled={selectedTrade === 'all'}>
+                    <Select value={selectedLevel} onValueChange={(value) => setSelectedLevel(value)} disabled={selectedTrade === 'all'}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Hitamo urwego" />
                       </SelectTrigger>
@@ -498,29 +582,29 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                               <div className="flex items-center space-x-4">
                                 <Avatar className="h-14 w-14 border-2 border-yellow-400">
                                   <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold text-lg">
-                                    {student.name.charAt(0)}
+                                    {student.first_name?.charAt(0) || 'S'}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <h4 className="font-bold text-gray-900">{student.name}</h4>
-                                  <p className="text-sm text-gray-600">{student.studentCode}</p>
+                                  <h4 className="font-bold text-gray-900">{student.first_name} {student.last_name}</h4>
+                                  <p className="text-sm text-gray-600">{student.student_id}</p>
                                   <div className="flex items-center space-x-2 mt-1">
                                     <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs">
-                                      {student.trade}
+                                      {student.trade_code}
                                     </Badge>
                                     <Badge variant="outline" className="text-xs">
-                                      {student.level}
+                                      Level {student.level_number}{student.level_suffix || ''}
                                     </Badge>
                                   </div>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-6">
                                 <div className="text-center">
-                                  <p className="text-2xl font-black text-yellow-600">{student.overallAverage}%</p>
+                                  <p className="text-2xl font-black text-yellow-600">{Math.round(student.average_grade || 0)}%</p>
                                   <p className="text-xs text-gray-500">Impera</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-2xl font-black text-green-600">{student.attendanceRate}%</p>
+                                  <p className="text-2xl font-black text-green-600">{Math.round(student.attendance_percentage || 0)}%</p>
                                   <p className="text-xs text-gray-500">Kwitabira</p>
                                 </div>
                                 <div className="flex space-x-2">
@@ -544,16 +628,18 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                 </div>
                               </div>
                             </div>
-                            {student.parent && (
+                            {(student.parent_first_name || student.parent_phone) && (
                               <div className="mt-3 pt-3 border-t border-yellow-100 flex items-center space-x-4 text-sm text-gray-600">
                                 <div className="flex items-center">
                                   <Users className="h-3 w-3 mr-1" />
-                                  <span>Umubyeyi: {student.parent.name}</span>
+                                  <span>Umubyeyi: {student.parent_first_name} {student.parent_last_name}</span>
                                 </div>
-                                <div className="flex items-center">
-                                  <Phone className="h-3 w-3 mr-1" />
-                                  <span>{student.parent.phoneNumber}</span>
-                                </div>
+                                {student.parent_phone && (
+                                  <div className="flex items-center">
+                                    <Phone className="h-3 w-3 mr-1" />
+                                    <span>{student.parent_phone}</span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
@@ -576,9 +662,9 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   {selectedStudent && (
                     <>
                       <DialogHeader>
-                        <DialogTitle className="text-2xl">Amakuru y'{selectedStudent.name}</DialogTitle>
+                        <DialogTitle className="text-2xl">Amakuru ya {selectedStudent.first_name} {selectedStudent.last_name}</DialogTitle>
                         <DialogDescription>
-                          Code: {selectedStudent.studentCode}
+                          Code: {selectedStudent.student_id}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-6">
@@ -593,77 +679,79 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Umwuga:</span>
                                 <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
-                                  {selectedStudent.trade}
+                                  {selectedStudent.trade_code}
                                 </Badge>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Urwego:</span>
-                                <span className="font-medium">{selectedStudent.level}</span>
+                                <span className="font-medium">Level {selectedStudent.level_number}{selectedStudent.level_suffix || ''}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Status:</span>
-                                <Badge variant="outline">{selectedStudent.status}</Badge>
+                                <Badge variant="outline">{selectedStudent.is_active ? 'Active' : 'Inactive'}</Badge>
                               </div>
                             </div>
                           </div>
-                          {selectedStudent.parent && (
+                          {(selectedStudent.parent_first_name || selectedStudent.parent_phone) && (
                             <div>
                               <h3 className="font-bold text-sm text-gray-700 mb-2">Umubyeyi</h3>
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Izina:</span>
-                                  <span className="font-medium">{selectedStudent.parent.name}</span>
+                                  <span className="font-medium">{selectedStudent.parent_first_name} {selectedStudent.parent_last_name}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Telefoni:</span>
-                                  <span className="font-medium">{selectedStudent.parent.phoneNumber}</span>
+                                  <span className="font-medium">{selectedStudent.parent_phone}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Isano:</span>
-                                  <span className="font-medium">{selectedStudent.parent.relationship}</span>
+                                  <span className="text-gray-600">Email:</span>
+                                  <span className="font-medium">{selectedStudent.parent_email}</span>
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        <div>
-                          <h3 className="font-bold text-sm text-gray-700 mb-3">Amanota</h3>
-                          <div className="space-y-2">
-                            {selectedStudent.grades.map((grade, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3 border-2 border-yellow-100 rounded-lg">
-                                <div>
-                                  <p className="font-medium">{grade.subject}</p>
-                                  <p className="text-xs text-gray-500">Umwarimu: {grade.teacher}</p>
+                        {selectedStudent.recent_grades && selectedStudent.recent_grades.length > 0 && (
+                          <div>
+                            <h3 className="font-bold text-sm text-gray-700 mb-3">Amanota</h3>
+                            <div className="space-y-2">
+                              {selectedStudent.recent_grades.map((grade: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-3 border-2 border-yellow-100 rounded-lg">
+                                  <div>
+                                    <p className="font-medium">{grade.subject_name}</p>
+                                    <p className="text-xs text-gray-500">Umwarimu: {grade.teacher_name} {grade.teacher_lastname}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-lg">
+                                      {grade.obtained_marks}/{grade.max_marks}
+                                    </Badge>
+                                    <p className="text-xs text-gray-500 mt-1">{Math.round((grade.obtained_marks / grade.max_marks) * 100)}%</p>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-lg">
-                                    {grade.score}/{grade.maxScore}
-                                  </Badge>
-                                  <p className="text-xs text-gray-500 mt-1">{grade.grade}</p>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
-                        {selectedStudent.conducts.length > 0 && (
+                        {selectedStudent.recent_conducts && selectedStudent.recent_conducts.length > 0 && (
                           <div>
                             <h3 className="font-bold text-sm text-gray-700 mb-3">Imyitwarire</h3>
                             <div className="space-y-2">
-                              {selectedStudent.conducts.map((conduct) => (
+                              {selectedStudent.recent_conducts.map((conduct: any) => (
                                 <div key={conduct.id} className={`p-3 border-2 rounded-lg ${
-                                  conduct.type === 'positive' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                                  conduct.incident_type === 'positive' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
                                 }`}>
                                   <div className="flex items-center justify-between">
                                     <h4 className="font-medium">{conduct.title}</h4>
-                                    <Badge className={conduct.type === 'positive' ? 'bg-green-500' : 'bg-red-500'}>
-                                      {conduct.type}
+                                    <Badge className={conduct.incident_type === 'positive' ? 'bg-green-500' : 'bg-red-500'}>
+                                      {conduct.incident_type}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600 mt-1">{conduct.description}</p>
                                   <p className="text-xs text-gray-500 mt-2">
-                                    {conduct.date} - Raporo: {conduct.reportedBy}
+                                    {conduct.incident_date} - Raporo: {conduct.reported_by_name} {conduct.reported_by_lastname}
                                   </p>
                                 </div>
                               ))}

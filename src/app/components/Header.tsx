@@ -22,7 +22,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) => {
   const { language, setLanguage, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout, getRoleDashboard } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -325,21 +325,26 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     <Button variant="ghost" className="rounded-full p-1 hover:bg-yellow-50">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold">
-                          {user.name.charAt(0)}
+                          {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem className="flex flex-col items-start">
-                      <p className="font-semibold">{user.name}</p>
+                      <p className="font-semibold">{user.first_name} {user.last_name}</p>
                       <p className="text-sm text-gray-500">{user.role}</p>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onNavigate('home')}>
+                    <DropdownMenuItem onClick={() => onNavigate(getRoleDashboard(user.role))}>
                       Dashboard
                     </DropdownMenuItem>
                     <DropdownMenuItem>Settings</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Logout</DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-600" onClick={() => {
+                      logout();
+                      onNavigate('home');
+                    }}>
+                      Logout
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -612,15 +617,42 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-50 to-green-50 rounded-lg border-2 border-yellow-200">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold">
-                        {user.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
-                      <p className="text-xs text-yellow-700 truncate font-medium">{user.role}</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-50 to-green-50 rounded-lg border-2 border-yellow-200">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold">
+                          {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{user.first_name} {user.last_name}</p>
+                        <p className="text-xs text-yellow-700 truncate font-medium">{user.role}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => {
+                          onNavigate(getRoleDashboard(user.role));
+                          setIsSidebarOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-full border-blue-400 text-blue-700 hover:bg-blue-50"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Dashboard
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          logout();
+                          onNavigate('home');
+                          setIsSidebarOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-full border-red-400 text-red-700 hover:bg-red-50"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Logout
+                      </Button>
                     </div>
                   </div>
                 )}

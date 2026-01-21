@@ -189,8 +189,13 @@ export const ContentProvider: React.FC<ContentProviderProps> = ({ children }) =>
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      await Promise.all([fetchSlides(), fetchTrades()]);
-      setLoading(false);
+      try {
+        await Promise.all([fetchSlides(), fetchTrades()]);
+      } catch (err) {
+        console.error('Error initializing data:', err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     initializeData();

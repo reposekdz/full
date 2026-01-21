@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { AuthProvider, useAuth, UserRole } from '@/app/contexts/AuthContext';
 import { ContentProvider } from '@/app/contexts/ContentContext';
@@ -32,7 +32,7 @@ import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
-  const { user, logout, login } = useAuth();
+  const { user, logout, login, getRoleDashboard } = useAuth();
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -44,16 +44,17 @@ const AppContent: React.FC = () => {
 
     switch (user.role) {
       case 'admin':
+      case 'super_admin':
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'student':
         return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         return <ParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
-      case 'director_of_study':
+      case 'director_study':
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
-      case 'director_of_discipline':
+      case 'director_discipline':
         return <DirectorDisciplineDashboard onNavigate={handleNavigate} onLogout={logout} />;
-      case 'head_master':
+      case 'headmaster':
         return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
         return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -66,17 +67,34 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Auto-redirect authenticated users to their dashboard
+  useEffect(() => {
+    if (user && currentPage === 'home') {
+      const dashboardPage = getRoleDashboard(user.role);
+      handleNavigate(dashboardPage);
+    }
+  }, [user, currentPage, getRoleDashboard]);
+
   const handleRoleSelect = async (role: UserRole) => {
-    await login('demo@school.com', 'password', role);
-    handleNavigate(`dashboard-${role}`);
+    const loginResult = await login('demo@school.com', 'password', role);
+    if (loginResult.success && loginResult.dashboardPage) {
+      // Automatically redirect to the appropriate dashboard
+      handleNavigate(loginResult.dashboardPage);
+    }
   };
 
   const renderPage = () => {
-    // If user is logged in, show their dashboard
-    if (user && !['home', 'sports', 'services', 'trades', 'contactUs', 'supports', 'teams', 'trades-showcase', 'trade-sod', 'trade-bdc', 'trade-aut', 'search'].includes(currentPage)) {
+    // If user is logged in, always show their dashboard (never redirect to public pages)
+    if (user) {
+      // Only allow logout or role selection for authenticated users
+      if (currentPage === 'role-selection') {
+        return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
+      }
+      // For all other pages, show the dashboard
       return renderDashboard();
     }
 
+    // For non-authenticated users, show public pages normally
     switch (currentPage) {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
@@ -111,9 +129,6 @@ const AppContent: React.FC = () => {
       case 'admin-panel':
         return <AdminPage />;
       default:
-        if (user) {
-          return renderDashboard();
-        }
         return <HomePage onNavigate={handleNavigate} />;
     }
   };

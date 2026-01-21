@@ -26,7 +26,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, role?: UserRole) => Promise<{ success: boolean; dashboardPage?: string }>;
   register: (userData: any) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
@@ -58,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return dashboardMap[role] || 'dashboard';
   };
 
-  // Check if user is authenticated on app load
   useEffect(() => {
     const checkAuth = async () => {
       const savedToken = localStorage.getItem('token');
@@ -95,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string, role?: UserRole): Promise<{ success: boolean; dashboardPage?: string }> => {
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -111,14 +110,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
         setToken(data.token);
         localStorage.setItem('token', data.token);
-        return true;
+        
+        const dashboardPage = getRoleDashboard(data.user.role);
+        return { success: true, dashboardPage };
       } else {
         console.error('Login failed:', data.message);
-        return false;
+        return { success: false };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      return { success: false };
     }
   };
 
@@ -135,8 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await response.json();
       
       if (data.success) {
-        // Auto-login after successful registration
-        return await login(userData.username, userData.password);
+        const loginResult = await login(userData.username, userData.password);
+        return loginResult.success;
       } else {
         console.error('Registration failed:', data.message);
         return false;

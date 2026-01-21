@@ -35,6 +35,8 @@ app.use('/api/users', require('./controllers/userController'));
 app.use('/api/academics', require('./controllers/academicController'));
 app.use('/api/finance', require('./controllers/financeController'));
 app.use('/api/stock', require('./controllers/stockController'));
+app.use('/api/dos', require('./routes/dos'));
+app.use('/api/dos', require('./controllers/dosController'));
 
 // Test route
 app.get('/api/health', (req, res) => {
@@ -80,6 +82,7 @@ const startServer = async () => {
       console.log('  - /api/academics - Academic management');
       console.log('  - /api/finance - Financial management');
       console.log('  - /api/stock - Stock management');
+      console.log('  - /api/dos - DOS management (students, conduct, analytics)');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

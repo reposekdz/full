@@ -29,8 +29,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const dashboard = await login(email, password);
-    onNavigate(dashboard);
+    setIsLoading(true);
+    const result = await login(email, password);
+    setIsLoading(false);
+    if (result.success && result.dashboardPage) {
+      onNavigate(result.dashboardPage);
+    } else {
+      alert('Login failed. Please check your credentials.');
+    }
   };
 
   const handleStaffCodeSubmit = () => {
@@ -60,7 +66,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
     setIsLoading(true);
     try {
-      // Make API call to authenticate admin
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -74,18 +79,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
       const data = await response.json();
 
-      if (data.success && data.user.role === 'admin') {
-        // Store token and user info
+      if (data.success) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         setShowAdminLogin(false);
-        onNavigate('dashboard-admin');
+        const dashboardPage = data.user.role === 'director_discipline' ? 'dashboard-director-discipline' : 'admin';
+        onNavigate(dashboardPage);
       } else {
-        alert(data.message || 'Invalid admin credentials');
+        alert(data.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('Admin login error:', error);
+      console.error('Login error:', error);
       alert('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -94,9 +99,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
   const handleRoleLogin = async () => {
     if (selectedRole && selectedRole !== 'admin') {
-      const dashboard = await login(email, password, selectedRole as UserRole);
-      setShowRoleSelection(false);
-      onNavigate(dashboard);
+      setIsLoading(true);
+      const result = await login(email, password);
+      setIsLoading(false);
+      if (result.success && result.dashboardPage) {
+        setShowRoleSelection(false);
+        onNavigate(result.dashboardPage);
+      } else {
+        alert('Login failed. Please check your credentials.');
+      }
     }
   };
 
@@ -156,9 +167,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
             <Button
               type="submit"
+              disabled={isLoading}
               className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold shadow-lg"
             >
-              {t('signIn')}
+              {isLoading ? 'Signing in...' : t('signIn')}
             </Button>
           </form>
 
@@ -250,9 +262,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="director_of_study">Director of Study</SelectItem>
-                  <SelectItem value="director_of_discipline">Director of Discipline</SelectItem>
-                  <SelectItem value="head_master">Head Master</SelectItem>
+                  <SelectItem value="director_study">Director of Study</SelectItem>
+                  <SelectItem value="director_discipline">Director of Discipline</SelectItem>
+                  <SelectItem value="headmaster">Head Master</SelectItem>
                   <SelectItem value="teacher">Teacher</SelectItem>
                   <SelectItem value="accountant">Accountant</SelectItem>
                   <SelectItem value="stock_manager">Stock Manager</SelectItem>
@@ -272,20 +284,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               <Button
                 onClick={handleRoleLogin}
                 className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white"
-                disabled={!selectedRole}
+                disabled={!selectedRole || isLoading}
               >
-                {t('signIn')}
+                {isLoading ? 'Signing in...' : t('signIn')}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Admin Login Modal */}
+      {/* Admin/DOS Login Modal */}
       <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
         <DialogContent className="sm:max-w-md">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-black text-green-600">Admin Login</h2>
+            <h2 className="text-xl font-black text-green-600">DOS Login</h2>
             <button
               onClick={() => {
                 setShowAdminLogin(false);
@@ -308,7 +320,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
                   type="email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="reponsekdz06@gmail.com"
+                  placeholder="reponse@gmail.com"
                   className="pl-9 h-10 border-green-200 focus:border-green-500 focus:ring-green-500"
                   required
                 />

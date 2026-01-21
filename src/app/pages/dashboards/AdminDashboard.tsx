@@ -83,7 +83,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
                   <Button variant="ghost" className="rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-blue-600 text-white">
-                        {user?.name.charAt(0)}
+                        {user?.name?.charAt(0) || 'A'}
                       </AvatarFallback>
                     </Avatar>
                   </Button>

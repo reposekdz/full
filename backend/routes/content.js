@@ -244,7 +244,7 @@ router.delete('/admin/slides/:id', [
 router.get('/news', async (req, res) => {
   try {
     const [articles] = await pool.execute(
-      'SELECT * FROM news_articles WHERE is_active = true ORDER BY sort_order ASC, date_published DESC'
+      'SELECT * FROM news_articles WHERE is_active = true ORDER BY sort_order ASC, created_at DESC'
     );
 
     res.json({
@@ -268,7 +268,7 @@ router.get('/admin/news', [
 ], async (req, res) => {
   try {
     const [articles] = await pool.execute(
-      'SELECT * FROM news_articles ORDER BY sort_order ASC, date_published DESC'
+      'SELECT * FROM news_articles ORDER BY sort_order ASC, created_at DESC'
     );
 
     res.json({
@@ -303,7 +303,7 @@ router.post('/admin/news', [
       });
     }
 
-    const { title, description, content, author, category, date_published, sort_order = 0 } = req.body;
+    const { title, description, content, author, category, publish_date, sort_order = 0 } = req.body;
     let image_url = req.body.image_url || '';
 
     if (req.file) {
@@ -311,8 +311,8 @@ router.post('/admin/news', [
     }
 
     const [result] = await pool.execute(
-      'INSERT INTO news_articles (title, description, content, image_url, author, category, date_published, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, description, content, image_url, author, category, date_published, sort_order]
+      'INSERT INTO news_articles (title, description, content, image_url, author, category, publish_date, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description, content, image_url, author, category, publish_date, sort_order]
     );
 
     res.status(201).json({
@@ -326,7 +326,7 @@ router.post('/admin/news', [
         image_url,
         author,
         category,
-        date_published,
+        publish_date,
         sort_order
       }
     });
@@ -358,7 +358,7 @@ router.put('/admin/news/:id', [
     }
 
     const { id } = req.params;
-    const { title, description, content, author, category, date_published, sort_order, is_active } = req.body;
+    const { title, description, content, author, category, publish_date, sort_order, is_active } = req.body;
     let image_url = req.body.image_url || '';
 
     // Get current article
@@ -381,8 +381,8 @@ router.put('/admin/news/:id', [
     }
 
     await pool.execute(
-      'UPDATE news_articles SET title = ?, description = ?, content = ?, image_url = ?, author = ?, category = ?, date_published = ?, sort_order = ?, is_active = ? WHERE id = ?',
-      [title, description, content, image_url, author, category, date_published, sort_order, is_active, id]
+      'UPDATE news_articles SET title = ?, description = ?, content = ?, image_url = ?, author = ?, category = ?, publish_date = ?, sort_order = ?, is_active = ? WHERE id = ?',
+      [title, description, content, image_url, author, category, publish_date, sort_order, is_active, id]
     );
 
     res.json({
