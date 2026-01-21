@@ -760,4 +760,203 @@ router.get('/academic-years', [authenticateToken], async (req, res) => {
   }
 });
 
+// ===============================
+// ENHANCED TRADE/COURSE MANAGEMENT
+// ===============================
+
+// Get course/trade by code with detailed information
+router.get('/courses/code/:code', [authenticateToken], async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    const [courses] = await pool.execute(`
+      SELECT c.*, 
+        COUNT(DISTINCT cl.id) as class_count,
+        COUNT(DISTINCT e.student_id) as student_count,
+        AVG(g.obtained_marks/g.max_marks * 100) as average_grade
+      FROM courses c
+      LEFT JOIN classes cl ON c.id = cl.course_id AND cl.is_active = true
+      LEFT JOIN enrollments e ON cl.id = e.class_id AND e.status = 'active'
+      LEFT JOIN grades g ON e.student_id = g.student_id
+      WHERE c.code = ? AND c.is_active = true
+      GROUP BY c.id
+    `, [code]);
+
+    if (courses.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    const course = courses[0];
+
+    // Get subjects for this course
+    const [subjects] = await pool.execute(`
+      SELECT * FROM subjects 
+      WHERE course_id = ? AND is_active = true
+      ORDER BY name
+    `, [course.id]);
+
+    // Get classes for this course
+    const [classes] = await pool.execute(`
+      SELECT cl.*, ay.name as academic_year_name,
+        CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
+        cl.current_enrollment
+      FROM classes cl
+      LEFT JOIN academic_years ay ON cl.academic_year_id = ay.id
+      LEFT JOIN users u ON cl.teacher_id = u.id
+      WHERE cl.course_id = ? AND cl.is_active = true
+      ORDER BY ay.start_date DESC
+    `, [course.id]);
+
+    // Get recent student achievements in this course
+    const [achievements] = await pool.execute(`
+      SELECT g.*, 
+        CONCAT(u.first_name, ' ', u.last_name) as student_name,
+        s.name as subject_name
+      FROM grades g
+      JOIN users u ON g.student_id = u.id
+      JOIN subjects s ON g.subject_id = s.id
+      JOIN classes cl ON g.class_id = cl.id
+      WHERE cl.course_id = ? AND g.obtained_marks/g.max_marks >= 0.8
+      ORDER BY g.assessment_date DESC
+      LIMIT 10
+    `, [course.id]);
+
+    res.json({
+      success: true,
+      course: {
+        ...course,
+        subjects,
+        classes,
+        recent_achievements: achievements
+      }
+    });
+  } catch (error) {
+    console.error('Get course by code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Get public courses/trades information (no auth needed)
+router.get('/public/courses', async (req, res) => {
+  try {
+    const [courses] = await pool.execute(`
+      SELECT c.*, 
+        COUNT(DISTINCT cl.id) as class_count,
+        COUNT(DISTINCT e.student_id) as student_count
+      FROM courses c
+      LEFT JOIN classes cl ON c.id = cl.course_id AND cl.is_active = true
+      LEFT JOIN enrollments e ON cl.id = e.class_id AND e.status = 'active'
+      WHERE c.is_active = true
+      GROUP BY c.id
+      ORDER BY c.name
+    `);
+
+    // Transform to match frontend Trade interface
+    const trades = courses.map(course => ({
+      id: course.code.toLowerCase(),
+      title: course.name,
+      code: course.code,
+      description: course.description,
+      duration_months: course.duration_months,
+      fee_amount: course.fee_amount,
+      student_count: course.student_count,
+      class_count: course.class_count,
+      image: getTradeImage(course.code),
+      features: getTradeFeatures(course.code)
+    }));
+
+    res.json({
+      success: true,
+      trades
+    });
+  } catch (error) {
+    console.error('Get public courses error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Get course statistics
+router.get('/courses/:id/statistics', [authenticateToken], async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get enrollment statistics
+    const [enrollmentStats] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_enrolled,
+        COUNT(CASE WHEN e.status = 'active' THEN 1 END) as active_students,
+        COUNT(CASE WHEN e.status = 'completed' THEN 1 END) as completed_students,
+        COUNT(CASE WHEN e.status = 'dropped' THEN 1 END) as dropped_students
+      FROM enrollments e
+      JOIN classes cl ON e.class_id = cl.id
+      WHERE cl.course_id = ?
+    `, [id]);
+
+    // Get grade statistics
+    const [gradeStats] = await pool.execute(`
+      SELECT 
+        AVG(g.obtained_marks/g.max_marks * 100) as average_grade,
+        COUNT(*) as total_assessments,
+        COUNT(CASE WHEN g.obtained_marks/g.max_marks >= 0.7 THEN 1 END) as passing_grades
+      FROM grades g
+      JOIN classes cl ON g.class_id = cl.id
+      WHERE cl.course_id = ?
+    `, [id]);
+
+    // Get attendance statistics
+    const [attendanceStats] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_attendance_records,
+        COUNT(CASE WHEN a.status = 'present' THEN 1 END) as present_count,
+        COUNT(CASE WHEN a.status = 'absent' THEN 1 END) as absent_count
+      FROM attendance a
+      JOIN classes cl ON a.class_id = cl.id
+      WHERE cl.course_id = ?
+    `, [id]);
+
+    res.json({
+      success: true,
+      statistics: {
+        enrollment: enrollmentStats[0],
+        grades: gradeStats[0],
+        attendance: attendanceStats[0]
+      }
+    });
+  } catch (error) {
+    console.error('Get course statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Helper functions for trade data
+function getTradeImage(code) {
+  const images = {
+    'SOD': 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2Z0d2FyZSUyMGRldmVsb3BtZW50JTIwY29kaW5nfGVufDF8fHx8MTc2ODcxODI3MXww&ixlib=rb-4.1.0&q=80&w=1080',
+    'BDC': 'https://images.unsplash.com/photo-1672072830247-85ac23671e96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBidWlsZGluZyUyMHNpdGV8ZW58MXx8fHwxNzY4NzMwNzQ0fDA',
+    'AUTO': 'https://images.unsplash.com/photo-1636761358757-0a616eb9e17e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdXRvbW9iaWxlJTIwbWVjaGFuaWMlMjB3b3Jrc2hvcHxlbnwxfHx8fDE3Njg4MDYyMTl8MA'
+  };
+  return images[code] || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1080';
+}
+
+function getTradeFeatures(code) {
+  const features = {
+    'SOD': ['Modern Programming Languages', 'Full-Stack Development', 'Mobile App Development', 'Database Management', 'Industry Projects'],
+    'BDC': ['Construction Techniques', 'Project Management', 'Safety Protocols', 'Building Materials', 'Sustainable Construction'],
+    'AUTO': ['Engine Diagnostics', 'Electrical Systems', 'Hybrid Technology', 'Auto Body Repair', 'Workshop Management']
+  };
+  return features[code] || ['Comprehensive Training', 'Industry Standard', 'Practical Skills', 'Career Support'];
+}
+
 module.exports = router;
