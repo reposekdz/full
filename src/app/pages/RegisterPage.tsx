@@ -8,34 +8,89 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 
+import { apiService } from '@/app/services/apiService';
+
 interface RegisterPageProps {
   onNavigate: (page: string) => void;
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
-  const { register } = useAuth();
+  const { login, getRoleDashboard } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
     role: '' as 'student' | 'parent' | '',
+    address: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
     if (!formData.role) {
-      alert('Please select a role');
+      setError('Please select a role');
       return;
     }
-    const dashboard = await register(formData.name, formData.email, formData.password, formData.role);
-    onNavigate(dashboard);
+
+    setLoading(true);
+    try {
+      let result;
+      
+      if (formData.role === 'parent') {
+        result = await apiService.registerParent({
+          email: formData.email,
+          password: formData.password,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          address: formData.address
+        });
+        
+        if (result.success && result.token) {
+          localStorage.setItem('token', result.token);
+          const dashboard = getRoleDashboard('parent');
+          onNavigate(dashboard);
+        } else {
+          setError(result.message || 'Registration failed');
+        }
+      } else {
+        const registerResult = await apiService.request('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: formData.email.split('@')[0],
+            email: formData.email,
+            password: formData.password,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            phone: formData.phone
+          })
+        });
+
+        if (registerResult.success) {
+          const loginResult = await login(formData.email, formData.password);
+          if (loginResult.success && loginResult.dashboardPage) {
+            onNavigate(loginResult.dashboardPage);
+          }
+        } else {
+          setError(registerResult.message || 'Registration failed');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,18 +117,40 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div>
-              <Label htmlFor="name" className="text-sm text-gray-700">{t('fullName')}</Label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
-                  required
-                />
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="first_name" className="text-sm text-gray-700">First Name</Label>
+                <div className="relative mt-1">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
+                  <Input
+                    id="first_name"
+                    type="text"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="last_name" className="text-sm text-gray-700">Last Name</Label>
+                <div className="relative mt-1">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
+                  <Input
+                    id="last_name"
+                    type="text"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
@@ -150,11 +227,25 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
               </div>
             </div>
 
+            {formData.role === 'parent' && (
+              <div>
+                <Label htmlFor="address" className="text-sm text-gray-700">Address</Label>
+                <Input
+                  id="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="mt-1 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
+                />
+              </div>
+            )}
+
             <Button
               type="submit"
-              className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold mt-4 shadow-lg"
+              disabled={loading}
+              className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold mt-4 shadow-lg disabled:opacity-50"
             >
-              {t('signUp')}
+              {loading ? 'Creating Account...' : t('signUp')}
             </Button>
           </form>
 

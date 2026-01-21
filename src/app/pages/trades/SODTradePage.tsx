@@ -21,12 +21,13 @@ import {
   Laptop,
   CloudIcon,
   Quote,
-  MapPin,
-  Clock,
   Mail,
   Phone,
   ZoomIn,
-  X
+  X,
+  Play,
+  Calendar,
+  MessageCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -37,6 +38,14 @@ import { Progress } from '@/app/components/ui/progress';
 import { Dialog, DialogContent } from '@/app/components/ui/dialog';
 import { getTeachersByTrade } from '@/app/data/mockTeachers';
 import { mockStudents } from '@/app/data/mockStudents';
+import { 
+  TradeInquiryModal, 
+  TradeFAQSection, 
+  TradeVideoModal, 
+  TradeCurriculumTimeline,
+  TradePartnersSection,
+  ScheduleVisitModal 
+} from '@/app/components/trades';
 
 interface SODTradePageProps {
   onNavigate: (page: string) => void;
@@ -46,6 +55,9 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const teachers = getTeachersByTrade('SOD');
   const students = mockStudents.filter(s => s.trade === 'SOD');
@@ -128,6 +140,44 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
     { label: 'Industry Partners', value: '15+', icon: Briefcase, color: 'from-purple-500 to-pink-500' }
   ];
 
+  const faqs = [
+    {
+      question: 'What are the admission requirements for the SOD program?',
+      answer: 'Applicants need a secondary school certificate (O-Level or A-Level) with good grades in Mathematics and English. Basic computer literacy is preferred but not required as we provide foundation training.'
+    },
+    {
+      question: 'How long does it take to complete the full program?',
+      answer: 'The complete program spans 3 years (Levels 3, 4, and 5), with each level taking approximately 1 year. Students can also enroll in individual levels based on their prior experience.'
+    },
+    {
+      question: 'What programming languages will I learn?',
+      answer: 'You will learn HTML, CSS, JavaScript, Python, React, Node.js, SQL, and more. The curriculum is regularly updated to include the latest industry-demanded technologies.'
+    },
+    {
+      question: 'Are there internship opportunities?',
+      answer: 'Yes! We have partnerships with 15+ tech companies that provide internship opportunities. Many students secure full-time employment through these internships.'
+    },
+    {
+      question: 'What equipment do I need to bring?',
+      answer: 'A personal laptop is recommended but not required. Our labs are equipped with modern computers and all necessary software. We provide free access to cloud development tools.'
+    },
+    {
+      question: 'Is financial aid available?',
+      answer: 'Yes, we offer scholarships for outstanding students and flexible payment plans. Government education loans are also available through our partnerships with local banks.'
+    }
+  ];
+
+  const partners = [
+    { name: 'TechCorp Rwanda', description: 'Leading software development company', type: 'employment' as const },
+    { name: 'Digital Hub', description: 'Innovation and technology center', type: 'training' as const },
+    { name: 'Microsoft Partners', description: 'Global technology partner', type: 'equipment' as const },
+    { name: 'StartUp Kigali', description: 'Tech startup incubator', type: 'internship' as const },
+    { name: 'CodeLab Africa', description: 'Pan-African coding bootcamp', type: 'training' as const },
+    { name: 'AWS Academy', description: 'Cloud computing certification partner', type: 'equipment' as const },
+    { name: 'iHUB Rwanda', description: 'Technology innovation hub', type: 'internship' as const },
+    { name: 'MTN Digital', description: 'Telecommunications leader', type: 'employment' as const }
+  ];
+
   const nextGalleryImage = () => {
     setCurrentGalleryIndex((prev) => (prev + 1) % gallery.length);
   };
@@ -174,7 +224,7 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
               <Button 
                 size="lg" 
                 className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6"
-                onClick={() => onNavigate('register')}
+                onClick={() => setShowInquiryModal(true)}
               >
                 Enroll Now
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -183,8 +233,19 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
                 size="lg" 
                 variant="outline"
                 className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowVideoModal(true)}
               >
-                Download Brochure
+                <Play className="mr-2 w-5 h-5" />
+                Watch Video
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowScheduleModal(true)}
+              >
+                <Calendar className="mr-2 w-5 h-5" />
+                Schedule Visit
               </Button>
             </div>
           </motion.div>
@@ -349,7 +410,7 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
               </CardContent>
             </Card>
 
-            {/* Testimonials */}
+          {/* Testimonials */}
             <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center">
@@ -382,43 +443,61 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* FAQ Section */}
+            <TradeFAQSection 
+              faqs={faqs}
+              accentColor="text-blue-600"
+              borderColor="border-blue-200"
+            />
+
+            {/* Industry Partners */}
+            <TradePartnersSection
+              partners={partners}
+              accentColor="text-blue-600"
+              borderColor="border-blue-200"
+              gradientColor="from-blue-500 to-indigo-500"
+            />
           </TabsContent>
 
           {/* Programs Tab */}
           <TabsContent value="programs" className="space-y-6">
-            {programs.map((program, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="border-2 border-blue-200 hover:shadow-xl transition-all">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-2xl">{program.level}</CardTitle>
-                        <CardDescription className="text-lg mt-2">{program.description}</CardDescription>
-                      </div>
-                      <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-lg px-4 py-2">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {program.duration}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <h4 className="font-bold text-gray-900 mb-3">Key Modules:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {program.modules.map((module, idx) => (
-                        <div key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                          <p className="font-medium text-gray-900 text-sm">{module}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {/* Interactive Curriculum Timeline */}
+            <TradeCurriculumTimeline
+              programs={programs}
+              accentColor="text-blue-600"
+              borderColor="border-blue-200"
+              gradientColor="from-blue-500 to-indigo-500"
+            />
+
+            {/* Quick Enroll CTA */}
+            <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">Ready to Start?</h3>
+                    <p className="text-gray-600">Choose your level and begin your journey in software development</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white"
+                      onClick={() => setShowInquiryModal(true)}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Inquire Now
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-300 text-blue-700"
+                      onClick={() => setShowScheduleModal(true)}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Visit Campus
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tools & Tech Tab */}
@@ -736,10 +815,19 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
                   <Button 
                     size="lg" 
                     className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6"
-                    onClick={() => onNavigate('register')}
+                    onClick={() => setShowInquiryModal(true)}
                   >
                     Apply Now
                     <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                    onClick={() => setShowScheduleModal(true)}
+                  >
+                    <Calendar className="mr-2 w-5 h-5" />
+                    Schedule Visit
                   </Button>
                   <Button 
                     size="lg" 
@@ -783,6 +871,29 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Interactive Modals */}
+      <TradeInquiryModal
+        open={showInquiryModal}
+        onOpenChange={setShowInquiryModal}
+        tradeName="Software Development"
+        tradeColor="from-blue-500 to-indigo-500"
+        programs={programs.map(p => ({ level: p.level, duration: p.duration }))}
+      />
+
+      <TradeVideoModal
+        open={showVideoModal}
+        onOpenChange={setShowVideoModal}
+        videoUrl="https://example.com/sod-program-video"
+        title="Software Development Program Overview"
+      />
+
+      <ScheduleVisitModal
+        open={showScheduleModal}
+        onOpenChange={setShowScheduleModal}
+        tradeName="Software Development"
+        tradeColor="from-blue-500 to-indigo-500"
+      />
     </div>
   );
 };

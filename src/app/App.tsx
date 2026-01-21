@@ -20,6 +20,10 @@ import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
 import BDCTradePage from '@/app/pages/trades/BDCTradePage';
 import AUTTradePage from '@/app/pages/trades/AUTTradePage';
+import TradeDetailPage from '@/app/pages/TradeDetailPage';
+import FootballPage from '@/app/pages/sports/FootballPage';
+import VolleyballPage from '@/app/pages/sports/VolleyballPage';
+import BasketballPage from '@/app/pages/sports/BasketballPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
@@ -101,9 +105,9 @@ const AppContent: React.FC = () => {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       case 'sports':
-        return <SportsPage />;
+        return <SportsPage onNavigate={handleNavigate} />;
       case 'services':
-        return <ServicesPage />;
+        return <ServicesPage onNavigate={handleNavigate} />;
       case 'trades':
         return <TradesPage />;
       case 'trades-showcase':
@@ -114,6 +118,18 @@ const AppContent: React.FC = () => {
         return <BDCTradePage onNavigate={handleNavigate} />;
       case 'trade-aut':
         return <AUTTradePage onNavigate={handleNavigate} />;
+      case 'sport-football':
+        return <FootballPage onNavigate={handleNavigate} />;
+      case 'sport-volleyball':
+        return <VolleyballPage onNavigate={handleNavigate} />;
+      case 'sport-basketball':
+        return <BasketballPage onNavigate={handleNavigate} />;
+      case 'sport-athletics':
+        return <SportsPage onNavigate={handleNavigate} />;
+      case 'sport-handball':
+        return <SportsPage onNavigate={handleNavigate} />;
+      case 'sport-tennis':
+        return <SportsPage onNavigate={handleNavigate} />;
       case 'contactUs':
         return <ContactPage />;
       case 'supports':

@@ -21,12 +21,14 @@ import {
   Construction,
   Quote,
   MapPin,
-  Clock,
   Mail,
   Phone,
   ZoomIn,
   X,
-  Triangle
+  Triangle,
+  Play,
+  Calendar,
+  MessageCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -37,6 +39,14 @@ import { Progress } from '@/app/components/ui/progress';
 import { Dialog, DialogContent } from '@/app/components/ui/dialog';
 import { getTeachersByTrade } from '@/app/data/mockTeachers';
 import { mockStudents } from '@/app/data/mockStudents';
+import { 
+  TradeInquiryModal, 
+  TradeFAQSection, 
+  TradeVideoModal, 
+  TradeCurriculumTimeline,
+  TradePartnersSection,
+  ScheduleVisitModal 
+} from '@/app/components/trades';
 
 interface BDCTradePageProps {
   onNavigate: (page: string) => void;
@@ -46,6 +56,9 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const teachers = getTeachersByTrade('BDC');
   const students = mockStudents.filter(s => s.trade === 'BDC');
@@ -128,6 +141,44 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
     { label: 'Industry Partners', value: '20+', icon: Briefcase, color: 'from-purple-500 to-pink-500' }
   ];
 
+  const faqs = [
+    {
+      question: 'What are the admission requirements for BDC?',
+      answer: 'Applicants need a secondary school certificate with good grades in Mathematics and Physics. Physical fitness is beneficial for practical work on construction sites.'
+    },
+    {
+      question: 'Will I get hands-on construction experience?',
+      answer: 'Absolutely! Our program includes extensive practical training on real construction sites, workshops, and lab sessions with industry-standard equipment.'
+    },
+    {
+      question: 'What software tools will I learn?',
+      answer: 'You will master AutoCAD, Revit, SketchUp, and other industry-standard design and project management software used in modern construction.'
+    },
+    {
+      question: 'Are there site visit opportunities?',
+      answer: 'Yes, we organize regular visits to active construction sites with our industry partners to give students real-world exposure to construction projects.'
+    },
+    {
+      question: 'What safety training is included?',
+      answer: 'Comprehensive safety training is integrated throughout the program, including OSHA-equivalent certification, PPE usage, and site safety protocols.'
+    },
+    {
+      question: 'Can I specialize in a specific area?',
+      answer: 'Yes, at Level 5 you can choose specializations like Structural Engineering, Quantity Surveying, Project Management, or Sustainable Architecture.'
+    }
+  ];
+
+  const partners = [
+    { name: 'Rwanda Construction Co.', description: 'Leading construction company', type: 'employment' as const },
+    { name: 'BuildRight Ltd', description: 'Commercial construction specialists', type: 'training' as const },
+    { name: 'Caterpillar Rwanda', description: 'Heavy equipment supplier', type: 'equipment' as const },
+    { name: 'Kigali Builders', description: 'Residential construction leader', type: 'internship' as const },
+    { name: 'Civil Engineering Assoc.', description: 'Professional certification body', type: 'training' as const },
+    { name: 'ArchiDesign Studios', description: 'Architecture and design firm', type: 'internship' as const },
+    { name: 'Infrastructure Plus', description: 'Infrastructure development', type: 'employment' as const },
+    { name: 'GreenBuild Rwanda', description: 'Sustainable construction experts', type: 'equipment' as const }
+  ];
+
   const nextGalleryImage = () => {
     setCurrentGalleryIndex((prev) => (prev + 1) % gallery.length);
   };
@@ -174,7 +225,7 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
               <Button 
                 size="lg" 
                 className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-6"
-                onClick={() => onNavigate('register')}
+                onClick={() => setShowInquiryModal(true)}
               >
                 Enroll Now
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -183,8 +234,19 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
                 size="lg" 
                 variant="outline"
                 className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowVideoModal(true)}
               >
-                Download Brochure
+                <Play className="mr-2 w-5 h-5" />
+                Watch Video
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowScheduleModal(true)}
+              >
+                <Calendar className="mr-2 w-5 h-5" />
+                Schedule Visit
               </Button>
             </div>
           </motion.div>
@@ -382,43 +444,59 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* FAQ Section */}
+            <TradeFAQSection 
+              faqs={faqs}
+              accentColor="text-orange-600"
+              borderColor="border-orange-200"
+            />
+
+            {/* Industry Partners */}
+            <TradePartnersSection
+              partners={partners}
+              accentColor="text-orange-600"
+              borderColor="border-orange-200"
+              gradientColor="from-orange-500 to-red-500"
+            />
           </TabsContent>
 
           {/* Programs Tab */}
           <TabsContent value="programs" className="space-y-6">
-            {programs.map((program, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="border-2 border-orange-200 hover:shadow-xl transition-all">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-2xl">{program.level}</CardTitle>
-                        <CardDescription className="text-lg mt-2">{program.description}</CardDescription>
-                      </div>
-                      <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg px-4 py-2">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {program.duration}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <h4 className="font-bold text-gray-900 mb-3">Key Modules:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {program.modules.map((module, idx) => (
-                        <div key={idx} className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
-                          <p className="font-medium text-gray-900 text-sm">{module}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            <TradeCurriculumTimeline
+              programs={programs}
+              accentColor="text-orange-600"
+              borderColor="border-orange-200"
+              gradientColor="from-orange-500 to-red-500"
+            />
+
+            <Card className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-red-50">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">Ready to Build Your Career?</h3>
+                    <p className="text-gray-600">Choose your level and start your construction journey</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                      onClick={() => setShowInquiryModal(true)}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Inquire Now
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-orange-300 text-orange-700"
+                      onClick={() => setShowScheduleModal(true)}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Visit Campus
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tools & Equipment Tab */}
@@ -783,6 +861,29 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Interactive Modals */}
+      <TradeInquiryModal
+        open={showInquiryModal}
+        onOpenChange={setShowInquiryModal}
+        tradeName="Building & Construction"
+        tradeColor="from-orange-500 to-red-500"
+        programs={programs.map(p => ({ level: p.level, duration: p.duration }))}
+      />
+
+      <TradeVideoModal
+        open={showVideoModal}
+        onOpenChange={setShowVideoModal}
+        videoUrl="https://example.com/bdc-program-video"
+        title="Building & Construction Program Overview"
+      />
+
+      <ScheduleVisitModal
+        open={showScheduleModal}
+        onOpenChange={setShowScheduleModal}
+        tradeName="Building & Construction"
+        tradeColor="from-orange-500 to-red-500"
+      />
     </div>
   );
 };

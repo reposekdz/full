@@ -2,11 +2,19 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useAuth, UserRole } from '@/app/contexts/AuthContext';
-import { Lock, Mail, X, Shield, ChevronRight, Zap } from 'lucide-react';
-import { Dialog, DialogContent } from '@/app/components/ui/dialog';
+import { 
+  Lock, Mail, ChevronRight, Sparkles, Eye, EyeOff, ArrowLeft,
+  GraduationCap, Users, BookOpen, Shield, School, DollarSign, 
+  Package, Settings, User, Loader2, CheckCircle2, AlertCircle, KeyRound, X
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import { Badge } from '@/app/components/ui/badge';
+import { Alert, AlertDescription } from '@/app/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle
+ } from '@/app/components/ui/dialog';
 
 interface LoginPageProps {
   onNavigate: (page: string) => void;
@@ -14,287 +22,574 @@ interface LoginPageProps {
 
 const UNIFIED_EMAIL = 'reponse@gmail.com';
 const UNIFIED_PASSWORD = '2026';
+const MS_ACCESS_CODE = 'g@2026';
 
-const ROLES: { value: UserRole; label: string; icon: string; color: string; description: string }[] = [
-  { value: 'director_study', label: 'Director of Study', icon: '📚', color: 'from-blue-500 to-blue-600', description: 'Manage academic programs' },
-  { value: 'director_discipline', label: 'Director of Discipline', icon: '⚖️', color: 'from-purple-500 to-purple-600', description: 'Manage student conduct' },
-  { value: 'headmaster', label: 'Head Master', icon: '👔', color: 'from-indigo-500 to-indigo-600', description: 'Overall school management' },
-  { value: 'teacher', label: 'Teacher', icon: '🎓', color: 'from-green-500 to-green-600', description: 'Manage classes & grades' },
-  { value: 'accountant', label: 'Accountant', icon: '💰', color: 'from-yellow-500 to-yellow-600', description: 'Financial management' },
-  { value: 'stock_manager', label: 'Stock Manager', icon: '📦', color: 'from-orange-500 to-orange-600', description: 'Inventory management' },
-  { value: 'admin', label: 'Administrator', icon: '🔐', color: 'from-red-500 to-red-600', description: 'System administration' },
+// Public roles - Parents and Students
+const PUBLIC_ROLES: { value: UserRole; label: string; labelRw: string; icon: React.ElementType; color: string; bgGradient: string; description: string }[] = [
+  { value: 'student', label: 'Student', labelRw: 'Umunyeshuri', icon: User, color: 'from-blue-500 to-indigo-600', bgGradient: 'from-blue-50 to-indigo-50', description: 'Reba amanota n\'ibikorwa' },
+  { value: 'parent', label: 'Parent', labelRw: 'Umubyeyi', icon: Users, color: 'from-pink-500 to-rose-600', bgGradient: 'from-pink-50 to-rose-50', description: 'Kugenzura abana' },
+];
+
+// Management Staff roles - requires MS code
+const MANAGEMENT_ROLES: { value: UserRole; label: string; labelRw: string; icon: React.ElementType; color: string; bgGradient: string; description: string }[] = [
+  { value: 'teacher', label: 'Teacher', labelRw: 'Umwarimu', icon: GraduationCap, color: 'from-green-500 to-teal-600', bgGradient: 'from-green-50 to-teal-50', description: 'Gucunga amaklasi' },
+  { value: 'director_study', label: 'Director of Study', labelRw: "Umuyobozi w'Amasomo (DOS)", icon: BookOpen, color: 'from-yellow-500 to-amber-600', bgGradient: 'from-yellow-50 to-amber-50', description: 'Gucunga amasomo' },
+  { value: 'director_discipline', label: 'Director of Discipline', labelRw: "Umuyobozi w'Imyitwarire (DOD)", icon: Shield, color: 'from-red-500 to-orange-600', bgGradient: 'from-red-50 to-orange-50', description: 'Gucunga imyitwarire' },
+  { value: 'headmaster', label: 'Head Master', labelRw: 'Umuyobozi Mukuru', icon: School, color: 'from-purple-500 to-violet-600', bgGradient: 'from-purple-50 to-violet-50', description: 'Kugenzura ishuri' },
+  { value: 'accountant', label: 'Accountant', labelRw: 'Umubare', icon: DollarSign, color: 'from-emerald-500 to-green-600', bgGradient: 'from-emerald-50 to-green-50', description: 'Gucunga amafaranga' },
+  { value: 'stock_manager', label: 'Stock Manager', labelRw: "Umukozi w'Ububiko", icon: Package, color: 'from-cyan-500 to-blue-600', bgGradient: 'from-cyan-50 to-blue-50', description: 'Gucunga ibikoresho' },
+  { value: 'admin', label: 'Administrator', labelRw: 'Umuyobozi wa Sistema', icon: Settings, color: 'from-slate-500 to-gray-600', bgGradient: 'from-slate-50 to-gray-50', description: 'Gucunga sisitemu' },
 ];
 
 const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
-  const { t } = useLanguage();
-  const { login, loginWithRole } = useAuth();
+  const { language } = useLanguage();
+  const { loginWithRole, getRoleDashboard } = useAuth();
+  
+  // View states
+  const [step, setStep] = useState<'role-select' | 'login-form' | 'ms-roles'>('role-select');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  
+  // MS Code Modal
+  const [showMSModal, setShowMSModal] = useState(false);
+  const [msCode, setMSCode] = useState('');
+  const [msCodeError, setMSCodeError] = useState('');
+  
+  // Login form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showStaffModal, setShowStaffModal] = useState(false);
-  const [staffCode, setStaffCode] = useState('');
-  const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const selectedRoleData = [...PUBLIC_ROLES, ...MANAGEMENT_ROLES].find(r => r.value === selectedRole);
+
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    setStep('login-form');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleBackToRoles = () => {
+    setStep('role-select');
+    setSelectedRole(null);
+    setEmail('');
+    setPassword('');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleBackToMSRoles = () => {
+    setStep('ms-roles');
+    setSelectedRole(null);
+    setEmail('');
+    setPassword('');
+    setError('');
+    setSuccess('');
+  };
+
+  const handleMSCodeSubmit = () => {
+    if (msCode === MS_ACCESS_CODE) {
+      setShowMSModal(false);
+      setMSCode('');
+      setMSCodeError('');
+      setStep('ms-roles');
+    } else {
+      setMSCodeError(language === 'rw' ? 'Kode ntabwo ari yo' : 'Invalid access code');
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedRole) return;
+    
     setError('');
+    setSuccess('');
     setIsLoading(true);
-    const result = await login(email, password);
-    setIsLoading(false);
-    if (result.success && result.dashboardPage) {
-      onNavigate(result.dashboardPage);
-    } else {
-      setError('Invalid email or password');
+
+    try {
+      const result = await loginWithRole(selectedRole, {
+        email: email || UNIFIED_EMAIL,
+        password: password || UNIFIED_PASSWORD
+      });
+
+      if (result.success) {
+        setSuccess(language === 'rw' ? 'Kwinjira byagenze neza! Gutegereza...' : 'Login successful! Redirecting...');
+        setTimeout(() => {
+          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
+        }, 1500);
+      } else {
+        setError(language === 'rw' ? 'Email cyangwa ijambo ry\'ibanga sibyo' : 'Invalid email or password');
+      }
+    } catch (err) {
+      setError(language === 'rw' ? 'Hari ikibazo. Ongera ugerageze.' : 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleStaffCodeSubmit = () => {
-    if (staffCode === 'g@2026') {
-      setShowStaffModal(false);
-      setShowRoleSelection(true);
-      setStaffCode('');
-    } else {
-      setError('Invalid staff code');
+  const handleQuickLogin = async () => {
+    if (!selectedRole) return;
+    setEmail(UNIFIED_EMAIL);
+    setPassword(UNIFIED_PASSWORD);
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const result = await loginWithRole(selectedRole, {
+        email: UNIFIED_EMAIL,
+        password: UNIFIED_PASSWORD
+      });
+
+      if (result.success) {
+        setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
+        setTimeout(() => {
+          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
+        }, 1000);
+      } else {
+        setError(language === 'rw' ? 'Kwinjira byanze' : 'Login failed');
+      }
+    } catch (err) {
+      setError(language === 'rw' ? 'Hari ikibazo' : 'Error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRoleSelect = async (role: UserRole) => {
-    setSelectedRole(role);
-    setIsLoading(true);
-    const result = await login(UNIFIED_EMAIL, UNIFIED_PASSWORD);
-    setIsLoading(false);
-    if (result.success && result.dashboardPage) {
-      setShowRoleSelection(false);
-      onNavigate(result.dashboardPage);
-    } else {
-      setError('Login failed. Please try again.');
-    }
+  const renderRoleCard = (role: typeof PUBLIC_ROLES[0], index: number) => {
+    const Icon = role.icon;
+    return (
+      <motion.div
+        key={role.value}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        whileHover={{ scale: 1.03, y: -5 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <Card
+          onClick={() => handleRoleSelect(role.value)}
+          className={`cursor-pointer border-2 border-yellow-200 hover:border-green-400 transition-all duration-300 hover:shadow-xl bg-gradient-to-br ${role.bgGradient} overflow-hidden group`}
+        >
+          <CardContent className="p-5">
+            <motion.div
+              whileHover={{ rotate: 10, scale: 1.1 }}
+              className={`w-14 h-14 rounded-xl bg-gradient-to-br ${role.color} flex items-center justify-center shadow-lg mb-4`}
+            >
+              <Icon className="w-7 h-7 text-white" />
+            </motion.div>
+
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              {language === 'rw' ? role.labelRw : role.label}
+            </h3>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              {role.description}
+            </p>
+
+            <Button
+              className={`w-full bg-gradient-to-r ${role.color} text-white font-semibold shadow-md hover:shadow-lg transition-all group-hover:scale-[1.02]`}
+            >
+              {language === 'rw' ? 'Injira' : 'Login'}
+              <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white rounded-2xl shadow-2xl p-6 border-2 border-yellow-200">
-          <div className="text-center mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50/30 to-yellow-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Sparkles className="w-6 h-6 text-yellow-500" />
+            <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white px-4 py-1 font-semibold border-0">
+              Garden TVET
+            </Badge>
+            <Sparkles className="w-6 h-6 text-green-500" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent">
+            {step === 'role-select' 
+              ? (language === 'rw' ? 'Hitamo Uruhare Rwawe' : 'Select Your Role')
+              : step === 'ms-roles'
+              ? (language === 'rw' ? 'Abakozi b\'Ubuyobozi' : 'Management Staff')
+              : (language === 'rw' ? 'Kwinjira' : 'Login')
+            }
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {step === 'role-select' 
+              ? (language === 'rw' ? 'Kanda ku ruhare rwawe kugira ngo winjire' : 'Click on your role to login')
+              : step === 'ms-roles'
+              ? (language === 'rw' ? 'Hitamo uruhare rwawe rwo mu buyobozi' : 'Select your management role')
+              : (language === 'rw' ? 'Injiza email n\'ijambo ry\'ibanga' : 'Enter your credentials')
+            }
+          </p>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {/* Step 1: Public Role Selection (Student/Parent) */}
+          {step === 'role-select' && (
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring' }}
-              className="inline-block bg-gradient-to-r from-yellow-500 to-green-500 p-3 rounded-full mb-3 shadow-lg"
+              key="role-select"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95, x: -50 }}
+              transition={{ duration: 0.3 }}
             >
-              <Lock className="w-6 h-6 text-white" />
-            </motion.div>
-            <h1 className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-              {t('login')}
-            </h1>
-            <p className="text-gray-600 text-sm mt-1">Student & Parent Portal</p>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                {PUBLIC_ROLES.map((role, index) => renderRoleCard(role, index))}
+              </div>
 
-          <AnimatePresence>
-            {error && (
+              {/* MS Button - Small Interactive Button */}
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-4 p-3 bg-red-50 border-2 border-red-300 text-red-700 rounded-lg text-sm font-medium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex justify-center mt-8"
               >
-                {error}
+                <Button
+                  onClick={() => setShowMSModal(true)}
+                  variant="outline"
+                  className="border-2 border-purple-400 text-purple-700 hover:bg-purple-50 hover:border-purple-500 font-bold px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all"
+                >
+                  <KeyRound className="w-5 h-5 mr-2" />
+                  MS
+                  <Badge className="ml-2 bg-purple-100 text-purple-700 text-xs">
+                    {language === 'rw' ? 'Abakozi' : 'Staff'}
+                  </Badge>
+                </Button>
               </motion.div>
-            )}
-          </AnimatePresence>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="email" className="text-sm text-gray-700">{t('email')}</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9 h-10 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
-                  required
-                />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="text-center mt-8 space-y-3"
+              >
+                <Button
+                  variant="outline"
+                  onClick={() => onNavigate('home')}
+                  className="border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  {language === 'rw' ? 'Subira Ahabanza' : 'Back to Home'}
+                </Button>
+                
+                <p className="text-sm text-gray-500">
+                  {language === 'rw' ? "Nta konti ufite?" : "Don't have an account?"}{' '}
+                  <button
+                    onClick={() => onNavigate('register')}
+                    className="text-green-600 hover:text-green-700 font-semibold hover:underline"
+                  >
+                    {language === 'rw' ? 'Iyandikishe' : 'Register'}
+                  </button>
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Step: MS Role Selection (Management Staff) */}
+          {step === 'ms-roles' && (
+            <motion.div
+              key="ms-roles"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-4 flex justify-center"
+              >
+                <Button
+                  variant="ghost"
+                  onClick={handleBackToRoles}
+                  className="text-gray-600 hover:text-yellow-700 hover:bg-yellow-50"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  {language === 'rw' ? 'Subira ku ruhare' : 'Back to Roles'}
+                </Button>
+              </motion.div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {MANAGEMENT_ROLES.map((role, index) => renderRoleCard(role, index))}
               </div>
-            </div>
+            </motion.div>
+          )}
 
-            <div>
-              <Label htmlFor="password" className="text-sm text-gray-700">{t('password')}</Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
+          {/* Step 2: Login Form */}
+          {step === 'login-form' && selectedRoleData && (
+            <motion.div
+              key="login-form"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-md mx-auto"
+            >
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-4"
+              >
+                <Button
+                  variant="ghost"
+                  onClick={MANAGEMENT_ROLES.find(r => r.value === selectedRole) ? handleBackToMSRoles : handleBackToRoles}
+                  className="text-gray-600 hover:text-yellow-700 hover:bg-yellow-50"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  {language === 'rw' ? 'Subira ku ruhare' : 'Back to Roles'}
+                </Button>
+              </motion.div>
+
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-center mb-6"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 200 }}
+                  className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${selectedRoleData.color} flex items-center justify-center shadow-xl mb-4`}
+                >
+                  <selectedRoleData.icon className="w-10 h-10 text-white" />
+                </motion.div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {language === 'rw' ? selectedRoleData.labelRw : selectedRoleData.label}
+                </h2>
+                <p className="text-gray-500 text-sm">{selectedRoleData.description}</p>
+              </motion.div>
+
+              <Card className="border-2 border-yellow-200 shadow-xl overflow-hidden">
+                <CardHeader className={`bg-gradient-to-r ${selectedRoleData.bgGradient} pb-4`}>
+                  <CardTitle className="text-center text-lg text-gray-800">
+                    {language === 'rw' ? 'Kwinjira mu Sisitemu' : 'Login to Dashboard'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <AnimatePresence mode="wait">
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-4"
+                      >
+                        <Alert className="border-red-300 bg-red-50 text-red-800">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertDescription className="ml-2">{error}</AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+                    {success && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-4"
+                      >
+                        <Alert className="border-green-300 bg-green-50 text-green-800">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="ml-2">{success}</AlertDescription>
+                        </Alert>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-700 font-medium">
+                        {language === 'rw' ? 'Aderesi ya Email' : 'Email Address'}
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder={UNIFIED_EMAIL}
+                          className="pl-10 h-12 border-2 border-gray-200 focus:border-yellow-400 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-gray-700 font-medium">
+                        {language === 'rw' ? "Ijambo ry'ibanga" : 'Password'}
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="pl-10 pr-10 h-12 border-2 border-gray-200 focus:border-yellow-400 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className={`w-full h-12 bg-gradient-to-r ${selectedRoleData.color} text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-70`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          {language === 'rw' ? 'Gutegereza...' : 'Logging in...'}
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-5 h-5 mr-2" />
+                          {language === 'rw' ? 'Injira' : 'Login'}
+                        </>
+                      )}
+                    </Button>
+                  </form>
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleQuickLogin}
+                      disabled={isLoading}
+                      className="w-full h-10 border-2 border-green-400 text-green-700 hover:bg-green-50 font-semibold"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      {language === 'rw' ? 'Kwinjira Vuba' : 'Quick Login'}
+                    </Button>
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                      {language === 'rw' ? 'Koresha amazina y\'ibanze' : 'Use default credentials'}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 font-medium mb-2">
+                      {language === 'rw' ? 'Amazina y\'ibanze:' : 'Default Credentials:'}
+                    </p>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-500">Email:</span>
+                      <code className="bg-gray-200 px-2 py-1 rounded text-gray-700 text-xs">{UNIFIED_EMAIL}</code>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Password:</span>
+                      <code className="bg-gray-200 px-2 py-1 rounded text-gray-700 text-xs">{UNIFIED_PASSWORD}</code>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-sm text-gray-500 mt-4">
+                    {language === 'rw' ? "Nta konti ufite?" : "Don't have an account?"}{' '}
+                    <button
+                      onClick={() => onNavigate('register')}
+                      className="text-green-600 hover:text-green-700 font-semibold hover:underline"
+                    >
+                      {language === 'rw' ? 'Iyandikishe' : 'Register'}
+                    </button>
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* MS Access Code Modal */}
+      <Dialog open={showMSModal} onOpenChange={setShowMSModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold flex items-center justify-center gap-2">
+              <KeyRound className="w-6 h-6 text-purple-600" />
+              {language === 'rw' ? 'Kode y\'Abakozi' : 'Staff Access Code'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-center text-gray-600 text-sm">
+              {language === 'rw' 
+                ? 'Injiza kode yo kwinjira mu buyobozi' 
+                : 'Enter the management staff access code'}
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ms-code" className="text-gray-700 font-medium">
+                {language === 'rw' ? 'Kode' : 'Access Code'}
+              </Label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  id="password"
+                  id="ms-code"
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 h-10 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
-                  required
+                  value={msCode}
+                  onChange={(e) => {
+                    setMSCode(e.target.value);
+                    setMSCodeError('');
+                  }}
+                  placeholder="••••••"
+                  className="pl-10 h-12 border-2 border-purple-200 focus:border-purple-400 transition-colors text-center text-lg tracking-widest"
+                  onKeyDown={(e) => e.key === 'Enter' && handleMSCodeSubmit()}
                 />
               </div>
+              {msCodeError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-500 text-sm text-center"
+                >
+                  {msCodeError}
+                </motion.p>
+              )}
             </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold shadow-lg disabled:opacity-50"
-            >
-              {isLoading ? 'Signing in...' : t('signIn')}
-            </Button>
-          </form>
-
-          <div className="mt-4 pt-4 border-t border-yellow-200">
-            <Button
-              onClick={() => setShowStaffModal(true)}
-              variant="outline"
-              className="w-full h-10 border-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-bold"
-            >
-              <Shield className="w-4 h-4 mr-2" />
-              MS - Staff Login
-            </Button>
-          </div>
-
-          <div className="mt-3 text-center">
-            <button
-              onClick={() => onNavigate('register')}
-              className="text-sm text-yellow-700 hover:text-green-600 hover:underline font-medium"
-            >
-              Don't have an account? {t('register')}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Staff Code Modal */}
-      <Dialog open={showStaffModal} onOpenChange={setShowStaffModal}>
-        <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-yellow-50 border-2 border-yellow-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-black text-gray-800">Enter Staff Code</h2>
-            <button
-              onClick={() => setShowStaffModal(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="staffCode">Staff Code</Label>
-              <Input
-                id="staffCode"
-                type="password"
-                value={staffCode}
-                onChange={(e) => setStaffCode(e.target.value)}
-                placeholder="g@2026"
-                className="mt-1 border-yellow-200 focus:border-yellow-500"
-              />
-            </div>
-
-            <div className="flex space-x-2">
+            <div className="flex gap-3">
               <Button
-                onClick={() => setShowStaffModal(false)}
                 variant="outline"
+                onClick={() => {
+                  setShowMSModal(false);
+                  setMSCode('');
+                  setMSCodeError('');
+                }}
                 className="flex-1"
               >
-                Cancel
+                <X className="w-4 h-4 mr-2" />
+                {language === 'rw' ? 'Hagarika' : 'Cancel'}
               </Button>
               <Button
-                onClick={handleStaffCodeSubmit}
-                className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white"
+                onClick={handleMSCodeSubmit}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white"
               >
-                Submit
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                {language === 'rw' ? 'Emeza' : 'Verify'}
               </Button>
             </div>
+
+            <p className="text-xs text-center text-gray-400">
+              {language === 'rw' 
+                ? 'Kode: g@2026 (Demo)' 
+                : 'Code: g@2026 (Demo)'}
+            </p>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Role Selection Modal */}
-      <Dialog open={showRoleSelection} onOpenChange={setShowRoleSelection}>
-        <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white to-yellow-50 border-2 border-yellow-200 max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-black text-gray-800">Select Your Role</h2>
-            <button
-              onClick={() => setShowRoleSelection(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ROLES.map((role) => (
-              <motion.button
-                key={role.value}
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleRoleSelect(role.value)}
-                disabled={isLoading}
-                className={`p-4 rounded-xl border-2 transition-all text-left group ${
-                  selectedRole === role.value
-                    ? `bg-gradient-to-r ${role.color} border-transparent text-white`
-                    : 'bg-white border-gray-200 hover:border-yellow-400 hover:shadow-lg'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-3xl">{role.icon}</span>
-                  <ChevronRight className={`w-5 h-5 transition-all ${selectedRole === role.value ? 'text-white' : 'text-gray-400 group-hover:text-yellow-500'}`} />
-                </div>
-                <h3 className={`font-bold text-sm mb-1 ${selectedRole === role.value ? 'text-white' : 'text-gray-800'}`}>
-                  {role.label}
-                </h3>
-                <p className={`text-xs ${selectedRole === role.value ? 'text-white/80' : 'text-gray-600'}`}>
-                  {role.description}
-                </p>
-              </motion.button>
-            ))}
-          </div>
-
-          <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg flex items-start space-x-3">
-            <Zap className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-gray-800 text-sm">Unified Credentials</p>
-              <p className="text-xs text-gray-600 mt-1">Email: <span className="font-mono font-bold">{UNIFIED_EMAIL}</span></p>
-              <p className="text-xs text-gray-600">Password: <span className="font-mono font-bold">{UNIFIED_PASSWORD}</span></p>
-            </div>
-          </div>
-
-          <div className="flex space-x-2 mt-6">
-            <Button
-              onClick={() => setShowRoleSelection(false)}
-              variant="outline"
-              className="flex-1"
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => selectedRole && handleRoleSelect(selectedRole)}
-              className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white"
-              disabled={!selectedRole || isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Continue'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* MS Floating Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setShowStaffModal(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-yellow-500 to-green-500 text-white rounded-full shadow-2xl flex items-center justify-center font-black text-xl hover:shadow-3xl z-50"
-      >
-        MS
-      </motion.button>
     </div>
   );
 };

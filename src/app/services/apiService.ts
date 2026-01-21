@@ -184,6 +184,87 @@ class ApiService {
     });
   }
 
+  // Parent Management
+  async registerParent(parentData: any) {
+    return this.request('/parents/register', {
+      method: 'POST',
+      body: JSON.stringify(parentData)
+    });
+  }
+
+  async getParentChildren() {
+    return this.request('/parents/children');
+  }
+
+  async linkChild(studentCode: string, relationship: string) {
+    return this.request('/parents/link-child', {
+      method: 'POST',
+      body: JSON.stringify({ student_code: studentCode, relationship })
+    });
+  }
+
+  async getChildGrades(childId: number) {
+    return this.request(`/parents/children/${childId}/grades`);
+  }
+
+  async getChildAttendance(childId: number) {
+    return this.request(`/parents/children/${childId}/attendance`);
+  }
+
+  async getChildFees(childId: number) {
+    return this.request(`/parents/children/${childId}/fees`);
+  }
+
+  // Teacher Management
+  async getTeacherClasses() {
+    return this.request('/teachers/classes');
+  }
+
+  async getClassStudents(classId: number) {
+    return this.request(`/teachers/classes/${classId}/students`);
+  }
+
+  async submitGradesBulk(grades: any[]) {
+    return this.request('/teachers/grades/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ grades })
+    });
+  }
+
+  async markAttendanceBulk(attendance: any[], classId: number, subjectId: number, date: string) {
+    return this.request('/teachers/attendance/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ attendance, class_id: classId, subject_id: subjectId, attendance_date: date })
+    });
+  }
+
+  async getTeacherStatistics() {
+    return this.request('/teachers/statistics');
+  }
+
+  // Student Management
+  async getStudentDashboard() {
+    return this.request('/students/dashboard');
+  }
+
+  async getStudentGrades(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/students/grades?${query}`);
+  }
+
+  async getStudentAttendance(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/students/attendance?${query}`);
+  }
+
+  async getStudentTimetable() {
+    return this.request('/students/timetable');
+  }
+
+  async getStudentPerformance() {
+    return this.request('/students/performance');
+  }
+
   async getCourseByCode(code: string) {
     return this.request(`/academics/courses/code/${code}`);
   }

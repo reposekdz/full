@@ -21,13 +21,14 @@ import {
   Battery,
   Zap as Lightning,
   Quote,
-  MapPin,
-  Clock,
   Mail,
   Phone,
   ZoomIn,
   X,
-  Fuel
+  Fuel,
+  Play,
+  Calendar,
+  MessageCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -38,6 +39,14 @@ import { Progress } from '@/app/components/ui/progress';
 import { Dialog, DialogContent } from '@/app/components/ui/dialog';
 import { getTeachersByTrade } from '@/app/data/mockTeachers';
 import { mockStudents } from '@/app/data/mockStudents';
+import { 
+  TradeInquiryModal, 
+  TradeFAQSection, 
+  TradeVideoModal, 
+  TradeCurriculumTimeline,
+  TradePartnersSection,
+  ScheduleVisitModal 
+} from '@/app/components/trades';
 
 interface AUTTradePageProps {
   onNavigate: (page: string) => void;
@@ -47,6 +56,9 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const teachers = getTeachersByTrade('AUT');
   const students = mockStudents.filter(s => s.trade === 'AUT');
@@ -141,6 +153,44 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
     { label: 'Industry Partners', value: '15+', icon: Briefcase, color: 'from-purple-500 to-pink-500' }
   ];
 
+  const faqs = [
+    {
+      question: 'What vehicles will I work on during training?',
+      answer: 'You will work on a variety of vehicles including passenger cars, light trucks, and commercial vehicles. We also have dedicated EV and hybrid training vehicles.'
+    },
+    {
+      question: 'Do I need any prior mechanical experience?',
+      answer: 'No prior experience is required. Our Level 3 program starts from the fundamentals and progressively builds your skills to professional level.'
+    },
+    {
+      question: 'What certifications will I earn?',
+      answer: 'You will earn industry-recognized certifications including ASE-equivalent credentials, EV safety certification, and our TVET professional diploma.'
+    },
+    {
+      question: 'Is EV training included in the program?',
+      answer: 'Yes! Levels 5A and 5B focus extensively on electric vehicle technology, hybrid systems, and modern computer diagnostics.'
+    },
+    {
+      question: 'Will I learn about modern car computers?',
+      answer: 'Absolutely. You will learn OBD-II diagnostics, ECU programming, and advanced computer-based troubleshooting using industry-standard tools.'
+    },
+    {
+      question: 'Can I start my own auto repair business?',
+      answer: 'Yes! Our program includes business management and entrepreneurship training specifically designed to help graduates start their own workshops.'
+    }
+  ];
+
+  const partners = [
+    { name: 'Toyota Rwanda', description: 'Official Toyota dealership & service', type: 'employment' as const },
+    { name: 'CFAO Motors', description: 'Multi-brand automotive group', type: 'internship' as const },
+    { name: 'Bosch Diagnostics', description: 'Diagnostic equipment supplier', type: 'equipment' as const },
+    { name: 'EV Rwanda', description: 'Electric vehicle specialists', type: 'training' as const },
+    { name: 'AutoZone Partners', description: 'Parts and accessories supplier', type: 'equipment' as const },
+    { name: 'Kigali Motors', description: 'Premium auto service center', type: 'employment' as const },
+    { name: 'Tesla Service Center', description: 'EV service training partner', type: 'training' as const },
+    { name: 'Auto Excellence', description: 'Luxury vehicle specialist', type: 'internship' as const }
+  ];
+
   const nextGalleryImage = () => {
     setCurrentGalleryIndex((prev) => (prev + 1) % gallery.length);
   };
@@ -187,7 +237,7 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
               <Button 
                 size="lg" 
                 className="bg-white text-green-600 hover:bg-green-50 text-lg px-8 py-6"
-                onClick={() => onNavigate('register')}
+                onClick={() => setShowInquiryModal(true)}
               >
                 Enroll Now
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -196,8 +246,19 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
                 size="lg" 
                 variant="outline"
                 className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowVideoModal(true)}
               >
-                Download Brochure
+                <Play className="mr-2 w-5 h-5" />
+                Watch Video
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                onClick={() => setShowScheduleModal(true)}
+              >
+                <Calendar className="mr-2 w-5 h-5" />
+                Schedule Visit
               </Button>
             </div>
           </motion.div>
@@ -395,43 +456,59 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* FAQ Section */}
+            <TradeFAQSection 
+              faqs={faqs}
+              accentColor="text-green-600"
+              borderColor="border-green-200"
+            />
+
+            {/* Industry Partners */}
+            <TradePartnersSection
+              partners={partners}
+              accentColor="text-green-600"
+              borderColor="border-green-200"
+              gradientColor="from-green-500 to-teal-500"
+            />
           </TabsContent>
 
           {/* Programs Tab */}
           <TabsContent value="programs" className="space-y-6">
-            {programs.map((program, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="border-2 border-green-200 hover:shadow-xl transition-all">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-2xl">{program.level}</CardTitle>
-                        <CardDescription className="text-lg mt-2">{program.description}</CardDescription>
-                      </div>
-                      <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white text-lg px-4 py-2">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {program.duration}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <h4 className="font-bold text-gray-900 mb-3">Key Modules:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {program.modules.map((module, idx) => (
-                        <div key={idx} className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-3 border border-green-200">
-                          <p className="font-medium text-gray-900 text-sm">{module}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            <TradeCurriculumTimeline
+              programs={programs}
+              accentColor="text-green-600"
+              borderColor="border-green-200"
+              gradientColor="from-green-500 to-teal-500"
+            />
+
+            <Card className="border-2 border-green-200 bg-gradient-to-r from-green-50 to-teal-50">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">Ready to Get Started?</h3>
+                    <p className="text-gray-600">Choose your level and begin your automotive journey</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      className="bg-gradient-to-r from-green-500 to-teal-500 text-white"
+                      onClick={() => setShowInquiryModal(true)}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Inquire Now
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-green-300 text-green-700"
+                      onClick={() => setShowScheduleModal(true)}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Visit Campus
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tools & Equipment Tab */}
@@ -796,6 +873,29 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Interactive Modals */}
+      <TradeInquiryModal
+        open={showInquiryModal}
+        onOpenChange={setShowInquiryModal}
+        tradeName="Automobile Technology"
+        tradeColor="from-green-500 to-teal-500"
+        programs={programs.map(p => ({ level: p.level, duration: p.duration }))}
+      />
+
+      <TradeVideoModal
+        open={showVideoModal}
+        onOpenChange={setShowVideoModal}
+        videoUrl="https://example.com/aut-program-video"
+        title="Automobile Technology Program Overview"
+      />
+
+      <ScheduleVisitModal
+        open={showScheduleModal}
+        onOpenChange={setShowScheduleModal}
+        tradeName="Automobile Technology"
+        tradeColor="from-green-500 to-teal-500"
+      />
     </div>
   );
 };
