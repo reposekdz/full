@@ -35,6 +35,25 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import { mockStudents } from '@/app/data/mockStudents';
+import { Student, Conduct } from '@/app/types/student';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/app/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select';
+import { Label } from '@/app/components/ui/label';
+import { Textarea } from '@/app/components/ui/textarea';
 
 interface DirectorDisciplineDashboardProps {
   onNavigate: (page: string) => void;
@@ -43,6 +62,12 @@ interface DirectorDisciplineDashboardProps {
 
 const DirectorDisciplineDashboard: React.FC<DirectorDisciplineDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [students, setStudents] = useState<Student[]>(mockStudents);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isAddConductOpen, setIsAddConductOpen] = useState(false);
+  const [isRemoveConductOpen, setIsRemoveConductOpen] = useState(false);
+  const [selectedConduct, setSelectedConduct] = useState<Conduct | null>(null);
+  const [notifyParent, setNotifyParent] = useState(true);
 
   const stats = [
     {
@@ -236,6 +261,50 @@ const DirectorDisciplineDashboard: React.FC<DirectorDisciplineDashboardProps> = 
     { name: 'Grace Kayitesi', class: 'S2 B', points: 400, avatar: 'GK', rank: 5 },
   ];
 
+  const handleAddConduct = (student: Student) => {
+    setSelectedStudent(student);
+    setIsAddConductOpen(true);
+  };
+
+  const handleRemoveConduct = (student: Student, conduct: Conduct) => {
+    setSelectedStudent(student);
+    setSelectedConduct(conduct);
+    setIsRemoveConductOpen(true);
+  };
+
+  const confirmRemoveConduct = () => {
+    if (selectedStudent && selectedConduct) {
+      const updatedStudents = students.map(s => {
+        if (s.id === selectedStudent.id) {
+          return {
+            ...s,
+            conducts: s.conducts.filter(c => c.id !== selectedConduct.id)
+          };
+        }
+        return s;
+      });
+      setStudents(updatedStudents);
+      
+      if (notifyParent && selectedStudent.parent) {
+        alert(`Parent notification sent to ${selectedStudent.parent.name} (${selectedStudent.parent.phoneNumber})\n\nConduct record removed: ${selectedConduct.title}`);
+      }
+      
+      setIsRemoveConductOpen(false);
+      setSelectedConduct(null);
+      setSelectedStudent(null);
+    }
+  };
+
+  const confirmAddConduct = () => {
+    if (selectedStudent) {
+      if (notifyParent && selectedStudent.parent) {
+        alert(`Parent notification sent to ${selectedStudent.parent.name} (${selectedStudent.parent.phoneNumber})\n\nNew conduct record added for ${selectedStudent.name}`);
+      }
+      setIsAddConductOpen(false);
+      setSelectedStudent(null);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
       <LeftSidebar currentPage="dashboard" onNavigate={onNavigate} />
@@ -307,9 +376,12 @@ const DirectorDisciplineDashboard: React.FC<DirectorDisciplineDashboardProps> = 
           </motion.div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto bg-white border-2 border-yellow-200 p-1">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto bg-white border-2 border-yellow-200 p-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
+              </TabsTrigger>
+              <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Abanyeshuri
               </TabsTrigger>
               <TabsTrigger value="incidents" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Impamvu
@@ -432,6 +504,228 @@ const DirectorDisciplineDashboard: React.FC<DirectorDisciplineDashboardProps> = 
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Students Conduct Management Tab */}
+            <TabsContent value="students" className="space-y-6">
+              <Card className="border-2 border-yellow-200">
+                <CardHeader>
+                  <CardTitle>Gucunga Imyitwarire y'Abanyeshuri</CardTitle>
+                  <CardDescription>Ongeraho cyangwa ukuraho ibikubiye ku myitwarire y'abanyeshuri hanyuma ukumenyeshe ababyeyi</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-3">
+                      {students.map((student) => (
+                        <Card key={student.id} className="border-2 border-yellow-100 hover:border-yellow-300 hover:shadow-md transition-all">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-4">
+                                <Avatar className="h-12 w-12 border-2 border-yellow-400">
+                                  <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold">
+                                    {student.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h4 className="font-bold text-gray-900">{student.name}</h4>
+                                  <p className="text-sm text-gray-600">{student.studentCode}</p>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs">
+                                      {student.trade} - {student.level}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-4">
+                                <div className="text-center">
+                                  <p className="text-2xl font-black text-green-600">{student.behaviorScore}%</p>
+                                  <p className="text-xs text-gray-500">Imyitwarire</p>
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                                  onClick={() => handleAddConduct(student)}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Ongeraho
+                                </Button>
+                              </div>
+                            </div>
+
+                            {student.parent && (
+                              <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                <div className="flex items-center text-sm text-blue-700">
+                                  <Bell className="h-3 w-3 mr-1" />
+                                  <span className="font-medium">Umubyeyi: {student.parent.name} - {student.parent.phoneNumber}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {student.conducts.length > 0 && (
+                              <div>
+                                <h5 className="text-xs font-bold text-gray-700 mb-2">Ibikubiye ku Myitwarire:</h5>
+                                <div className="space-y-2">
+                                  {student.conducts.map((conduct) => (
+                                    <div key={conduct.id} className={`flex items-center justify-between p-2 rounded border ${
+                                      conduct.type === 'positive' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                                    }`}>
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2">
+                                          <Badge className={conduct.type === 'positive' ? 'bg-green-500' : 'bg-red-500'}>
+                                            {conduct.type}
+                                          </Badge>
+                                          <span className="font-medium text-sm">{conduct.title}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 mt-1">{conduct.description}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{conduct.date} - {conduct.reportedBy}</p>
+                                      </div>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="border-red-300 text-red-700 hover:bg-red-50"
+                                        onClick={() => handleRemoveConduct(student, conduct)}
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" />
+                                        Kuraho
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Add Conduct Dialog */}
+              <Dialog open={isAddConductOpen} onOpenChange={setIsAddConductOpen}>
+                <DialogContent className="max-w-2xl">
+                  {selectedStudent && (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>Ongeraho Ibikubiye ku Myitwarire - {selectedStudent.name}</DialogTitle>
+                        <DialogDescription>
+                          Uzuza amakuru yerekeye imyitwarire y'umunyeshuri
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Ubwoko</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Hitamo ubwoko" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="positive">Positive (Ibihembo)</SelectItem>
+                              <SelectItem value="negative">Negative (Ibihano)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Urwego</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Hitamo urwego" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Byoroshye</SelectItem>
+                              <SelectItem value="medium">Byiciriritse</SelectItem>
+                              <SelectItem value="high">Bikomeye</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Umutwe</Label>
+                          <Input placeholder="Ex: Gutinda mu ishuri" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Ibisobanuro</Label>
+                          <Textarea placeholder="Andika ibisobanuro birambuye..." rows={4} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Icyakozwe</Label>
+                          <Input placeholder="Ex: Verbal Warning" />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="notify"
+                            checked={notifyParent}
+                            onChange={(e) => setNotifyParent(e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                          <Label htmlFor="notify" className="cursor-pointer">
+                            Ohereza ubutumwa ku mubyeyi ({selectedStudent.parent?.phoneNumber || 'N/A'})
+                          </Label>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddConductOpen(false)}>
+                          Hagarika
+                        </Button>
+                        <Button 
+                          className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                          onClick={confirmAddConduct}
+                        >
+                          <Bell className="h-4 w-4 mr-2" />
+                          Bika & Kumenyesha
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              {/* Remove Conduct Dialog */}
+              <Dialog open={isRemoveConductOpen} onOpenChange={setIsRemoveConductOpen}>
+                <DialogContent>
+                  {selectedStudent && selectedConduct && (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>Kuraho Ibikubiye ku Myitwarire</DialogTitle>
+                        <DialogDescription>
+                          Uremeza neza ko ushaka gukuraho ibi bikubiye?
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="p-4 bg-gray-50 rounded border">
+                          <h4 className="font-bold">{selectedConduct.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{selectedConduct.description}</p>
+                          <p className="text-xs text-gray-500 mt-2">{selectedConduct.date}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="notify-remove"
+                            checked={notifyParent}
+                            onChange={(e) => setNotifyParent(e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                          <Label htmlFor="notify-remove" className="cursor-pointer">
+                            Kumenyesha umubyeyi ko ibi bikubiye byakuwemo ({selectedStudent.parent?.phoneNumber || 'N/A'})
+                          </Label>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsRemoveConductOpen(false)}>
+                          Hagarika
+                        </Button>
+                        <Button 
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          onClick={confirmRemoveConduct}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Kuraho
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="incidents" className="space-y-6">

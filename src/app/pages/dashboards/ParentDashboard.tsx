@@ -28,7 +28,10 @@ import {
   Mail,
   Send,
   UserCheck,
-  GraduationCap
+  GraduationCap,
+  UserPlus,
+  Trash2,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -36,8 +39,19 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import LeftSidebar from '@/app/components/LeftSidebar';
+import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import { mockStudents } from '@/app/data/mockStudents';
+import { Student } from '@/app/types/student';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/app/components/ui/dialog';
+import { Label } from '@/app/components/ui/label';
 
 interface ParentDashboardProps {
   onNavigate: (page: string) => void;
@@ -46,12 +60,66 @@ interface ParentDashboardProps {
 
 const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [connectedStudents, setConnectedStudents] = useState<Student[]>([]);
+  const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [studentCode, setStudentCode] = useState('');
+  const [connectionError, setConnectionError] = useState('');
+
+  const handleConnectStudent = () => {
+    setConnectionError('');
+    
+    const student = mockStudents.find(s => 
+      s.studentCode === studentCode && 
+      s.parent?.phoneNumber === phoneNumber
+    );
+
+    if (student) {
+      if (connectedStudents.some(cs => cs.id === student.id)) {
+        setConnectionError('Uyu mwana amaze guhuza!');
+        return;
+      }
+      setConnectedStudents([...connectedStudents, student]);
+      setIsConnectDialogOpen(false);
+      setPhoneNumber('');
+      setStudentCode('');
+    } else {
+      setConnectionError('Nimero ya telefone cyangwa code y\'umunyeshuri ntibashya. Gerageza ukundi.');
+    }
+  };
+
+  const handleDisconnectStudent = (studentId: string) => {
+    setConnectedStudents(connectedStudents.filter(s => s.id !== studentId));
+  };
+
+  const calculateStats = () => {
+    if (connectedStudents.length === 0) {
+      return {
+        totalStudents: 0,
+        avgPerformance: 0,
+        avgAttendance: 0,
+        totalFees: 0
+      };
+    }
+
+    const avgPerformance = connectedStudents.reduce((acc, s) => acc + (s.overallAverage || 0), 0) / connectedStudents.length;
+    const avgAttendance = connectedStudents.reduce((acc, s) => acc + (s.attendanceRate || 0), 0) / connectedStudents.length;
+
+    return {
+      totalStudents: connectedStudents.length,
+      avgPerformance: avgPerformance.toFixed(1),
+      avgAttendance: avgAttendance.toFixed(1),
+      totalFees: connectedStudents.length * 150000
+    };
+  };
+
+  const statsData = calculateStats();
 
   const stats = [
     {
       title: 'Abana',
-      value: '3',
-      change: 'Bose bariga',
+      value: statsData.totalStudents.toString(),
+      change: statsData.totalStudents > 0 ? 'Bahuye' : 'Nta mwana',
       trend: 'up',
       icon: Users,
       color: 'from-blue-500 to-indigo-500',
@@ -59,8 +127,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
     },
     {
       title: 'Impera Rusange',
-      value: '85.3%',
-      change: '+5.2%',
+      value: `${statsData.avgPerformance}%`,
+      change: statsData.avgPerformance > 80 ? 'Byiza cyane' : 'Komeza',
       trend: 'up',
       icon: TrendingUp,
       color: 'from-green-500 to-teal-500',
@@ -68,8 +136,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
     },
     {
       title: 'Kwitabira',
-      value: '94.5%',
-      change: '+2.1%',
+      value: `${statsData.avgAttendance}%`,
+      change: statsData.avgAttendance > 90 ? 'Byiza' : 'Kongera',
       trend: 'up',
       icon: Calendar,
       color: 'from-yellow-500 to-amber-500',
@@ -77,7 +145,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
     },
     {
       title: 'Amafaranga',
-      value: 'RWF 450K',
+      value: `RWF ${(statsData.totalFees / 1000).toFixed(0)}K`,
       change: 'Byishyuwe',
       trend: 'up',
       icon: DollarSign,
@@ -351,7 +419,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-white overflow-hidden">
-      <LeftSidebar currentPage="parent-dashboard" onNavigate={onNavigate} />
+      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
@@ -540,77 +608,122 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
             </TabsContent>
 
             <TabsContent value="children" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {children.map((child, index) => (
-                  <Card key={index} className="border-2 border-yellow-200 hover:shadow-xl transition-all">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col items-center text-center mb-4">
-                        <Avatar className="h-24 w-24 border-4 border-yellow-400 mb-3">
-                          <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-2xl font-bold">
-                            {child.avatar}
-                          </AvatarFallback>
-                        </Avatar>
-                        <h3 className="font-black text-gray-900 text-xl">{child.name}</h3>
-                        <Badge className="mt-2 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
-                          {child.class}
-                        </Badge>
-                      </div>
+              <Card className="border-2 border-yellow-200 mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Abana Bawe Bahuye</CardTitle>
+                    <Button 
+                      className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                      onClick={() => setIsConnectDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Huza Umwana
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Huza abana bawe ukoresheje nimero yawe ya telefone na code yabo
+                  </CardDescription>
+                </CardHeader>
+              </Card>
 
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between text-sm mb-2">
-                            <span className="text-gray-600">Imikorere</span>
-                            <span className="font-bold text-gray-900">{child.performance}%</span>
-                          </div>
-                          <div className="bg-gray-200 rounded-full h-3">
-                            <div
-                              className="bg-gradient-to-r from-yellow-500 to-green-500 h-3 rounded-full"
-                              style={{ width: `${child.performance}%` }}
-                            />
-                          </div>
+              {connectedStudents.length === 0 ? (
+                <Card className="border-2 border-yellow-200">
+                  <CardContent className="p-12 text-center">
+                    <LinkIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Nta mwana uhuye</h3>
+                    <p className="text-gray-600 mb-6">Kanda butoni "Huza Umwana" kugirango uhuze abana bawe</p>
+                    <Button 
+                      className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                      onClick={() => setIsConnectDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Huza Umwana Wambere
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {connectedStudents.map((student) => (
+                    <Card key={student.id} className="border-2 border-yellow-200 hover:shadow-xl transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col items-center text-center mb-4">
+                          <Avatar className="h-24 w-24 border-4 border-yellow-400 mb-3">
+                            <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-2xl font-bold">
+                              {student.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-black text-gray-900 text-xl">{student.name}</h3>
+                          <Badge className="mt-2 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
+                            {student.trade} - {student.level}
+                          </Badge>
+                          <p className="text-xs text-gray-600 mt-1">{student.studentCode}</p>
                         </div>
 
-                        <div>
-                          <div className="flex items-center justify-between text-sm mb-2">
-                            <span className="text-gray-600">Kwitabira</span>
-                            <span className="font-bold text-gray-900">{child.attendance}%</span>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="text-gray-600">Impera</span>
+                              <span className="font-bold text-gray-900">{student.overallAverage}%</span>
+                            </div>
+                            <div className="bg-gray-200 rounded-full h-3">
+                              <div
+                                className="bg-gradient-to-r from-yellow-500 to-green-500 h-3 rounded-full"
+                                style={{ width: `${student.overallAverage}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="bg-gray-200 rounded-full h-3">
-                            <div
-                              className="bg-gradient-to-r from-green-500 to-teal-500 h-3 rounded-full"
-                              style={{ width: `${child.attendance}%` }}
-                            />
+
+                          <div>
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className="text-gray-600">Kwitabira</span>
+                              <span className="font-bold text-gray-900">{student.attendanceRate}%</span>
+                            </div>
+                            <div className="bg-gray-200 rounded-full h-3">
+                              <div
+                                className="bg-gradient-to-r from-green-500 to-teal-500 h-3 rounded-full"
+                                style={{ width: `${student.attendanceRate}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-3 pt-4 border-t-2 border-yellow-100">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600">Imyitwarire</p>
+                              <p className="text-lg font-black text-gray-900">{student.behaviorScore}%</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600">Amanota</p>
+                              <p className="text-lg font-black text-gray-900">{student.grades.length}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600">Status</p>
+                              <Badge className={
+                                student.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              }>
+                                {student.status === 'active' ? 'Akora' : student.status}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-4">
+                            <Button className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:from-yellow-600 hover:to-green-600 border-0">
+                              <Eye className="h-4 w-4 mr-2" />
+                              Reba
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="border-red-300 text-red-700 hover:bg-red-50"
+                              onClick={() => handleDisconnectStudent(student.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-
-                        <div className="grid grid-cols-3 gap-3 pt-4 border-t-2 border-yellow-100">
-                          <div className="text-center">
-                            <p className="text-xs text-gray-600">Rank</p>
-                            <p className="text-lg font-black text-gray-900">{child.rank}/{child.totalStudents}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-600">Amasomo</p>
-                            <p className="text-lg font-black text-gray-900">{child.subjects}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-600">Status</p>
-                            <Badge className={
-                              child.status === 'excellent' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                            }>
-                              {child.status === 'excellent' ? 'Byiza' : 'Neza'}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <Button className="w-full bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:from-yellow-600 hover:to-green-600 border-0 mt-4">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Reba Byose
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="grades" className="space-y-6">
@@ -881,6 +994,73 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, onLogout 
           </div>
         </div>
       </div>
+
+      {/* Connect Student Dialog */}
+      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Huza Umwana Wawe</DialogTitle>
+            <DialogDescription>
+              Injiza nimero yawe ya telefone na code y'umwana wawe kugirango umuhuze
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Nimero ya Telefone Yawe</Label>
+              <Input
+                id="phone"
+                placeholder="+250788123456"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="border-2 border-yellow-200 focus:border-yellow-400"
+              />
+              <p className="text-xs text-gray-500">Injiza nimero ya telefone yamenyeshejwe ku ishuri</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="code">Code y'Umwana</Label>
+              <Input
+                id="code"
+                placeholder="SOD0012026"
+                value={studentCode}
+                onChange={(e) => setStudentCode(e.target.value)}
+                className="border-2 border-yellow-200 focus:border-yellow-400"
+              />
+              <p className="text-xs text-gray-500">Injiza code y'umwana wawe (Ex: SOD0012026)</p>
+            </div>
+            {connectionError && (
+              <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                <p className="text-sm text-red-700 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {connectionError}
+                </p>
+              </div>
+            )}
+            <div className="p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 flex items-center">
+                <CheckCircle2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                Nimero ya telefone igomba kuba imenyeshejwe ku ishuri nk'umubyeyi w'umwana
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsConnectDialogOpen(false);
+              setConnectionError('');
+              setPhoneNumber('');
+              setStudentCode('');
+            }}>
+              Hagarika
+            </Button>
+            <Button 
+              className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+              onClick={handleConnectStudent}
+            >
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Huza Umwana
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

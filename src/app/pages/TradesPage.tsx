@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Code, HardHat, Wrench, ArrowRight, X, Image as ImageIcon, Settings, Award } from 'lucide-react';
+import { Code, HardHat, Wrench, ArrowRight, X, Image as ImageIcon, Settings, Award, Sparkles, ZoomIn } from 'lucide-react';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
@@ -94,6 +94,8 @@ const trades: Trade[] = [
 
 const TradesPage: React.FC = () => {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
+  const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen py-20 px-4 bg-gradient-to-br from-gray-50 to-gray-100">
@@ -205,20 +207,46 @@ const TradesPage: React.FC = () => {
 
                 {/* Tools Tab */}
                 <TabsContent value="tools">
-                  <Card>
+                  <Card className="border-2 border-yellow-200">
                     <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Settings className="w-5 h-5 mr-2" />
+                      <CardTitle className="flex items-center text-2xl">
+                        <Wrench className="w-6 h-6 mr-2 text-yellow-600" />
                         Tools & Equipment
                       </CardTitle>
+                      <CardDescription>Professional equipment and software you'll master</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        {selectedTrade.tools.map((tool) => (
-                          <div key={tool} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                            <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                            <span className="font-medium">{tool}</span>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedTrade.tools.map((tool, index) => (
+                          <motion.div
+                            key={tool}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            onMouseEnter={() => setHoveredTool(tool)}
+                            onMouseLeave={() => setHoveredTool(null)}
+                            className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                              hoveredTool === tool 
+                                ? 'bg-gradient-to-r from-yellow-50 to-green-50 border-yellow-400 shadow-lg scale-105' 
+                                : 'bg-gray-50 border-gray-200 hover:border-yellow-300'
+                            }`}
+                          >
+                            <div className={`w-3 h-3 rounded-full transition-all ${
+                              hoveredTool === tool 
+                                ? 'bg-gradient-to-r from-yellow-500 to-green-500 animate-pulse' 
+                                : 'bg-yellow-500'
+                            }`} />
+                            <span className="font-bold text-gray-900">{tool}</span>
+                            {hoveredTool === tool && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="ml-auto"
+                              >
+                                <Sparkles className="w-5 h-5 text-yellow-500" />
+                              </motion.div>
+                            )}
+                          </motion.div>
                         ))}
                       </div>
                     </CardContent>
@@ -227,23 +255,43 @@ const TradesPage: React.FC = () => {
 
                 {/* Gallery Tab */}
                 <TabsContent value="gallery">
-                  <Card>
+                  <Card className="border-2 border-yellow-200">
                     <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <ImageIcon className="w-5 h-5 mr-2" />
+                      <CardTitle className="flex items-center text-2xl">
+                        <ImageIcon className="w-6 h-6 mr-2 text-yellow-600" />
                         Photo Gallery
                       </CardTitle>
+                      <CardDescription>Explore our facilities and student work</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {selectedTrade.gallery.map((img, index) => (
-                          <div key={index} className="aspect-video rounded-lg overflow-hidden">
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="aspect-video rounded-lg overflow-hidden relative group cursor-pointer border-2 border-transparent hover:border-yellow-400 transition-all"
+                            onClick={() => setSelectedGalleryImage(img)}
+                          >
                             <ImageWithFallback
                               src={img}
                               alt={`${selectedTrade.title} ${index + 1}`}
-                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
-                          </div>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                whileHover={{ scale: 1 }}
+                                className="bg-white/90 backdrop-blur-sm rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <ZoomIn className="w-6 h-6 text-gray-900" />
+                              </motion.div>
+                            </div>
+                            <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-green-500 text-white px-3 py-1 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                              Click to expand
+                            </div>
+                          </motion.div>
                         ))}
                       </div>
                     </CardContent>
@@ -283,6 +331,33 @@ const TradesPage: React.FC = () => {
                 </Button>
               </div>
             </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Gallery Image Modal */}
+      <Dialog open={!!selectedGalleryImage} onOpenChange={() => setSelectedGalleryImage(null)}>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden">
+          {selectedGalleryImage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative"
+            >
+              <ImageWithFallback
+                src={selectedGalleryImage}
+                alt="Gallery Image"
+                className="w-full h-auto max-h-[85vh] object-contain"
+              />
+              <Button
+                variant="outline"
+                className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm hover:bg-white"
+                onClick={() => setSelectedGalleryImage(null)}
+                size="icon"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </motion.div>
           )}
         </DialogContent>
       </Dialog>

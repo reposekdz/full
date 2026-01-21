@@ -39,7 +39,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import LeftSidebar from '@/app/components/LeftSidebar';
+import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 
 interface StudentDashboardProps {
@@ -402,7 +402,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-yellow-50/30 to-green-50/30 overflow-hidden">
-      <LeftSidebar currentPage="student-dashboard" onNavigate={onNavigate} />
+      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-gradient-to-r from-yellow-500 via-green-500 to-teal-500 text-white shadow-xl">

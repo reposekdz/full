@@ -3,7 +3,7 @@ import { Student, TradeInfo } from '@/app/types/student';
 export const mockStudents: Student[] = [
   {
     id: '1',
-    studentCode: 'SOD-L3-001',
+    studentCode: 'SOD0012026',
     name: 'Jean Mugisha',
     email: 'jean.mugisha@student.com',
     dateOfBirth: '2005-03-15',
@@ -37,7 +37,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '2',
-    studentCode: 'SOD-L4-015',
+    studentCode: 'SOD0152026',
     name: 'Marie Uwase',
     email: 'marie.uwase@student.com',
     dateOfBirth: '2004-07-22',
@@ -66,7 +66,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '3',
-    studentCode: 'BDC-L3-008',
+    studentCode: 'BDC0082026',
     name: 'Patrick Nkusi',
     email: 'patrick.nkusi@student.com',
     dateOfBirth: '2005-11-08',
@@ -95,7 +95,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '4',
-    studentCode: 'BDC-L5-025',
+    studentCode: 'BDC0252026',
     name: 'Alice Umutoni',
     email: 'alice.umutoni@student.com',
     dateOfBirth: '2003-02-14',
@@ -126,7 +126,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '5',
-    studentCode: 'AUT-L3-012',
+    studentCode: 'AUT0122026',
     name: 'Eric Habimana',
     email: 'eric.habimana@student.com',
     dateOfBirth: '2005-05-30',
@@ -155,7 +155,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '6',
-    studentCode: 'AUT-L4A-020',
+    studentCode: 'AUT0202026',
     name: 'Grace Mutesi',
     email: 'grace.mutesi@student.com',
     dateOfBirth: '2004-09-12',
@@ -184,7 +184,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '7',
-    studentCode: 'AUT-L5B-030',
+    studentCode: 'AUT0302026',
     name: 'Samuel Uwimana',
     email: 'samuel.uwimana@student.com',
     dateOfBirth: '2003-12-05',
@@ -215,7 +215,7 @@ export const mockStudents: Student[] = [
   },
   {
     id: '8',
-    studentCode: 'SOD-L5-040',
+    studentCode: 'SOD0402026',
     name: 'Divine Ishimwe',
     email: 'divine.ishimwe@student.com',
     dateOfBirth: '2003-04-18',

@@ -22,6 +22,7 @@ import { Switch } from '@/app/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
+import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -55,7 +56,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
+      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
+      
+      <div className="flex-1 overflow-auto">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -414,6 +418,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
             </ScrollArea>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

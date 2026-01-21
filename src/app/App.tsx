@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
-import { AuthProvider, useAuth } from '@/app/contexts/AuthContext';
+import { AuthProvider, useAuth, UserRole } from '@/app/contexts/AuthContext';
 import Header from '@/app/components/Header';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
@@ -12,6 +12,11 @@ import TeamsPage from '@/app/pages/TeamsPage';
 import LoginPage from '@/app/pages/LoginPage';
 import RegisterPage from '@/app/pages/RegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
+import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
+import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
+import SODTradePage from '@/app/pages/trades/SODTradePage';
+import BDCTradePage from '@/app/pages/trades/BDCTradePage';
+import AUTTradePage from '@/app/pages/trades/AUTTradePage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
@@ -25,7 +30,7 @@ import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
-  const { user, logout } = useAuth();
+  const { user, logout, login } = useAuth();
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -59,9 +64,14 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleRoleSelect = async (role: UserRole) => {
+    await login('demo@school.com', 'password', role);
+    handleNavigate(`dashboard-${role}`);
+  };
+
   const renderPage = () => {
     // If user is logged in, show their dashboard
-    if (user && !['home', 'sports', 'services', 'trades', 'contactUs', 'supports', 'teams'].includes(currentPage)) {
+    if (user && !['home', 'sports', 'services', 'trades', 'contactUs', 'supports', 'teams', 'trades-showcase', 'trade-sod', 'trade-bdc', 'trade-aut', 'search'].includes(currentPage)) {
       return renderDashboard();
     }
 
@@ -74,6 +84,14 @@ const AppContent: React.FC = () => {
         return <ServicesPage />;
       case 'trades':
         return <TradesPage />;
+      case 'trades-showcase':
+        return <TradesShowcasePage onNavigate={handleNavigate} />;
+      case 'trade-sod':
+        return <SODTradePage onNavigate={handleNavigate} />;
+      case 'trade-bdc':
+        return <BDCTradePage onNavigate={handleNavigate} />;
+      case 'trade-aut':
+        return <AUTTradePage onNavigate={handleNavigate} />;
       case 'contactUs':
         return <ContactPage />;
       case 'supports':
@@ -84,6 +102,8 @@ const AppContent: React.FC = () => {
         return <LoginPage onNavigate={handleNavigate} />;
       case 'register':
         return <RegisterPage onNavigate={handleNavigate} />;
+      case 'role-selection':
+        return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       case 'search':
         return <SearchPage onNavigate={handleNavigate} />;
       default:

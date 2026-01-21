@@ -482,16 +482,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                         <Button
                           variant="ghost"
                           onClick={() => {
-                            if (hasSubItems) {
-                              setExpandedNavItems(prev =>
-                                isExpanded
-                                  ? prev.filter(k => k !== item.key)
-                                  : [...prev, item.key]
-                              );
-                            } else {
-                              onNavigate(item.key);
-                              setIsSidebarOpen(false);
-                            }
+                            onNavigate(item.key);
+                            setIsSidebarOpen(false);
                           }}
                           className={`w-full justify-between px-3 py-2 ${
                             currentPage === item.key

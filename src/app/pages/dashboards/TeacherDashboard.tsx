@@ -34,7 +34,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import LeftSidebar from '@/app/components/LeftSidebar';
+import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 
 interface TeacherDashboardProps {
@@ -294,8 +294,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
   ];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
-      <LeftSidebar currentPage="dashboard" onNavigate={onNavigate} />
+    <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100 overflow-hidden">
+      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
       <div className="flex-1 overflow-auto">
         <div className="p-8">
