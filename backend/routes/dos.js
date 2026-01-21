@@ -5,209 +5,173 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ============ STUDENTS MANAGEMENT ============
-
 // Get all students with filters
-router.get('/students', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+router.get('/students', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
   try {
-    const { class_id, level_id, trade_id, search, status } = req.query;
+    const { trade, level, search, limit = 50, offset = 0 } = req.query;
     let query = `
-      SELECT u.*, c.name as class_name, l.name as level_name, t.name as trade_name
+      SELECT u.*, r.name as role_name,
+        (SELECT AVG(g.obtained_marks/g.max_marks * 100) FROM grades g WHERE g.student_id = u.id) as average_grade,
+        (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id AND a.status = 'present') as present_count,
+        (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id) as total_attendance
       FROM users u
-      LEFT JOIN classes c ON u.class_id = c.id
-      LEFT JOIN levels l ON u.level_id = l.id
-      LEFT JOIN trades t ON u.trade_id = t.id
-      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'student')
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE r.name = 'student' AND u.is_active = true
     `;
     const params = [];
 
-    if (class_id) {
-      query += ' AND u.class_id = ?';
-      params.push(class_id);
+    if (trade) {
+      query += ' AND u.student_id LIKE ?';
+      params.push(`%${trade}%`);
     }
-    if (level_id) {
-      query += ' AND u.level_id = ?';
-      params.push(level_id);
-    }
-    if (trade_id) {
-      query += ' AND u.trade_id = ?';
-      params.push(trade_id);
+    if (level) {
+      query += ' AND u.student_id LIKE ?';
+      params.push(`%${level}%`);
     }
     if (search) {
-      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.student_id LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-    if (status) {
-      query += ' AND u.is_active = ?';
-      params.push(status === 'active' ? 1 : 0);
+      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR u.student_id LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    query += ' ORDER BY u.first_name ASC';
+    query += ' ORDER BY u.last_name, u.first_name LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
     const [students] = await pool.execute(query, params);
+    const [total] = await pool.execute('SELECT COUNT(*) as count FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE r.name = "student" AND u.is_active = true');
 
-    res.json({ success: true, students });
+    res.json({ success: true, data: { students, total: total[0].count } });
   } catch (error) {
     console.error('Get students error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get student details
-router.get('/students/:id', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+// Assign teacher to class
+router.post('/assign-teacher', [
+  authenticateToken,
+  requireRole('director_study', 'admin', 'super_admin'),
+  body('teacher_id').isInt().withMessage('Valid teacher ID required'),
+  body('class_id').isInt().withMessage('Valid class ID required')
+], async (req, res) => {
   try {
-    const [student] = await pool.execute(`
-      SELECT u.*, c.name as class_name, l.name as level_name, t.name as trade_name
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { teacher_id, class_id } = req.body;
+
+    await pool.execute('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, class_id]);
+
+    res.json({ success: true, message: 'Teacher assigned successfully' });
+  } catch (error) {
+    console.error('Assign teacher error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Create/Update timetable
+router.post('/timetable', [
+  authenticateToken,
+  requireRole('director_study', 'admin', 'super_admin'),
+  body('class_id').isInt().withMessage('Valid class ID required'),
+  body('subject_id').isInt().withMessage('Valid subject ID required'),
+  body('teacher_id').isInt().withMessage('Valid teacher ID required'),
+  body('day_of_week').notEmpty().withMessage('Day of week required'),
+  body('start_time').notEmpty().withMessage('Start time required'),
+  body('end_time').notEmpty().withMessage('End time required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number } = req.body;
+
+    const [result] = await pool.execute(`
+      INSERT INTO timetable (class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE teacher_id = ?, start_time = ?, end_time = ?, room_number = ?
+    `, [class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number, teacher_id, start_time, end_time, room_number]);
+
+    res.json({ success: true, message: 'Timetable updated successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Update timetable error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get performance analytics
+router.get('/analytics/performance', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { trade, level, period = 'month' } = req.query;
+
+    const [overallStats] = await pool.execute(`
+      SELECT 
+        COUNT(DISTINCT u.id) as total_students,
+        AVG(g.obtained_marks/g.max_marks * 100) as average_performance,
+        COUNT(DISTINCT g.id) as total_assessments,
+        (SELECT COUNT(*) FROM attendance WHERE status = 'present') / (SELECT COUNT(*) FROM attendance) * 100 as attendance_rate
       FROM users u
-      LEFT JOIN classes c ON u.class_id = c.id
-      LEFT JOIN levels l ON u.level_id = l.id
-      LEFT JOIN trades t ON u.trade_id = t.id
-      WHERE u.id = ? AND u.role_id = (SELECT id FROM roles WHERE name = 'student')
-    `, [req.params.id]);
+      LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN grades g ON u.id = g.student_id
+      WHERE r.name = 'student' AND u.is_active = true
+    `);
 
-    if (student.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
+    const [tradePerformance] = await pool.execute(`
+      SELECT 
+        SUBSTRING(u.student_id, 5, 3) as trade_code,
+        COUNT(DISTINCT u.id) as student_count,
+        AVG(g.obtained_marks/g.max_marks * 100) as average_grade
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN grades g ON u.id = g.student_id
+      WHERE r.name = 'student' AND u.is_active = true
+      GROUP BY trade_code
+    `);
 
-    res.json({ success: true, student: student[0] });
+    const [levelPerformance] = await pool.execute(`
+      SELECT 
+        SUBSTRING(u.student_id, 8, 2) as level,
+        COUNT(DISTINCT u.id) as student_count,
+        AVG(g.obtained_marks/g.max_marks * 100) as average_grade
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      LEFT JOIN grades g ON u.id = g.student_id
+      WHERE r.name = 'student' AND u.is_active = true
+      GROUP BY level
+    `);
+
+    res.json({
+      success: true,
+      analytics: {
+        overall: overallStats[0],
+        by_trade: tradePerformance,
+        by_level: levelPerformance
+      }
+    });
   } catch (error) {
-    console.error('Get student error:', error);
+    console.error('Get analytics error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Update student
-router.put('/students/:id', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('first_name').optional().notEmpty(),
-  body('last_name').optional().notEmpty(),
-  body('class_id').optional().isInt(),
-  body('level_id').optional().isInt(),
-  body('trade_id').optional().isInt()
-], async (req, res) => {
+// Get all trades with levels
+router.get('/trades', authenticateToken, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
+    const [trades] = await pool.execute(`
+      SELECT DISTINCT
+        SUBSTRING(student_id, 5, 3) as trade_code,
+        SUBSTRING(student_id, 8, 2) as level,
+        COUNT(*) as student_count
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE r.name = 'student' AND u.is_active = true AND student_id IS NOT NULL
+      GROUP BY trade_code, level
+      ORDER BY trade_code, level
+    `);
 
-    const { first_name, last_name, class_id, level_id, trade_id } = req.body;
-    const updateFields = [];
-    const updateValues = [];
-
-    if (first_name) {
-      updateFields.push('first_name = ?');
-      updateValues.push(first_name);
-    }
-    if (last_name) {
-      updateFields.push('last_name = ?');
-      updateValues.push(last_name);
-    }
-    if (class_id) {
-      updateFields.push('class_id = ?');
-      updateValues.push(class_id);
-    }
-    if (level_id) {
-      updateFields.push('level_id = ?');
-      updateValues.push(level_id);
-    }
-    if (trade_id) {
-      updateFields.push('trade_id = ?');
-      updateValues.push(trade_id);
-    }
-
-    if (updateFields.length === 0) {
-      return res.status(400).json({ success: false, message: 'No fields to update' });
-    }
-
-    updateValues.push(req.params.id);
-    await pool.execute(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
-
-    res.json({ success: true, message: 'Student updated successfully' });
-  } catch (error) {
-    console.error('Update student error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ CLASSES MANAGEMENT ============
-
-router.get('/classes', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const [classes] = await pool.execute('SELECT * FROM classes ORDER BY name ASC');
-    res.json({ success: true, classes });
-  } catch (error) {
-    console.error('Get classes error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-router.post('/classes', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('name').notEmpty().withMessage('Class name is required'),
-  body('level_id').isInt().withMessage('Level is required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { name, level_id, capacity } = req.body;
-    const [result] = await pool.execute(
-      'INSERT INTO classes (name, level_id, capacity) VALUES (?, ?, ?)',
-      [name, level_id, capacity || 50]
-    );
-
-    res.status(201).json({ success: true, message: 'Class created', id: result.insertId });
-  } catch (error) {
-    console.error('Create class error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ LEVELS MANAGEMENT ============
-
-router.get('/levels', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const [levels] = await pool.execute('SELECT * FROM levels ORDER BY name ASC');
-    res.json({ success: true, levels });
-  } catch (error) {
-    console.error('Get levels error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-router.post('/levels', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('name').notEmpty().withMessage('Level name is required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { name, description } = req.body;
-    const [result] = await pool.execute(
-      'INSERT INTO levels (name, description) VALUES (?, ?)',
-      [name, description || '']
-    );
-
-    res.status(201).json({ success: true, message: 'Level created', id: result.insertId });
-  } catch (error) {
-    console.error('Create level error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ TRADES MANAGEMENT ============
-
-router.get('/trades', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const [trades] = await pool.execute('SELECT * FROM trades ORDER BY name ASC');
     res.json({ success: true, trades });
   } catch (error) {
     console.error('Get trades error:', error);
@@ -215,166 +179,21 @@ router.get('/trades', authenticateToken, requireRole('director_discipline'), asy
   }
 });
 
-router.post('/trades', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('name').notEmpty().withMessage('Trade name is required')
-], async (req, res) => {
+// Get DOS dashboard statistics
+router.get('/dashboard-stats', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { name, description, code } = req.body;
-    const [result] = await pool.execute(
-      'INSERT INTO trades (name, description, code) VALUES (?, ?, ?)',
-      [name, description || '', code || '']
-    );
-
-    res.status(201).json({ success: true, message: 'Trade created', id: result.insertId });
-  } catch (error) {
-    console.error('Create trade error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ TEACHERS MANAGEMENT ============
-
-router.get('/teachers', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const [teachers] = await pool.execute(`
-      SELECT u.*, GROUP_CONCAT(c.name) as classes
-      FROM users u
-      LEFT JOIN class_teachers ct ON u.id = ct.teacher_id
-      LEFT JOIN classes c ON ct.class_id = c.id
-      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'teacher')
-      GROUP BY u.id
-      ORDER BY u.first_name ASC
+    const [stats] = await pool.execute(`
+      SELECT 
+        (SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'student' AND u.is_active = true) as total_students,
+        (SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'teacher' AND u.is_active = true) as total_teachers,
+        (SELECT COUNT(*) FROM classes WHERE is_active = true) as total_classes,
+        (SELECT AVG(obtained_marks/max_marks * 100) FROM grades) as average_performance,
+        (SELECT COUNT(*) FROM timetable) as timetable_entries
     `);
 
-    res.json({ success: true, teachers });
+    res.json({ success: true, statistics: stats[0] });
   } catch (error) {
-    console.error('Get teachers error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-router.post('/teachers/:id/assign-class', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('class_id').isInt().withMessage('Class is required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { class_id } = req.body;
-    await pool.execute(
-      'INSERT INTO class_teachers (teacher_id, class_id) VALUES (?, ?)',
-      [req.params.id, class_id]
-    );
-
-    res.json({ success: true, message: 'Teacher assigned to class' });
-  } catch (error) {
-    console.error('Assign teacher error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ CONDUCT RECORDS ============
-
-router.get('/conduct-records', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const { student_id, type, status } = req.query;
-    let query = `
-      SELECT cr.*, u.first_name, u.last_name, u.student_id
-      FROM conduct_records cr
-      JOIN users u ON cr.student_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (student_id) {
-      query += ' AND cr.student_id = ?';
-      params.push(student_id);
-    }
-    if (type) {
-      query += ' AND cr.type = ?';
-      params.push(type);
-    }
-    if (status) {
-      query += ' AND cr.status = ?';
-      params.push(status);
-    }
-
-    query += ' ORDER BY cr.created_at DESC';
-    const [records] = await pool.execute(query, params);
-
-    res.json({ success: true, records });
-  } catch (error) {
-    console.error('Get conduct records error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-router.post('/conduct-records', [
-  authenticateToken,
-  requireRole('director_discipline'),
-  body('student_id').isInt().withMessage('Student is required'),
-  body('type').notEmpty().withMessage('Type is required'),
-  body('description').notEmpty().withMessage('Description is required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
-    }
-
-    const { student_id, type, description, severity } = req.body;
-    const [result] = await pool.execute(
-      'INSERT INTO conduct_records (student_id, type, description, severity, status) VALUES (?, ?, ?, ?, ?)',
-      [student_id, type, description, severity || 'medium', 'open']
-    );
-
-    res.status(201).json({ success: true, message: 'Conduct record created', id: result.insertId });
-  } catch (error) {
-    console.error('Create conduct record error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ ANALYTICS ============
-
-router.get('/analytics/overview', authenticateToken, requireRole('director_discipline'), async (req, res) => {
-  try {
-    const [totalStudents] = await pool.execute(
-      'SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "student")'
-    );
-
-    const [totalTeachers] = await pool.execute(
-      'SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "teacher")'
-    );
-
-    const [conductIssues] = await pool.execute(
-      'SELECT COUNT(*) as count FROM conduct_records WHERE status = "open"'
-    );
-
-    const [classes] = await pool.execute('SELECT COUNT(*) as count FROM classes');
-
-    res.json({
-      success: true,
-      analytics: {
-        totalStudents: totalStudents[0].count,
-        totalTeachers: totalTeachers[0].count,
-        openConductIssues: conductIssues[0].count,
-        totalClasses: classes[0].count
-      }
-    });
-  } catch (error) {
-    console.error('Get analytics error:', error);
+    console.error('Get dashboard stats error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

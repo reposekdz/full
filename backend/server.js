@@ -39,6 +39,7 @@ app.use('/api/parents', require('./routes/parents'));
 app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/dos', require('./routes/dos'));
+app.use('/api/dos', require('./routes/dos'));
 app.use('/api/dos', require('./controllers/dosController'));
 app.use('/api/dos-enhanced', require('./routes/enhanced-dos'));
 app.use('/api/role-auth', require('./routes/role-auth'));

@@ -265,6 +265,39 @@ class ApiService {
     return this.request('/students/performance');
   }
 
+  // DOS Management - Full Operations
+  async getDOSStudents(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dos/students?${query}`);
+  }
+
+  async assignTeacherToClass(teacherId: number, classId: number) {
+    return this.request('/dos/assign-teacher', {
+      method: 'POST',
+      body: JSON.stringify({ teacher_id: teacherId, class_id: classId })
+    });
+  }
+
+  async createTimetableEntry(timetableData: any) {
+    return this.request('/dos/timetable', {
+      method: 'POST',
+      body: JSON.stringify(timetableData)
+    });
+  }
+
+  async getDOSAnalytics(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dos/analytics/performance?${query}`);
+  }
+
+  async getDOSTrades() {
+    return this.request('/dos/trades');
+  }
+
+  async getDOSDashboardStats() {
+    return this.request('/dos/dashboard-stats');
+  }
+
   async getCourseByCode(code: string) {
     return this.request(`/academics/courses/code/${code}`);
   }
