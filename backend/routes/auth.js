@@ -58,8 +58,8 @@ router.post('/login', [
             username: user.username,
             email: user.email,
             role: user.role,
-            first_name: user.username,
-            last_name: '',
+            first_name: user.first_name || user.username,
+            last_name: user.last_name || '',
             user_type: 'admin'
           }
         });
@@ -68,9 +68,9 @@ router.post('/login', [
 
     // If not found in admin_users, try users table
     const [users] = await pool.execute(`
-      SELECT u.*, r.name as role_name 
+      SELECT u.*, COALESCE(r.name, u.role) as role_name 
       FROM users u 
-      JOIN roles r ON u.role_id = r.id 
+      LEFT JOIN roles r ON u.role_id = r.id 
       WHERE (u.username = ? OR u.email = ?) AND u.is_active = true
     `, [username, username]);
 
@@ -221,23 +221,21 @@ router.get('/me', authenticateToken, async (req, res) => {
 
     // Try admin_users first
     const [adminUsers] = await pool.execute(
-      'SELECT id, username, email, role FROM admin_users WHERE id = ?',
+      'SELECT id, username, email, role, first_name, last_name FROM admin_users WHERE id = ?',
       [req.user.id]
     );
 
     if (adminUsers.length > 0) {
       user = {
         ...adminUsers[0],
-        first_name: adminUsers[0].username,
-        last_name: '',
         user_type: 'admin'
       };
     } else {
       // Try users table
       const [users] = await pool.execute(`
-        SELECT u.*, r.name as role_name 
+        SELECT u.*, COALESCE(r.name, u.role) as role_name 
         FROM users u 
-        JOIN roles r ON u.role_id = r.id 
+        LEFT JOIN roles r ON u.role_id = r.id 
         WHERE u.id = ?
       `, [req.user.id]);
 
@@ -264,6 +262,128 @@ router.get('/me', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Update profile
+router.put('/profile', [
+  authenticateToken,
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+  body('first_name').optional().notEmpty().withMessage('First name cannot be empty'),
+  body('last_name').optional().notEmpty().withMessage('Last name cannot be empty'),
+  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { email, first_name, last_name, password } = req.body;
+    const userId = req.user.id;
+    const updateFields = [];
+    const updateValues = [];
+
+    // Check if user is admin or regular user
+    const [adminUsers] = await pool.execute(
+      'SELECT id FROM admin_users WHERE id = ?',
+      [userId]
+    );
+
+    let updateTable = '';
+    let passwordField = '';
+
+    if (adminUsers.length > 0) {
+      updateTable = 'admin_users';
+      passwordField = 'password';
+    } else {
+      const [users] = await pool.execute(
+        'SELECT id FROM users WHERE id = ?',
+        [userId]
+      );
+      
+      if (users.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      updateTable = 'users';
+      passwordField = 'password_hash';
+    }
+
+    // Build update query
+    if (email) {
+      updateFields.push('email = ?');
+      updateValues.push(email);
+    }
+    if (first_name) {
+      updateFields.push('first_name = ?');
+      updateValues.push(first_name);
+    }
+    if (last_name) {
+      updateFields.push('last_name = ?');
+      updateValues.push(last_name);
+    }
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateFields.push(`${passwordField} = ?`);
+      updateValues.push(hashedPassword);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+
+    updateValues.push(userId);
+    const query = `UPDATE ${updateTable} SET ${updateFields.join(', ')} WHERE id = ?`;
+    await pool.execute(query, updateValues);
+
+    // Fetch updated user
+    let user = null;
+    if (updateTable === 'admin_users') {
+      const [updatedAdmin] = await pool.execute(
+        'SELECT id, username, email, role, first_name, last_name FROM admin_users WHERE id = ?',
+        [userId]
+      );
+      user = {
+        ...updatedAdmin[0],
+        user_type: 'admin'
+      };
+    } else {
+      const [updatedUser] = await pool.execute(`
+        SELECT u.*, COALESCE(r.name, u.role) as role_name 
+        FROM users u 
+        LEFT JOIN roles r ON u.role_id = r.id 
+        WHERE u.id = ?
+      `, [userId]);
+      user = {
+        ...updatedUser[0],
+        role: updatedUser[0].role_name,
+        user_type: 'user'
+      };
+      delete user.password_hash;
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

@@ -37,6 +37,9 @@ app.use('/api/finance', require('./controllers/financeController'));
 app.use('/api/stock', require('./controllers/stockController'));
 app.use('/api/dos', require('./routes/dos'));
 app.use('/api/dos', require('./controllers/dosController'));
+app.use('/api/dos-enhanced', require('./routes/enhanced-dos'));
+app.use('/api/role-auth', require('./routes/role-auth'));
+app.use('/', require('./routes/docs'));
 
 // Test route
 app.get('/api/health', (req, res) => {
@@ -45,6 +48,11 @@ app.get('/api/health', (req, res) => {
     message: 'School Management API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Redirect root to docs
+app.get('/', (req, res) => {
+  res.redirect('/docs');
 });
 
 // Error handling middleware
@@ -73,6 +81,7 @@ const startServer = async () => {
     await testConnection();
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📖 API Documentation: http://localhost:${PORT}/docs`);
       console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
       console.log('📚 Available endpoints:');
       console.log('  - /api/auth - Authentication');
@@ -83,6 +92,7 @@ const startServer = async () => {
       console.log('  - /api/finance - Financial management');
       console.log('  - /api/stock - Stock management');
       console.log('  - /api/dos - DOS management (students, conduct, analytics)');
+      console.log('  - /api/dos-enhanced - Enhanced DOS features with advanced analytics');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

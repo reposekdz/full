@@ -1,763 +1,382 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply authentication and role check to all DOS routes
-router.use(authenticateToken);
-router.use(requireRole('director_of_study', 'admin', 'super_admin'));
+// ============ STUDENTS MANAGEMENT ============
 
-// ===============================
-// DASHBOARD ANALYTICS
-// ===============================
+// Get all students with filters
+router.get('/students', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const { class_id, level_id, trade_id, search, status } = req.query;
+    let query = `
+      SELECT u.*, c.name as class_name, l.name as level_name, t.name as trade_name
+      FROM users u
+      LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN levels l ON u.level_id = l.id
+      LEFT JOIN trades t ON u.trade_id = t.id
+      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'student')
+    `;
+    const params = [];
 
-// Get analytics overview
-router.get('/analytics/overview', async (req, res) => {
-    try {
-        // Get total students
-        const [totalStudents] = await pool.execute(
-            'SELECT COUNT(*) as count FROM students WHERE status = "active"'
-        );
-
-        // Get students by trade level
-        const [studentsByLevel] = await pool.execute(`
-            SELECT 
-                trade_level, 
-                COUNT(*) as count 
-            FROM students 
-            WHERE status = "active" 
-            GROUP BY trade_level
-        `);
-
-        // Get students by trade program
-        const [studentsByProgram] = await pool.execute(`
-            SELECT 
-                trade_program, 
-                COUNT(*) as count 
-            FROM students 
-            WHERE status = "active" 
-            GROUP BY trade_program
-        `);
-
-        // Get recent conduct records
-        const [recentConduct] = await pool.execute(`
-            SELECT COUNT(*) as count 
-            FROM conduct_records 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        `);
-
-        // Get average attendance
-        const [avgAttendance] = await pool.execute(`
-            SELECT 
-                AVG(CASE WHEN status = 'present' THEN 1 ELSE 0 END) * 100 as percentage
-            FROM attendance_records 
-            WHERE attendance_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        `);
-
-        // Get recent academic performance
-        const [avgGrades] = await pool.execute(`
-            SELECT AVG(percentage) as average
-            FROM academic_records 
-            WHERE assessment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        `);
-
-        res.json({
-            success: true,
-            data: {
-                overview: {
-                    total_students: totalStudents[0].count,
-                    avg_attendance_rate: Math.round(avgAttendance[0].percentage || 0),
-                    avg_academic_performance: Math.round(avgGrades[0].average || 0),
-                    conduct_records_this_month: recentConduct[0].count
-                },
-                students_by_level: studentsByLevel,
-                students_by_program: studentsByProgram
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching analytics:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch analytics', error: error.message });
+    if (class_id) {
+      query += ' AND u.class_id = ?';
+      params.push(class_id);
     }
+    if (level_id) {
+      query += ' AND u.level_id = ?';
+      params.push(level_id);
+    }
+    if (trade_id) {
+      query += ' AND u.trade_id = ?';
+      params.push(trade_id);
+    }
+    if (search) {
+      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.student_id LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (status) {
+      query += ' AND u.is_active = ?';
+      params.push(status === 'active' ? 1 : 0);
+    }
+
+    query += ' ORDER BY u.first_name ASC';
+    const [students] = await pool.execute(query, params);
+
+    res.json({ success: true, students });
+  } catch (error) {
+    console.error('Get students error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// ===============================
-// STUDENT MANAGEMENT
-// ===============================
+// Get student details
+router.get('/students/:id', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [student] = await pool.execute(`
+      SELECT u.*, c.name as class_name, l.name as level_name, t.name as trade_name
+      FROM users u
+      LEFT JOIN classes c ON u.class_id = c.id
+      LEFT JOIN levels l ON u.level_id = l.id
+      LEFT JOIN trades t ON u.trade_id = t.id
+      WHERE u.id = ? AND u.role_id = (SELECT id FROM roles WHERE name = 'student')
+    `, [req.params.id]);
 
-// Get all students with filtering and pagination
-router.get('/students', async (req, res) => {
-    try {
-        const { 
-            page = 1, 
-            limit = 20, 
-            trade_program, 
-            trade_level, 
-            status, 
-            search,
-            sort_by = 'last_name',
-            sort_order = 'ASC'
-        } = req.query;
-        
-        const offset = (page - 1) * limit;
-        
-        let whereConditions = [];
-        let queryParams = [];
-        
-        if (trade_program) {
-            whereConditions.push('s.trade_program = ?');
-            queryParams.push(trade_program);
-        }
-        
-        if (trade_level) {
-            whereConditions.push('s.trade_level = ?');
-            queryParams.push(trade_level);
-        }
-        
-        if (status) {
-            whereConditions.push('s.status = ?');
-            queryParams.push(status);
-        }
-        
-        if (search) {
-            whereConditions.push('(s.first_name LIKE ? OR s.last_name LIKE ? OR s.student_id LIKE ? OR s.email LIKE ?)');
-            const searchTerm = `%${search}%`;
-            queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-        }
-        
-        const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-        
-        const query = `
-            SELECT 
-                s.id,
-                s.student_id,
-                s.first_name,
-                s.last_name,
-                s.email,
-                s.phone,
-                s.date_of_birth,
-                s.gender,
-                s.address,
-                s.guardian_name,
-                s.guardian_phone,
-                s.admission_date,
-                s.trade_level,
-                s.trade_program,
-                s.status,
-                s.academic_year,
-                s.profile_picture,
-                s.created_at,
-                COALESCE(AVG(ar.percentage), 0) as average_grade,
-                COALESCE(
-                    (SELECT COUNT(*) FROM attendance_records att WHERE att.student_id = s.id AND att.status = 'present') * 100.0 / 
-                    NULLIF((SELECT COUNT(*) FROM attendance_records att WHERE att.student_id = s.id), 0), 
-                    100
-                ) as attendance_percentage,
-                COALESCE(SUM(cr.points_awarded - cr.points_deducted), 0) as conduct_score
-            FROM students s
-            LEFT JOIN academic_records ar ON s.id = ar.student_id
-            LEFT JOIN conduct_records cr ON s.id = cr.student_id
-            ${whereClause}
-            GROUP BY s.id
-            ORDER BY s.${sort_by} ${sort_order}
-            LIMIT ? OFFSET ?
-        `;
-        
-        queryParams.push(parseInt(limit), parseInt(offset));
-        
-        const [students] = await pool.execute(query, queryParams);
-        
-        // Get total count
-        const countQuery = `
-            SELECT COUNT(DISTINCT s.id) as total
-            FROM students s
-            ${whereClause}
-        `;
-        
-        const [countResult] = await pool.execute(countQuery, queryParams.slice(0, -2));
-        const total = countResult[0].total;
-        
-        res.json({
-            success: true,
-            data: {
-                students,
-                pagination: {
-                    current_page: parseInt(page),
-                    per_page: parseInt(limit),
-                    total: total,
-                    total_pages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch students', error: error.message });
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
     }
-});
 
-// Get single student details
-router.get('/students/:id', async (req, res) => {
-    try {
-        const studentId = req.params.id;
-        
-        const [students] = await pool.execute(`
-            SELECT 
-                s.*,
-                COALESCE(AVG(ar.percentage), 0) as average_grade,
-                COALESCE(
-                    (SELECT COUNT(*) FROM attendance_records att WHERE att.student_id = s.id AND att.status = 'present') * 100.0 / 
-                    NULLIF((SELECT COUNT(*) FROM attendance_records att WHERE att.student_id = s.id), 0), 
-                    100
-                ) as attendance_percentage,
-                COALESCE(SUM(cr.points_awarded - cr.points_deducted), 0) as conduct_score
-            FROM students s
-            LEFT JOIN academic_records ar ON s.id = ar.student_id
-            LEFT JOIN conduct_records cr ON s.id = cr.student_id
-            WHERE s.id = ?
-            GROUP BY s.id
-        `, [studentId]);
-        
-        if (students.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-        
-        res.json({
-            success: true,
-            data: students[0]
-        });
-    } catch (error) {
-        console.error('Error fetching student:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch student', error: error.message });
-    }
-});
-
-// Create new student
-router.post('/students', async (req, res) => {
-    try {
-        const {
-            first_name,
-            last_name,
-            email,
-            phone,
-            date_of_birth,
-            gender,
-            trade_level,
-            trade_program,
-            address,
-            guardian_name,
-            guardian_phone,
-            guardian_email,
-            academic_year
-        } = req.body;
-        
-        // Validate required fields
-        if (!first_name || !last_name || !trade_level || !trade_program) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Required fields: first_name, last_name, trade_level, trade_program' 
-            });
-        }
-        
-        // Generate student ID
-        const year = new Date().getFullYear();
-        const tradeCode = trade_program.replace(/\s+/g, '').substring(0, 3).toUpperCase();
-        const levelCode = trade_level.replace('Level', 'L');
-        
-        const [lastStudent] = await pool.execute(
-            'SELECT student_id FROM students WHERE student_id LIKE ? ORDER BY student_id DESC LIMIT 1',
-            [`${year}${tradeCode}${levelCode}%`]
-        );
-        
-        let studentNumber = 1;
-        if (lastStudent.length > 0) {
-            const lastNumber = parseInt(lastStudent[0].student_id.slice(-3));
-            studentNumber = lastNumber + 1;
-        }
-        
-        const student_id = `${year}${tradeCode}${levelCode}${studentNumber.toString().padStart(3, '0')}`;
-        
-        // Create student
-        const [result] = await pool.execute(`
-            INSERT INTO students (
-                student_id, first_name, last_name, email, phone, date_of_birth, gender,
-                address, guardian_name, guardian_phone, guardian_email, admission_date,
-                trade_level, trade_program, status, academic_year
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?, 'active', ?)
-        `, [
-            student_id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            date_of_birth,
-            gender,
-            address,
-            guardian_name,
-            guardian_phone,
-            guardian_email,
-            trade_level,
-            trade_program,
-            academic_year || '2025-2026'
-        ]);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Student created successfully',
-            data: {
-                id: result.insertId,
-                student_id: student_id
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error creating student:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to create student', 
-            error: error.message 
-        });
-    }
+    res.json({ success: true, student: student[0] });
+  } catch (error) {
+    console.error('Get student error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 // Update student
-router.put('/students/:id', async (req, res) => {
-    try {
-        const studentId = req.params.id;
-        const updates = req.body;
-        
-        const allowedFields = [
-            'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 
-            'gender', 'address', 'guardian_name', 'guardian_phone', 'guardian_email',
-            'trade_level', 'trade_program', 'status', 'academic_year', 'notes'
-        ];
-        
-        const updateFields = [];
-        const values = [];
-        
-        Object.keys(updates).forEach(key => {
-            if (allowedFields.includes(key)) {
-                updateFields.push(`${key} = ?`);
-                values.push(updates[key]);
-            }
-        });
-        
-        if (updateFields.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No valid fields to update'
-            });
-        }
-        
-        values.push(studentId);
-        
-        const query = `UPDATE students SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-        
-        const [result] = await pool.execute(query, values);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-        
-        res.json({
-            success: true,
-            message: 'Student updated successfully'
-        });
-        
-    } catch (error) {
-        console.error('Error updating student:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update student', 
-            error: error.message 
-        });
+router.put('/students/:id', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('first_name').optional().notEmpty(),
+  body('last_name').optional().notEmpty(),
+  body('class_id').optional().isInt(),
+  body('level_id').optional().isInt(),
+  body('trade_id').optional().isInt()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
+
+    const { first_name, last_name, class_id, level_id, trade_id } = req.body;
+    const updateFields = [];
+    const updateValues = [];
+
+    if (first_name) {
+      updateFields.push('first_name = ?');
+      updateValues.push(first_name);
+    }
+    if (last_name) {
+      updateFields.push('last_name = ?');
+      updateValues.push(last_name);
+    }
+    if (class_id) {
+      updateFields.push('class_id = ?');
+      updateValues.push(class_id);
+    }
+    if (level_id) {
+      updateFields.push('level_id = ?');
+      updateValues.push(level_id);
+    }
+    if (trade_id) {
+      updateFields.push('trade_id = ?');
+      updateValues.push(trade_id);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    updateValues.push(req.params.id);
+    await pool.execute(`UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`, updateValues);
+
+    res.json({ success: true, message: 'Student updated successfully' });
+  } catch (error) {
+    console.error('Update student error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// ===============================
-// CONDUCT RECORDS MANAGEMENT
-// ===============================
+// ============ CLASSES MANAGEMENT ============
 
-// Get conduct records
-router.get('/conduct-records', async (req, res) => {
-    try {
-        const { 
-            page = 1, 
-            limit = 20, 
-            student_id, 
-            incident_type, 
-            severity,
-            status,
-            search
-        } = req.query;
-        
-        const offset = (page - 1) * limit;
-        
-        let whereConditions = [];
-        let queryParams = [];
-        
-        if (student_id) {
-            whereConditions.push('cr.student_id = ?');
-            queryParams.push(student_id);
-        }
-        
-        if (incident_type) {
-            whereConditions.push('cr.incident_type = ?');
-            queryParams.push(incident_type);
-        }
-        
-        if (severity) {
-            whereConditions.push('cr.severity = ?');
-            queryParams.push(severity);
-        }
-        
-        if (status) {
-            whereConditions.push('cr.status = ?');
-            queryParams.push(status);
-        }
-        
-        if (search) {
-            whereConditions.push('(cr.title LIKE ? OR cr.description LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ?)');
-            const searchTerm = `%${search}%`;
-            queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
-        }
-        
-        const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-        
-        const query = `
-            SELECT 
-                cr.*,
-                s.student_id,
-                s.first_name,
-                s.last_name,
-                s.trade_program,
-                s.trade_level
-            FROM conduct_records cr
-            JOIN students s ON cr.student_id = s.id
-            ${whereClause}
-            ORDER BY cr.incident_date DESC, cr.created_at DESC
-            LIMIT ? OFFSET ?
-        `;
-        
-        queryParams.push(parseInt(limit), parseInt(offset));
-        
-        const [records] = await pool.execute(query, queryParams);
-        
-        // Get total count
-        const countQuery = `
-            SELECT COUNT(*) as total
-            FROM conduct_records cr
-            JOIN students s ON cr.student_id = s.id
-            ${whereClause}
-        `;
-        
-        const [countResult] = await pool.execute(countQuery, queryParams.slice(0, -2));
-        const total = countResult[0].total;
-        
-        res.json({
-            success: true,
-            data: {
-                records,
-                pagination: {
-                    current_page: parseInt(page),
-                    per_page: parseInt(limit),
-                    total: total,
-                    total_pages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching conduct records:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch conduct records', error: error.message });
-    }
+router.get('/classes', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [classes] = await pool.execute('SELECT * FROM classes ORDER BY name ASC');
+    res.json({ success: true, classes });
+  } catch (error) {
+    console.error('Get classes error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// Create conduct record
-router.post('/conduct-records', async (req, res) => {
-    try {
-        const {
-            student_id,
-            incident_type,
-            severity = 'medium',
-            title,
-            description,
-            action_taken,
-            reported_by,
-            incident_date,
-            follow_up_required = false,
-            follow_up_date,
-            points_awarded = 0,
-            points_deducted = 0
-        } = req.body;
-        
-        // Validate required fields
-        if (!student_id || !incident_type || !title || !description) {
-            return res.status(400).json({
-                success: false,
-                message: 'Required fields: student_id, incident_type, title, description'
-            });
-        }
-        
-        const [result] = await pool.execute(`
-            INSERT INTO conduct_records (
-                student_id, incident_type, severity, title, description, action_taken,
-                reported_by, incident_date, follow_up_required, follow_up_date,
-                points_awarded, points_deducted, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
-        `, [
-            student_id, incident_type, severity, title, description, action_taken,
-            reported_by, incident_date || new Date().toISOString().split('T')[0], 
-            follow_up_required, follow_up_date, points_awarded, points_deducted
-        ]);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Conduct record created successfully',
-            data: { id: result.insertId }
-        });
-        
-    } catch (error) {
-        console.error('Error creating conduct record:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to create conduct record', 
-            error: error.message 
-        });
+router.post('/classes', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('name').notEmpty().withMessage('Class name is required'),
+  body('level_id').isInt().withMessage('Level is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
+
+    const { name, level_id, capacity } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO classes (name, level_id, capacity) VALUES (?, ?, ?)',
+      [name, level_id, capacity || 50]
+    );
+
+    res.status(201).json({ success: true, message: 'Class created', id: result.insertId });
+  } catch (error) {
+    console.error('Create class error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// Update conduct record
-router.put('/conduct-records/:id', async (req, res) => {
-    try {
-        const recordId = req.params.id;
-        const updates = req.body;
-        
-        const allowedFields = [
-            'incident_type', 'severity', 'title', 'description', 'action_taken',
-            'reported_by', 'incident_date', 'follow_up_required', 'follow_up_date',
-            'status', 'points_awarded', 'points_deducted'
-        ];
-        
-        const updateFields = [];
-        const values = [];
-        
-        Object.keys(updates).forEach(key => {
-            if (allowedFields.includes(key)) {
-                updateFields.push(`${key} = ?`);
-                values.push(updates[key]);
-            }
-        });
-        
-        if (updateFields.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No valid fields to update'
-            });
-        }
-        
-        values.push(recordId);
-        
-        const query = `UPDATE conduct_records SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-        
-        const [result] = await pool.execute(query, values);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Conduct record not found'
-            });
-        }
-        
-        res.json({
-            success: true,
-            message: 'Conduct record updated successfully'
-        });
-        
-    } catch (error) {
-        console.error('Error updating conduct record:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update conduct record', 
-            error: error.message 
-        });
-    }
+// ============ LEVELS MANAGEMENT ============
+
+router.get('/levels', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [levels] = await pool.execute('SELECT * FROM levels ORDER BY name ASC');
+    res.json({ success: true, levels });
+  } catch (error) {
+    console.error('Get levels error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// ===============================
-// ATTENDANCE MANAGEMENT
-// ===============================
-
-// Get attendance records
-router.get('/attendance', async (req, res) => {
-    try {
-        const { 
-            date,
-            student_id,
-            subject,
-            status,
-            page = 1,
-            limit = 50
-        } = req.query;
-        
-        const offset = (page - 1) * limit;
-        
-        let whereConditions = [];
-        let queryParams = [];
-        
-        if (date) {
-            whereConditions.push('ar.attendance_date = ?');
-            queryParams.push(date);
-        } else {
-            // Default to today if no date specified
-            whereConditions.push('ar.attendance_date = CURDATE()');
-        }
-        
-        if (student_id) {
-            whereConditions.push('ar.student_id = ?');
-            queryParams.push(student_id);
-        }
-        
-        if (subject) {
-            whereConditions.push('ar.subject = ?');
-            queryParams.push(subject);
-        }
-        
-        if (status) {
-            whereConditions.push('ar.status = ?');
-            queryParams.push(status);
-        }
-        
-        const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-        
-        const query = `
-            SELECT 
-                ar.*,
-                s.student_id,
-                s.first_name,
-                s.last_name,
-                s.trade_program,
-                s.trade_level
-            FROM attendance_records ar
-            JOIN students s ON ar.student_id = s.id
-            ${whereClause}
-            ORDER BY ar.attendance_date DESC, s.last_name ASC
-            LIMIT ? OFFSET ?
-        `;
-        
-        queryParams.push(parseInt(limit), parseInt(offset));
-        
-        const [records] = await pool.execute(query, queryParams);
-        
-        res.json({
-            success: true,
-            data: {
-                records,
-                date: date || new Date().toISOString().split('T')[0]
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error fetching attendance:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch attendance', error: error.message });
+router.post('/levels', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('name').notEmpty().withMessage('Level name is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
+
+    const { name, description } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO levels (name, description) VALUES (?, ?)',
+      [name, description || '']
+    );
+
+    res.status(201).json({ success: true, message: 'Level created', id: result.insertId });
+  } catch (error) {
+    console.error('Create level error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// Mark attendance
-router.post('/attendance', async (req, res) => {
-    try {
-        const {
-            student_id,
-            attendance_date,
-            status,
-            subject = 'General',
-            period = 'Morning',
-            notes,
-            marked_by
-        } = req.body;
-        
-        // Validate required fields
-        if (!student_id || !attendance_date || !status) {
-            return res.status(400).json({
-                success: false,
-                message: 'Required fields: student_id, attendance_date, status'
-            });
-        }
-        
-        // Check if attendance already exists for this student, date, subject, and period
-        const [existing] = await pool.execute(`
-            SELECT id FROM attendance_records 
-            WHERE student_id = ? AND attendance_date = ? AND subject = ? AND period = ?
-        `, [student_id, attendance_date, subject, period]);
-        
-        if (existing.length > 0) {
-            // Update existing record
-            await pool.execute(`
-                UPDATE attendance_records 
-                SET status = ?, notes = ?, marked_by = ?
-                WHERE id = ?
-            `, [status, notes, marked_by, existing[0].id]);
-            
-            res.json({
-                success: true,
-                message: 'Attendance updated successfully',
-                data: { id: existing[0].id }
-            });
-        } else {
-            // Create new record
-            const [result] = await pool.execute(`
-                INSERT INTO attendance_records (
-                    student_id, attendance_date, status, subject, period, notes, marked_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [student_id, attendance_date, status, subject, period, notes, marked_by]);
-            
-            res.status(201).json({
-                success: true,
-                message: 'Attendance recorded successfully',
-                data: { id: result.insertId }
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error recording attendance:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to record attendance', 
-            error: error.message 
-        });
-    }
+// ============ TRADES MANAGEMENT ============
+
+router.get('/trades', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [trades] = await pool.execute('SELECT * FROM trades ORDER BY name ASC');
+    res.json({ success: true, trades });
+  } catch (error) {
+    console.error('Get trades error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
-// Get trade levels (dropdown data)
-router.get('/trade-levels', async (req, res) => {
-    try {
-        const tradeLevels = [
-            { value: 'Level1', label: 'Level 1' },
-            { value: 'Level2', label: 'Level 2' },
-            { value: 'Level3', label: 'Level 3' }
-        ];
-        
-        const tradePrograms = [
-            { value: 'Software Development', label: 'Software Development' },
-            { value: 'Building Construction', label: 'Building Construction' },
-            { value: 'Automobile Technology', label: 'Automobile Technology' }
-        ];
-        
-        res.json({
-            success: true,
-            data: {
-                trade_levels: tradeLevels,
-                trade_programs: tradePrograms
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching trade levels:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch trade levels', error: error.message });
+router.post('/trades', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('name').notEmpty().withMessage('Trade name is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
+
+    const { name, description, code } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO trades (name, description, code) VALUES (?, ?, ?)',
+      [name, description || '', code || '']
+    );
+
+    res.status(201).json({ success: true, message: 'Trade created', id: result.insertId });
+  } catch (error) {
+    console.error('Create trade error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ TEACHERS MANAGEMENT ============
+
+router.get('/teachers', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [teachers] = await pool.execute(`
+      SELECT u.*, GROUP_CONCAT(c.name) as classes
+      FROM users u
+      LEFT JOIN class_teachers ct ON u.id = ct.teacher_id
+      LEFT JOIN classes c ON ct.class_id = c.id
+      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'teacher')
+      GROUP BY u.id
+      ORDER BY u.first_name ASC
+    `);
+
+    res.json({ success: true, teachers });
+  } catch (error) {
+    console.error('Get teachers error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/teachers/:id/assign-class', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('class_id').isInt().withMessage('Class is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { class_id } = req.body;
+    await pool.execute(
+      'INSERT INTO class_teachers (teacher_id, class_id) VALUES (?, ?)',
+      [req.params.id, class_id]
+    );
+
+    res.json({ success: true, message: 'Teacher assigned to class' });
+  } catch (error) {
+    console.error('Assign teacher error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ CONDUCT RECORDS ============
+
+router.get('/conduct-records', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const { student_id, type, status } = req.query;
+    let query = `
+      SELECT cr.*, u.first_name, u.last_name, u.student_id
+      FROM conduct_records cr
+      JOIN users u ON cr.student_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (student_id) {
+      query += ' AND cr.student_id = ?';
+      params.push(student_id);
+    }
+    if (type) {
+      query += ' AND cr.type = ?';
+      params.push(type);
+    }
+    if (status) {
+      query += ' AND cr.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY cr.created_at DESC';
+    const [records] = await pool.execute(query, params);
+
+    res.json({ success: true, records });
+  } catch (error) {
+    console.error('Get conduct records error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/conduct-records', [
+  authenticateToken,
+  requireRole('director_discipline'),
+  body('student_id').isInt().withMessage('Student is required'),
+  body('type').notEmpty().withMessage('Type is required'),
+  body('description').notEmpty().withMessage('Description is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { student_id, type, description, severity } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO conduct_records (student_id, type, description, severity, status) VALUES (?, ?, ?, ?, ?)',
+      [student_id, type, description, severity || 'medium', 'open']
+    );
+
+    res.status(201).json({ success: true, message: 'Conduct record created', id: result.insertId });
+  } catch (error) {
+    console.error('Create conduct record error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ ANALYTICS ============
+
+router.get('/analytics/overview', authenticateToken, requireRole('director_discipline'), async (req, res) => {
+  try {
+    const [totalStudents] = await pool.execute(
+      'SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "student")'
+    );
+
+    const [totalTeachers] = await pool.execute(
+      'SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "teacher")'
+    );
+
+    const [conductIssues] = await pool.execute(
+      'SELECT COUNT(*) as count FROM conduct_records WHERE status = "open"'
+    );
+
+    const [classes] = await pool.execute('SELECT COUNT(*) as count FROM classes');
+
+    res.json({
+      success: true,
+      analytics: {
+        totalStudents: totalStudents[0].count,
+        totalTeachers: totalTeachers[0].count,
+        openConductIssues: conductIssues[0].count,
+        totalClasses: classes[0].count
+      }
+    });
+  } catch (error) {
+    console.error('Get analytics error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 module.exports = router;

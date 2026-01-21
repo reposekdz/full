@@ -1,0 +1,9 @@
+{
+  "roleName": "teacher",
+  "email": "teacher@test.com",
+  "password": "test123",
+  "confirmPassword": "test123",
+  "first_name": "John",
+  "last_name": "Teacher",
+  "phone": "123-456-7890"
+}

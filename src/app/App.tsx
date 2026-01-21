@@ -14,6 +14,7 @@ import LoginPage from '@/app/pages/LoginPage';
 import RegisterPage from '@/app/pages/RegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
+import RoleLoginPage from '@/app/pages/RoleLoginPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
 import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
@@ -32,6 +33,7 @@ import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const { user, logout, login, getRoleDashboard } = useAuth();
 
   const handleNavigate = (page: string) => {
@@ -75,20 +77,20 @@ const AppContent: React.FC = () => {
     }
   }, [user, currentPage, getRoleDashboard]);
 
-  const handleRoleSelect = async (role: UserRole) => {
-    const loginResult = await login('demo@school.com', 'password', role);
-    if (loginResult.success && loginResult.dashboardPage) {
-      // Automatically redirect to the appropriate dashboard
-      handleNavigate(loginResult.dashboardPage);
-    }
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    handleNavigate('role-login');
   };
 
   const renderPage = () => {
     // If user is logged in, always show their dashboard (never redirect to public pages)
     if (user) {
-      // Only allow logout or role selection for authenticated users
+      // Only allow logout, role selection, or role login for authenticated users
       if (currentPage === 'role-selection') {
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
+      }
+      if (currentPage === 'role-login') {
+        return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
       }
       // For all other pages, show the dashboard
       return renderDashboard();
@@ -124,6 +126,8 @@ const AppContent: React.FC = () => {
         return <RegisterPage onNavigate={handleNavigate} />;
       case 'role-selection':
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
+      case 'role-login':
+        return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
       case 'search':
         return <SearchPage onNavigate={handleNavigate} />;
       case 'admin-panel':

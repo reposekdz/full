@@ -474,6 +474,128 @@ class DOSService {
     
     return this.makeRequest(`/trades/${tradeLevelId}/classes${queryParams}`);
   }
+
+  // Enhanced DOS Features
+  async getAdvancedStudentSearch(params: {
+    search?: string;
+    trade?: string;
+    level?: string;
+    status?: string;
+    performance_grade?: number;
+    attendance_min?: number;
+    enrollment_year?: number;
+    sort_by?: string;
+    sort_order?: 'ASC' | 'DESC';
+    page?: number;
+    limit?: number;
+  } = {}): Promise<{
+    success: boolean;
+    data: {
+      students: Student[];
+      pagination: {
+        current_page: number;
+        per_page: number;
+        total: number;
+        total_pages: number;
+      };
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    return this.makeRequest(`-enhanced/students/advanced-search?${queryParams.toString()}`);
+  }
+
+  async getComprehensiveAnalytics(timeframe: string = 'current_semester'): Promise<{
+    success: boolean;
+    data: {
+      academic_performance: any[];
+      attendance_analytics: any[];
+      subject_performance: any[];
+      enrollment_trends: any[];
+      top_performers: any[];
+      at_risk_students: any[];
+      teacher_performance: any[];
+      summary: {
+        total_students: number;
+        avg_overall_performance: number;
+        students_at_risk: number;
+        performance_trend: string;
+      };
+    };
+  }> {
+    return this.makeRequest(`-enhanced/analytics/comprehensive?timeframe=${timeframe}`);
+  }
+
+  async performBulkActions(action: string, student_ids: number[], data: any): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      success: number;
+      failed: number;
+      details: any[];
+    };
+  }> {
+    return this.makeRequest(`-enhanced/students/bulk-actions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        action,
+        student_ids,
+        data
+      }),
+    });
+  }
+
+  async generateComprehensiveReport(
+    reportType: 'academic_performance' | 'attendance_summary' | 'class_overview',
+    params: {
+      startDate?: string;
+      endDate?: string;
+      classId?: number;
+      tradeId?: number;
+      format?: 'json' | 'csv';
+    } = {}
+  ): Promise<{
+    success: boolean;
+    report_type: string;
+    generated_at: string;
+    data: any;
+  }> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const url = `-enhanced/reports/comprehensive/${reportType}?${queryParams.toString()}`;
+    
+    if (params.format === 'csv') {
+      // Handle CSV download differently
+      const response = await fetch(`${API_BASE_URL}/dos${url}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Report generation failed');
+      }
+      
+      return {
+        success: true,
+        report_type: reportType,
+        generated_at: new Date().toISOString(),
+        data: await response.blob()
+      };
+    }
+
+    return this.makeRequest(url);
+  }
 }
 
 export default new DOSService();

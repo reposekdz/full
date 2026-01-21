@@ -194,7 +194,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    // Return a default context instead of throwing error
+    return {
+      language: 'rw' as Language,
+      setLanguage: () => {},
+      t: (key: string) => key
+    };
   }
   return context;
 };

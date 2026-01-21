@@ -235,14 +235,14 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-16 w-16 border-2 border-yellow-400 cursor-pointer hover:scale-105 transition-transform" onClick={onOpenProfile}>
                     <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-xl font-bold">
-                      {user.name.charAt(0)}
+                      {user?.first_name?.charAt(0) || user?.name?.charAt(0) || 'U'}{user?.last_name?.charAt(0) || ''}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 truncate cursor-pointer hover:text-yellow-600 transition-colors" onClick={onOpenProfile}>
-                      {user.name}
+                      {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.name || 'User'}
                     </p>
-                    <p className="text-xs text-gray-600 capitalize">{user.role.replace('_', ' ')}</p>
+                    <p className="text-xs text-gray-600 capitalize">{user?.role?.replace('_', ' ') || 'User'}</p>
                     <Badge className="mt-1 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs">
                       Ukora
                     </Badge>
