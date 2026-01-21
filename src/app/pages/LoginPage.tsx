@@ -25,8 +25,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
-    onNavigate('home');
+    const dashboard = await login(email, password);
+    onNavigate(dashboard);
   };
 
   const handleStaffCodeSubmit = () => {
@@ -41,61 +41,61 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
   const handleRoleLogin = async () => {
     if (selectedRole) {
-      await login(email, password, selectedRole as UserRole);
+      const dashboard = await login(email, password, selectedRole as UserRole);
       setShowRoleSelection(false);
-      onNavigate('home');
+      onNavigate(dashboard);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-20 px-4 bg-gradient-to-br from-[#ADFF2F]/20 via-teal-50 to-blue-100">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 border-2 border-yellow-200">
+          <div className="text-center mb-6">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring' }}
-              className="inline-block bg-gradient-to-r from-[#ADFF2F] to-blue-600 p-4 rounded-full mb-4"
+              className="inline-block bg-gradient-to-r from-yellow-500 to-green-500 p-3 rounded-full mb-3 shadow-lg"
             >
-              <Lock className="w-8 h-8 text-white" />
+              <Lock className="w-6 h-6 text-white" />
             </motion.div>
-            <h1 className="text-3xl font-black bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
               {t('login')}
             </h1>
-            <p className="text-gray-600 mt-2">Student & Parent Portal</p>
+            <p className="text-gray-600 text-sm mt-1">Student & Parent Portal</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email" className="text-sm text-gray-700">{t('email')}</Label>
               <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 h-10 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password" className="text-sm text-gray-700">{t('password')}</Label>
               <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 h-10 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
@@ -103,27 +103,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-[#ADFF2F] to-teal-500 hover:from-[#9FEF1F] hover:to-teal-600 text-gray-900 font-bold"
+              className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold shadow-lg"
             >
               {t('signIn')}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-yellow-200">
             <Button
               onClick={() => setShowStaffModal(true)}
               variant="outline"
-              className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold"
+              className="w-full h-10 border-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-bold"
             >
-              <Shield className="w-5 h-5 mr-2" />
+              <Shield className="w-4 h-4 mr-2" />
               MS - Staff Login
             </Button>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="mt-3 text-center">
             <button
               onClick={() => onNavigate('register')}
-              className="text-blue-600 hover:underline"
+              className="text-sm text-yellow-700 hover:text-green-600 hover:underline font-medium"
             >
               Don't have an account? {t('register')}
             </button>
@@ -167,7 +167,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               </Button>
               <Button
                 onClick={handleStaffCodeSubmit}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white"
               >
                 {t('submit')}
               </Button>
@@ -218,7 +218,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               </Button>
               <Button
                 onClick={handleRoleLogin}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white"
                 disabled={!selectedRole}
               >
                 {t('signIn')}
@@ -233,7 +233,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setShowStaffModal(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full shadow-2xl flex items-center justify-center font-black text-xl hover:shadow-3xl z-50"
+        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-yellow-500 to-green-500 text-white rounded-full shadow-2xl flex items-center justify-center font-black text-xl hover:shadow-3xl z-50"
       >
         MS
       </motion.button>

@@ -20,9 +20,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role?: UserRole) => Promise<void>;
+  login: (email: string, password: string, role?: UserRole) => Promise<string>;
   logout: () => void;
-  register: (name: string, email: string, password: string, role: 'student' | 'parent') => Promise<void>;
+  register: (name: string, email: string, password: string, role: 'student' | 'parent') => Promise<string>;
+  getRoleDashboard: (role: UserRole) => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,36 +31,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password: string, role?: UserRole) => {
-    // Simulated login
-    setTimeout(() => {
-      setUser({
-        id: '1',
-        name: 'John Doe',
-        email,
-        role: role || 'student',
-      });
-    }, 500);
+  const getRoleDashboard = (role: UserRole): string => {
+    const dashboardMap: Record<UserRole, string> = {
+      student: 'dashboard-student',
+      parent: 'dashboard-parent',
+      director_of_study: 'dashboard-director-study',
+      director_of_discipline: 'dashboard-director-discipline',
+      head_master: 'dashboard-headmaster',
+      teacher: 'dashboard-teacher',
+      accountant: 'dashboard-accountant',
+      stock_manager: 'dashboard-stock',
+      admin: 'dashboard-admin',
+    };
+    return dashboardMap[role];
+  };
+
+  const login = async (email: string, password: string, role?: UserRole): Promise<string> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const userRole = role || 'student';
+        setUser({
+          id: '1',
+          name: 'John Doe',
+          email,
+          role: userRole,
+        });
+        resolve(getRoleDashboard(userRole));
+      }, 500);
+    });
   };
 
   const logout = () => {
     setUser(null);
   };
 
-  const register = async (name: string, email: string, password: string, role: 'student' | 'parent') => {
-    // Simulated registration
-    setTimeout(() => {
-      setUser({
-        id: '1',
-        name,
-        email,
-        role,
-      });
-    }, 500);
+  const register = async (name: string, email: string, password: string, role: 'student' | 'parent'): Promise<string> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        setUser({
+          id: '1',
+          name,
+          email,
+          role,
+        });
+        resolve(getRoleDashboard(role));
+      }, 500);
+    });
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
+    <AuthContext.Provider value={{ user, login, logout, register, getRoleDashboard }}>
       {children}
     </AuthContext.Provider>
   );

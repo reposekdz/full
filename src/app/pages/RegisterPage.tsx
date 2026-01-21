@@ -34,83 +34,83 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       alert('Please select a role');
       return;
     }
-    await register(formData.name, formData.email, formData.password, formData.role);
-    onNavigate('home');
+    const dashboard = await register(formData.name, formData.email, formData.password, formData.role);
+    onNavigate(dashboard);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-20 px-4 bg-gradient-to-br from-[#ADFF2F]/20 via-teal-50 to-blue-100">
+    <div className="min-h-screen flex items-center justify-center py-8 px-4 bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 border-2 border-yellow-200">
+          <div className="text-center mb-5">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring' }}
-              className="inline-block bg-gradient-to-r from-[#ADFF2F] to-blue-600 p-4 rounded-full mb-4"
+              className="inline-block bg-gradient-to-r from-yellow-500 to-green-500 p-3 rounded-full mb-3 shadow-lg"
             >
-              <UserPlus className="w-8 h-8 text-white" />
+              <UserPlus className="w-6 h-6 text-white" />
             </motion.div>
-            <h1 className="text-3xl font-black bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
               {t('register')}
             </h1>
-            <p className="text-gray-600 mt-2">Student & Parent Registration</p>
+            <p className="text-gray-600 text-sm mt-1">Student & Parent Registration</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <Label htmlFor="name">{t('fullName')}</Label>
+              <Label htmlFor="name" className="text-sm text-gray-700">{t('fullName')}</Label>
               <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="pl-10"
+                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email" className="text-sm text-gray-700">{t('email')}</Label>
               <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-10"
+                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="phone">{t('phoneNumber')}</Label>
+              <Label htmlFor="phone" className="text-sm text-gray-700">{t('phoneNumber')}</Label>
               <div className="relative mt-1">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="pl-10"
+                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role" className="text-sm text-gray-700">Role</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as 'student' | 'parent' })}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500">
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,30 +121,30 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
             </div>
 
             <div>
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password" className="text-sm text-gray-700">{t('password')}</Label>
               <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-10"
+                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
+              <Label htmlFor="confirmPassword" className="text-sm text-gray-700">{t('confirmPassword')}</Label>
               <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="pl-10"
+                  className="pl-9 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500"
                   required
                 />
               </div>
@@ -152,16 +152,16 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-[#ADFF2F] to-teal-500 hover:from-[#9FEF1F] hover:to-teal-600 text-gray-900 font-bold"
+              className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold mt-4 shadow-lg"
             >
               {t('signUp')}
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-3 text-center">
             <button
               onClick={() => onNavigate('login')}
-              className="text-blue-600 hover:underline"
+              className="text-sm text-yellow-700 hover:text-green-600 hover:underline font-medium"
             >
               Already have an account? {t('login')}
             </button>

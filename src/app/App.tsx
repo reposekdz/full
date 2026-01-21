@@ -8,6 +8,7 @@ import ServicesPage from '@/app/pages/ServicesPage';
 import TradesPage from '@/app/pages/TradesPage';
 import ContactPage from '@/app/pages/ContactPage';
 import SupportsPage from '@/app/pages/SupportsPage';
+import TeamsPage from '@/app/pages/TeamsPage';
 import LoginPage from '@/app/pages/LoginPage';
 import RegisterPage from '@/app/pages/RegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
@@ -60,7 +61,7 @@ const AppContent: React.FC = () => {
 
   const renderPage = () => {
     // If user is logged in, show their dashboard
-    if (user && !['home', 'sports', 'services', 'trades', 'contactUs', 'supports'].includes(currentPage)) {
+    if (user && !['home', 'sports', 'services', 'trades', 'contactUs', 'supports', 'teams'].includes(currentPage)) {
       return renderDashboard();
     }
 
@@ -77,6 +78,8 @@ const AppContent: React.FC = () => {
         return <ContactPage />;
       case 'supports':
         return <SupportsPage />;
+      case 'teams':
+        return <TeamsPage onNavigate={handleNavigate} />;
       case 'login':
         return <LoginPage onNavigate={handleNavigate} />;
       case 'register':
