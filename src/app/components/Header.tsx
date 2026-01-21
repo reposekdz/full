@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp } from 'lucide-react';
+import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { useLanguage, Language } from '@/app/contexts/LanguageContext';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -68,14 +68,22 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
 
   const searchSuggestions = [
-    { title: 'Academic Calendar', category: 'Academics', icon: Calendar },
-    { title: 'Student Portal', category: 'Services', icon: User },
-    { title: 'Course Registration', category: 'Academics', icon: FileText },
-    { title: 'Exam Results', category: 'Academics', icon: TrendingUp },
-    { title: 'Sports Events', category: 'Sports', icon: Trophy },
-    { title: 'Library Resources', category: 'Services', icon: BookOpen },
-    { title: 'Contact Support', category: 'Support', icon: HelpCircle },
-    { title: 'School Teams', category: 'About', icon: Users },
+    { title: 'Academic Calendar', category: 'Academics', icon: Calendar, description: 'View term dates and academic schedule' },
+    { title: 'Student Portal', category: 'Services', icon: User, description: 'Access student dashboard and resources' },
+    { title: 'Course Registration', category: 'Academics', icon: FileText, description: 'Register for courses and programs' },
+    { title: 'Exam Results', category: 'Academics', icon: TrendingUp, description: 'Check examination results and grades' },
+    { title: 'Sports Events', category: 'Sports', icon: Trophy, description: 'View upcoming sports activities and matches' },
+    { title: 'Library Resources', category: 'Services', icon: BookOpen, description: 'Browse library catalog and resources' },
+    { title: 'Contact Support', category: 'Support', icon: HelpCircle, description: 'Get help and technical support' },
+    { title: 'School Teams', category: 'About', icon: Users, description: 'Meet our management teams' },
+    { title: 'Fee Payment', category: 'Finance', icon: Briefcase, description: 'Pay school fees and view payment history' },
+    { title: 'Timetable', category: 'Academics', icon: Calendar, description: 'View class schedules and timetables' },
+    { title: 'Attendance', category: 'Academics', icon: ClipboardList, description: 'Check attendance records' },
+    { title: 'Software Development', category: 'Trades', icon: BookOpen, description: 'Learn about SOD program' },
+    { title: 'Building Construction', category: 'Trades', icon: Wrench, description: 'Learn about BDC program' },
+    { title: 'Automobile Technology', category: 'Trades', icon: Wrench, description: 'Learn about AUTO program' },
+    { title: 'Health Center', category: 'Services', icon: HelpCircle, description: 'Medical services and health support' },
+    { title: 'Counseling Services', category: 'Services', icon: HelpCircle, description: 'Student counseling and guidance' },
   ];
 
   const filteredSuggestions = searchSuggestions.filter(item =>
@@ -94,34 +102,23 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Menu Icon & Logo */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-3 hover:bg-gradient-to-br hover:from-yellow-50 hover:to-green-50 rounded-xl transition-all duration-300 group"
-              >
-                <Menu className="w-7 h-7 text-gray-700 group-hover:text-yellow-600 transition-colors" />
-              </motion.button>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
-                onClick={() => onNavigate('home')}
-              >
-                <div className="bg-gradient-to-br from-yellow-500 to-green-500 p-2 sm:p-2.5 rounded-lg shadow-lg">
-                  <div className="flex flex-col items-center">
-                    <span className="text-white font-black text-xs sm:text-sm leading-tight">GARDEN</span>
-                    <span className="text-white font-black text-xs sm:text-sm leading-tight">TVET</span>
-                  </div>
+            {/* Logo Only */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
+              onClick={() => onNavigate('home')}
+            >
+              <div className="bg-gradient-to-br from-yellow-500 to-green-500 p-2 sm:p-2.5 rounded-lg shadow-lg">
+                <div className="flex flex-col items-center">
+                  <span className="text-white font-black text-xs sm:text-sm leading-tight">GARDEN</span>
+                  <span className="text-white font-black text-xs sm:text-sm leading-tight">TVET</span>
                 </div>
-                <div className="hidden sm:block">
-                  <p className="text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">Garden TVET</p>
-                  <p className="text-xs text-gray-600">Excellence in Education</p>
-                </div>
-              </motion.div>
-            </div>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">Garden TVET</p>
+                <p className="text-xs text-gray-600">Excellence in Education</p>
+              </div>
+            </motion.div>
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2 md:space-x-3">
@@ -131,22 +128,65 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-64 lg:w-80 justify-start text-left font-normal rounded-full border-yellow-300 hover:border-yellow-500 hover:bg-yellow-50"
+                      className="w-80 lg:w-96 h-12 justify-start text-left font-normal rounded-2xl border-2 border-yellow-300 hover:border-yellow-500 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 shadow-md hover:shadow-lg transition-all"
                     >
-                      <Search className="mr-2 h-4 w-4 shrink-0 text-yellow-500" />
-                      <span className="text-gray-500">Search everything...</span>
+                      <Search className="mr-3 h-5 w-5 shrink-0 text-yellow-600" />
+                      <span className="text-gray-500 text-base">Search everything...</span>
+                      <kbd className="ml-auto pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border border-yellow-200 bg-yellow-50 px-2 font-mono text-xs text-yellow-700">
+                        <span className="text-xs">⌘</span>K
+                      </kbd>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="end">
-                    <Command>
-                      <CommandInput 
-                        placeholder="Type to search..." 
-                        value={searchQuery}
-                        onValueChange={setSearchQuery}
-                      />
-                      <CommandList>
-                        <CommandEmpty>No results found.</CommandEmpty>
-                        <CommandGroup heading="Suggestions">
+                  <PopoverContent className="w-[600px] p-0 shadow-2xl border-2 border-yellow-200" align="end">
+                    <Command className="rounded-lg">
+                      <div className="flex items-center border-b-2 border-yellow-100 bg-gradient-to-r from-yellow-50 to-green-50 px-4 py-3">
+                        <Search className="mr-2 h-5 w-5 shrink-0 text-yellow-600" />
+                        <CommandInput 
+                          placeholder="Search for pages, resources, and more..." 
+                          value={searchQuery}
+                          onValueChange={setSearchQuery}
+                          className="flex-1 border-0 bg-transparent focus:ring-0 text-base"
+                        />
+                      </div>
+                      <CommandList className="max-h-[500px]">
+                        <CommandEmpty className="py-12 text-center">
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="rounded-full bg-yellow-100 p-4">
+                              <Search className="h-8 w-8 text-yellow-600" />
+                            </div>
+                            <p className="text-gray-500 font-medium">No results found</p>
+                            <p className="text-sm text-gray-400">Try searching with different keywords</p>
+                          </div>
+                        </CommandEmpty>
+                        {searchQuery === '' && (
+                          <div className="p-4 border-b border-yellow-100">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Actions</h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {searchSuggestions.slice(0, 4).map((item, index) => {
+                                const ItemIcon = item.icon;
+                                return (
+                                  <button
+                                    key={index}
+                                    onClick={() => {
+                                      setIsSearchOpen(false);
+                                      setSearchQuery('');
+                                      onSearch();
+                                    }}
+                                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 border border-yellow-100 hover:border-yellow-300 transition-all group"
+                                  >
+                                    <div className="p-2 rounded-md bg-gradient-to-br from-yellow-500 to-green-500 group-hover:scale-110 transition-transform">
+                                      <ItemIcon className="h-4 w-4 text-white" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700">{item.title}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        <CommandGroup heading="Search Results" className="p-2">
                           {filteredSuggestions.map((item, index) => {
                             const ItemIcon = item.icon;
                             return (
@@ -157,18 +197,45 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                                   setSearchQuery('');
                                   onSearch();
                                 }}
-                                className="cursor-pointer"
+                                className="cursor-pointer p-3 rounded-lg aria-selected:bg-gradient-to-r aria-selected:from-yellow-50 aria-selected:to-green-50"
                               >
-                                <ItemIcon className="mr-2 h-4 w-4" />
-                                <div className="flex flex-col">
-                                  <span>{item.title}</span>
-                                  <span className="text-xs text-gray-500">{item.category}</span>
+                                <div className="flex items-start space-x-3 w-full">
+                                  <div className="p-2 rounded-md bg-gradient-to-br from-yellow-100 to-green-100 mt-0.5">
+                                    <ItemIcon className="h-4 w-4 text-yellow-700" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <p className="font-medium text-gray-900">{item.title}</p>
+                                      <Badge variant="outline" className="ml-2 text-xs border-yellow-300 text-yellow-700 bg-yellow-50">
+                                        {item.category}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-0.5">{item.description}</p>
+                                  </div>
                                 </div>
                               </CommandItem>
                             );
                           })}
                         </CommandGroup>
                       </CommandList>
+                      <div className="border-t-2 border-yellow-100 bg-gradient-to-r from-yellow-50 to-green-50 px-4 py-3">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center">
+                              <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">↑↓</kbd>
+                              Navigate
+                            </span>
+                            <span className="flex items-center">
+                              <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">↵</kbd>
+                              Select
+                            </span>
+                          </div>
+                          <span className="flex items-center">
+                            <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">ESC</kbd>
+                            Close
+                          </span>
+                        </div>
+                      </div>
                     </Command>
                   </PopoverContent>
                 </Popover>
@@ -276,6 +343,61 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
+              {/* Language Selector - Desktop & Tablet */}
+              <div className="hidden sm:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      className="rounded-full border-yellow-300 hover:border-yellow-500 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50"
+                    >
+                      <Globe className="h-4 w-4 text-yellow-600" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="p-2">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-2">
+                        Hitamo Ururimi
+                      </p>
+                      {(['en', 'fr', 'rw', 'sw'] as Language[]).map((lang) => (
+                        <DropdownMenuItem
+                          key={lang}
+                          onClick={() => setLanguage(lang)}
+                          className={`cursor-pointer rounded-md ${
+                            language === lang
+                              ? 'bg-gradient-to-r from-yellow-100 to-green-100 text-yellow-700 font-bold'
+                              : 'hover:bg-yellow-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {lang === 'en' && '🇬🇧 English'}
+                              {lang === 'fr' && '🇫🇷 Français'}
+                              {lang === 'rw' && '🇷🇼 Kinyarwanda'}
+                              {lang === 'sw' && '🇰🇪 Kiswahili'}
+                            </span>
+                            {language === lang && (
+                              <CheckCircle2 className="h-4 w-4 text-yellow-600" />
+                            )}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Menu Icon - All screens */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2.5 hover:bg-gradient-to-br hover:from-yellow-50 hover:to-green-50 rounded-xl transition-all duration-300 group border-2 border-yellow-200 hover:border-yellow-400 shadow-sm hover:shadow-md"
+              >
+                <Menu className="w-6 h-6 text-gray-700 group-hover:text-yellow-600 transition-colors" />
+              </motion.button>
             </div>
           </div>
         </div>
