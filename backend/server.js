@@ -31,6 +31,10 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/users', require('./controllers/userController'));
+app.use('/api/academics', require('./controllers/academicController'));
+app.use('/api/finance', require('./controllers/financeController'));
+app.use('/api/stock', require('./controllers/stockController'));
 
 // Test route
 app.get('/api/health', (req, res) => {
@@ -68,6 +72,14 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+      console.log('📚 Available endpoints:');
+      console.log('  - /api/auth - Authentication');
+      console.log('  - /api/admin - Admin management');
+      console.log('  - /api/content - Content management');
+      console.log('  - /api/users - User management');
+      console.log('  - /api/academics - Academic management');
+      console.log('  - /api/finance - Financial management');
+      console.log('  - /api/stock - Stock management');
     });
   } catch (error) {
     console.error('Failed to start server:', error);
