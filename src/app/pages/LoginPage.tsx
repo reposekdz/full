@@ -22,6 +22,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
   const [staffCode, setStaffCode] = useState('');
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +43,57 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     }
   };
 
+  const handleRoleSelection = (role: string) => {
+    setSelectedRole(role as UserRole);
+    if (role === 'admin') {
+      setShowRoleSelection(false);
+      setShowAdminLogin(true);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminEmail || !adminPassword) {
+      alert('Please enter email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Make API call to authenticate admin
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: adminEmail,
+          password: adminPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user.role === 'admin') {
+        // Store token and user info
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setShowAdminLogin(false);
+        onNavigate('dashboard-admin');
+      } else {
+        alert(data.message || 'Invalid admin credentials');
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      alert('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRoleLogin = async () => {
-    if (selectedRole) {
+    if (selectedRole && selectedRole !== 'admin') {
       const dashboard = await login(email, password, selectedRole as UserRole);
       setShowRoleSelection(false);
       onNavigate(dashboard);
@@ -192,7 +245,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
+              <Select value={selectedRole} onValueChange={handleRoleSelection}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -225,6 +278,82 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Login Modal */}
+      <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-black text-green-600">Admin Login</h2>
+            <button
+              onClick={() => {
+                setShowAdminLogin(false);
+                setAdminEmail('');
+                setAdminPassword('');
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div>
+              <Label htmlFor="adminEmail">Email Address</Label>
+              <div className="relative mt-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                <Input
+                  id="adminEmail"
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="reponsekdz06@gmail.com"
+                  className="pl-9 h-10 border-green-200 focus:border-green-500 focus:ring-green-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="adminPassword">Password</Label>
+              <div className="relative mt-1">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                <Input
+                  id="adminPassword"
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="2026"
+                  className="pl-9 h-10 border-green-200 focus:border-green-500 focus:ring-green-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowAdminLogin(false);
+                  setAdminEmail('');
+                  setAdminPassword('');
+                }}
+                variant="outline"
+                className="flex-1"
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

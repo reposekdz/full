@@ -3,20 +3,23 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs-extra');
 const { authenticateToken } = require('../middleware/auth');
+const { pool } = require('../config/database');
 
 const router = express.Router();
 
-// Configure multer for file uploads
+// Configure multer for file uploads with organized folders
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads');
+    const type = req.query.type || 'general';
+    const uploadPath = path.join(__dirname, '../uploads', type);
     fs.ensureDirSync(uploadPath);
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    cb(null, `${sanitizedName.split('.')[0]}-${uniqueSuffix}${ext}`);
   }
 });
 
@@ -40,8 +43,8 @@ const upload = multer({
   fileFilter
 });
 
-// Upload single image
-router.post('/image', authenticateToken, upload.single('image'), (req, res) => {
+// Upload single image with database tracking
+router.post('/image', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -50,8 +53,22 @@ router.post('/image', authenticateToken, upload.single('image'), (req, res) => {
       });
     }
 
-    const fileUrl = `/uploads/${req.file.filename}`;
+    const type = req.query.type || 'general';
+    const fileUrl = `/uploads/${type}/${req.file.filename}`;
     
+    // Store file info in database
+    await pool.execute(
+      'INSERT INTO uploaded_files (original_name, filename, file_path, file_size, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        req.file.originalname,
+        req.file.filename,
+        fileUrl,
+        req.file.size,
+        req.file.mimetype,
+        req.user.id
+      ]
+    );
+
     res.json({
       success: true,
       message: 'File uploaded successfully',
@@ -60,7 +77,8 @@ router.post('/image', authenticateToken, upload.single('image'), (req, res) => {
         originalName: req.file.originalname,
         size: req.file.size,
         url: fileUrl,
-        fullUrl: `${req.protocol}://${req.get('host')}${fileUrl}`
+        fullUrl: `${req.protocol}://${req.get('host')}${fileUrl}`,
+        type: type
       }
     });
 

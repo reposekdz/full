@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Hero from '@/app/components/Hero';
 import { motion } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -47,124 +47,258 @@ const trades = [
   },
 ];
 
-const newsArticles = [
+// These will be replaced by API data
+const defaultNewsArticles = [
   {
+    id: 1,
     title: 'Abanyeshuri bacu batsinze amahugurwa y\'ubuhanga',
     description: 'Ikipe y\'abanyeshuri muri Software Development yatsindiye igihembo cya mbere mu mahugurwa y\'igihugu.',
-    date: 'Mutarama 15, 2026',
+    publish_date: 'Mutarama 15, 2026',
     category: 'Ibihembo',
-    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800',
-    author: 'Jean Mugisha'
+    image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800',
+    author: 'Jean Mugisha',
+    is_active: true,
+    sort_order: 1
   },
   {
+    id: 2,
     title: 'Ishuri ryacu ryitabiriye ibirori bya siporo',
     description: 'Abanyeshuri bacu batsinze imikino 5 mu birori bya siporo by\'ishuri ry\'igihugu.',
-    date: 'Mutarama 12, 2026',
+    publish_date: 'Mutarama 12, 2026',
     category: 'Siporo',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800',
-    author: 'Sarah Uwase'
+    image_url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800',
+    author: 'Sarah Uwase',
+    is_active: true,
+    sort_order: 2
   },
   {
+    id: 3,
     title: 'Amashuri mashya azatangira mu kwezi gutaha',
     description: 'Kwiyandikisha kw\'abanyeshuri bashya kuzatangira Nyakanga 1, 2026.',
-    date: 'Mutarama 10, 2026',
+    publish_date: 'Mutarama 10, 2026',
     category: 'Amakuru',
-    image: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800',
-    author: 'Grace Ingabire'
+    image_url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800',
+    author: 'Grace Ingabire',
+    is_active: true,
+    sort_order: 3
   },
   {
+    id: 4,
     title: 'Ubufatanye bushya n\'amasosiyete',
     description: 'Ishuri ryacu ryasinyeho amasezerano y\'ubufatanye n\'amasosiyete 5 mu bikorwa.',
-    date: 'Mutarama 8, 2026',
+    publish_date: 'Mutarama 8, 2026',
     category: 'Ubufatanye',
-    image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
-    author: 'Peter Karenzi'
+    image_url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
+    author: 'Peter Karenzi',
+    is_active: true,
+    sort_order: 4
   },
 ];
 
-const testimonials = [
+const defaultTestimonials = [
   {
+    id: 1,
     name: 'Jean Claude Mugisha',
     role: 'Umunyeshuri - Software Development',
     avatar: 'JM',
     quote: 'Ishuri ryacu ryampaye amahirwe menshi yo kwiga ubuhanga bw\'ikoranabuhanga. Abarimu bacu barahebuje kandi bagashoboye.',
-    rating: 5
+    rating: 5,
+    is_active: true,
+    sort_order: 1
   },
   {
+    id: 2,
     name: 'Marie Uwase',
     role: 'Umubyeyi',
     avatar: 'MU',
     quote: 'Umwana wanjye yarahindutse cyane kuva atangiye kwiga muri iri shuri. Amasomo ni meza kandi abanyeshuri bagenzurwa neza.',
-    rating: 5
+    rating: 5,
+    is_active: true,
+    sort_order: 2
   },
   {
+    id: 3,
     name: 'Patrick Nkurunziza',
     role: 'Warangije - Building Construction',
     avatar: 'PN',
     quote: 'Nyuma yo kurangiza amashuri yanjye, nabonye akazi kahambaye mu kigo cy\'ubwubatsi. Murakoze ishuri!',
-    rating: 5
+    rating: 5,
+    is_active: true,
+    sort_order: 3
   },
   {
+    id: 4,
     name: 'Alice Mukandori',
     role: 'Umwarimu',
     avatar: 'AM',
     quote: 'Ni ishuri ryiza cyane rifite ibikoresho byiza by\'amashuri. Abanyeshuri bacu bagera kuri byinshi.',
-    rating: 5
+    rating: 5,
+    is_active: true,
+    sort_order: 4
   },
 ];
 
-const schoolStats = [
+const defaultSchoolStats = [
   {
+    id: 1,
+    stat_key: 'students',
     value: '1,248',
     label: 'Abanyeshuri',
-    icon: Users,
-    color: 'from-blue-500 to-indigo-500'
+    icon: 'Users',
+    color: 'from-blue-500 to-indigo-500',
+    is_active: true,
+    sort_order: 1
   },
   {
+    id: 2,
+    stat_key: 'teachers',
     value: '84',
     label: 'Abarimu',
-    icon: GraduationCap,
-    color: 'from-green-500 to-teal-500'
+    icon: 'GraduationCap',
+    color: 'from-green-500 to-teal-500',
+    is_active: true,
+    sort_order: 2
   },
   {
+    id: 3,
+    stat_key: 'employment',
     value: '95%',
     label: 'Gushirwa mu kazi',
-    icon: Briefcase,
-    color: 'from-yellow-500 to-orange-500'
+    icon: 'Briefcase',
+    color: 'from-yellow-500 to-orange-500',
+    is_active: true,
+    sort_order: 3
   },
   {
+    id: 4,
+    stat_key: 'awards',
     value: '25+',
     label: 'Ibihembo',
-    icon: Trophy,
-    color: 'from-orange-500 to-red-500'
+    icon: 'Trophy',
+    color: 'from-orange-500 to-red-500',
+    is_active: true,
+    sort_order: 4
   },
 ];
 
-const achievements = [
+const defaultAchievements = [
   {
+    id: 1,
     title: 'Ishuri ry\'Umwaka',
     year: '2025',
-    description: 'Twatoranijwe nk\'ishuri ry\'umwaka mu mahugurwa y\'ubuhanga'
+    description: 'Twatoranijwe nk\'ishuri ry\'umwaka mu mahugurwa y\'ubuhanga',
+    image_url: '',
+    is_active: true,
+    sort_order: 1
   },
   {
+    id: 2,
     title: 'Igihembo cya Mbere - Siporo',
     year: '2025',
-    description: 'Abanyeshuri bacu batsinze igihembo cya mbere mu mikino y\'ishuri'
+    description: 'Abanyeshuri bacu batsinze igihembo cya mbere mu mikino y\'ishuri',
+    image_url: '',
+    is_active: true,
+    sort_order: 2
   },
   {
+    id: 3,
     title: 'Ubuhanga bw\'Ikoranabuhanga',
     year: '2024',
-    description: 'Ikipe yacu yatsinze amahugurwa y\'igihugu y\'ubuhanga bw\'ikoranabuhanga'
+    description: 'Ikipe yacu yatsinze amahugurwa y\'igihugu y\'ubuhanga bw\'ikoranabuhanga',
+    image_url: '',
+    is_active: true,
+    sort_order: 3
   },
   {
+    id: 4,
     title: 'Ubufatanye Mpuzamahanga',
     year: '2024',
-    description: 'Twashyizeho ubufatanye n\'amashuri menshi mu mahanga'
+    description: 'Twashyizeho ubufatanye n\'amashuri menshi mu mahanga',
+    image_url: '',
+    is_active: true,
+    sort_order: 4
   },
 ];
 
 const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
+  const [newsArticles, setNewsArticles] = useState(defaultNewsArticles);
+  const [testimonials, setTestimonials] = useState(defaultTestimonials);
+  const [schoolStats, setSchoolStats] = useState(defaultSchoolStats);
+  const [achievements, setAchievements] = useState(defaultAchievements);
+  const [loading, setLoading] = useState(false);
+
+  const API_BASE = 'http://localhost:5000/api';
+
+  // Icon mapping
+  const iconMap: { [key: string]: any } = {
+    Users,
+    GraduationCap,
+    Briefcase,
+    Trophy,
+    Award,
+    Target,
+    TrendingUp,
+    BookOpen
+  };
+
+  // Fetch content from API
+  useEffect(() => {
+    const fetchContent = async () => {
+      setLoading(true);
+      try {
+        // Fetch news articles
+        try {
+          const newsResponse = await fetch(`${API_BASE}/content/news`);
+          const newsData = await newsResponse.json();
+          if (newsData.success && newsData.articles.length > 0) {
+            setNewsArticles(newsData.articles);
+          }
+        } catch (error) {
+          console.log('Using default news articles');
+        }
+
+        // Fetch testimonials
+        try {
+          const testimonialsResponse = await fetch(`${API_BASE}/content/testimonials`);
+          const testimonialsData = await testimonialsResponse.json();
+          if (testimonialsData.success && testimonialsData.testimonials.length > 0) {
+            setTestimonials(testimonialsData.testimonials);
+          }
+        } catch (error) {
+          console.log('Using default testimonials');
+        }
+
+        // Fetch school stats
+        try {
+          const statsResponse = await fetch(`${API_BASE}/content/stats`);
+          const statsData = await statsResponse.json();
+          if (statsData.success && statsData.stats.length > 0) {
+            setSchoolStats(statsData.stats);
+          }
+        } catch (error) {
+          console.log('Using default school stats');
+        }
+
+        // Fetch achievements
+        try {
+          const achievementsResponse = await fetch(`${API_BASE}/content/achievements`);
+          const achievementsData = await achievementsResponse.json();
+          if (achievementsData.success && achievementsData.achievements.length > 0) {
+            setAchievements(achievementsData.achievements);
+          }
+        } catch (error) {
+          console.log('Using default achievements');
+        }
+      } catch (error) {
+        console.error('Error fetching content:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
 
   return (
     <div>
@@ -188,25 +322,28 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {schoolStats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="p-8 text-center">
-                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
-                      <stat.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-4xl font-black text-gray-900 mb-2">{stat.value}</h3>
-                    <p className="text-gray-600 font-medium">{stat.label}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {schoolStats.map((stat, index) => {
+              const IconComponent = iconMap[stat.icon] || Users;
+              return (
+                <motion.div
+                  key={stat.stat_key || stat.label}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all">
+                    <CardContent className="p-8 text-center">
+                      <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                        <IconComponent className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-4xl font-black text-gray-900 mb-2">{stat.value}</h3>
+                      <p className="text-gray-600 font-medium">{stat.label}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -276,7 +413,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {newsArticles.map((article, index) => (
               <motion.div
-                key={index}
+                key={article.id || index}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -285,7 +422,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all h-full overflow-hidden group cursor-pointer">
                   <div className="aspect-video relative overflow-hidden">
                     <img 
-                      src={article.image} 
+                      src={article.image_url?.startsWith('/uploads') ? `http://localhost:5000${article.image_url}` : article.image_url || article.image} 
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -296,7 +433,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                       <Calendar className="w-4 h-4" />
-                      {article.date}
+                      {article.publish_date || article.date}
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                       {article.title}
@@ -336,7 +473,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {testimonials.map((testimonial, index) => (
               <motion.div
-                key={index}
+                key={testimonial.id || index}
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -392,7 +529,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {achievements.map((achievement, index) => (
               <motion.div
-                key={index}
+                key={achievement.id || index}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
