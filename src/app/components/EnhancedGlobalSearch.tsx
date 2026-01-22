@@ -28,22 +28,19 @@ interface EnhancedSearchProps {
 }
 
 const typeConfig: Record<string, { icon: any; color: string; label: string; gradient: string }> = {
-  student: { icon: User, color: 'bg-blue-500', label: 'Students', gradient: 'from-blue-500 to-cyan-500' },
-  teacher: { icon: User, color: 'bg-purple-500', label: 'Teachers', gradient: 'from-purple-500 to-pink-500' },
   course: { icon: BookOpen, color: 'bg-green-500', label: 'Courses', gradient: 'from-green-500 to-emerald-500' },
   assignment: { icon: FileText, color: 'bg-orange-500', label: 'Assignments', gradient: 'from-orange-500 to-amber-500' },
   exam: { icon: Calendar, color: 'bg-red-500', label: 'Exams', gradient: 'from-red-500 to-rose-500' },
   sport: { icon: Trophy, color: 'bg-yellow-500', label: 'Sports', gradient: 'from-yellow-500 to-orange-500' },
   notification: { icon: Bell, color: 'bg-pink-500', label: 'Notifications', gradient: 'from-pink-500 to-rose-500' },
   trade: { icon: Award, color: 'bg-indigo-500', label: 'Trades', gradient: 'from-indigo-500 to-purple-500' },
-  stock: { icon: TrendingUp, color: 'bg-teal-500', label: 'Inventory', gradient: 'from-teal-500 to-cyan-500' },
 };
 
 const quickSearches = [
-  { query: 'abanyeshuri', icon: User, label: 'Abanyeshuri', color: 'blue' },
   { query: 'amasomo', icon: BookOpen, label: 'Amasomo', color: 'green' },
   { query: 'ibizamini', icon: Calendar, label: 'Ibizamini', color: 'red' },
   { query: 'siporo', icon: Trophy, label: 'Siporo', color: 'yellow' },
+  { query: 'amahugurwa', icon: Award, label: 'Amahugurwa', color: 'indigo' },
 ];
 
 export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate }) => {
@@ -125,24 +122,6 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     const lower = q.toLowerCase();
     const fallback: any = {};
     
-    // Students - English and Kinyarwanda
-    if (lower.includes('stud') || lower.includes('elev') || lower.includes('abanyeshuri') || 
-        lower.includes('umunyeshuri') || lower.includes('nyeshuri') || lower.includes('student')) {
-      fallback.students = [
-        { id: 1, type: 'student', first_name: 'View All', last_name: 'Students', email: 'students@school.com', student_id: 'ALL', description: 'Browse all students in the system' },
-        { id: 2, type: 'student', first_name: 'Search', last_name: 'Students', email: 'search@school.com', student_id: 'SEARCH', description: 'Find specific students by name or ID' }
-      ];
-    }
-    
-    // Teachers - English and Kinyarwanda
-    if (lower.includes('teach') || lower.includes('prof') || lower.includes('abarimu') || 
-        lower.includes('umwarimu') || lower.includes('arimu') || lower.includes('teacher')) {
-      fallback.teachers = [
-        { id: 1, type: 'teacher', first_name: 'View All', last_name: 'Teachers', email: 'teachers@school.com', description: 'Browse all teachers' },
-        { id: 2, type: 'teacher', first_name: 'Search', last_name: 'Teachers', email: 'search@school.com', description: 'Find specific teachers' }
-      ];
-    }
-    
     // Courses - English and Kinyarwanda
     if (lower.includes('cours') || lower.includes('class') || lower.includes('amasomo') || 
         lower.includes('isomo') || lower.includes('somo') || lower.includes('course')) {
@@ -189,15 +168,6 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Stock/Inventory - English and Kinyarwanda
-    if (lower.includes('stock') || lower.includes('inventory') || lower.includes('ibikoresho') || 
-        lower.includes('ububiko') || lower.includes('supply') || lower.includes('item')) {
-      fallback.stock = [
-        { id: 1, type: 'stock', name: 'View Inventory', description: 'Browse all stock items' },
-        { id: 2, type: 'stock', name: 'Low Stock Items', description: 'Items needing reorder' }
-      ];
-    }
-    
     // Notifications - English and Kinyarwanda
     if (lower.includes('notif') || lower.includes('alert') || lower.includes('amakuru') || 
         lower.includes('ubutumwa') || lower.includes('message')) {
@@ -208,9 +178,9 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     
     // If no specific match, provide general suggestions
     if (Object.keys(fallback).length === 0) {
-      fallback.students = [{ id: 1, type: 'student', first_name: 'Search', last_name: 'Students', email: 'students@school.com', description: 'Find students' }];
       fallback.courses = [{ id: 1, type: 'course', name: 'Browse Courses', code: 'ALL', description: 'View courses' }];
       fallback.exams = [{ id: 1, type: 'exam', title: 'View Exams', exam_type: 'All', description: 'Browse exams' }];
+      fallback.trades = [{ id: 1, type: 'trade', name_en: 'View Trades', code: 'ALL', description: 'Browse trade programs' }];
     }
     
     return fallback;
@@ -225,14 +195,11 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
   const handleResultClick = (result: SearchResult) => {
     saveRecentSearch(query);
     const typeRoutes: Record<string, string> = {
-      student: 'students',
-      teacher: 'teachers',
       course: 'courses',
       assignment: 'assignments',
       exam: 'exams',
       sport: 'sports',
       trade: 'trades',
-      stock: 'inventory',
       notification: 'notifications'
     };
 
@@ -284,7 +251,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                 {language === 'rw' ? 'Shakisha ikintu cyose...' : 'Search anything...'}
               </p>
               <p className="text-xs text-gray-400">
-                {language === 'rw' ? 'Abanyeshuri, amasomo, ibizamini...' : 'Students, courses, exams...'}
+                {language === 'rw' ? 'Amasomo, ibizamini, siporo...' : 'Courses, exams, sports...'}
               </p>
             </div>
           </div>

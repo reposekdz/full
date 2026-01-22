@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
-const { authenticateToken, checkRole } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 router.use(authenticateToken);
-router.use(checkRole(['teacher', 'dos', 'admin']));
+router.use(requireRole('teacher', 'dos', 'admin'));
 
 const getMyAssignments = async (req, res) => {
     try {

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 
-// Global search endpoint
+// Global search endpoint (public - excludes sensitive data)
 router.get('/', async (req, res) => {
   try {
     const { q, type, limit = 20 } = req.query;
@@ -13,40 +13,13 @@ router.get('/', async (req, res) => {
 
     const searchTerm = `%${q}%`;
     const results = {
-      students: [],
-      teachers: [],
       courses: [],
       assignments: [],
       exams: [],
       trades: [],
       sports: [],
-      notifications: [],
-      messages: []
+      notifications: []
     };
-
-    // Search students
-    if (!type || type === 'students') {
-      const [students] = await db.query(
-        `SELECT id, student_id, first_name, last_name, email, phone, trade_code, 'student' as type 
-         FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'student') 
-         AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR student_id LIKE ?) 
-         LIMIT ?`,
-        [searchTerm, searchTerm, searchTerm, searchTerm, parseInt(limit)]
-      );
-      results.students = students;
-    }
-
-    // Search teachers
-    if (!type || type === 'teachers') {
-      const [teachers] = await db.query(
-        `SELECT id, first_name, last_name, email, phone, 'teacher' as type 
-         FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'teacher') 
-         AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?) 
-         LIMIT ?`,
-        [searchTerm, searchTerm, searchTerm, parseInt(limit)]
-      );
-      results.teachers = teachers;
-    }
 
     // Search courses
     if (!type || type === 'courses') {
@@ -59,11 +32,11 @@ router.get('/', async (req, res) => {
       results.courses = courses;
     }
 
-    // Search assignments
+    // Search assignments (public ones only)
     if (!type || type === 'assignments') {
       const [assignments] = await db.query(
         `SELECT id, title, description, due_date, 'assignment' as type 
-         FROM assignments WHERE title LIKE ? OR description LIKE ? 
+         FROM assignments WHERE is_published = true AND (title LIKE ? OR description LIKE ?) 
          LIMIT ?`,
         [searchTerm, searchTerm, parseInt(limit)]
       );
@@ -103,11 +76,11 @@ router.get('/', async (req, res) => {
       results.sports = sports;
     }
 
-    // Search notifications
+    // Search notifications (public ones only)
     if (!type || type === 'notifications') {
       const [notifications] = await db.query(
         `SELECT id, title, message, type, created_at, 'notification' as type 
-         FROM notifications WHERE title LIKE ? OR message LIKE ? 
+         FROM notifications WHERE is_public = true AND (title LIKE ? OR message LIKE ?) 
          ORDER BY created_at DESC LIMIT ?`,
         [searchTerm, searchTerm, parseInt(limit)]
       );
