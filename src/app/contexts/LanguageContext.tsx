@@ -8,6 +8,7 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
+// Extended translations with comprehensive Kinyarwanda support
 const translations: Record<Language, Record<string, string>> = {
   en: {
     // Navigation
@@ -55,6 +56,37 @@ const translations: Record<Language, Record<string, string>> = {
     learnMore: 'Learn More',
     viewAll: 'View All',
     getStarted: 'Get Started',
+    // Dashboard terms
+    dashboard: 'Dashboard',
+    overview: 'Overview',
+    analytics: 'Analytics',
+    reports: 'Reports',
+    settings: 'Settings',
+    profile: 'Profile',
+    notifications: 'Notifications',
+    logout: 'Logout',
+    // Academic terms
+    courses: 'Courses',
+    grades: 'Grades',
+    attendance: 'Attendance',
+    assignments: 'Assignments',
+    exams: 'Exams',
+    schedule: 'Schedule',
+    // Advanced features
+    artificialIntelligence: 'Artificial Intelligence',
+    blockchain: 'Blockchain',
+    iot: 'Internet of Things',
+    biometric: 'Biometric',
+    augmentedReality: 'Augmented Reality',
+    predictiveAnalytics: 'Predictive Analytics',
+    smartEnergy: 'Smart Energy',
+    quantumSecurity: 'Quantum Security',
+    // System messages
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    warning: 'Warning',
+    info: 'Information',
   },
   fr: {
     home: 'ACCUEIL',
@@ -94,6 +126,37 @@ const translations: Record<Language, Record<string, string>> = {
     learnMore: 'En savoir plus',
     viewAll: 'Voir tout',
     getStarted: 'Commencer',
+    // Dashboard terms
+    dashboard: 'Tableau de bord',
+    overview: 'Vue d\'ensemble',
+    analytics: 'Analytiques',
+    reports: 'Rapports',
+    settings: 'Paramètres',
+    profile: 'Profil',
+    notifications: 'Notifications',
+    logout: 'Déconnexion',
+    // Academic terms
+    courses: 'Cours',
+    grades: 'Notes',
+    attendance: 'Présence',
+    assignments: 'Devoirs',
+    exams: 'Examens',
+    schedule: 'Horaire',
+    // Advanced features
+    artificialIntelligence: 'Intelligence Artificielle',
+    blockchain: 'Blockchain',
+    iot: 'Internet des Objets',
+    biometric: 'Biométrique',
+    augmentedReality: 'Réalité Augmentée',
+    predictiveAnalytics: 'Analytiques Prédictives',
+    smartEnergy: 'Énergie Intelligente',
+    quantumSecurity: 'Sécurité Quantique',
+    // System messages
+    loading: 'Chargement...',
+    error: 'Erreur',
+    success: 'Succès',
+    warning: 'Attention',
+    info: 'Information',
   },
   rw: {
     home: 'AHABANZA',
@@ -133,6 +196,37 @@ const translations: Record<Language, Record<string, string>> = {
     learnMore: 'Menya byinshi',
     viewAll: 'Reba byose',
     getStarted: 'Tangira',
+    // Dashboard terms
+    dashboard: 'Ikimenyetso',
+    overview: 'Icyerekezo rusange',
+    analytics: 'Isesengura',
+    reports: 'Raporo',
+    settings: 'Igenamigambi',
+    profile: 'Umwirondoro',
+    notifications: 'Ubutumwa',
+    logout: 'Gusohoka',
+    // Academic terms
+    courses: 'Amasomo',
+    grades: 'Amanota',
+    attendance: 'Kwitabira',
+    assignments: 'Akazi k\'umuryango',
+    exams: 'Ibizamini',
+    schedule: 'Gahunda',
+    // Advanced features
+    artificialIntelligence: 'Ubwiyunge Bwubatswe',
+    blockchain: 'Tekinoroji ya Blockchain',
+    iot: 'Ibibanza bya Internet',
+    biometric: 'Ibimenyetso by\'umuntu',
+    augmentedReality: 'Ukuri Kwongerewe',
+    predictiveAnalytics: 'Isesengura Riteganya',
+    smartEnergy: 'Ingufu Zirangwa Ubwiyunge',
+    quantumSecurity: 'Umutekano wa Quantum',
+    // System messages
+    loading: 'Birategurika...',
+    error: 'Ikosa',
+    success: 'Byagenze neza',
+    warning: 'Iburira',
+    info: 'Amakuru',
   },
   sw: {
     home: 'NYUMBANI',
@@ -172,6 +266,37 @@ const translations: Record<Language, Record<string, string>> = {
     learnMore: 'Jifunze zaidi',
     viewAll: 'Tazama zote',
     getStarted: 'Anza',
+    // Dashboard terms
+    dashboard: 'Dashibodi',
+    overview: 'Muhtasari',
+    analytics: 'Uchanganuzi',
+    reports: 'Ripoti',
+    settings: 'Mipangilio',
+    profile: 'Wasifu',
+    notifications: 'Arifa',
+    logout: 'Ondoka',
+    // Academic terms
+    courses: 'Kozi',
+    grades: 'Alama',
+    attendance: 'Mahudhurio',
+    assignments: 'Kazi',
+    exams: 'Mtihani',
+    schedule: 'Ratiba',
+    // Advanced features
+    artificialIntelligence: 'Akili Bandia',
+    blockchain: 'Blockchain',
+    iot: 'Intaneti ya Vitu',
+    biometric: 'Kibayometriki',
+    augmentedReality: 'Uhalisia Ulioongezwa',
+    predictiveAnalytics: 'Uchambuzi wa Kutabiri',
+    smartEnergy: 'Nishati Mahiri',
+    quantumSecurity: 'Usalama wa Quantum',
+    // System messages
+    loading: 'Inapakia...',
+    error: 'Kosa',
+    success: 'Mafanikio',
+    warning: 'Onyo',
+    info: 'Maelezo',
   },
 };
 

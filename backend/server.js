@@ -39,10 +39,27 @@ app.use('/api/parents', require('./routes/parents'));
 app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/students', require('./routes/students'));
 app.use('/api/dos', require('./routes/dos'));
-app.use('/api/dos', require('./routes/dos'));
-app.use('/api/dos', require('./controllers/dosController'));
 app.use('/api/dos-enhanced', require('./routes/enhanced-dos'));
 app.use('/api/role-auth', require('./routes/role-auth'));
+
+// New comprehensive routes
+app.use('/api/exams', require('./routes/exams'));
+app.use('/api/courses', require('./routes/courses'));
+app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/grades', require('./routes/grades'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/teams', require('./routes/teams'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/timetable', require('./routes/timetable'));
+app.use('/api/sports', require('./routes/sports'));
+
+// New powerful API routes
+app.use('/api/powerful', require('./routes/powerfulSchoolApis'));
+app.use('/api/academics-advanced', require('./routes/advancedAcademics'));
+app.use('/api/operations-advanced', require('./routes/advancedOperations'));
+app.use('/api/intelligence', require('./routes/intelligentSystems'));
+app.use('/api/modern-tech', require('./routes/modernTechApis'));
+
 app.use('/', require('./routes/docs'));
 
 // Test route

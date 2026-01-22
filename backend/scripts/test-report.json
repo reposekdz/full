@@ -1,0 +1,142 @@
+{
+  "passed": 5,
+  "failed": 22,
+  "total": 27,
+  "details": [
+    {
+      "name": "Admin Login Authentication",
+      "status": "FAILED",
+      "error": "Request failed with status code 500"
+    },
+    {
+      "name": "Get Current User Profile",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch All Courses",
+      "status": "PASSED",
+      "error": null
+    },
+    {
+      "name": "Filter Courses by Trade",
+      "status": "PASSED",
+      "error": null
+    },
+    {
+      "name": "Create New Course",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch All Exams",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Create Comprehensive Exam",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Filter Exams by Multiple Criteria",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Attendance Records",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Get Attendance Statistics",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch All Grades",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Get Grade Analytics",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Timetable Entries",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Check Timetable Conflicts",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch User Notifications",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Create System Notification",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch User Messages",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Get Message Statistics",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Get Recent Contacts",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Sports Teams",
+      "status": "PASSED",
+      "error": null
+    },
+    {
+      "name": "Fetch Sports Events",
+      "status": "PASSED",
+      "error": null
+    },
+    {
+      "name": "Fetch Sports Achievements",
+      "status": "FAILED",
+      "error": "Request failed with status code 500"
+    },
+    {
+      "name": "Create Sports Team",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Management Teams",
+      "status": "PASSED",
+      "error": null
+    },
+    {
+      "name": "Fetch Payment Records",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Stock Items",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    },
+    {
+      "name": "Fetch Stock Movements",
+      "status": "FAILED",
+      "error": "Request failed with status code 401"
+    }
+  ]
+}

@@ -273,7 +273,7 @@ const initDatabase = async () => {
     // Insert default about content
     await connection.execute(`
       INSERT IGNORE INTO about_content (section_title, main_title, subtitle, description, features, statistics) VALUES
-      ('About Our Institution', 'POWERFUL SCHOOL MANAGEMENT SYSTEM', 'Excellence in Education', 'We are committed to providing world-class technical education that prepares students for successful careers in today\'s competitive job market. Our modern facilities and expert instructors ensure the highest quality learning experience.', 
+      ('About Our Institution', 'POWERFUL SCHOOL MANAGEMENT SYSTEM', 'Excellence in Education', 'We are committed to providing world-class technical education that prepares students for successful careers in today\\'s competitive job market. Our modern facilities and expert instructors ensure the highest quality learning experience.', 
       JSON_ARRAY('Modern Facilities', 'Expert Instructors', 'Industry Partnerships', 'Hands-on Learning', 'Career Support', 'International Standards'),
       JSON_OBJECT('students', 1248, 'programs', 3, 'teachers', 65, 'partners', 65))
     `);

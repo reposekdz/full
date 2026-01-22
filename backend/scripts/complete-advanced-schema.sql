@@ -1,4 +1,8 @@
 -- Complete Advanced School Management System Database Schema
+
+-- Disable foreign key checks for clean table drops
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- Drop existing tables
 DROP TABLE IF EXISTS exam_results;
 DROP TABLE IF EXISTS exam_registrations;
@@ -25,6 +29,9 @@ DROP TABLE IF EXISTS sports_teams;
 DROP TABLE IF EXISTS trade_courses;
 DROP TABLE IF EXISTS academic_years;
 DROP TABLE IF EXISTS users;
+
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- Users table with comprehensive role support
 CREATE TABLE users (

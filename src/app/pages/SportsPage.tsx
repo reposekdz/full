@@ -122,11 +122,64 @@ const recentAchievements = [
 const SportsPage: React.FC<SportsPageProps> = ({ onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredSport, setHoveredSport] = useState<string | null>(null);
+  const [sportsCategories, setSportsCategories] = useState<any[]>(sportCategories);
+  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [recentAchievements, setRecentAchievements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const { language } = useLanguage();
 
-  const filteredSports = sportCategories.filter(sport =>
+  const API_BASE = 'http://localhost:5000/api';
+
+  // Fetch dynamic sports data
+  useEffect(() => {
+    const fetchSportsData = async () => {
+      setLoading(true);
+      try {
+        // Fetch sports categories
+        try {
+          const categoriesResponse = await fetch(`${API_BASE}/dynamic/sports/categories`);
+          const categoriesData = await categoriesResponse.json();
+          if (categoriesData.success && categoriesData.categories.length > 0) {
+            setSportsCategories(categoriesData.categories);
+          }
+        } catch (error) {
+          console.log('Using default sports categories');
+        }
+
+        // Fetch upcoming matches
+        try {
+          const matchesResponse = await fetch(`${API_BASE}/dynamic/sports/matches?status=upcoming&limit=4`);
+          const matchesData = await matchesResponse.json();
+          if (matchesData.success && matchesData.matches.length > 0) {
+            setUpcomingMatches(matchesData.matches);
+          }
+        } catch (error) {
+          console.log('Using default sports matches');
+        }
+
+        // Fetch recent achievements
+        try {
+          const achievementsResponse = await fetch(`${API_BASE}/dynamic/sports/achievements?featured=true&limit=4`);
+          const achievementsData = await achievementsResponse.json();
+          if (achievementsData.success && achievementsData.achievements.length > 0) {
+            setRecentAchievements(achievementsData.achievements);
+          }
+        } catch (error) {
+          console.log('Using default sports achievements');
+        }
+      } catch (error) {
+        console.error('Error fetching sports data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSportsData();
+  }, []);
+
+  const filteredSports = sportsCategories.filter(sport =>
     sport.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sport.nameRw.toLowerCase().includes(searchQuery.toLowerCase())
+    sport.name_rw?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const stats = [

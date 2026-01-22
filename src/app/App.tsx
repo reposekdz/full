@@ -25,7 +25,9 @@ import FootballPage from '@/app/pages/sports/FootballPage';
 import VolleyballPage from '@/app/pages/sports/VolleyballPage';
 import BasketballPage from '@/app/pages/sports/BasketballPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
+import EnhancedAdminDashboard from '@/app/pages/dashboards/EnhancedAdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
+import EnhancedStudentDashboard from '@/app/pages/dashboards/EnhancedStudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DirectorDisciplineDashboard from '@/app/pages/dashboards/DirectorDisciplineDashboard';
@@ -51,9 +53,9 @@ const AppContent: React.FC = () => {
     switch (user.role) {
       case 'admin':
       case 'super_admin':
-        return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <EnhancedAdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'student':
-        return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <EnhancedStudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         return <ParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':

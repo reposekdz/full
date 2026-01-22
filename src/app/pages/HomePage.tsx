@@ -220,12 +220,169 @@ const defaultAchievements = [
   },
 ];
 
+const defaultFeatures = [
+  {
+    id: 1,
+    title: 'Experienced Teachers',
+    title_rw: 'Abarimu Babizi',
+    description: 'Our teachers have extensive experience and expertise',
+    description_rw: 'Abarimu bacu bafite uburambe bwinshi n\'ubuhanga',
+    icon: 'GraduationCap',
+    color: 'from-blue-500 to-indigo-600',
+    is_active: true,
+    sort_order: 1
+  },
+  {
+    id: 2,
+    title: 'Modern Facilities',
+    title_rw: 'Ibikoresho By\'Igihe',
+    description: 'State-of-the-art facilities and equipment',
+    description_rw: 'Ibikoresho bigezweho by\'igihe',
+    icon: 'Building',
+    color: 'from-green-500 to-teal-500',
+    is_active: true,
+    sort_order: 2
+  },
+  {
+    id: 3,
+    title: 'High Employment Rate',
+    title_rw: 'Gushirwa mu Kazi Cyinshi',
+    description: '95% of our graduates find employment',
+    description_rw: '95% y\'abanyeshuri bacu babona akazi',
+    icon: 'Briefcase',
+    color: 'from-yellow-500 to-orange-500',
+    is_active: true,
+    sort_order: 3
+  },
+  {
+    id: 4,
+    title: 'Many Trophies',
+    title_rw: 'Ibihembo Byinshi',
+    description: '25+ trophies won in various competitions',
+    description_rw: 'Ibihembo 25+ byatsindwe mu marushanwa',
+    icon: 'Trophy',
+    color: 'from-orange-500 to-red-500',
+    is_active: true,
+    sort_order: 4
+  },
+  {
+    id: 5,
+    title: 'International Partnerships',
+    title_rw: 'Ubufatanye Mpuzamahanga',
+    description: 'Partnerships with international institutions',
+    description_rw: 'Ubufatanye n\'amashuri mpuzamahanga',
+    icon: 'Globe',
+    color: 'from-pink-500 to-rose-500',
+    is_active: true,
+    sort_order: 5
+  },
+  {
+    id: 6,
+    title: 'Extracurricular Activities',
+    title_rw: 'Ibikorwa by\'Inyongera',
+    description: 'Sports, clubs, and other activities',
+    description_rw: 'Siporo, amakoperative n\'ibindi bikorwa',
+    icon: 'Target',
+    color: 'from-purple-500 to-indigo-500',
+    is_active: true,
+    sort_order: 6
+  },
+];
+
+const defaultEvents = [
+  {
+    id: 1,
+    title: 'Parent-Teacher Meeting',
+    title_rw: 'Inama y\'Ababyeyi n\'Abarimu',
+    description: 'Monthly meeting between parents and teachers',
+    description_rw: 'Inama y\'ukwezi ihuza ababyeyi n\'abarimu',
+    event_date: '2026-01-25',
+    event_time: '14:00:00',
+    location: 'Main Hall',
+    event_type: 'academic',
+    priority: 'high',
+    organizer: 'School Administration',
+    organizer_rw: 'Abayobozi b\'Ishuri',
+    contact_info: 'admin@school.rw',
+    max_attendees: 200,
+    current_attendees: 0,
+    status: 'upcoming',
+    is_active: true,
+    sort_order: 1
+  },
+  {
+    id: 2,
+    title: 'Mid-term Exams',
+    title_rw: 'Imirimo y\'Icyiciro cya Kabiri',
+    description: 'Mid-term examinations for all classes',
+    description_rw: 'Imirimo y\'icyiciro cya kabiri ku mashuri yose',
+    event_date: '2026-01-28',
+    event_time: '08:00:00',
+    location: 'All Classrooms',
+    event_type: 'academic',
+    priority: 'high',
+    organizer: 'Academic Department',
+    organizer_rw: 'Ishami ry\'Amashuri',
+    contact_info: 'academic@school.rw',
+    max_attendees: null,
+    current_attendees: 0,
+    status: 'upcoming',
+    is_active: true,
+    sort_order: 2
+  },
+  {
+    id: 3,
+    title: 'Basketball Championship',
+    title_rw: 'Igikombe cya Basketball',
+    description: 'Regional basketball championship finals',
+    description_rw: 'Impera z\'igikombe cya basketball cy\'akarere',
+    event_date: '2026-02-01',
+    event_time: '14:00:00',
+    location: 'Kibagabaga Stadium',
+    event_type: 'sports',
+    priority: 'medium',
+    organizer: 'Sports Department',
+    organizer_rw: 'Ishami ry\'Imikino',
+    contact_info: 'sports@school.rw',
+    max_attendees: 500,
+    current_attendees: 0,
+    status: 'upcoming',
+    is_active: true,
+    sort_order: 3
+  },
+  {
+    id: 4,
+    title: 'Athletics Competition',
+    title_rw: 'Marushanwa y\'Imikino Ngororamubiri',
+    description: 'Inter-school athletics competition',
+    description_rw: 'Marushanwa y\'imikino ngororamubiri hagati y\'amashuri',
+    event_date: '2026-02-05',
+    event_time: '08:00:00',
+    location: 'Nyamirambo Stadium',
+    event_type: 'sports',
+    priority: 'medium',
+    organizer: 'PE Department',
+    organizer_rw: 'Ishami ry\'Imikino Ngororamubiri',
+    contact_info: 'pe@school.rw',
+    max_attendees: 300,
+    current_attendees: 0,
+    status: 'upcoming',
+    is_active: true,
+    sort_order: 4
+  },
+];
+
 const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [newsArticles, setNewsArticles] = useState(defaultNewsArticles);
   const [testimonials, setTestimonials] = useState(defaultTestimonials);
   const [schoolStats, setSchoolStats] = useState(defaultSchoolStats);
   const [achievements, setAchievements] = useState(defaultAchievements);
+  const [dynamicFeatures, setDynamicFeatures] = useState(defaultFeatures);
+  const [upcomingEvents, setUpcomingEvents] = useState(defaultEvents);
+  const [sportsCategories, setSportsCategories] = useState([]);
+  const [sportsMatches, setSportsMatches] = useState([]);
+  const [sportsAchievements, setSportsAchievements] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const API_BASE = 'http://localhost:5000/api';
@@ -242,7 +399,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     BookOpen
   };
 
-  // Fetch content from API
+  // Fetch all dynamic content from API
   useEffect(() => {
     const fetchContent = async () => {
       setLoading(true);
@@ -251,45 +408,135 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         try {
           const newsResponse = await fetch(`${API_BASE}/content/news`);
           const newsData = await newsResponse.json();
-          if (newsData.success && newsData.articles.length > 0) {
+          if (newsData.success && newsData.articles && newsData.articles.length > 0) {
             setNewsArticles(newsData.articles);
           }
         } catch (error) {
-          console.log('Using default news articles');
+          console.log('News API error, using default:', error.message);
         }
 
         // Fetch testimonials
         try {
           const testimonialsResponse = await fetch(`${API_BASE}/content/testimonials`);
           const testimonialsData = await testimonialsResponse.json();
-          if (testimonialsData.success && testimonialsData.testimonials.length > 0) {
+          if (testimonialsData.success && testimonialsData.testimonials && testimonialsData.testimonials.length > 0) {
             setTestimonials(testimonialsData.testimonials);
           }
         } catch (error) {
-          console.log('Using default testimonials');
+          console.log('Testimonials API error, using default:', error.message);
         }
 
-        // Fetch school stats
+        // Fetch school statistics 
         try {
           const statsResponse = await fetch(`${API_BASE}/content/stats`);
           const statsData = await statsResponse.json();
-          if (statsData.success && statsData.stats.length > 0) {
+          if (statsData.success && statsData.stats && statsData.stats.length > 0) {
             setSchoolStats(statsData.stats);
           }
         } catch (error) {
-          console.log('Using default school stats');
+          console.log('Stats API error, using default:', error.message);
         }
 
         // Fetch achievements
         try {
           const achievementsResponse = await fetch(`${API_BASE}/content/achievements`);
           const achievementsData = await achievementsResponse.json();
-          if (achievementsData.success && achievementsData.achievements.length > 0) {
+          if (achievementsData.success && achievementsData.achievements && achievementsData.achievements.length > 0) {
             setAchievements(achievementsData.achievements);
           }
         } catch (error) {
-          console.log('Using default achievements');
+          console.log('Achievements API error, using default:', error.message);
         }
+
+        // Fetch slides for hero section
+        try {
+          const slidesResponse = await fetch(`${API_BASE}/content/slides`);
+          const slidesData = await slidesResponse.json();
+          if (slidesData.success && slidesData.slides && slidesData.slides.length > 0) {
+            // Pass slides to Hero component or use them for homepage content
+            console.log('Loaded slides:', slidesData.slides);
+          }
+        } catch (error) {
+          console.log('Slides API error:', error.message);
+        }
+
+        // Fetch sports teams and events
+        try {
+          const sportsResponse = await fetch(`${API_BASE}/sports/teams`);
+          const sportsData = await sportsResponse.json();
+          if (sportsData.success && sportsData.teams) {
+            setSportsCategories(sportsData.teams);
+          }
+        } catch (error) {
+          console.log('Sports API error:', error.message);
+        }
+
+        // Fetch management teams
+        try {
+          const teamsResponse = await fetch(`${API_BASE}/teams`);
+          const teamsData = await teamsResponse.json();
+          if (teamsData.success && teamsData.teams) {
+            console.log('Management teams loaded:', teamsData.teams);
+          }
+        } catch (error) {
+          console.log('Teams API error:', error.message);
+        }
+
+        // Fetch dynamic features
+        try {
+          const featuresResponse = await fetch(`${API_BASE}/dynamic/features`);
+          const featuresData = await featuresResponse.json();
+          if (featuresData.success && featuresData.features.length > 0) {
+            setDynamicFeatures(featuresData.features);
+          }
+        } catch (error) {
+          console.log('Using default features');
+        }
+
+        // Fetch upcoming events
+        try {
+          const eventsResponse = await fetch(`${API_BASE}/dynamic/events?status=upcoming&limit=4`);
+          const eventsData = await eventsResponse.json();
+          if (eventsData.success && eventsData.events.length > 0) {
+            setUpcomingEvents(eventsData.events);
+          }
+        } catch (error) {
+          console.log('Using default events');
+        }
+
+        // Fetch sports categories
+        try {
+          const sportsResponse = await fetch(`${API_BASE}/dynamic/sports/categories`);
+          const sportsData = await sportsResponse.json();
+          if (sportsData.success && sportsData.categories.length > 0) {
+            setSportsCategories(sportsData.categories);
+          }
+        } catch (error) {
+          console.log('Using default sports categories');
+        }
+
+        // Fetch upcoming sports matches
+        try {
+          const matchesResponse = await fetch(`${API_BASE}/dynamic/sports/matches?status=upcoming&limit=4`);
+          const matchesData = await matchesResponse.json();
+          if (matchesData.success && matchesData.matches.length > 0) {
+            setSportsMatches(matchesData.matches);
+          }
+        } catch (error) {
+          console.log('Using default sports matches');
+        }
+
+        // Fetch sports achievements
+        try {
+          const sportsAchievementsResponse = await fetch(`${API_BASE}/dynamic/sports/achievements?featured=true&limit=4`);
+          const sportsAchievementsData = await sportsAchievementsResponse.json();
+          if (sportsAchievementsData.success && sportsAchievementsData.achievements.length > 0) {
+            setSportsAchievements(sportsAchievementsData.achievements);
+          }
+        } catch (error) {
+          console.log('Using default sports achievements');
+        }
+
       } catch (error) {
         console.error('Error fetching content:', error);
       } finally {
@@ -692,67 +939,33 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: GraduationCap,
-                title: 'Abarimu Babizi',
-                description: 'Abarimu bacu bafite uburambe bwinshi kandi barahebuje',
-                color: 'from-blue-500 to-indigo-500'
-              },
-              {
-                icon: Building,
-                title: 'Ibikoresho Byiza',
-                description: 'Ishuri dufite ibikoresho bigezweho by\'amashuri',
-                color: 'from-green-500 to-teal-500'
-              },
-              {
-                icon: Briefcase,
-                title: 'Gushirwa mu Kazi',
-                description: '95% y\'abanyeshuri bacu babona akazi nyuma y\'amashuri',
-                color: 'from-yellow-500 to-orange-500'
-              },
-              {
-                icon: Trophy,
-                title: 'Ibihembo Byinshi',
-                description: 'Twatsindiye ibihembo 25+ mu myaka 5 ishize',
-                color: 'from-orange-500 to-red-500'
-              },
-              {
-                icon: Globe,
-                title: 'Ubufatanye Mpuzamahanga',
-                description: 'Dufite ubufatanye n\'amashuri menshi mu mahanga',
-                color: 'from-pink-500 to-rose-500'
-              },
-              {
-                icon: Target,
-                title: 'Ibikorwa by\'Inyongera',
-                description: 'Siporo, club, n\'ibikorwa by\'inyongera byinshi',
-                color: 'from-purple-500 to-indigo-500'
-              },
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.05 }}
-              >
-                <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all h-full">
-                  <CardContent className="p-8 text-center">
-                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${feature.color} flex items-center justify-center`}>
-                      <feature.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {dynamicFeatures.map((feature, index) => {
+              const IconComponent = iconMap[feature.icon] || GraduationCap;
+              return (
+                <motion.div
+                  key={feature.id || index}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all h-full">
+                    <CardContent className="p-8 text-center">
+                      <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${feature.color} flex items-center justify-center`}>
+                        <IconComponent className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">
+                        {language === 'rw' ? feature.title_rw : feature.title}
+                      </h3>
+                      <p className="text-gray-600">
+                        {language === 'rw' ? feature.description_rw : feature.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

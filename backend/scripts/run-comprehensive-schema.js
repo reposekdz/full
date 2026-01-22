@@ -11,7 +11,7 @@ async function runSchema() {
       host: 'localhost',
       user: 'root',
       password: '',
-      database: 'school_management_system',
+      database: 'school_management',
       multipleStatements: true
     });
 

@@ -13,7 +13,7 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { Select, SelecbatContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Switch } from '@/app/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
@@ -262,11 +262,13 @@ const RoleBasedDashboard: React.FC = () => {
       { id: 'attendance', label: 'Attendance', icon: Calendar, roles: ['super_admin', 'admin', 'headmaster', 'director_study', 'teacher', 'student'] },
       { id: 'finance', label: 'Finance', icon: DollarSign, roles: ['super_admin', 'admin', 'headmaster', 'accountant', 'student', 'parent'] },
       { id: 'stock', label: 'Stock Management', icon: Package, roles: ['super_admin', 'admin', 'stock_manager'] },
+      { id: 'parent-linking', label: 'Parent Linking', icon: Link, roles: ['super_admin', 'admin', 'headmaster', 'director_discipline', 'parent'] },
+      { id: 'excel-import', label: 'Excel Import', icon: FileSpreadsheet, roles: ['super_admin', 'admin', 'director_discipline'] },
       { id: 'reports', label: 'Reports', icon: TrendingUp, roles: ['super_admin', 'admin', 'headmaster', 'director_study', 'accountant'] },
       { id: 'settings', label: 'Settings', icon: Settings, roles: ['super_admin', 'admin'] }
     ];
 
-    return [...baseItems, ...roleItems.filter(item => 
+    return [...baseItems, ...roleItems.filter(item =>
       item.roles.includes('all') || item.roles.includes(user?.role)
     )];
   };
@@ -823,6 +825,22 @@ const RoleBasedDashboard: React.FC = () => {
                 </Table>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case 'parent-linking':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Parent-Student Linking</h2>
+            <ParentStudentLink onNavigate={(page) => setActiveTab(page)} />
+          </div>
+        );
+
+      case 'excel-import':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Excel Student Import</h2>
+            <ExcelStudentImport />
           </div>
         );
 
