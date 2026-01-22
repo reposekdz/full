@@ -21,6 +21,7 @@ const authRoutes = require('./routes/auth');
 const userAuthRoutes = require('./routes/user-auth');
 const staffAuthRoutes = require('./routes/staff-auth');
 const parentLinkingRoutes = require('./routes/parent-linking');
+const parentMonitoringRoutes = require('./routes/parent-monitoring');
 const academicsRoutes = require('./routes/academics');
 const contactRoutes = require('./routes/contact');
 const supportRoutes = require('./routes/support');
@@ -42,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auth', userAuthRoutes);
 app.use('/api/auth', staffAuthRoutes);
 app.use('/api/parent-linking', parentLinkingRoutes);
+app.use('/api/parent-monitoring', parentMonitoringRoutes);
 app.use('/api/academics', academicsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/support', supportRoutes);
@@ -77,7 +79,7 @@ app.listen(PORT, () => {
   console.log('\n🎓 School Management System - v3.0.0');
   console.log(`🚀 Server: http://localhost:${PORT}`);
   console.log(`📊 Database: ${process.env.DB_NAME}`);
-  console.log('✅ 150+ Routes Active | All Features Operational\n');
+  console.log('✅ 170+ Routes | Student/Parent Registration Active\n');
 });
 
 module.exports = app;
