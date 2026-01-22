@@ -27,37 +27,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
   const navItems = [
     { key: 'home', icon: Home, label: 'Home', subItems: [] },
-    {
-      key: 'academics',
-      icon: BookOpen,
-      label: 'Academics',
-      subItems: [
-        { key: 'courses', icon: GraduationCap, label: 'Courses' },
-        { key: 'timetable', icon: Calendar, label: 'Timetable' },
-        { key: 'exams', icon: ClipboardList, label: 'Exams' },
-        { key: 'results', icon: TrendingUp, label: 'Results' },
-      ]
-    },
-    {
-      key: 'sports',
-      icon: Trophy,
-      label: 'Sports',
-      subItems: [
-        { key: 'teams', icon: Users, label: 'Teams' },
-        { key: 'events', icon: Calendar, label: 'Events' },
-        { key: 'achievements', icon: Award, label: 'Achievements' },
-      ]
-    },
-    {
-      key: 'services',
-      icon: Briefcase,
-      label: 'Services',
-      subItems: [
-        { key: 'library', icon: BookOpen, label: 'Library' },
-        { key: 'counseling', icon: HelpCircle, label: 'Counseling' },
-        { key: 'health', icon: HelpCircle, label: 'Health Center' },
-      ]
-    },
+    { key: 'academics', icon: BookOpen, label: 'Academics', subItems: [] },
+    { key: 'sports', icon: Trophy, label: 'Sports', subItems: [] },
+    { key: 'services', icon: Briefcase, label: 'Services', subItems: [] },
     { key: 'trades', icon: Wrench, label: 'Trades', subItems: [] },
     { key: 'contactUs', icon: Phone, label: 'Contact Us', subItems: [] },
     { key: 'supports', icon: HelpCircle, label: 'Support', subItems: [] },
@@ -91,80 +63,58 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+        className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-20 md:h-24">
+        <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between h-14 sm:h-16 md:h-20 gap-2">
             {/* Logo */}
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="flex items-center space-x-2 cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0"
               onClick={() => onNavigate('home')}
             >
               <motion.img
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico"
-                alt="Garden TVET School Logo"
-                className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 object-contain rounded-lg shadow-lg"
+                alt="Logo"
+                className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain rounded-lg shadow-lg"
               />
-              <div className="hidden sm:block">
-                <motion.p className="text-base sm:text-xl md:text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent leading-tight">
-                  Garden TVET School
+              <div className="hidden md:block min-w-0">
+                <motion.p className="text-sm sm:text-base md:text-xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent leading-tight truncate">
+                  Garden TVET
                 </motion.p>
                 <motion.p
                   key={currentTaglineIndex}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-xs sm:text-sm text-gray-600 leading-tight"
+                  className="text-xs text-gray-600 leading-tight truncate"
                 >
                   {taglines[currentTaglineIndex]}
                 </motion.p>
               </div>
             </motion.div>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-2">
+            {/* Right Side - Desktop Only */}
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
               {/* Desktop Search */}
-              <div className="hidden lg:block flex-1 max-w-2xl mx-4">
+              <div className="flex-1 max-w-md xl:max-w-2xl">
                 <EnhancedGlobalSearch onNavigate={onNavigate} />
               </div>
 
-              {/* Mobile Icons Row */}
-              <div className="flex items-center space-x-2">
-                {/* Search Icon - Mobile/Tablet */}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsSearchOpen(true)}
-                  className="lg:hidden rounded-full border-2 border-yellow-300 hover:border-yellow-500 hover:bg-yellow-50 h-9 w-9 sm:h-10 sm:w-10"
-                >
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-                </Button>
-
-                {/* Login Icon - Mobile (if not logged in) */}
-                {!user && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onNavigate('login')}
-                    className="md:hidden rounded-full border-2 border-green-300 hover:border-green-500 hover:bg-green-50 h-9 w-9 sm:h-10 sm:w-10"
-                  >
-                    <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                  </Button>
-                )}
-
-                {/* Language Icon - Mobile/Tablet */}
+              {/* Desktop Icons */}
+              <div className="flex items-center gap-1.5">
+                {/* Language Icon */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-full border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 h-9 w-9 sm:h-10 sm:w-10"
+                      className="rounded-full border border-blue-300 h-9 w-9 p-0 flex-shrink-0"
                     >
-                      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                      <Globe className="w-4 h-4 text-blue-600" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuContent align="end" className="w-44">
                     {(['en', 'fr', 'rw', 'sw'] as Language[]).map((lang) => (
                       <DropdownMenuItem
                         key={lang}
@@ -172,13 +122,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                         className={language === lang ? 'bg-yellow-100 font-bold' : ''}
                       >
                         <div className="flex items-center justify-between w-full">
-                          <span>
+                          <span className="text-sm">
                             {lang === 'en' && '🇬🇧 English'}
                             {lang === 'fr' && '🇫🇷 Français'}
                             {lang === 'rw' && '🇷🇼 Kinyarwanda'}
                             {lang === 'sw' && '🇰🇪 Kiswahili'}
                           </span>
-                          {language === lang && <CheckCircle2 className="h-4 w-4" />}
+                          {language === lang && <CheckCircle2 className="h-3 w-3" />}
                         </div>
                       </DropdownMenuItem>
                     ))}
@@ -187,55 +137,55 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
                 {/* Desktop Auth Buttons */}
                 {!user && (
-                  <div className="hidden md:flex items-center space-x-2">
+                  <div className="flex items-center gap-1.5">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => onNavigate('login')}
-                      className="rounded-full hover:bg-yellow-50 border-yellow-400"
+                      className="rounded-full border-yellow-400 h-8 px-3"
                     >
-                      <LogIn className="w-4 h-4 mr-2" />
-                      {t('login')}
+                      <LogIn className="w-3 h-3 mr-1" />
+                      <span className="text-xs">{t('login')}</span>
                     </Button>
                     <Button
+                      size="sm"
                       onClick={() => onNavigate('register')}
-                      className="rounded-full bg-gradient-to-br from-yellow-500 to-green-500"
+                      className="rounded-full bg-gradient-to-br from-yellow-500 to-green-500 h-8 px-3"
                     >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      {t('register')}
+                      <UserPlus className="w-3 h-3 mr-1" />
+                      <span className="text-xs">{t('register')}</span>
                     </Button>
                   </div>
                 )}
 
-                {/* User Menu - Desktop */}
+                {/* User Menu */}
                 {user && (
-                  <div className="hidden md:block">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="rounded-full p-1">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold">
-                              {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem className="flex flex-col items-start">
-                          <p className="font-semibold">{user.first_name} {user.last_name}</p>
-                          <p className="text-sm text-gray-500">{user.role}</p>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onNavigate(getRoleDashboard(user.role))}>
-                          Dashboard
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => {
-                          logout();
-                          onNavigate('home');
-                        }}>
-                          Logout
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 p-0">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-xs font-bold">
+                            {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem className="flex flex-col items-start">
+                        <p className="font-semibold text-sm">{user.first_name} {user.last_name}</p>
+                        <p className="text-xs text-gray-500">{user.role}</p>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onNavigate(getRoleDashboard(user.role))}>
+                        Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-600" onClick={() => {
+                        logout();
+                        onNavigate('home');
+                      }}>
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
                 {/* Menu Icon */}
@@ -243,11 +193,23 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   variant="outline"
                   size="icon"
                   onClick={() => setIsSidebarOpen(true)}
-                  className="rounded-full border-2 border-yellow-200 hover:border-yellow-400 h-9 w-9 sm:h-10 sm:w-10"
+                  className="rounded-full border border-yellow-200 h-9 w-9 p-0 flex-shrink-0"
                 >
-                  <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+                  <Menu className="w-4 h-4 text-gray-700" />
                 </Button>
               </div>
+            </div>
+
+            {/* Mobile/Tablet - Only Logo and Menu */}
+            <div className="lg:hidden flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsSidebarOpen(true)}
+                className="rounded-full border border-yellow-200 h-9 w-9 p-0"
+              >
+                <Menu className="w-4 h-4 text-gray-700" />
+              </Button>
             </div>
           </div>
         </div>
@@ -306,54 +268,22 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase">Navigation</h3>
                   {navItems.map((item) => {
                     const Icon = item.icon;
-                    const hasSubItems = item.subItems?.length > 0;
-                    const isExpanded = expandedNavItems.includes(item.key);
 
                     return (
-                      <div key={item.key}>
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            if (hasSubItems) {
-                              toggleNavItem(item.key);
-                            } else {
-                              onNavigate(item.key);
-                              setIsSidebarOpen(false);
-                            }
-                          }}
-                          className={`w-full justify-between px-3 py-2 ${
-                            currentPage === item.key ? 'bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500' : ''
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <Icon className="w-5 h-5 mr-3" />
-                            <span className="font-medium">{item.label}</span>
-                          </div>
-                          {hasSubItems && (isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
-                        </Button>
-
-                        {hasSubItems && isExpanded && (
-                          <div className="ml-8 mt-1 space-y-1">
-                            {item.subItems.map((subItem) => {
-                              const SubIcon = subItem.icon;
-                              return (
-                                <Button
-                                  key={subItem.key}
-                                  variant="ghost"
-                                  onClick={() => {
-                                    onNavigate(subItem.key);
-                                    setIsSidebarOpen(false);
-                                  }}
-                                  className="w-full justify-start px-3 py-1.5 text-sm"
-                                >
-                                  <SubIcon className="w-4 h-4 mr-2" />
-                                  {subItem.label}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                      <Button
+                        key={item.key}
+                        variant="ghost"
+                        onClick={() => {
+                          onNavigate(item.key);
+                          setIsSidebarOpen(false);
+                        }}
+                        className={`w-full justify-start px-3 py-2 ${
+                          currentPage === item.key ? 'bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500' : ''
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        <span className="font-medium">{item.label}</span>
+                      </Button>
                     );
                   })}
                 </div>

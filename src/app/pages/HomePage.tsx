@@ -552,23 +552,23 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       <Hero />
 
       {/* Statistics Section */}
-      <section className="py-16 bg-gradient-to-br from-yellow-50 via-white to-green-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-yellow-50 via-white to-green-50">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-6 sm:mb-8 md:mb-12"
           >
-            <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 sm:mb-4 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent px-2">
               Imibare Yacu
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm sm:text-base md:text-lg px-4">
               Ishuri ry\'ubuhanga rifite imikorere myiza kandi ryizera
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {schoolStats.map((stat, index) => {
               const IconComponent = iconMap[stat.icon] || Users;
               return (
@@ -580,12 +580,12 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   transition={{ delay: index * 0.1 }}
                 >
                   <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all">
-                    <CardContent className="p-8 text-center">
-                      <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
-                        <IconComponent className="w-8 h-8 text-white" />
+                    <CardContent className="p-4 sm:p-6 md:p-8 text-center">
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-2 sm:mb-3 md:mb-4 rounded-full bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
+                        <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white" />
                       </div>
-                      <h3 className="text-4xl font-black text-gray-900 mb-2">{stat.value}</h3>
-                      <p className="text-gray-600 font-medium">{stat.label}</p>
+                      <h3 className="text-xl sm:text-2xl md:text-4xl font-black text-gray-900 mb-1 sm:mb-2">{stat.value}</h3>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 font-medium">{stat.label}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -596,18 +596,18 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       </section>
 
       {/* Trades Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-8 sm:py-12 md:py-16 bg-white">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl font-black text-center mb-12 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent"
+            className="text-2xl sm:text-3xl md:text-4xl font-black text-center mb-6 sm:mb-8 md:mb-12 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent px-2"
           >
             {t('tradesOffered')}
           </motion.h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {trades.map((trade, index) => (
               <motion.div
                 key={trade.code}
@@ -616,7 +616,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-2xl shadow-xl cursor-pointer"
+                className="group relative overflow-hidden rounded-xl sm:rounded-2xl shadow-xl cursor-pointer"
                 onClick={() => onNavigate('trades')}
               >
                 <div className="aspect-[4/3] relative">
@@ -627,11 +627,11 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl font-bold text-white mb-2">{t(trade.titleKey)}</h3>
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">{t(trade.titleKey)}</h3>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#ADFF2F] font-bold text-lg">{trade.code}</span>
-                    <ArrowRight className="w-6 h-6 text-white transform group-hover:translate-x-2 transition-transform" />
+                    <span className="text-[#ADFF2F] font-bold text-base sm:text-lg">{trade.code}</span>
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-white transform group-hover:translate-x-2 transition-transform" />
                   </div>
                 </div>
               </motion.div>
@@ -641,23 +641,23 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       </section>
 
       {/* News Section */}
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-yellow-50/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-gray-50 to-yellow-50/30">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-6 sm:mb-8 md:mb-12"
           >
-            <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 sm:mb-4 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent px-2">
               Amakuru Y\'Ishuri
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm sm:text-base md:text-lg px-4">
               Amakuru mashya n\'ibikorwa by\'ishuri ryacu
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {newsArticles.map((article, index) => (
               <motion.div
                 key={article.id || index}
@@ -673,24 +673,24 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <Badge className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
+                    <Badge className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs sm:text-sm">
                       {article.category}
                     </Badge>
                   </div>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                      <Calendar className="w-4 h-4" />
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                       {article.publish_date || article.date}
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                    <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                       {article.title}
                     </h3>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3">
                       {article.description}
                     </p>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                      <span className="text-sm text-gray-600">{article.author}</span>
-                      <ArrowRight className="w-5 h-5 text-[#ADFF2F] group-hover:translate-x-2 transition-transform" />
+                    <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-200">
+                      <span className="text-xs sm:text-sm text-gray-600 truncate">{article.author}</span>
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#ADFF2F] group-hover:translate-x-2 transition-transform flex-shrink-0" />
                     </div>
                   </CardContent>
                 </Card>

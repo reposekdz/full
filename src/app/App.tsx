@@ -3,6 +3,7 @@ import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { AuthProvider, useAuth, UserRole } from '@/app/contexts/AuthContext';
 import { ContentProvider } from '@/app/contexts/ContentContext';
 import Header from '@/app/components/Header';
+import { BottomNav } from '@/app/components/BottomNav';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
 import ServicesPage from '@/app/pages/ServicesPage';
@@ -156,16 +157,23 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full max-w-[100vw]">
       <Header
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onSearch={() => handleNavigate('search')}
       />
-      <main className="pt-20">
+      <main className="pt-14 sm:pt-16 md:pt-20 pb-16 sm:pb-20 lg:pb-0 w-full overflow-x-hidden">
         {renderPage()}
       </main>
       {!user && <Footer onNavigate={handleNavigate} />}
+      {!user && (
+        <BottomNav
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onSearch={() => handleNavigate('search')}
+        />
+      )}
     </div>
   );
 };
