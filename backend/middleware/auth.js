@@ -106,6 +106,8 @@ const requirePermission = (permission) => {
 
 module.exports = {
   authenticateToken,
+  authenticate: authenticateToken,
   requireRole,
+  authorize: requireRole,
   requirePermission
 };

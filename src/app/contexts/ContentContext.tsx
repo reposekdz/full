@@ -61,13 +61,13 @@ export const ContentProvider: React.FC<ContentProviderProps> = ({ children }) =>
     try {
       const response = await fetch(`${API_BASE}/content/slides`);
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.slides && data.slides.length > 0) {
         setSlides(data.slides);
       } else {
-        setError('Failed to load slides');
+        throw new Error('No slides available');
       }
     } catch (err) {
-      console.error('Failed to fetch slides:', err);
+      console.error('Failed to fetch slides, using fallback:', err);
       // Fallback to default slides
       setSlides([
         {
@@ -122,13 +122,13 @@ export const ContentProvider: React.FC<ContentProviderProps> = ({ children }) =>
     try {
       const response = await fetch(`${API_BASE}/content/trades`);
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.trades) {
         setTrades(data.trades);
       } else {
-        setError('Failed to load trades');
+        throw new Error('No trades available');
       }
     } catch (err) {
-      console.error('Failed to fetch trades:', err);
+      console.error('Failed to fetch trades, using fallback:', err);
       // Fallback to default trades
       setTrades([
         {

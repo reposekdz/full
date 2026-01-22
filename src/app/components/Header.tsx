@@ -8,11 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from '@/app/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
-import { Input } from '@/app/components/ui/input';
 import { Separator } from '@/app/components/ui/separator';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/app/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover';
+import { GlobalSearch } from '@/app/components/GlobalSearch';
+import { EnhancedGlobalSearch } from '@/app/components/EnhancedGlobalSearch';
 
 interface HeaderProps {
   currentPage: string;
@@ -24,9 +23,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   const { language, setLanguage, t } = useLanguage();
   const { user, logout, getRoleDashboard } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [expandedNavItems, setExpandedNavItems] = useState<string[]>([]);
 
   const navItems = [
     { key: 'home', icon: Home, label: 'Home', subItems: [] },
@@ -66,31 +63,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     { key: 'supports', icon: HelpCircle, label: 'Support', subItems: [] },
   ];
 
-  const searchSuggestions = [
-    { title: 'Academic Calendar', category: 'Academics', icon: Calendar, description: 'View term dates and academic schedule' },
-    { title: 'Student Portal', category: 'Services', icon: User, description: 'Access student dashboard and resources' },
-    { title: 'Course Registration', category: 'Academics', icon: FileText, description: 'Register for courses and programs' },
-    { title: 'Exam Results', category: 'Academics', icon: TrendingUp, description: 'Check examination results and grades' },
-    { title: 'Sports Events', category: 'Sports', icon: Trophy, description: 'View upcoming sports activities and matches' },
-    { title: 'Library Resources', category: 'Services', icon: BookOpen, description: 'Browse library catalog and resources' },
-    { title: 'Contact Support', category: 'Support', icon: HelpCircle, description: 'Get help and technical support' },
-    { title: 'School Teams', category: 'About', icon: Users, description: 'Meet our management teams' },
-    { title: 'Fee Payment', category: 'Finance', icon: Briefcase, description: 'Pay school fees and view payment history' },
-    { title: 'Timetable', category: 'Academics', icon: Calendar, description: 'View class schedules and timetables' },
-    { title: 'Attendance', category: 'Academics', icon: ClipboardList, description: 'Check attendance records' },
-    { title: 'Software Development', category: 'Trades', icon: BookOpen, description: 'Learn about SOD program' },
-    { title: 'Building Construction', category: 'Trades', icon: Wrench, description: 'Learn about BDC program' },
-    { title: 'Automobile Technology', category: 'Trades', icon: Wrench, description: 'Learn about AUTO program' },
-    { title: 'Health Center', category: 'Services', icon: HelpCircle, description: 'Medical services and health support' },
-    { title: 'Counseling Services', category: 'Services', icon: HelpCircle, description: 'Student counseling and guidance' },
-  ];
 
-  const filteredSuggestions = searchSuggestions.filter(item =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const [expandedNavItems, setExpandedNavItems] = useState<string[]>([]);
 
   // Dynamic tagline rotation
   const taglines = [
@@ -174,181 +147,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
               </div>
             </motion.div>
 
-            {/* Quick Actions Menu */}
-            <AnimatePresence>
-              {showQuickActions && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                  className="absolute top-20 left-4 bg-white rounded-lg shadow-xl border-2 border-yellow-200 p-3 z-50 min-w-[200px]"
-                >
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => {
-                        onNavigate('home');
-                        setShowQuickActions(false);
-                      }}
-                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
-                    >
-                      <Home className="w-4 h-4 text-yellow-600" />
-                      <span>Go to Homepage</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onNavigate('contactUs');
-                        setShowQuickActions(false);
-                      }}
-                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
-                    >
-                      <Phone className="w-4 h-4 text-yellow-600" />
-                      <span>Contact Support</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        onNavigate('teams');
-                        setShowQuickActions(false);
-                      }}
-                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
-                    >
-                      <Users className="w-4 h-4 text-yellow-600" />
-                      <span>Meet Our Team</span>
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2 md:space-x-3">
-              {/* Advanced Search - Desktop & Tablet */}
-              <div className="hidden md:block">
-                <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-80 lg:w-96 h-12 justify-start text-left font-normal rounded-2xl border-2 border-yellow-300 hover:border-yellow-500 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 shadow-md hover:shadow-lg transition-all"
-                    >
-                      <Search className="mr-3 h-5 w-5 shrink-0 text-yellow-600" />
-                      <span className="text-gray-500 text-base">Search everything...</span>
-                      <kbd className="ml-auto pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border border-yellow-200 bg-yellow-50 px-2 font-mono text-xs text-yellow-700">
-                        <span className="text-xs">⌘</span>K
-                      </kbd>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[600px] p-0 shadow-2xl border-2 border-yellow-200" align="end">
-                    <Command className="rounded-lg">
-                      <div className="flex items-center border-b-2 border-yellow-100 bg-gradient-to-r from-yellow-50 to-green-50 px-4 py-3">
-                        <Search className="mr-2 h-5 w-5 shrink-0 text-yellow-600" />
-                        <CommandInput 
-                          placeholder="Search for pages, resources, and more..." 
-                          value={searchQuery}
-                          onValueChange={setSearchQuery}
-                          className="flex-1 border-0 bg-transparent focus:ring-0 text-base"
-                        />
-                      </div>
-                      <CommandList className="max-h-[500px]">
-                        <CommandEmpty className="py-12 text-center">
-                          <div className="flex flex-col items-center space-y-3">
-                            <div className="rounded-full bg-yellow-100 p-4">
-                              <Search className="h-8 w-8 text-yellow-600" />
-                            </div>
-                            <p className="text-gray-500 font-medium">No results found</p>
-                            <p className="text-sm text-gray-400">Try searching with different keywords</p>
-                          </div>
-                        </CommandEmpty>
-                        {searchQuery === '' && (
-                          <div className="p-4 border-b border-yellow-100">
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Quick Actions</h4>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              {searchSuggestions.slice(0, 4).map((item, index) => {
-                                const ItemIcon = item.icon;
-                                return (
-                                  <button
-                                    key={index}
-                                    onClick={() => {
-                                      setIsSearchOpen(false);
-                                      setSearchQuery('');
-                                      onSearch();
-                                    }}
-                                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 border border-yellow-100 hover:border-yellow-300 transition-all group"
-                                  >
-                                    <div className="p-2 rounded-md bg-gradient-to-br from-yellow-500 to-green-500 group-hover:scale-110 transition-transform">
-                                      <ItemIcon className="h-4 w-4 text-white" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-700">{item.title}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                        <CommandGroup heading="Search Results" className="p-2">
-                          {filteredSuggestions.map((item, index) => {
-                            const ItemIcon = item.icon;
-                            return (
-                              <CommandItem
-                                key={index}
-                                onSelect={() => {
-                                  setIsSearchOpen(false);
-                                  setSearchQuery('');
-                                  onSearch();
-                                }}
-                                className="cursor-pointer p-3 rounded-lg aria-selected:bg-gradient-to-r aria-selected:from-yellow-50 aria-selected:to-green-50"
-                              >
-                                <div className="flex items-start space-x-3 w-full">
-                                  <div className="p-2 rounded-md bg-gradient-to-br from-yellow-100 to-green-100 mt-0.5">
-                                    <ItemIcon className="h-4 w-4 text-yellow-700" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between">
-                                      <p className="font-medium text-gray-900">{item.title}</p>
-                                      <Badge variant="outline" className="ml-2 text-xs border-yellow-300 text-yellow-700 bg-yellow-50">
-                                        {item.category}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-0.5">{item.description}</p>
-                                  </div>
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                      <div className="border-t-2 border-yellow-100 bg-gradient-to-r from-yellow-50 to-green-50 px-4 py-3">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <div className="flex items-center space-x-4">
-                            <span className="flex items-center">
-                              <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">↑↓</kbd>
-                              Navigate
-                            </span>
-                            <span className="flex items-center">
-                              <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">↵</kbd>
-                              Select
-                            </span>
-                          </div>
-                          <span className="flex items-center">
-                            <kbd className="px-2 py-1 bg-white border border-yellow-200 rounded mr-1">ESC</kbd>
-                            Close
-                          </span>
-                        </div>
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+              {/* Enhanced Global Search - Fully Responsive */}
+              <div className="flex-1 max-w-2xl mx-4">
+                <EnhancedGlobalSearch onNavigate={onNavigate} />
               </div>
-
-              {/* Search Icon - Mobile only */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsSearchOpen(true)}
-                className="md:hidden rounded-full"
-              >
-                <Search className="w-4 h-4" />
-              </Button>
 
               {/* Notification - All screens */}
               {user && (
@@ -505,48 +309,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
             </div>
           </div>
         </div>
-
-        {/* Mobile Search Modal */}
-        <Sheet open={isSearchOpen && window.innerWidth < 768} onOpenChange={setIsSearchOpen}>
-          <SheetContent side="top" className="h-full">
-            <SheetHeader>
-              <SheetTitle>Search</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4">
-              <Command>
-                <CommandInput 
-                  placeholder="Type to search..." 
-                  value={searchQuery}
-                  onValueChange={setSearchQuery}
-                />
-                <CommandList>
-                  <CommandEmpty>No results found.</CommandEmpty>
-                  <CommandGroup heading="Suggestions">
-                    {filteredSuggestions.map((item, index) => {
-                      const ItemIcon = item.icon;
-                      return (
-                        <CommandItem
-                          key={index}
-                          onSelect={() => {
-                            setIsSearchOpen(false);
-                            setSearchQuery('');
-                            onSearch();
-                          }}
-                        >
-                          <ItemIcon className="mr-2 h-4 w-4" />
-                          <div className="flex flex-col">
-                            <span>{item.title}</span>
-                            <span className="text-xs text-gray-500">{item.category}</span>
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          </SheetContent>
-        </Sheet>
       </motion.header>
 
       {/* Modern Left Sidebar */}

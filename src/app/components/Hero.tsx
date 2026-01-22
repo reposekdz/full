@@ -90,7 +90,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
     }
   };
 
-  if (loading || slides.length === 0) {
+  if (loading) {
     return (
       <div className="relative h-[800px] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
         <div className="text-center">
