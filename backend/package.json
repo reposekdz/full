@@ -7,7 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node scripts/initDatabase.js",
-    "setup-db": "node scripts/init-complete-database.js"
+    "setup-db": "node scripts/init-complete-database.js",
+    "setup": "node scripts/setup-comprehensive-system.js",
+    "init-staff": "node scripts/init-staff-credentials.js"
   },
   "dependencies": {
     "axios": "^1.13.2",

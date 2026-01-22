@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { useLanguage, Language } from '@/app/contexts/LanguageContext';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -26,12 +26,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   const navItems = [
     { key: 'home', icon: Home, label: 'Home', subItems: [] },
-    { 
-      key: 'academics', 
-      icon: BookOpen, 
+    {
+      key: 'academics',
+      icon: BookOpen,
       label: 'Academics',
       subItems: [
         { key: 'courses', icon: GraduationCap, label: 'Courses' },
@@ -40,9 +41,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
         { key: 'results', icon: TrendingUp, label: 'Results' },
       ]
     },
-    { 
-      key: 'sports', 
-      icon: Trophy, 
+    {
+      key: 'sports',
+      icon: Trophy,
       label: 'Sports',
       subItems: [
         { key: 'teams', icon: Users, label: 'Teams' },
@@ -50,9 +51,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
         { key: 'achievements', icon: Award, label: 'Achievements' },
       ]
     },
-    { 
-      key: 'services', 
-      icon: Briefcase, 
+    {
+      key: 'services',
+      icon: Briefcase,
       label: 'Services',
       subItems: [
         { key: 'library', icon: BookOpen, label: 'Library' },
@@ -64,8 +65,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     { key: 'contactUs', icon: Phone, label: 'Contact Us', subItems: [] },
     { key: 'supports', icon: HelpCircle, label: 'Support', subItems: [] },
   ];
-
-
 
   const searchSuggestions = [
     { title: 'Academic Calendar', category: 'Academics', icon: Calendar, description: 'View term dates and academic schedule' },
@@ -93,6 +92,43 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
   const [expandedNavItems, setExpandedNavItems] = useState<string[]>([]);
 
+  // Dynamic tagline rotation
+  const taglines = [
+    "Excellence in Education",
+    "Empowering Future Leaders",
+    "Innovation Through Learning",
+    "Building Tomorrow's Workforce",
+    "Quality Technical Education",
+    "Shaping Skilled Professionals"
+  ];
+  const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0);
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const [isLogoAnimating, setIsLogoAnimating] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTaglineIndex((prevIndex) =>
+        (prevIndex + 1) % taglines.length
+      );
+    }, 3000); // Change tagline every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [taglines.length]);
+
+  const handleLogoClick = () => {
+    setLogoClickCount(prev => prev + 1);
+    setIsLogoAnimating(true);
+
+    // Reset animation after 1 second
+    setTimeout(() => setIsLogoAnimating(false), 1000);
+
+    // Special animation on 5th click
+    if (logoClickCount + 1 === 5) {
+      setLogoClickCount(0);
+      // Could add special effects here
+    }
+  };
+
   return (
     <>
       <motion.header
@@ -101,24 +137,87 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
         className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo Only */}
+          <div className="flex items-center justify-between h-24">
+            {/* Logo */}
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
               onClick={() => onNavigate('home')}
             >
-              <div className="bg-gradient-to-br from-yellow-500 to-green-500 p-2 sm:p-2.5 rounded-lg shadow-lg">
-                <div className="flex flex-col items-center">
-                  <span className="text-white font-black text-xs sm:text-sm leading-tight">GARDEN</span>
-                  <span className="text-white font-black text-xs sm:text-sm leading-tight">TVET</span>
+              <div className="flex items-center space-x-2">
+                <motion.img
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico"
+                  alt="Garden TVET School Logo"
+                  className="h-20 w-20 sm:h-22 sm:w-22 md:h-24 md:w-24 object-contain rounded-lg shadow-lg transition-all hover:shadow-2xl hover:shadow-yellow-500/50"
+                />
+                <div className="hidden sm:block">
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-lg sm:text-xl md:text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent leading-tight"
+                  >
+                    Garden TVET School
+                  </motion.p>
+                  <motion.p
+                    key={currentTaglineIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-xs sm:text-sm text-gray-600 leading-tight"
+                  >
+                    {taglines[currentTaglineIndex]}
+                  </motion.p>
                 </div>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-lg sm:text-xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">Garden TVET</p>
-                <p className="text-xs text-gray-600">Excellence in Education</p>
-              </div>
             </motion.div>
+
+            {/* Quick Actions Menu */}
+            <AnimatePresence>
+              {showQuickActions && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                  className="absolute top-20 left-4 bg-white rounded-lg shadow-xl border-2 border-yellow-200 p-3 z-50 min-w-[200px]"
+                >
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        onNavigate('home');
+                        setShowQuickActions(false);
+                      }}
+                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
+                    >
+                      <Home className="w-4 h-4 text-yellow-600" />
+                      <span>Go to Homepage</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigate('contactUs');
+                        setShowQuickActions(false);
+                      }}
+                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
+                    >
+                      <Phone className="w-4 h-4 text-yellow-600" />
+                      <span>Contact Support</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigate('teams');
+                        setShowQuickActions(false);
+                      }}
+                      className="w-full text-left p-2 rounded-md hover:bg-yellow-50 text-sm font-medium text-gray-700 flex items-center space-x-2"
+                    >
+                      <Users className="w-4 h-4 text-yellow-600" />
+                      <span>Meet Our Team</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2 md:space-x-3">
@@ -458,12 +557,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
               {/* Sidebar Header */}
               <SheetHeader className="p-6 border-b bg-gradient-to-br from-yellow-500 to-green-500 shadow-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-white p-2 rounded-lg shadow-md">
-                    <div className="flex flex-col items-center">
-                      <span className="text-yellow-600 font-black text-xs leading-tight">GARDEN</span>
-                      <span className="text-green-600 font-black text-xs leading-tight">TVET</span>
-                    </div>
-                  </div>
+                  <img 
+                    src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico" 
+                    alt="Garden TVET Logo" 
+                    className="h-12 w-12 object-contain rounded-lg shadow-md bg-white p-1"
+                  />
                   <div>
                     <SheetTitle className="text-white text-lg">Garden TVET</SheetTitle>
                     <p className="text-yellow-100 text-xs">Excellence in Education</p>

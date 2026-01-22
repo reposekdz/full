@@ -1,238 +1,340 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const { body, validationResult } = require('express-validator');
-const { pool } = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-
 const router = express.Router();
+const { pool } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
 
-// Get all admin users (super admin only)
-router.get('/users', [
-  authenticateToken,
-  requireRole('super_admin')
-], async (req, res) => {
-  try {
-    const [users] = await pool.execute(
-      'SELECT id, username, email, role, created_at, updated_at FROM admin_users ORDER BY created_at DESC'
-    );
-
-    res.json({
-      success: true,
-      users
-    });
-
-  } catch (error) {
-    console.error('Get admin users error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const type = req.body.upload_type || 'general';
+    cb(null, `uploads/${type}/`);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
-// Create new admin user (super admin only)
-router.post('/users', [
-  authenticateToken,
-  requireRole('super_admin'),
-  body('username').isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['admin', 'editor']).withMessage('Role must be admin or editor')
-], async (req, res) => {
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only images allowed'));
+  }
+});
+
+// Dashboard Stats
+router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation errors',
-        errors: errors.array()
-      });
-    }
-
-    const { username, email, password, role } = req.body;
-
-    // Check if username or email already exists
-    const [existingUsers] = await pool.execute(
-      'SELECT id FROM admin_users WHERE username = ? OR email = ?',
-      [username, email]
-    );
-
-    if (existingUsers.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Username or email already exists'
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const [result] = await pool.execute(
-      'INSERT INTO admin_users (username, email, password, role) VALUES (?, ?, ?, ?)',
-      [username, email, hashedPassword, role]
-    );
-
-    res.status(201).json({
+    const [users] = await pool.execute('SELECT COUNT(*) as count FROM users');
+    const [students] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "student")');
+    const [teachers] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "teacher")');
+    const [courses] = await pool.execute('SELECT COUNT(*) as count FROM courses');
+    const [news] = await pool.execute('SELECT COUNT(*) as count FROM news');
+    const [tickets] = await pool.execute('SELECT COUNT(*) as count FROM support_tickets WHERE status != "closed"');
+    
+    res.json({
       success: true,
-      message: 'Admin user created successfully',
-      user: {
-        id: result.insertId,
-        username,
-        email,
-        role
+      stats: {
+        totalUsers: users[0].count,
+        students: students[0].count,
+        teachers: teachers[0].count,
+        courses: courses[0].count,
+        news: news[0].count,
+        openTickets: tickets[0].count
       }
     });
-
   } catch (error) {
-    console.error('Create admin user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Update admin user (super admin only)
-router.put('/users/:id', [
-  authenticateToken,
-  requireRole('super_admin'),
-  body('username').optional().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
-  body('email').optional().isEmail().withMessage('Valid email is required'),
-  body('role').optional().isIn(['admin', 'editor']).withMessage('Role must be admin or editor')
-], async (req, res) => {
+// ===== CAROUSEL/HERO SLIDES MANAGEMENT =====
+router.get('/carousel', authenticateToken, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation errors',
-        errors: errors.array()
-      });
-    }
+    const [slides] = await pool.execute('SELECT * FROM hero_slides ORDER BY display_order ASC');
+    res.json({ success: true, slides });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-    const { id } = req.params;
-    const { username, email, role } = req.body;
+router.post('/carousel', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { title, subtitle, button_text, button_link, display_order } = req.body;
+    const image_url = req.file ? `/uploads/carousel/${req.file.filename}` : null;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO hero_slides (title, subtitle, image_url, button_text, button_link, display_order, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, true)
+    `, [title, subtitle, image_url, button_text, button_link, display_order || 0]);
+    
+    res.json({ success: true, id: result.insertId, image_url });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-    // Prevent super admin from changing their own role
-    if (req.user.id === parseInt(id) && role && role !== 'super_admin') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot change your own role'
-      });
+router.put('/carousel/:id', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { title, subtitle, button_text, button_link, display_order, is_active } = req.body;
+    let query = 'UPDATE hero_slides SET title = ?, subtitle = ?, button_text = ?, button_link = ?, display_order = ?, is_active = ?';
+    const params = [title, subtitle, button_text, button_link, display_order, is_active];
+    
+    if (req.file) {
+      query += ', image_url = ?';
+      params.push(`/uploads/carousel/${req.file.filename}`);
     }
+    
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+    
+    await pool.execute(query, params);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-    const updates = [];
-    const values = [];
+router.delete('/carousel/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM hero_slides WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-    if (username) {
-      updates.push('username = ?');
-      values.push(username);
+// ===== TRADES MANAGEMENT WITH IMAGES =====
+router.get('/trades', authenticateToken, async (req, res) => {
+  try {
+    const [trades] = await pool.execute('SELECT * FROM trades');
+    res.json({ success: true, trades });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/trades', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { trade_code, trade_name, description } = req.body;
+    const image_url = req.file ? `/uploads/trades/${req.file.filename}` : null;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO trades (trade_code, trade_name, description, image_url, is_active)
+      VALUES (?, ?, ?, ?, true)
+    `, [trade_code, trade_name, description, image_url]);
+    
+    res.json({ success: true, id: result.insertId, image_url });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/trades/:id', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { trade_name, description, is_active } = req.body;
+    let query = 'UPDATE trades SET trade_name = ?, description = ?, is_active = ?';
+    const params = [trade_name, description, is_active];
+    
+    if (req.file) {
+      query += ', image_url = ?';
+      params.push(`/uploads/trades/${req.file.filename}`);
     }
-    if (email) {
-      updates.push('email = ?');
-      values.push(email);
+    
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+    
+    await pool.execute(query, params);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ===== GALLERY MANAGEMENT =====
+router.get('/gallery', authenticateToken, async (req, res) => {
+  try {
+    const { category } = req.query;
+    let query = 'SELECT * FROM gallery WHERE 1=1';
+    const params = [];
+    
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
     }
+    
+    query += ' ORDER BY created_at DESC';
+    const [images] = await pool.execute(query, params);
+    res.json({ success: true, images });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/gallery', authenticateToken, upload.array('images', 10), async (req, res) => {
+  try {
+    const { title, description, category } = req.body;
+    const uploadedImages = [];
+    
+    for (const file of req.files) {
+      const image_url = `/uploads/gallery/${file.filename}`;
+      const [result] = await pool.execute(`
+        INSERT INTO gallery (title, description, category, image_url, uploaded_by)
+        VALUES (?, ?, ?, ?, ?)
+      `, [title, description, category, image_url, req.user.id]);
+      
+      uploadedImages.push({ id: result.insertId, image_url });
+    }
+    
+    res.json({ success: true, images: uploadedImages });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/gallery/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM gallery WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ===== NEWS MANAGEMENT =====
+router.get('/news', authenticateToken, async (req, res) => {
+  try {
+    const [news] = await pool.execute('SELECT * FROM news ORDER BY created_at DESC');
+    res.json({ success: true, news });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/news', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { title, content, category } = req.body;
+    const image_url = req.file ? `/uploads/news/${req.file.filename}` : null;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO news (title, content, image_url, category, author_id, is_published, published_at)
+      VALUES (?, ?, ?, ?, ?, true, NOW())
+    `, [title, content, image_url, category, req.user.id]);
+    
+    res.json({ success: true, id: result.insertId, image_url });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/news/:id', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { title, content, category, is_published } = req.body;
+    let query = 'UPDATE news SET title = ?, content = ?, category = ?, is_published = ?';
+    const params = [title, content, category, is_published];
+    
+    if (req.file) {
+      query += ', image_url = ?';
+      params.push(`/uploads/news/${req.file.filename}`);
+    }
+    
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+    
+    await pool.execute(query, params);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/news/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM news WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ===== USER MANAGEMENT =====
+router.get('/users', authenticateToken, async (req, res) => {
+  try {
+    const { role, search } = req.query;
+    let query = `
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      LEFT JOIN roles r ON u.role_id = r.id 
+      WHERE 1=1
+    `;
+    const params = [];
+    
     if (role) {
-      updates.push('role = ?');
-      values.push(role);
+      query += ' AND r.name = ?';
+      params.push(role);
     }
-
-    if (updates.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No fields to update'
-      });
+    
+    if (search) {
+      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
-
-    values.push(id);
-
-    await pool.execute(
-      `UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    res.json({
-      success: true,
-      message: 'Admin user updated successfully'
-    });
-
+    
+    query += ' ORDER BY u.created_at DESC';
+    const [users] = await pool.execute(query, params);
+    res.json({ success: true, users });
   } catch (error) {
-    console.error('Update admin user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Delete admin user (super admin only)
-router.delete('/users/:id', [
-  authenticateToken,
-  requireRole('super_admin')
-], async (req, res) => {
+router.put('/users/:id/status', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // Prevent super admin from deleting themselves
-    if (req.user.id === parseInt(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete your own account'
-      });
-    }
-
-    await pool.execute('DELETE FROM admin_users WHERE id = ?', [id]);
-
-    res.json({
-      success: true,
-      message: 'Admin user deleted successfully'
-    });
-
+    const { is_active } = req.body;
+    await pool.execute('UPDATE users SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Delete admin user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Dashboard statistics
-router.get('/dashboard', [
-  authenticateToken
-], async (req, res) => {
+router.delete('/users/:id', authenticateToken, async (req, res) => {
   try {
-    // Get various statistics
-    const [slideCount] = await pool.execute('SELECT COUNT(*) as count FROM home_slides WHERE is_active = true');
-    const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM admin_users');
-    const [tradeCount] = await pool.execute('SELECT COUNT(*) as count FROM trade_programs WHERE is_active = true');
-    const [contentCount] = await pool.execute('SELECT COUNT(*) as count FROM dynamic_content WHERE is_active = true');
-
-    const stats = {
-      slides: slideCount[0].count,
-      users: userCount[0].count,
-      trades: tradeCount[0].count,
-      content: contentCount[0].count
-    };
-
-    // Get recent activity (last 10 slides created)
-    const [recentSlides] = await pool.execute(
-      'SELECT id, title, created_at FROM home_slides ORDER BY created_at DESC LIMIT 10'
-    );
-
-    res.json({
-      success: true,
-      stats,
-      recentActivity: recentSlides
-    });
-
+    await pool.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Dashboard stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ===== SYSTEM SETTINGS =====
+router.get('/settings', authenticateToken, async (req, res) => {
+  try {
+    const [settings] = await pool.execute('SELECT * FROM system_settings');
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/settings', authenticateToken, async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    await pool.execute(`
+      INSERT INTO system_settings (setting_key, setting_value)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE setting_value = ?
+    `, [key, value, value]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

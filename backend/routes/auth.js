@@ -720,13 +720,16 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Update profile
+// Update profile with password change capability
 router.put('/profile', [
   authenticateToken,
   body('email').optional().isEmail().withMessage('Valid email is required'),
   body('first_name').optional().notEmpty().withMessage('First name cannot be empty'),
   body('last_name').optional().notEmpty().withMessage('Last name cannot be empty'),
-  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  body('phone').optional(),
+  body('address').optional(),
+  body('current_password').optional(),
+  body('new_password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -738,26 +741,28 @@ router.put('/profile', [
       });
     }
 
-    const { email, first_name, last_name, password } = req.body;
+    const { email, first_name, last_name, phone, address, current_password, new_password } = req.body;
     const userId = req.user.id;
     const updateFields = [];
     const updateValues = [];
 
     // Check if user is admin or regular user
     const [adminUsers] = await pool.execute(
-      'SELECT id FROM admin_users WHERE id = ?',
+      'SELECT id, password FROM admin_users WHERE id = ?',
       [userId]
     );
 
     let updateTable = '';
     let passwordField = '';
+    let currentHashedPassword = null;
 
     if (adminUsers.length > 0) {
       updateTable = 'admin_users';
       passwordField = 'password';
+      currentHashedPassword = adminUsers[0].password;
     } else {
       const [users] = await pool.execute(
-        'SELECT id FROM users WHERE id = ?',
+        'SELECT id, password_hash FROM users WHERE id = ?',
         [userId]
       );
       
@@ -769,9 +774,32 @@ router.put('/profile', [
       }
       updateTable = 'users';
       passwordField = 'password_hash';
+      currentHashedPassword = users[0].password_hash;
     }
 
-    // Build update query
+    // If changing password, verify current password first
+    if (new_password) {
+      if (!current_password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is required to change password'
+        });
+      }
+
+      const isValidPassword = await bcrypt.compare(current_password, currentHashedPassword);
+      if (!isValidPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(new_password, 10);
+      updateFields.push(`${passwordField} = ?`);
+      updateValues.push(hashedPassword);
+    }
+
+    // Build update query for other fields
     if (email) {
       updateFields.push('email = ?');
       updateValues.push(email);
@@ -784,10 +812,13 @@ router.put('/profile', [
       updateFields.push('last_name = ?');
       updateValues.push(last_name);
     }
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateFields.push(`${passwordField} = ?`);
-      updateValues.push(hashedPassword);
+    if (phone && updateTable === 'users') {
+      updateFields.push('phone = ?');
+      updateValues.push(phone);
+    }
+    if (address && updateTable === 'users') {
+      updateFields.push('address = ?');
+      updateValues.push(address);
     }
 
     if (updateFields.length === 0) {
@@ -920,6 +951,189 @@ router.put('/change-password', [
 
   } catch (error) {
     console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Parent phone-based login (phone + password)
+router.post('/login/parent', [
+  body('phone').notEmpty().withMessage('Phone number is required'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, password } = req.body;
+
+    const [users] = await pool.execute(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE u.phone = ? AND r.name = 'parent' AND u.is_active = true
+    `, [phone]);
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
+    }
+
+    const user = users[0];
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, username: user.username, role: 'parent' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    await pool.execute(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [user.id]
+    );
+
+    const [children] = await pool.execute(`
+      SELECT COUNT(*) as child_count
+      FROM parent_student WHERE parent_id = ?
+    `, [user.id]);
+
+    res.json({
+      success: true,
+      message: 'Parent login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        role: 'parent',
+        first_name: user.first_name,
+        last_name: user.last_name,
+        user_type: 'parent',
+        linked_children: children[0].child_count
+      }
+    });
+
+  } catch (error) {
+    console.error('Parent login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Parent phone-based registration (phone + password)
+router.post('/register/parent-phone', [
+  body('phone').notEmpty().withMessage('Phone number is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('first_name').notEmpty().withMessage('First name is required'),
+  body('last_name').notEmpty().withMessage('Last name is required'),
+  body('email').optional().isEmail().withMessage('Valid email required if provided'),
+  body('address').optional()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, password, first_name, last_name, email, address } = req.body;
+
+    const [existingPhone] = await pool.execute(
+      'SELECT id FROM users WHERE phone = ?',
+      [phone]
+    );
+
+    if (existingPhone.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already registered'
+      });
+    }
+
+    if (email) {
+      const [existingEmail] = await pool.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+
+      if (existingEmail.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already registered'
+        });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [parentRole] = await pool.execute(
+      'SELECT id FROM roles WHERE name = "parent"'
+    );
+    
+    if (parentRole.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Parent role not found in system'
+      });
+    }
+
+    const username = `parent_${phone.replace(/[^0-9]/g, '')}`;
+    const parentEmail = email || `${username}@parent.gardentvet.com`;
+
+    const [result] = await pool.execute(`
+      INSERT INTO users (
+        username, email, password_hash, first_name, last_name, 
+        phone, address, role_id, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
+    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, address, parentRole[0].id]);
+
+    const token = jwt.sign(
+      { userId: result.insertId, username, role: 'parent' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Parent account created successfully',
+      token,
+      user: {
+        id: result.insertId,
+        username,
+        email: parentEmail,
+        phone,
+        role: 'parent',
+        first_name,
+        last_name,
+        user_type: 'parent'
+      }
+    });
+
+  } catch (error) {
+    console.error('Parent phone registration error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

@@ -1,200 +1,182 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
-const { pool } = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-
 const router = express.Router();
+const { pool } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
 
-// Get all students with filters
-router.get('/students', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
-  try {
-    const { trade, level, search, limit = 50, offset = 0 } = req.query;
-    let query = `
-      SELECT u.*, r.name as role_name,
-        (SELECT AVG(g.obtained_marks/g.max_marks * 100) FROM grades g WHERE g.student_id = u.id) as average_grade,
-        (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id AND a.status = 'present') as present_count,
-        (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id) as total_attendance
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE r.name = 'student' AND u.is_active = true
-    `;
-    const params = [];
-
-    if (trade) {
-      query += ' AND u.student_id LIKE ?';
-      params.push(`%${trade}%`);
-    }
-    if (level) {
-      query += ' AND u.student_id LIKE ?';
-      params.push(`%${level}%`);
-    }
-    if (search) {
-      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR u.student_id LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
-    }
-
-    query += ' ORDER BY u.last_name, u.first_name LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    const [students] = await pool.execute(query, params);
-    const [total] = await pool.execute('SELECT COUNT(*) as count FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE r.name = "student" AND u.is_active = true');
-
-    res.json({ success: true, data: { students, total: total[0].count } });
-  } catch (error) {
-    console.error('Get students error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/dos/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// Assign teacher to class
-router.post('/assign-teacher', [
-  authenticateToken,
-  requireRole('director_study', 'admin', 'super_admin'),
-  body('teacher_id').isInt().withMessage('Valid teacher ID required'),
-  body('class_id').isInt().withMessage('Valid class ID required')
-], async (req, res) => {
+// Dashboard Overview
+router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
-    }
-
-    const { teacher_id, class_id } = req.body;
-
-    await pool.execute('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacher_id, class_id]);
-
-    res.json({ success: true, message: 'Teacher assigned successfully' });
-  } catch (error) {
-    console.error('Assign teacher error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Create/Update timetable
-router.post('/timetable', [
-  authenticateToken,
-  requireRole('director_study', 'admin', 'super_admin'),
-  body('class_id').isInt().withMessage('Valid class ID required'),
-  body('subject_id').isInt().withMessage('Valid subject ID required'),
-  body('teacher_id').isInt().withMessage('Valid teacher ID required'),
-  body('day_of_week').notEmpty().withMessage('Day of week required'),
-  body('start_time').notEmpty().withMessage('Start time required'),
-  body('end_time').notEmpty().withMessage('End time required')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
-    }
-
-    const { class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number } = req.body;
-
-    const [result] = await pool.execute(`
-      INSERT INTO timetable (class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE teacher_id = ?, start_time = ?, end_time = ?, room_number = ?
-    `, [class_id, subject_id, teacher_id, day_of_week, start_time, end_time, room_number, teacher_id, start_time, end_time, room_number]);
-
-    res.json({ success: true, message: 'Timetable updated successfully', id: result.insertId });
-  } catch (error) {
-    console.error('Update timetable error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// Get performance analytics
-router.get('/analytics/performance', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
-  try {
-    const { trade, level, period = 'month' } = req.query;
-
-    const [overallStats] = await pool.execute(`
-      SELECT 
-        COUNT(DISTINCT u.id) as total_students,
-        AVG(g.obtained_marks/g.max_marks * 100) as average_performance,
-        COUNT(DISTINCT g.id) as total_assessments,
-        (SELECT COUNT(*) FROM attendance WHERE status = 'present') / (SELECT COUNT(*) FROM attendance) * 100 as attendance_rate
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN grades g ON u.id = g.student_id
-      WHERE r.name = 'student' AND u.is_active = true
-    `);
-
-    const [tradePerformance] = await pool.execute(`
-      SELECT 
-        SUBSTRING(u.student_id, 5, 3) as trade_code,
-        COUNT(DISTINCT u.id) as student_count,
-        AVG(g.obtained_marks/g.max_marks * 100) as average_grade
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN grades g ON u.id = g.student_id
-      WHERE r.name = 'student' AND u.is_active = true
-      GROUP BY trade_code
-    `);
-
-    const [levelPerformance] = await pool.execute(`
-      SELECT 
-        SUBSTRING(u.student_id, 8, 2) as level,
-        COUNT(DISTINCT u.id) as student_count,
-        AVG(g.obtained_marks/g.max_marks * 100) as average_grade
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      LEFT JOIN grades g ON u.id = g.student_id
-      WHERE r.name = 'student' AND u.is_active = true
-      GROUP BY level
-    `);
-
+    const [students] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "student")');
+    const [teachers] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "teacher")');
+    const [courses] = await pool.execute('SELECT COUNT(*) as count FROM courses WHERE is_active = true');
+    const [avgGrade] = await pool.execute('SELECT AVG(score) as avg FROM grades');
+    const [attendance] = await pool.execute('SELECT COUNT(*) as present FROM attendance WHERE status = "present" AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    
     res.json({
       success: true,
-      analytics: {
-        overall: overallStats[0],
-        by_trade: tradePerformance,
-        by_level: levelPerformance
+      stats: {
+        totalStudents: students[0].count,
+        totalTeachers: teachers[0].count,
+        activeCourses: courses[0].count,
+        averageGrade: avgGrade[0].avg || 0,
+        attendanceRate: attendance[0].present
       }
     });
   } catch (error) {
-    console.error('Get analytics error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Get all trades with levels
-router.get('/trades', authenticateToken, async (req, res) => {
+// Manage Courses
+router.post('/courses', authenticateToken, upload.single('image'), async (req, res) => {
   try {
-    const [trades] = await pool.execute(`
-      SELECT DISTINCT
-        SUBSTRING(student_id, 5, 3) as trade_code,
-        SUBSTRING(student_id, 8, 2) as level,
-        COUNT(*) as student_count
+    const { course_code, course_name, description, credits, trade_level_id, instructor_id, semester } = req.body;
+    const image_url = req.file ? `/uploads/dos/${req.file.filename}` : null;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO courses (course_code, course_name, description, credits, trade_level_id, instructor_id, semester, image_url, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
+    `, [course_code, course_name, description, credits, trade_level_id, instructor_id, semester, image_url]);
+    
+    res.json({ success: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/courses/:id', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const { course_name, description, credits, instructor_id } = req.body;
+    let query = 'UPDATE courses SET course_name = ?, description = ?, credits = ?, instructor_id = ?';
+    const params = [course_name, description, credits, instructor_id];
+    
+    if (req.file) {
+      query += ', image_url = ?';
+      params.push(`/uploads/dos/${req.file.filename}`);
+    }
+    
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+    
+    await pool.execute(query, params);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/courses/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('UPDATE courses SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Manage Timetable
+router.post('/timetable', authenticateToken, async (req, res) => {
+  try {
+    const { course_id, day_of_week, start_time, end_time, room_id } = req.body;
+    const [result] = await pool.execute(`
+      INSERT INTO timetable (course_id, day_of_week, start_time, end_time, room_id, is_active)
+      VALUES (?, ?, ?, ?, ?, true)
+    `, [course_id, day_of_week, start_time, end_time, room_id]);
+    
+    res.json({ success: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Manage Exams
+router.post('/exams', authenticateToken, async (req, res) => {
+  try {
+    const { course_id, exam_name, exam_type, exam_date, duration, total_marks, room_id } = req.body;
+    const [result] = await pool.execute(`
+      INSERT INTO exams (course_id, exam_name, exam_type, exam_date, duration, total_marks, room_id, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, true)
+    `, [course_id, exam_name, exam_type, exam_date, duration, total_marks, room_id]);
+    
+    res.json({ success: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Performance Reports
+router.get('/reports/performance', authenticateToken, async (req, res) => {
+  try {
+    const { trade, level, period } = req.query;
+    let query = `
+      SELECT u.id, u.first_name, u.last_name, u.student_id,
+        AVG(g.score) as avg_score,
+        COUNT(DISTINCT a.id) as total_attendance,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
       FROM users u
-      JOIN roles r ON u.role_id = r.id
-      WHERE r.name = 'student' AND u.is_active = true AND student_id IS NOT NULL
-      GROUP BY trade_code, level
-      ORDER BY trade_code, level
-    `);
-
-    res.json({ success: true, trades });
+      LEFT JOIN grades g ON u.id = g.student_id
+      LEFT JOIN attendance a ON u.id = a.student_id
+      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'student')
+    `;
+    
+    const params = [];
+    if (period) {
+      query += ' AND g.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)';
+      params.push(parseInt(period));
+    }
+    
+    query += ' GROUP BY u.id ORDER BY avg_score DESC';
+    
+    const [students] = await pool.execute(query, params);
+    res.json({ success: true, students });
   } catch (error) {
-    console.error('Get trades error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Get DOS dashboard statistics
-router.get('/dashboard-stats', authenticateToken, requireRole('director_study', 'admin', 'super_admin'), async (req, res) => {
+// Assign Teachers
+router.post('/assign-teacher', authenticateToken, async (req, res) => {
   try {
-    const [stats] = await pool.execute(`
-      SELECT 
-        (SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'student' AND u.is_active = true) as total_students,
-        (SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'teacher' AND u.is_active = true) as total_teachers,
-        (SELECT COUNT(*) FROM classes WHERE is_active = true) as total_classes,
-        (SELECT AVG(obtained_marks/max_marks * 100) FROM grades) as average_performance,
-        (SELECT COUNT(*) FROM timetable) as timetable_entries
-    `);
-
-    res.json({ success: true, statistics: stats[0] });
+    const { course_id, teacher_id } = req.body;
+    await pool.execute('UPDATE courses SET instructor_id = ? WHERE id = ?', [teacher_id, course_id]);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Get dashboard stats error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Academic Calendar
+router.post('/calendar', authenticateToken, async (req, res) => {
+  try {
+    const { event_name, event_type, event_date, description } = req.body;
+    const [result] = await pool.execute(`
+      INSERT INTO academic_calendar (event_name, event_type, event_date, description)
+      VALUES (?, ?, ?, ?)
+    `, [event_name, event_type, event_date, description]);
+    
+    res.json({ success: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/calendar', authenticateToken, async (req, res) => {
+  try {
+    const [events] = await pool.execute(`
+      SELECT * FROM academic_calendar 
+      WHERE event_date >= CURDATE() 
+      ORDER BY event_date ASC
+    `);
+    res.json({ success: true, events });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

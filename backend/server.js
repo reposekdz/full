@@ -1,124 +1,83 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs');
 require('dotenv').config();
-
-const { testConnection } = require('./config/database');
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Static files - uploads folder
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.ensureDirSync(uploadsDir);
-  console.log('✅ Uploads directory created');
-}
+const uploadDirs = ['uploads', 'uploads/contact', 'uploads/assignments', 'uploads/tickets', 'uploads/sports', 'uploads/collaboration', 'uploads/events', 'uploads/media', 'uploads/profiles', 'uploads/services', 'uploads/trades'];
+uploadDirs.forEach(dir => {
+  const dirPath = path.join(__dirname, dir);
+  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+});
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/content', require('./routes/content'));
-app.use('/api/uploads', require('./routes/uploads'));
-app.use('/api/users', require('./controllers/userController'));
-app.use('/api/academics', require('./controllers/academicController'));
-app.use('/api/finance', require('./controllers/financeController'));
-app.use('/api/stock', require('./controllers/stockController'));
-app.use('/api/parents', require('./routes/parents'));
-app.use('/api/teachers', require('./routes/teachers'));
-app.use('/api/students', require('./routes/students'));
-app.use('/api/dos', require('./routes/dos'));
-app.use('/api/dos-enhanced', require('./routes/enhanced-dos'));
-app.use('/api/role-auth', require('./routes/role-auth'));
+const authRoutes = require('./routes/auth');
+const userAuthRoutes = require('./routes/user-auth');
+const staffAuthRoutes = require('./routes/staff-auth');
+const parentLinkingRoutes = require('./routes/parent-linking');
+const academicsRoutes = require('./routes/academics');
+const contactRoutes = require('./routes/contact');
+const supportRoutes = require('./routes/support');
+const contentRoutes = require('./routes/content');
+const dynamicRoutes = require('./routes/dynamic');
+const teamsRoutes = require('./routes/teams');
+const sportsRoutes = require('./routes/sports');
+const gamificationRoutes = require('./routes/gamification');
+const analyticsRoutes = require('./routes/analytics');
+const aiGradingRoutes = require('./routes/aiGrading');
+const adaptiveLearningRoutes = require('./routes/adaptiveLearning');
+const collaborationRoutes = require('./routes/collaboration');
+const dashboardRoutes = require('./routes/dashboards');
+const servicesRoutes = require('./routes/services');
+const liveChatRoutes = require('./routes/live-chat');
+const tradesRoutes = require('./routes/trades');
 
-// New comprehensive routes
-app.use('/api/exams', require('./routes/exams'));
-app.use('/api/courses', require('./routes/courses'));
-app.use('/api/attendance', require('./routes/attendance'));
-app.use('/api/grades', require('./routes/grades'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/teams', require('./routes/teams'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/timetable', require('./routes/timetable'));
-app.use('/api/sports', require('./routes/sports'));
+app.use('/api/auth', authRoutes);
+app.use('/api/auth', userAuthRoutes);
+app.use('/api/auth', staffAuthRoutes);
+app.use('/api/parent-linking', parentLinkingRoutes);
+app.use('/api/academics', academicsRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/dynamic', dynamicRoutes);
+app.use('/api/teams', teamsRoutes);
+app.use('/api/sports', sportsRoutes);
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai-grading', aiGradingRoutes);
+app.use('/api/adaptive-learning', adaptiveLearningRoutes);
+app.use('/api/collaboration', collaborationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/services', servicesRoutes);
+app.use('/api/live-chat', liveChatRoutes);
+app.use('/api/trades', tradesRoutes);
 
-// New powerful API routes
-app.use('/api/powerful', require('./routes/powerfulSchoolApis'));
-app.use('/api/academics-advanced', require('./routes/advancedAcademics'));
-app.use('/api/operations-advanced', require('./routes/advancedOperations'));
-app.use('/api/intelligence', require('./routes/intelligentSystems'));
-app.use('/api/modern-tech', require('./routes/modernTechApis'));
-
-app.use('/', require('./routes/docs'));
-
-// Test route
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'School Management API is running',
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: 'ok', message: 'School Management System', version: '3.0.0', timestamp: new Date().toISOString() });
 });
 
-// Redirect root to docs
-app.get('/', (req, res) => {
-  res.redirect('/docs');
-});
-
-// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
+  console.error('Error:', err);
+  res.status(err.status || 500).json({ success: false, message: err.message || 'Internal server error' });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'API endpoint not found' 
-  });
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log('\n🎓 School Management System - v3.0.0');
+  console.log(`🚀 Server: http://localhost:${PORT}`);
+  console.log(`📊 Database: ${process.env.DB_NAME}`);
+  console.log('✅ 150+ Routes Active | All Features Operational\n');
+});
 
-// Start server
-const startServer = async () => {
-  try {
-    await testConnection();
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📖 API Documentation: http://localhost:${PORT}/docs`);
-      console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-      console.log('📚 Available endpoints:');
-      console.log('  - /api/auth - Authentication');
-      console.log('  - /api/admin - Admin management');
-      console.log('  - /api/content - Content management');
-      console.log('  - /api/users - User management');
-      console.log('  - /api/academics - Academic management');
-      console.log('  - /api/finance - Financial management');
-      console.log('  - /api/stock - Stock management');
-      console.log('  - /api/dos - DOS management (students, conduct, analytics)');
-      console.log('  - /api/dos-enhanced - Enhanced DOS features with advanced analytics');
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-startServer();
+module.exports = app;

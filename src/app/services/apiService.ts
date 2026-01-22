@@ -271,7 +271,7 @@ class ApiService {
     return this.request(`/dos/students?${query}`);
   }
 
-  async assignTeacherToClass(teacherId: number, classId: number) {
+  async dosAssignTeacherToClass(teacherId: number, classId: number) {
     return this.request('/dos/assign-teacher', {
       method: 'POST',
       body: JSON.stringify({ teacher_id: teacherId, class_id: classId })
@@ -503,6 +503,139 @@ class ApiService {
     if (!grades.length) return 0;
     const total = grades.reduce((sum, grade) => sum + (parseFloat(grade.obtained_marks) / parseFloat(grade.max_marks)) * 100, 0);
     return Math.round(total / grades.length);
+  }
+
+  // Contact Management
+  async submitContactForm(formData: FormData) {
+    const response = await fetch(`${API_BASE}/contact/submit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    });
+    return response.json();
+  }
+
+  async requestCallback(callbackData: any) {
+    return this.request('/contact/callback', {
+      method: 'POST',
+      body: JSON.stringify(callbackData)
+    });
+  }
+
+  async getContactSubmissions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/contact/submissions?${query}`);
+  }
+
+  async updateContactSubmissionStatus(id: number, status: string, response: string) {
+    return this.request(`/contact/submissions/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, response })
+    });
+  }
+
+  async sendChatMessage(sessionId: string, sender: string, message: string) {
+    return this.request('/contact/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, sender, message })
+    });
+  }
+
+  async getChatMessages(sessionId: string) {
+    return this.request(`/contact/chat/${sessionId}/messages`);
+  }
+
+  // Support Management
+  async createSupportTicket(ticketData: any) {
+    return this.request('/support/tickets', {
+      method: 'POST',
+      body: JSON.stringify(ticketData)
+    });
+  }
+
+  async getSupportTickets(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/support/tickets?${query}`);
+  }
+
+  async getSupportTicketDetails(id: number) {
+    return this.request(`/support/tickets/${id}`);
+  }
+
+  async addTicketResponse(ticketId: number, message: string, isStaff = false) {
+    return this.request(`/support/tickets/${ticketId}/responses`, {
+      method: 'POST',
+      body: JSON.stringify({ message, isStaff })
+    });
+  }
+
+  async updateTicketStatus(ticketId: number, status: string) {
+    return this.request(`/support/tickets/${ticketId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  async getKnowledgeBase(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/support/knowledge-base?${query}`);
+  }
+
+  async getKnowledgeArticle(id: number) {
+    return this.request(`/support/knowledge-base/${id}`);
+  }
+
+  async rateArticle(articleId: number, rating: number, feedback?: string) {
+    return this.request(`/support/knowledge-base/${articleId}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, feedback })
+    });
+  }
+
+  async getSupportStatistics() {
+    return this.request('/support/statistics');
+  }
+
+  // Parent Phone-Based Authentication
+  async parentPhoneLogin(phone: string, password: string) {
+    const response = await fetch(`${API_BASE}/auth/login/parent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ phone, password })
+    });
+    const data = await response.json();
+    if (data.success && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    return data;
+  }
+
+  async parentPhoneRegister(parentData: {
+    phone: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    address?: string;
+  }) {
+    const response = await fetch(`${API_BASE}/auth/register/parent-phone`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(parentData)
+    });
+    const data = await response.json();
+    if (data.success && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    return data;
   }
 }
 

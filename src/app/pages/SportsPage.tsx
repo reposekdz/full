@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Users, Calendar, Award, Medal, Target, TrendingUp, Star, Search, MapPin, Clock, ChevronRight, Play, Heart, Zap, ArrowLeft, Volleyball } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
