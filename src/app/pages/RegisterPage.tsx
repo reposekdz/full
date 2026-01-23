@@ -1,448 +1,609 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useLanguage } from '@/app/contexts/LanguageContext';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { UserPlus, Mail, Lock, User, Phone, Loader2, CheckCircle2, AlertCircle, Calendar, MapPin } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Alert, AlertDescription } from '@/app/components/ui/alert';
-import { apiService } from '@/app/services/apiService';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UserPlus, Eye, EyeOff, Mail, Lock, User, Phone, AlertCircle, CheckCircle, Loader2, Shield, Calendar, MapPin, Briefcase, GraduationCap, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent } from '../components/ui/card';
 
 interface RegisterPageProps {
   onNavigate: (page: string) => void;
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
-  const { language } = useLanguage();
-  const { getRoleDashboard } = useAuth();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    // Step 1: Basic Info
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
+    // Step 2: Account Info
     password: '',
     confirmPassword: '',
-    role: '' as 'student' | 'parent' | '',
+    role: 'student',
+    // Step 3: Additional Info
+    dateOfBirth: '',
+    gender: '',
     address: '',
-    date_of_birth: '',
-    gender: '' as 'Male' | 'Female' | '',
-    trade_code: '',
-    level_number: '',
-    level_suffix: ''
+    nationalId: '',
+    // Step 4: Role-specific
+    studentCode: '',
+    parentName: '',
+    parentPhone: '',
+    course: '',
+    level: '',
+    // Terms
+    agreeTerms: false
   });
-  const [trades, setTrades] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [validationErrors, setValidationErrors] = useState<any>({});
 
-  useEffect(() => {
-    const fetchTrades = async () => {
-      try {
-        const result = await apiService.getAvailableTrades();
-        if (result.success) {
-          setTrades(result.trades || []);
-        }
-      } catch (err) {
-        console.error('Failed to fetch trades:', err);
+  const validateStep = (currentStep: number) => {
+    const errors: any = {};
+
+    if (currentStep === 1) {
+      if (!formData.firstName) errors.firstName = 'Izina ryambere rirakenewe';
+      if (!formData.lastName) errors.lastName = 'Izina ryukuri rirakenewe';
+      if (!formData.email) errors.email = 'Imeyili irakenewe';
+      else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Imeyili ntiyemewe';
+      if (!formData.phone) errors.phone = 'Telefoni irakenewe';
+      else if (!/^07\d{8}$/.test(formData.phone)) errors.phone = 'Telefoni ntiyemewe (07XXXXXXXX)';
+    }
+
+    if (currentStep === 2) {
+      if (!formData.password) errors.password = 'Ijambo ryibanga rirakenewe';
+      else if (formData.password.length < 6) errors.password = 'Ijambo ryibanga rigomba kuba rifite imibare 6 nibura';
+      if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Amagambo yibanga ntabwo ahuje';
+      if (!formData.role) errors.role = 'Hitamo uruhare';
+    }
+
+    if (currentStep === 3) {
+      if (!formData.dateOfBirth) errors.dateOfBirth = 'Itariki y\'amavuko irakenewe';
+      if (!formData.gender) errors.gender = 'Hitamo igitsina';
+      if (!formData.address) errors.address = 'Aderesi irakenewe';
+    }
+
+    if (currentStep === 4) {
+      if (formData.role === 'student') {
+        if (!formData.course) errors.course = 'Hitamo umwuga';
+        if (!formData.level) errors.level = 'Hitamo urwego';
+        if (!formData.parentName) errors.parentName = 'Izina ry\'umubyeyi rirakenewe';
+        if (!formData.parentPhone) errors.parentPhone = 'Telefoni y\'umubyeyi irakenewe';
       }
-    };
-    fetchTrades();
-  }, []);
+      if (!formData.agreeTerms) errors.agreeTerms = 'Ugomba kwemera amabwiriza';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+      setStep(step + 1);
+      setError('');
+    }
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     
-    if (formData.password !== formData.confirmPassword) {
-      setError(language === 'rw' ? 'Amagambo y\'ibanga ntabwo ahuje' : 'Passwords do not match');
-      return;
-    }
-    if (!formData.role) {
-      setError(language === 'rw' ? 'Hitamo uruhare' : 'Please select a role');
-      return;
-    }
-    if (formData.role === 'student' && !formData.trade_code) {
-      setError(language === 'rw' ? 'Hitamo umwuga' : 'Please select a trade');
-      return;
-    }
+    if (!validateStep(4)) return;
 
     setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
+      let endpoint = '';
+      let payload: any = {};
+
       if (formData.role === 'parent') {
-        const result = await apiService.parentPhoneRegister({
-          phone: formData.phone,
-          password: formData.password,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email || undefined,
-          address: formData.address || undefined
-        });
-        
-        if (result.success && result.token) {
-          setSuccess(language === 'rw' ? 'Iyandikishe ryagenze neza! Gutegereza...' : 'Registration successful! Redirecting...');
-          setTimeout(() => onNavigate(getRoleDashboard('parent')), 1500);
-        } else {
-          setError(result.message || (language === 'rw' ? 'Iyandikishe ryanze' : 'Registration failed'));
-        }
-      } else {
-        const result = await apiService.registerStudent({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
+        endpoint = 'http://localhost:5000/api/auth/register/parent';
+        payload = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           email: formData.email,
           phone: formData.phone,
           password: formData.password,
-          date_of_birth: formData.date_of_birth || undefined,
-          gender: formData.gender || undefined,
-          trade_code: formData.trade_code,
-          level_number: parseInt(formData.level_number),
-          level_suffix: formData.level_suffix || undefined,
-          address: formData.address || undefined
-        });
-
-        if (result.success && result.token) {
-          setSuccess(language === 'rw' ? `Iyandikishe ryagenze neza! Nimero yawe: ${result.user.student_id}` : `Registration successful! Your Student ID: ${result.user.student_id}`);
-          setTimeout(() => onNavigate(getRoleDashboard('student')), 2000);
-        } else {
-          setError(result.message || (language === 'rw' ? 'Iyandikishe ryanze' : 'Registration failed'));
-        }
+          address: formData.address,
+          date_of_birth: formData.dateOfBirth,
+          gender: formData.gender,
+          national_id: formData.nationalId
+        };
+      } else if (formData.role === 'student') {
+        endpoint = 'http://localhost:5000/api/auth/register/student';
+        payload = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          date_of_birth: formData.dateOfBirth,
+          gender: formData.gender,
+          address: formData.address,
+          national_id: formData.nationalId,
+          trade_code: formData.course,
+          level: formData.level,
+          parent_name: formData.parentName,
+          parent_phone: formData.parentPhone
+        };
+      } else {
+        setError('Uruhare ntirwemewe');
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(language === 'rw' ? 'Hari ikibazo. Ongera ugerageze.' : 'An error occurred. Please try again.');
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('Kwiyandikisha byagenze neza! Urakwiye kwinjira.');
+        setTimeout(() => onNavigate('login'), 2000);
+      } else {
+        setError(data.message || 'Kwiyandikisha ntibyakunze. Gerageza ukundi.');
+      }
+    } catch (err) {
+      setError('Habaye ikosa. Gerageza ukundi.');
     } finally {
       setLoading(false);
     }
   };
 
+  const roles = [
+    { value: 'student', label: 'Umunyeshuri', icon: GraduationCap },
+    { value: 'parent', label: 'Umubyeyi', icon: User },
+    { value: 'teacher', label: 'Umwarimu', icon: Briefcase }
+  ];
+
+  const courses = [
+    'Software Development',
+    'Electrical Installation',
+    'Plumbing',
+    'Welding',
+    'Carpentry',
+    'Masonry'
+  ];
+
+  const levels = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
+
+  const steps = [
+    { number: 1, title: 'Amakuru Yibanze', icon: User },
+    { number: 2, title: 'Konti', icon: Lock },
+    { number: 3, title: 'Amakuru Yinyongera', icon: MapPin },
+    { number: 4, title: 'Soza', icon: Check }
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center py-8 px-4 bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-4xl"
       >
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border-2 border-yellow-200">
-          <div className="text-center mb-4">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200 }}
-              whileHover={{ rotate: 360 }}
-              className="inline-block bg-gradient-to-r from-yellow-500 to-green-500 p-2.5 rounded-full mb-2 shadow-lg"
-            >
-              <UserPlus className="w-5 h-5 text-white" />
-            </motion.div>
-            <h1 className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-              {language === 'rw' ? 'Iyandikishe' : 'Register'}
-            </h1>
-            <p className="text-gray-600 text-xs mt-1">
-              {language === 'rw' ? 'Iyandikishe ry\'Abanyeshuri n\'Ababyeyi' : 'Student & Parent Registration'}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <AnimatePresence mode="wait">
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <Alert className="border-red-300 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="ml-2 text-red-800 text-xs">{error}</AlertDescription>
-                  </Alert>
-                </motion.div>
-              )}
-              {success && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <Alert className="border-green-300 bg-green-50">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="ml-2 text-green-800 text-xs">{success}</AlertDescription>
-                  </Alert>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div>
-              <Label htmlFor="role" className="text-xs text-gray-700 font-medium">
-                {language === 'rw' ? 'Uruhare' : 'Role'} *
-              </Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as 'student' | 'parent' })}>
-                <SelectTrigger className="mt-1 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg">
-                  <SelectValue placeholder={language === 'rw' ? 'Hitamo uruhare rwawe' : 'Select your role'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">{language === 'rw' ? 'Umunyeshuri' : 'Student'}</SelectItem>
-                  <SelectItem value="parent">{language === 'rw' ? 'Umubyeyi' : 'Parent'}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <Label htmlFor="first_name" className="text-xs text-gray-700 font-medium">
-                  {language === 'rw' ? 'Izina Rya Mbere' : 'First Name'} *
-                </Label>
-                <div className="relative mt-1">
-                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                  <Input
-                    id="first_name"
-                    type="text"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="last_name" className="text-xs text-gray-700 font-medium">
-                  {language === 'rw' ? 'Izina Rya Kabiri' : 'Last Name'} *
-                </Label>
-                <div className="relative mt-1">
-                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                  <Input
-                    id="last_name"
-                    type="text"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="email" className="text-xs text-gray-700 font-medium">
-                {language === 'rw' ? 'Imeyili' : 'Email'} {formData.role === 'parent' ? '' : '*'}
-              </Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                  required={formData.role === 'student'}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="phone" className="text-xs text-gray-700 font-medium">
-                {language === 'rw' ? 'Telefoni' : 'Phone'} *
-              </Label>
-              <div className="relative mt-1">
-                <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                  placeholder="0788123456"
-                  required
-                />
-              </div>
-            </div>
-
-            {formData.role === 'student' && (
+        <Card className="shadow-2xl border-4 border-white">
+          <CardContent className="p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-3"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
               >
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <Label htmlFor="date_of_birth" className="text-xs text-gray-700 font-medium">
-                      {language === 'rw' ? 'Itariki y\'Amavuko' : 'Date of Birth'}
-                    </Label>
-                    <div className="relative mt-1">
-                      <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
+                <UserPlus className="w-12 h-12 text-white" />
+              </motion.div>
+              <h2 className="text-4xl font-black text-gray-900 mb-2">Iyandikishe</h2>
+              <p className="text-gray-600">Fungura konti nshya</p>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="mb-8">
+              <div className="flex justify-between items-center">
+                {steps.map((s, i) => (
+                  <div key={s.number} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${
+                        step >= s.number
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                          : 'bg-gray-200 text-gray-500'
+                      }`}>
+                        {step > s.number ? <Check className="w-6 h-6" /> : <s.icon className="w-6 h-6" />}
+                      </div>
+                      <p className={`text-xs mt-2 font-bold ${step >= s.number ? 'text-blue-600' : 'text-gray-500'}`}>
+                        {s.title}
+                      </p>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div className={`h-1 flex-1 mx-2 rounded ${step > s.number ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <AnimatePresence mode="wait">
+                {/* Step 1: Basic Info */}
+                {step === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Izina Ryambere</label>
+                        <Input
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                          placeholder=""
+                          className="h-12"
+                        />
+                        {validationErrors.firstName && <p className="text-red-600 text-xs mt-1">{validationErrors.firstName}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Izina Ryukuri</label>
+                        <Input
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                          placeholder=""
+                          className="h-12"
+                        />
+                        {validationErrors.lastName && <p className="text-red-600 text-xs mt-1">{validationErrors.lastName}</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Imeyili</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder=""
+                          className="pl-10 h-12"
+                        />
+                      </div>
+                      {validationErrors.email && <p className="text-red-600 text-xs mt-1">{validationErrors.email}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Telefoni</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder=""
+                          className="pl-10 h-12"
+                        />
+                      </div>
+                      {validationErrors.phone && <p className="text-red-600 text-xs mt-1">{validationErrors.phone}</p>}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 2: Account Info */}
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Ijambo Ryibanga</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          placeholder=""
+                          className="pl-10 pr-10 h-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5 text-gray-400" /> : <Eye className="w-5 h-5 text-gray-400" />}
+                        </button>
+                      </div>
+                      {validationErrors.password && <p className="text-red-600 text-xs mt-1">{validationErrors.password}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Emeza Ijambo Ryibanga</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={formData.confirmPassword}
+                          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                          placeholder=""
+                          className="pl-10 pr-10 h-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-5 h-5 text-gray-400" /> : <Eye className="w-5 h-5 text-gray-400" />}
+                        </button>
+                      </div>
+                      {validationErrors.confirmPassword && <p className="text-red-600 text-xs mt-1">{validationErrors.confirmPassword}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Uruhare</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {roles.map((role) => (
+                          <button
+                            key={role.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, role: role.value })}
+                            className={`p-4 rounded-xl border-2 transition-all ${
+                              formData.role === role.value
+                                ? 'border-blue-600 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <role.icon className={`w-8 h-8 mx-auto mb-2 ${formData.role === role.value ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <p className={`text-sm font-bold ${formData.role === role.value ? 'text-blue-600' : 'text-gray-600'}`}>
+                              {role.label}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                      {validationErrors.role && <p className="text-red-600 text-xs mt-1">{validationErrors.role}</p>}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Additional Info */}
+                {step === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Itariki y'Amavuko</label>
+                        <Input
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                          className="h-12"
+                        />
+                        {validationErrors.dateOfBirth && <p className="text-red-600 text-xs mt-1">{validationErrors.dateOfBirth}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Igitsina</label>
+                        <select
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          className="w-full h-12 border rounded-lg px-3"
+                        >
+                          <option value="">Hitamo</option>
+                          <option value="male">Gabo</option>
+                          <option value="female">Gore</option>
+                        </select>
+                        {validationErrors.gender && <p className="text-red-600 text-xs mt-1">{validationErrors.gender}</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Aderesi</label>
                       <Input
-                        id="date_of_birth"
-                        type="date"
-                        value={formData.date_of_birth}
-                        onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                        className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="Kigali, Gasabo, Remera"
+                        className="h-12"
+                      />
+                      {validationErrors.address && <p className="text-red-600 text-xs mt-1">{validationErrors.address}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Indangamuntu (Optional)</label>
+                      <Input
+                        value={formData.nationalId}
+                        onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+                        placeholder="1199012345678901"
+                        className="h-12"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="gender" className="text-xs text-gray-700 font-medium">
-                      {language === 'rw' ? 'Igitsina' : 'Gender'}
-                    </Label>
-                    <Select value={formData.gender} onValueChange={(value: 'Male' | 'Female') => setFormData({ ...formData, gender: value })}>
-                      <SelectTrigger className="mt-1 h-9 border-yellow-200 focus:border-yellow-500 text-sm rounded-lg">
-                        <SelectValue placeholder={language === 'rw' ? 'Hitamo' : 'Select'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">{language === 'rw' ? 'Gabo' : 'Male'}</SelectItem>
-                        <SelectItem value="Female">{language === 'rw' ? 'Gore' : 'Female'}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="trade" className="text-xs text-gray-700 font-medium">
-                    {language === 'rw' ? 'Hitamo Umwuga' : 'Select Trade'} *
-                  </Label>
-                  <Select value={formData.trade_code} onValueChange={(value) => {
-                    const selectedTrade = trades.find(t => t.trade_code === value);
-                    setFormData({ 
-                      ...formData, 
-                      trade_code: value,
-                      level_number: selectedTrade?.level_number?.toString() || '',
-                      level_suffix: selectedTrade?.level_suffix || ''
-                    });
-                  }}>
-                    <SelectTrigger className="mt-1 h-9 border-yellow-200 focus:border-yellow-500 text-sm rounded-lg">
-                      <SelectValue placeholder={language === 'rw' ? 'Hitamo umwuga wawe' : 'Choose your trade'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trades.map((trade) => (
-                        <SelectItem key={trade.id} value={trade.trade_code}>
-                          {trade.full_name || trade.trade_name} - {language === 'rw' ? 'Urwego' : 'Level'} {trade.level_number}{trade.level_suffix || ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </motion.div>
-            )}
-
-            {formData.role === 'parent' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <Label htmlFor="address" className="text-xs text-gray-700 font-medium">
-                  {language === 'rw' ? 'Aderesi' : 'Address'}
-                </Label>
-                <div className="relative mt-1">
-                  <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                  <Input
-                    id="address"
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                    placeholder={language === 'rw' ? 'Injiza aderesi yawe' : 'Enter your address'}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            <div>
-              <Label htmlFor="password" className="text-xs text-gray-700 font-medium">
-                {language === 'rw' ? 'Ijambo ry\'Ibanga' : 'Password'} *
-              </Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="confirmPassword" className="text-xs text-gray-700 font-medium">
-                {language === 'rw' ? 'Emeza Ijambo ry\'Ibanga' : 'Confirm Password'} *
-              </Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-500" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="pl-8 h-9 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-500 text-sm rounded-lg"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-10 bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white font-bold mt-3 shadow-lg disabled:opacity-50 text-sm rounded-lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {language === 'rw' ? 'Gukora Konti...' : 'Creating Account...'}
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    {language === 'rw' ? 'Iyandikishe' : 'Register'}
-                  </>
+                  </motion.div>
                 )}
-              </Button>
-            </motion.div>
-          </form>
 
-          <div className="mt-3 text-center">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onNavigate('login')}
-              className="text-xs text-yellow-700 hover:text-green-600 hover:underline font-bold"
-            >
-              {language === 'rw' ? 'Usanzwe ufite konti? Injira' : 'Already have an account? Login'}
-            </motion.button>
-          </div>
+                {/* Step 4: Role-specific & Terms */}
+                {step === 4 && (
+                  <motion.div
+                    key="step4"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    className="space-y-4"
+                  >
+                    {formData.role === 'student' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Umwuga</label>
+                            <select
+                              value={formData.course}
+                              onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                              className="w-full h-12 border rounded-lg px-3"
+                            >
+                              <option value="">Hitamo umwuga</option>
+                              {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            {validationErrors.course && <p className="text-red-600 text-xs mt-1">{validationErrors.course}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Urwego</label>
+                            <select
+                              value={formData.level}
+                              onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                              className="w-full h-12 border rounded-lg px-3"
+                            >
+                              <option value="">Hitamo urwego</option>
+                              {levels.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                            {validationErrors.level && <p className="text-red-600 text-xs mt-1">{validationErrors.level}</p>}
+                          </div>
+                        </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-4 p-3 bg-gradient-to-br from-yellow-50 to-green-50 rounded-lg border border-yellow-200"
-          >
-            <p className="text-xs font-semibold text-gray-700 mb-2 text-center">
-              ✨ {language === 'rw' ? 'Inyungu z\'Konti' : 'Account Benefits'}
-            </p>
-            <ul className="text-xs text-gray-600 space-y-1">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                {language === 'rw' ? 'Kugenzura iterambere n\'amanota' : 'Track progress and grades'}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                {language === 'rw' ? 'Kubona ibikoresho byo kwiga 24/7' : 'Access learning resources 24/7'}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                {language === 'rw' ? 'Guhuza n\'abarimu n\'ababyeyi' : 'Connect with teachers and parents'}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                {language === 'rw' ? 'Kubona amakuru ako kanya' : 'Receive instant notifications'}
-              </li>
-            </ul>
-          </motion.div>
-        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Izina ry'Umubyeyi</label>
+                          <Input
+                            value={formData.parentName}
+                            onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
+                            placeholder="Jean MUGABO"
+                            className="h-12"
+                          />
+                          {validationErrors.parentName && <p className="text-red-600 text-xs mt-1">{validationErrors.parentName}</p>}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Telefoni y'Umubyeyi</label>
+                          <Input
+                            value={formData.parentPhone}
+                            onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
+                            placeholder="0788123456"
+                            className="h-12"
+                          />
+                          {validationErrors.parentPhone && <p className="text-red-600 text-xs mt-1">{validationErrors.parentPhone}</p>}
+                        </div>
+                      </>
+                    )}
+
+                    <div className="p-4 bg-blue-50 rounded-xl">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.agreeTerms}
+                          onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
+                          className="w-5 h-5 text-blue-600 rounded mt-1"
+                        />
+                        <span className="text-sm text-gray-700">
+                          Ndemeye <button type="button" className="text-blue-600 font-bold hover:underline">amabwiriza n'amategeko</button> ya Garden TVET School
+                        </span>
+                      </label>
+                      {validationErrors.agreeTerms && <p className="text-red-600 text-xs mt-2">{validationErrors.agreeTerms}</p>}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Error/Success Messages */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3"
+                  >
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <p className="text-red-700 font-semibold">{error}</p>
+                  </motion.div>
+                )}
+
+                {success && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-xl flex items-center gap-3"
+                  >
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <p className="text-green-700 font-semibold">{success}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Navigation Buttons */}
+              <div className="flex gap-3 mt-6">
+                {step > 1 && (
+                  <Button
+                    type="button"
+                    onClick={handleBack}
+                    variant="outline"
+                    className="flex-1 h-12"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Subira
+                  </Button>
+                )}
+
+                {step < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-purple-600"
+                  >
+                    Komeza
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 h-12 bg-gradient-to-r from-green-600 to-emerald-600"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Gutegereza...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-5 h-5 mr-2" />
+                        Iyandikishe
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {/* Login Link */}
+              <div className="text-center mt-6 pt-6 border-t">
+                <p className="text-gray-600">
+                  Usanzwe ufite konti?{' '}
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('login')}
+                    className="font-bold text-blue-600 hover:text-blue-700"
+                  >
+                    Injira
+                  </button>
+                </p>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </motion.div>
     </div>
   );

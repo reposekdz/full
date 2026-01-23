@@ -11,6 +11,10 @@ import TradesPage from '@/app/pages/TradesPage';
 import ContactPage from '@/app/pages/ContactPage';
 import SupportsPage from '@/app/pages/SupportsPage';
 import TeamsPage from '@/app/pages/TeamsPage';
+import DeveloperTeamPage from '@/app/pages/DeveloperTeamPage';
+import DeveloperDetailPage from '@/app/pages/DeveloperDetailPage';
+import LeadershipPage from '@/app/pages/LeadershipPage';
+import LeaderDetailPage from '@/app/pages/LeaderDetailPage';
 import LoginPage from '@/app/pages/LoginPage';
 import ModernLoginPage from '@/app/pages/ModernLoginPage';
 import RegisterPage from '@/app/pages/RegisterPage';
@@ -32,9 +36,7 @@ import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
-import EnhancedAdminDashboard from '@/app/pages/dashboards/EnhancedAdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
-import EnhancedStudentDashboard from '@/app/pages/dashboards/EnhancedStudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DirectorDisciplineDashboard from '@/app/pages/dashboards/DirectorDisciplineDashboard';
@@ -60,9 +62,9 @@ const AppContent: React.FC = () => {
     switch (user.role) {
       case 'admin':
       case 'super_admin':
-        return <EnhancedAdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'student':
-        return <EnhancedStudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         return <ParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
@@ -148,6 +150,16 @@ const AppContent: React.FC = () => {
         return <ContactPage />;
       case 'supports':
         return <SupportsPage />;
+      case 'developers':
+        return <DeveloperTeamPage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('developer/') ? currentPage : '':
+        const devId = currentPage.split('/')[1];
+        return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
+      case 'leadership':
+        return <LeadershipPage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('leader/') ? currentPage : '':
+        const leaderId = currentPage.split('/')[1];
+        return <LeaderDetailPage leaderId={leaderId} onNavigate={handleNavigate} />;
       case 'teams':
         return <TeamsPage onNavigate={handleNavigate} />;
       case 'login':

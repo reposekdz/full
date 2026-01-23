@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { X, ChevronLeft, ChevronRight, Camera, ZoomIn, ZoomOut, Download, Share2, Maximize2, Building2, Laptop, BookOpen, Trophy, RotateCw } from 'lucide-react';
+import schoolImg1 from '@/assets/school view/1.jpg';
+import schoolImg2 from '@/assets/school view/2.jpg';
+import schoolImg3 from '@/assets/school view/3.jpg';
+import schoolImg4 from '@/assets/school view/4.jpg';
 
 const campusImages = [
   {
     id: 1,
-    src: new URL('../assets/school view/1.jpg', import.meta.url).href,
+    src: schoolImg1,
     title: 'Main Administration Building',
     title_rw: 'Inyubako y\'Ubuyobozi',
     description: 'Modern administrative offices and reception area',
@@ -16,7 +20,7 @@ const campusImages = [
   },
   {
     id: 2,
-    src: new URL('../assets/school view/2.jpg', import.meta.url).href,
+    src: schoolImg2,
     title: 'Classrooms & Learning Spaces',
     title_rw: 'Amaklasi n\'Ahantu ho Kwiga',
     description: 'Well-equipped classrooms with modern teaching facilities',
@@ -26,7 +30,7 @@ const campusImages = [
   },
   {
     id: 3,
-    src: new URL('../assets/school view/3.jpg', import.meta.url).href,
+    src: schoolImg3,
     title: 'Computer Labs & Technology Center',
     title_rw: 'Laboratoire za Mudasobwa',
     description: 'State-of-the-art computer labs for practical training',
@@ -36,7 +40,7 @@ const campusImages = [
   },
   {
     id: 4,
-    src: new URL('../assets/school view/4.jpg', import.meta.url).href,
+    src: schoolImg4,
     title: 'Sports & Recreation Facilities',
     title_rw: 'Ibikoresho bya Siporo',
     description: 'Modern sports fields and recreational areas',
@@ -51,6 +55,9 @@ const CampusGallerySection: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+
+  const displayImages = campusImages.slice(0, 4);
+  const remainingCount = Math.max(0, campusImages.length - 4);
 
   const openLightbox = (index: number) => {
     setSelectedImage(index);
@@ -125,8 +132,9 @@ const CampusGallerySection: React.FC = () => {
 
           {/* 2x2 Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {campusImages.map((image, index) => {
+            {displayImages.map((image, index) => {
               const Icon = image.icon;
+              const isLastImage = index === 3 && remainingCount > 0;
               return (
                 <motion.div
                   key={image.id}
@@ -146,6 +154,20 @@ const CampusGallerySection: React.FC = () => {
                       alt={language === 'rw' ? image.title_rw : image.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+                    
+                    {/* Remaining Photos Badge */}
+                    {isLastImage && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="bg-gradient-to-r from-yellow-500 to-green-500 rounded-full w-32 h-32 flex items-center justify-center mb-4 shadow-2xl">
+                            <span className="text-white text-5xl font-black">+{remainingCount}</span>
+                          </div>
+                          <p className="text-white text-xl font-bold">
+                            {language === 'rw' ? 'Amafoto Yandi' : 'More Photos'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500">
                       <div className="absolute bottom-0 left-0 right-0 p-8 transform translate-y-6 group-hover:translate-y-0 transition-transform duration-500">

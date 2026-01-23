@@ -68,14 +68,36 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
     try {
       let result;
       
-      if (selectedRole === 'parent') {
-        const { apiService } = await import('@/app/services/apiService');
-        result = await apiService.parentPhoneLogin(phone, password);
+      if (selectedRole === 'student') {
+        const response = await fetch('http://localhost:5000/api/auth/login/student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ serial_code: email, password })
+        });
+        result = await response.json();
         
         if (result.success) {
           setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
+          if (result.token) localStorage.setItem('token', result.token);
           setTimeout(() => {
-            onNavigate(getRoleDashboard('parent'));
+            onNavigate('dashboard-student');
+          }, 1000);
+        } else {
+          setError(result.message || 'Invalid serial code or password');
+        }
+      } else if (selectedRole === 'parent') {
+        const response = await fetch('http://localhost:5000/api/auth/login/parent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password })
+        });
+        result = await response.json();
+        
+        if (result.success) {
+          setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
+          if (result.token) localStorage.setItem('token', result.token);
+          setTimeout(() => {
+            onNavigate('dashboard-parent');
           }, 1000);
         } else {
           setError(result.message || 'Invalid phone or password');
@@ -234,7 +256,48 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
                     )}
 
                     <form onSubmit={handleLogin} className="space-y-4">
-                      {selectedRole === 'parent' ? (
+                      {selectedRole === 'student' ? (
+                        <>
+                          <div>
+                            <Label htmlFor="serial">Nimero y'Umunyeshuri (Serial Code)</Label>
+                            <div className="relative mt-1">
+                              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                              <Input
+                                id="serial"
+                                type="text"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Andika nimero yawe"
+                                className="pl-10 h-12"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="password">Ijambo ry'Ibanga (Password)</Label>
+                            <div className="relative mt-1">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                              <Input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="pl-10 pr-10 h-12"
+                                required
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2"
+                              >
+                                {showPassword ? <EyeOff className="w-5 h-5 text-gray-400" /> : <Eye className="w-5 h-5 text-gray-400" />}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ) : selectedRole === 'parent' ? (
                         <>
                           <div>
                             <Label htmlFor="phone">Phone Number</Label>
@@ -325,37 +388,21 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
                       </Button>
                     </form>
 
-                    {selectedRole !== 'parent' && (
-                      <>
-                        <div className="mt-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleQuickLogin}
-                            className="w-full h-10 border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
-                          >
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Quick Login
-                          </Button>
-                        </div>
-
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 mb-2">Demo Credentials:</p>
-                          <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span>Email:</span>
-                              <code className="bg-white px-2 py-1 rounded">{UNIFIED_EMAIL}</code>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Password:</span>
-                              <code className="bg-white px-2 py-1 rounded">{UNIFIED_PASSWORD}</code>
-                            </div>
-                          </div>
-                        </div>
-                      </>
+                    {selectedRole !== 'parent' && selectedRole !== 'student' && (
+                      <div className="mt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleQuickLogin}
+                          className="w-full h-10 border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                        >
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Quick Login
+                        </Button>
+                      </div>
                     )}
 
-                    {selectedRole === 'parent' && (
+                    {(selectedRole === 'parent' || selectedRole === 'student') && (
                       <div className="mt-4 text-center">
                         <p className="text-sm text-gray-600">
                           Don't have an account?{' '}
@@ -492,7 +539,7 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
             >
               Verify
             </Button>
-            <p className="text-xs text-center text-gray-400">Demo code: g@2026</p>
+            <p className="text-xs text-center text-gray-400">Staff access code required</p>
           </div>
         </DialogContent>
       </Dialog>

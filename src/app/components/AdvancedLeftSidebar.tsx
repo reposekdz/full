@@ -7,7 +7,7 @@ import {
   PieChart, LineChart, Calculator, CreditCard, Truck, Warehouse, ShoppingCart, Receipt,
   UserPlus, UserMinus, Search, Filter, Download, Upload, Eye, Edit, Trash2, Plus,
   Mail, Phone, MapPin, Globe, Star, Heart, Bookmark, Flag, AlertTriangle, CheckCircle,
-  XCircle, Info, HelpCircle, ExternalLink, Zap, Lightbulb, Compass, Navigation
+  XCircle, Info, HelpCircle, ExternalLink, Zap, Lightbulb, Compass, Navigation, Brain, Video, Bed
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -64,11 +64,14 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
     const roleSpecificItems = {
       student: [
         { key: 'classes', icon: BookOpen, label: 'Amaklasi', color: 'from-blue-500 to-cyan-500' },
+        { key: 'competitions', icon: Trophy, label: 'Amarushanwa', color: 'from-purple-500 to-pink-500' },
+        { key: 'library', icon: BookOpen, label: 'Isomero', color: 'from-indigo-500 to-blue-500' },
+        { key: 'transport', icon: Truck, label: 'Transport', color: 'from-green-500 to-teal-500' },
+        { key: 'hostel', icon: Bed, label: 'Hostel', color: 'from-orange-500 to-red-500' },
         { key: 'assignments', icon: ClipboardList, label: 'Ibizamini', color: 'from-purple-500 to-violet-500' },
         { key: 'grades', icon: Award, label: 'Amanota', color: 'from-green-500 to-emerald-500' },
         { key: 'attendance', icon: Calendar, label: 'Kwitabira', color: 'from-orange-500 to-red-500' },
         { key: 'activities', icon: Trophy, label: 'Ibikorwa', color: 'from-pink-500 to-rose-500' },
-        { key: 'library', icon: BookOpen, label: 'Isomero', color: 'from-indigo-500 to-blue-500' },
         { key: 'timetable', icon: Clock, label: 'Gahunda', color: 'from-teal-500 to-cyan-500' }
       ],
       parent: [
@@ -91,6 +94,15 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       ],
       admin: [
         { key: 'users', icon: Users, label: 'Abakoresha', color: 'from-blue-500 to-indigo-500' },
+        { key: 'student-management', icon: GraduationCap, label: 'Abanyeshuri & Abarimu', color: 'from-green-500 to-emerald-500' },
+        { key: 'content-management', icon: FileText, label: 'Gucunga Ibikubiyemo', color: 'from-purple-500 to-pink-500' },
+        { key: 'homework-management', icon: BookOpen, label: 'Homework', color: 'from-orange-500 to-red-500' },
+        { key: 'assignments-management', icon: ClipboardList, label: 'Assignments', color: 'from-teal-500 to-cyan-500' },
+        { key: 'quiz-system', icon: Brain, label: 'Quiz System', color: 'from-purple-500 to-pink-500' },
+        { key: 'live-chat', icon: MessageSquare, label: 'Live Chat', color: 'from-blue-500 to-indigo-500' },
+        { key: 'gamification', icon: Trophy, label: 'Gamification', color: 'from-yellow-500 to-amber-500' },
+        { key: 'live-study', icon: Video, label: 'Live Study', color: 'from-red-500 to-pink-500' },
+        { key: 'collaboration', icon: Users, label: 'Study Groups', color: 'from-green-500 to-teal-500' },
         { key: 'analytics', icon: BarChart3, label: 'Imibare', color: 'from-green-500 to-teal-500' },
         { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-purple-500 to-violet-500' },
         { key: 'settings', icon: Settings, label: 'Igenamiterere', color: 'from-orange-500 to-red-500' },
@@ -126,7 +138,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' }
       ],
       director_of_discipline: [
-        { key: 'discipline', icon: Shield, label: 'Imyitwarire', color: 'from-red-500 to-orange-500' },
+        { key: 'discipline-management', icon: Shield, label: 'Gucunga Indero', color: 'from-red-500 to-orange-500' },
         { key: 'incidents', icon: AlertTriangle, label: 'Ibibazo', color: 'from-yellow-500 to-amber-500' },
         { key: 'counseling', icon: Heart, label: 'Ubujyanama', color: 'from-pink-500 to-rose-500' },
         { key: 'rules', icon: BookOpen, label: 'Amategeko', color: 'from-blue-500 to-indigo-500' },
@@ -225,6 +237,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
     <motion.aside
       initial={{ x: -300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className="hidden lg:block w-80 bg-gradient-to-b from-white to-yellow-50/30 border-r-2 border-yellow-200 h-full overflow-hidden shadow-xl"
     >
       <ScrollArea className="h-full">
@@ -294,6 +307,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                   >
                     <CardContent className="space-y-2 pb-4">
                       {notifications.map((notification, index) => (
@@ -339,6 +353,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
                 >
                   <CardContent className="space-y-2 pb-4">
                     {filteredNavItems.map((item) => {
@@ -393,6 +408,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                   >
                     <CardContent className="space-y-2 pb-4">
                       {quickActions.map((action) => {

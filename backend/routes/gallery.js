@@ -1,142 +1,118 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../config/database');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { pool } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// Configure multer for gallery uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/gallery');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
+    const dir = 'uploads/gallery';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'gallery-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, `gallery-${Date.now()}${path.extname(file.originalname)}`);
   }
 });
 
-const upload = multer({
-  storage: storage,
+const upload = multer({ 
+  storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed!'));
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only images allowed'));
   }
 });
 
-// Get all gallery images (public)
+// Get all gallery images
 router.get('/images', async (req, res) => {
   try {
-    const [images] = await pool.execute(`
+    const [images] = await db.query(`
       SELECT * FROM gallery_images 
       WHERE is_active = true 
       ORDER BY sort_order ASC, created_at DESC
     `);
-    
-    res.json({
-      success: true,
-      images: images.map(img => ({
-        ...img,
-        image_url: `/uploads/gallery/${path.basename(img.image_url)}`
-      }))
-    });
+    res.json({ success: true, images });
   } catch (error) {
-    console.error('Get gallery error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch gallery images' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Upload new gallery image (admin only)
-router.post('/upload', authenticateToken, upload.single('image'), async (req, res) => {
+// Get gallery stats
+router.get('/stats', async (req, res) => {
   try {
-    const { title, title_rw, description, description_rw, sort_order } = req.body;
-    
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No image file provided' });
-    }
-
-    const imageUrl = `/uploads/gallery/${req.file.filename}`;
-    
-    const [result] = await pool.execute(`
-      INSERT INTO gallery_images (
-        title, title_rw, description, description_rw, 
-        image_url, sort_order, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, true)
-    `, [
-      title || 'Campus Image',
-      title_rw || 'Ifoto y\'Ikigo',
-      description || '',
-      description_rw || '',
-      imageUrl,
-      sort_order || 0
-    ]);
-
-    res.json({
-      success: true,
-      message: 'Image uploaded successfully',
-      image: {
-        id: result.insertId,
-        title,
-        title_rw,
-        image_url: imageUrl
-      }
-    });
+    const [stats] = await db.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN category = 'campus' THEN 1 ELSE 0 END) as campus,
+        SUM(CASE WHEN category = 'classroom' THEN 1 ELSE 0 END) as classroom,
+        SUM(CASE WHEN category = 'lab' THEN 1 ELSE 0 END) as lab,
+        SUM(CASE WHEN category = 'sports' THEN 1 ELSE 0 END) as sports,
+        SUM(CASE WHEN category = 'events' THEN 1 ELSE 0 END) as events
+      FROM gallery_images WHERE is_active = true
+    `);
+    res.json({ success: true, stats: stats[0] });
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload image' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Update gallery image (admin only)
-router.put('/:id', authenticateToken, async (req, res) => {
+// Admin: Get all images
+router.get('/admin/images', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
   try {
-    const { id } = req.params;
-    const { title, title_rw, description, description_rw, sort_order, is_active } = req.body;
-    
-    await pool.execute(`
-      UPDATE gallery_images 
-      SET title = ?, title_rw = ?, description = ?, description_rw = ?, 
-          sort_order = ?, is_active = ?
-      WHERE id = ?
-    `, [title, title_rw, description, description_rw, sort_order, is_active, id]);
+    const [images] = await db.query('SELECT * FROM gallery_images ORDER BY created_at DESC');
+    res.json({ success: true, images });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
+// Admin: Upload image
+router.post('/admin/upload', authenticateToken, requireRole(['admin', 'headmaster']), upload.single('image'), async (req, res) => {
+  try {
+    const { title, title_rw, description, description_rw, category, sort_order } = req.body;
+    const image_url = `/uploads/gallery/${req.file.filename}`;
+    
+    const [result] = await db.query(
+      'INSERT INTO gallery_images (title, title_rw, description, description_rw, category, image_url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [title, title_rw, description, description_rw, category, image_url, sort_order || 0]
+    );
+    
+    res.json({ success: true, id: result.insertId, image_url, message: 'Image uploaded successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Admin: Update image
+router.put('/admin/images/:id', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  try {
+    const { title, title_rw, description, description_rw, category, is_active, sort_order } = req.body;
+    await db.query(
+      'UPDATE gallery_images SET title=?, title_rw=?, description=?, description_rw=?, category=?, is_active=?, sort_order=? WHERE id=?',
+      [title, title_rw, description, description_rw, category, is_active, sort_order, req.params.id]
+    );
     res.json({ success: true, message: 'Image updated successfully' });
   } catch (error) {
-    console.error('Update error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update image' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Delete gallery image (admin only)
-router.delete('/:id', authenticateToken, async (req, res) => {
+// Admin: Delete image
+router.delete('/admin/images/:id', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    const [images] = await pool.execute('SELECT image_url FROM gallery_images WHERE id = ?', [id]);
-    
-    if (images.length > 0) {
-      const imagePath = path.join(__dirname, '..', images[0].image_url);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    const [image] = await db.query('SELECT image_url FROM gallery_images WHERE id=?', [req.params.id]);
+    if (image[0]?.image_url) {
+      const filePath = path.join(__dirname, '..', image[0].image_url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
-    
-    await pool.execute('DELETE FROM gallery_images WHERE id = ?', [id]);
-    
+    await db.query('DELETE FROM gallery_images WHERE id=?', [req.params.id]);
     res.json({ success: true, message: 'Image deleted successfully' });
   } catch (error) {
-    console.error('Delete error:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete image' });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

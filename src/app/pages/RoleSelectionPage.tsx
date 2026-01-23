@@ -89,8 +89,8 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
     },
     {
       role: 'accountant' as UserRole,
-      title: 'Umubare',
-      subtitle: 'Accountant',
+      title: 'Accountant',
+      subtitle: 'Financial Manager',
       description: 'Gucunga amafaranga n\'imari',
       icon: DollarSign,
       color: 'from-emerald-500 to-green-600',

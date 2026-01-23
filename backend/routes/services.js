@@ -1,106 +1,236 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-const multer = require('multer');
-const path = require('path');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/services/'),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-});
-
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// Get all services
-router.get('/', async (req, res) => {
+// GET all services
+router.get('/services', async (req, res) => {
   try {
-    const [services] = await pool.execute(`
-      SELECT s.*, COUNT(si.id) as item_count
-      FROM services s
-      LEFT JOIN service_items si ON s.id = si.service_id
-      WHERE s.is_active = true
-      GROUP BY s.id
-      ORDER BY s.display_order ASC
-    `);
-    res.json({ success: true, services });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get service details
-router.get('/:id', async (req, res) => {
-  try {
-    const [services] = await pool.execute(`SELECT * FROM services WHERE id = ?`, [req.params.id]);
-    const [items] = await pool.execute(`SELECT * FROM service_items WHERE service_id = ? ORDER BY display_order`, [req.params.id]);
-    res.json({ success: true, service: services[0], items });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Create service (Admin/DOS)
-router.post('/', authenticateToken, requireRole('admin', 'dos', 'headmaster'), upload.single('icon'), async (req, res) => {
-  try {
-    const { title_rw, title_en, title_fr, description_rw, description_en, description_fr, category, display_order } = req.body;
-    const icon = req.file ? `/uploads/services/${req.file.filename}` : null;
+    const { category } = req.query;
+    let query = 'SELECT * FROM school_services WHERE is_active = true';
+    const params = [];
     
-    const [result] = await pool.execute(`
-      INSERT INTO services (title_rw, title_en, title_fr, description_rw, description_en, description_fr, category, icon, display_order, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
-    `, [title_rw, title_en, title_fr, description_rw, description_en, description_fr, category, icon, display_order || 0]);
-    
-    res.json({ success: true, serviceId: result.insertId });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Update service
-router.put('/:id', authenticateToken, requireRole('admin', 'dos', 'headmaster'), upload.single('icon'), async (req, res) => {
-  try {
-    const { title_rw, title_en, title_fr, description_rw, description_en, description_fr, category, display_order, is_active } = req.body;
-    let query = `UPDATE services SET title_rw = ?, title_en = ?, title_fr = ?, description_rw = ?, description_en = ?, description_fr = ?, category = ?, display_order = ?, is_active = ?`;
-    const params = [title_rw, title_en, title_fr, description_rw, description_en, description_fr, category, display_order, is_active];
-    
-    if (req.file) {
-      query += `, icon = ?`;
-      params.push(`/uploads/services/${req.file.filename}`);
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
     }
     
-    query += ` WHERE id = ?`;
-    params.push(req.params.id);
+    query += ' ORDER BY name_rw ASC';
     
-    await pool.execute(query, params);
-    res.json({ success: true });
+    const [services] = await pool.query(query, params);
+    
+    const parsedServices = services.map(service => ({
+      ...service,
+      schedule: typeof service.schedule === 'string' ? JSON.parse(service.schedule) : service.schedule,
+      features: typeof service.features === 'string' ? JSON.parse(service.features) : service.features,
+      requirements: typeof service.requirements === 'string' ? JSON.parse(service.requirements) : service.requirements,
+      benefits: typeof service.benefits === 'string' ? JSON.parse(service.benefits) : service.benefits
+    }));
+    
+    res.json({
+      success: true,
+      services: parsedServices
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching services'
+    });
   }
 });
 
-// Delete service
-router.delete('/:id', authenticateToken, requireRole('admin', 'headmaster'), async (req, res) => {
+// GET single service
+router.get('/services/:id', async (req, res) => {
   try {
-    await pool.execute(`UPDATE services SET is_active = false WHERE id = ?`, [req.params.id]);
-    res.json({ success: true });
+    const [services] = await pool.query(
+      'SELECT * FROM school_services WHERE id = ? AND is_active = true',
+      [req.params.id]
+    );
+    
+    if (services.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found'
+      });
+    }
+    
+    const service = {
+      ...services[0],
+      schedule: typeof services[0].schedule === 'string' ? JSON.parse(services[0].schedule) : services[0].schedule,
+      features: typeof services[0].features === 'string' ? JSON.parse(services[0].features) : services[0].features,
+      requirements: typeof services[0].requirements === 'string' ? JSON.parse(services[0].requirements) : services[0].requirements,
+      benefits: typeof services[0].benefits === 'string' ? JSON.parse(services[0].benefits) : services[0].benefits
+    };
+    
+    res.json({
+      success: true,
+      service
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching service'
+    });
   }
 });
 
-// Add service item
-router.post('/:id/items', authenticateToken, requireRole('admin', 'dos', 'headmaster'), async (req, res) => {
+// POST service request
+router.post('/requests', async (req, res) => {
   try {
-    const { title_rw, title_en, title_fr, description_rw, description_en, description_fr, display_order } = req.body;
-    const [result] = await pool.execute(`
-      INSERT INTO service_items (service_id, title_rw, title_en, title_fr, description_rw, description_en, description_fr, display_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [req.params.id, title_rw, title_en, title_fr, description_rw, description_en, description_fr, display_order || 0]);
+    const { service_id, user_id, student_name, student_email, student_phone, parent_name, parent_phone, request_type, message } = req.body;
     
-    res.json({ success: true, itemId: result.insertId });
+    const [result] = await pool.query(
+      `INSERT INTO service_requests 
+       (service_id, user_id, student_name, student_email, student_phone, parent_name, parent_phone, request_type, message) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [service_id, user_id, student_name, student_email, student_phone, parent_name, parent_phone, request_type, message]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Request submitted successfully',
+      requestId: result.insertId
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error submitting request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting request'
+    });
+  }
+});
+
+// GET service requests (admin/headmaster/advisor)
+router.get('/admin/requests', async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = `
+      SELECT sr.*, ss.name_rw as service_name 
+      FROM service_requests sr
+      JOIN school_services ss ON sr.service_id = ss.id
+    `;
+    const params = [];
+    
+    if (status) {
+      query += ' WHERE sr.status = ?';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY sr.created_at DESC';
+    
+    const [requests] = await pool.query(query, params);
+    
+    res.json({
+      success: true,
+      requests
+    });
+  } catch (error) {
+    console.error('Error fetching requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching requests'
+    });
+  }
+});
+
+// PUT update request status (admin/headmaster/advisor)
+router.put('/admin/requests/:id', async (req, res) => {
+  try {
+    const { status, notes, approved_by } = req.body;
+    
+    await pool.query(
+      `UPDATE service_requests 
+       SET status = ?, notes = ?, approved_by = ?, approved_at = NOW() 
+       WHERE id = ?`,
+      [status, notes, approved_by, req.params.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Request updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating request'
+    });
+  }
+});
+
+// POST create service (admin/headmaster/advisor)
+router.post('/admin/services', async (req, res) => {
+  try {
+    const { name, name_rw, category, description, description_rw, full_details_rw, icon, price, duration, availability, contact_person, contact_email, contact_phone, location, schedule, features, requirements, benefits, created_by } = req.body;
+    
+    const [result] = await pool.query(
+      `INSERT INTO school_services 
+       (name, name_rw, category, description, description_rw, full_details_rw, icon, price, duration, availability, 
+        contact_person, contact_email, contact_phone, location, schedule, features, requirements, benefits, created_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, name_rw, category, description, description_rw, full_details_rw, icon, price, duration, availability, contact_person, contact_email, contact_phone, location, JSON.stringify(schedule), JSON.stringify(features), JSON.stringify(requirements), JSON.stringify(benefits), created_by]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Service created successfully',
+      serviceId: result.insertId
+    });
+  } catch (error) {
+    console.error('Error creating service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating service'
+    });
+  }
+});
+
+// PUT update service (admin/headmaster/advisor)
+router.put('/admin/services/:id', async (req, res) => {
+  try {
+    const { name, name_rw, category, description, description_rw, full_details_rw, icon, price, duration, availability, contact_person, contact_email, contact_phone, location, schedule, features, requirements, benefits } = req.body;
+    
+    await pool.query(
+      `UPDATE school_services 
+       SET name = ?, name_rw = ?, category = ?, description = ?, description_rw = ?, full_details_rw = ?, 
+           icon = ?, price = ?, duration = ?, availability = ?, contact_person = ?, contact_email = ?, 
+           contact_phone = ?, location = ?, schedule = ?, features = ?, requirements = ?, benefits = ? 
+       WHERE id = ?`,
+      [name, name_rw, category, description, description_rw, full_details_rw, icon, price, duration, availability, contact_person, contact_email, contact_phone, location, JSON.stringify(schedule), JSON.stringify(features), JSON.stringify(requirements), JSON.stringify(benefits), req.params.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Service updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating service'
+    });
+  }
+});
+
+// DELETE service (admin/headmaster/advisor)
+router.delete('/admin/services/:id', async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE school_services SET is_active = false WHERE id = ?',
+      [req.params.id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Service deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting service'
+    });
   }
 });
 

@@ -405,137 +405,135 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     const fetchContent = async () => {
       setLoading(true);
       try {
-        // Fetch news articles
+        // Fetch news articles from homepage API
         try {
-          const newsResponse = await fetch(`${API_BASE}/content/news`);
+          const newsResponse = await fetch(`${API_BASE}/homepage/news`);
           const newsData = await newsResponse.json();
           if (newsData.success && newsData.articles && newsData.articles.length > 0) {
             setNewsArticles(newsData.articles);
           }
         } catch (error) {
-          console.log('News API error, using default:', error.message);
+          console.log('News API error, using default:', error);
         }
 
-        // Fetch testimonials
+        // Fetch testimonials from homepage API
         try {
-          const testimonialsResponse = await fetch(`${API_BASE}/content/testimonials`);
+          const testimonialsResponse = await fetch(`${API_BASE}/homepage/testimonials`);
           const testimonialsData = await testimonialsResponse.json();
           if (testimonialsData.success && testimonialsData.testimonials && testimonialsData.testimonials.length > 0) {
             setTestimonials(testimonialsData.testimonials);
           }
         } catch (error) {
-          console.log('Testimonials API error, using default:', error.message);
+          console.log('Testimonials API error, using default:', error);
         }
 
-        // Fetch school statistics 
+        // Fetch school statistics from homepage API
         try {
-          const statsResponse = await fetch(`${API_BASE}/content/stats`);
+          const statsResponse = await fetch(`${API_BASE}/homepage/stats`);
           const statsData = await statsResponse.json();
-          if (statsData.success && statsData.stats && statsData.stats.length > 0) {
-            setSchoolStats(statsData.stats);
+          if (statsData.success) {
+            // Transform API data to match component format
+            const transformedStats = [
+              {
+                id: 1,
+                stat_key: 'students',
+                value: statsData.students?.toString() || '1,248',
+                label: 'Abanyeshuri',
+                icon: 'Users',
+                color: 'from-blue-500 to-indigo-500',
+                is_active: true,
+                sort_order: 1
+              },
+              {
+                id: 2,
+                stat_key: 'teachers',
+                value: statsData.teachers?.toString() || '84',
+                label: 'Abarimu',
+                icon: 'GraduationCap',
+                color: 'from-green-500 to-teal-500',
+                is_active: true,
+                sort_order: 2
+              },
+              {
+                id: 3,
+                stat_key: 'employment',
+                value: statsData.employmentRate || '95%',
+                label: 'Gushirwa mu kazi',
+                icon: 'Briefcase',
+                color: 'from-yellow-500 to-orange-500',
+                is_active: true,
+                sort_order: 3
+              },
+              {
+                id: 4,
+                stat_key: 'awards',
+                value: statsData.awards?.toString() || '25+',
+                label: 'Ibihembo',
+                icon: 'Trophy',
+                color: 'from-orange-500 to-red-500',
+                is_active: true,
+                sort_order: 4
+              }
+            ];
+            setSchoolStats(transformedStats);
           }
         } catch (error) {
-          console.log('Stats API error, using default:', error.message);
+          console.log('Stats API error, using default:', error);
         }
 
-        // Fetch achievements
+        // Fetch achievements from homepage API
         try {
-          const achievementsResponse = await fetch(`${API_BASE}/content/achievements`);
+          const achievementsResponse = await fetch(`${API_BASE}/homepage/achievements`);
           const achievementsData = await achievementsResponse.json();
           if (achievementsData.success && achievementsData.achievements && achievementsData.achievements.length > 0) {
             setAchievements(achievementsData.achievements);
           }
         } catch (error) {
-          console.log('Achievements API error, using default:', error.message);
+          console.log('Achievements API error, using default:', error);
         }
 
-        // Fetch slides for hero section
+        // Fetch events from homepage API
         try {
-          const slidesResponse = await fetch(`${API_BASE}/content/slides`);
-          const slidesData = await slidesResponse.json();
-          if (slidesData.success && slidesData.slides && slidesData.slides.length > 0) {
-            // Pass slides to Hero component or use them for homepage content
-            console.log('Loaded slides:', slidesData.slides);
-          }
-        } catch (error) {
-          console.log('Slides API error:', error.message);
-        }
-
-        // Fetch sports teams and events
-        try {
-          const sportsResponse = await fetch(`${API_BASE}/sports/teams`);
-          const sportsData = await sportsResponse.json();
-          if (sportsData.success && sportsData.teams) {
-            setSportsCategories(sportsData.teams);
-          }
-        } catch (error) {
-          console.log('Sports API error:', error.message);
-        }
-
-        // Fetch management teams
-        try {
-          const teamsResponse = await fetch(`${API_BASE}/teams`);
-          const teamsData = await teamsResponse.json();
-          if (teamsData.success && teamsData.teams) {
-            console.log('Management teams loaded:', teamsData.teams);
-          }
-        } catch (error) {
-          console.log('Teams API error:', error.message);
-        }
-
-        // Fetch dynamic features
-        try {
-          const featuresResponse = await fetch(`${API_BASE}/dynamic/features`);
-          const featuresData = await featuresResponse.json();
-          if (featuresData.success && featuresData.features.length > 0) {
-            setDynamicFeatures(featuresData.features);
-          }
-        } catch (error) {
-          console.log('Using default features');
-        }
-
-        // Fetch upcoming events
-        try {
-          const eventsResponse = await fetch(`${API_BASE}/dynamic/events?status=upcoming&limit=4`);
+          const eventsResponse = await fetch(`${API_BASE}/homepage/events`);
           const eventsData = await eventsResponse.json();
-          if (eventsData.success && eventsData.events.length > 0) {
+          if (eventsData.success && eventsData.events && eventsData.events.length > 0) {
             setUpcomingEvents(eventsData.events);
           }
         } catch (error) {
-          console.log('Using default events');
+          console.log('Events API error, using default:', error);
         }
 
-        // Fetch sports categories
+        // Fetch slides for hero section from homepage API
         try {
-          const sportsResponse = await fetch(`${API_BASE}/dynamic/sports/categories`);
-          const sportsData = await sportsResponse.json();
-          if (sportsData.success && sportsData.categories.length > 0) {
-            setSportsCategories(sportsData.categories);
+          const slidesResponse = await fetch(`${API_BASE}/homepage/hero-slides`);
+          const slidesData = await slidesResponse.json();
+          if (slidesData.success && slidesData.slides && slidesData.slides.length > 0) {
+            console.log('Loaded slides:', slidesData.slides);
           }
         } catch (error) {
-          console.log('Using default sports categories');
+          console.log('Slides API error:', error);
         }
 
-        // Fetch upcoming sports matches
+        // Fetch trades from homepage API
         try {
-          const matchesResponse = await fetch(`${API_BASE}/dynamic/sports/matches?status=upcoming&limit=4`);
-          const matchesData = await matchesResponse.json();
-          if (matchesData.success && matchesData.matches.length > 0) {
-            setSportsMatches(matchesData.matches);
+          const tradesResponse = await fetch(`${API_BASE}/homepage/trades`);
+          const tradesData = await tradesResponse.json();
+          if (tradesData.success && tradesData.trades) {
+            console.log('Loaded trades:', tradesData.trades);
           }
         } catch (error) {
-          console.log('Using default sports matches');
+          console.log('Trades API error:', error);
         }
 
-        // Fetch sports achievements
+        // Fetch home features from homepage API
         try {
-          const sportsAchievementsResponse = await fetch(`${API_BASE}/dynamic/sports/achievements?featured=true&limit=4`);
-          const sportsAchievementsData = await sportsAchievementsResponse.json();
-          if (sportsAchievementsData.success && sportsAchievementsData.achievements.length > 0) {
-            setSportsAchievements(sportsAchievementsData.achievements);
+          const featuresResponse = await fetch(`${API_BASE}/homepage/features`);
+          const featuresData = await featuresResponse.json();
+          if (featuresData.success && featuresData.features && featuresData.features.length > 0) {
+            setDynamicFeatures(featuresData.features);
           }
         } catch (error) {
-          console.log('Using default sports achievements');
+          console.log('Features API error, using default:', error);
         }
 
       } catch (error) {

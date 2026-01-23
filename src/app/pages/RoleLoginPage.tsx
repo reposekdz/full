@@ -181,8 +181,8 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
   // Login form
   const loginForm = useForm<LoginFormData>({
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'reponse@gmail.com',
+      password: '2026',
       rememberMe: false
     }
   });
@@ -231,15 +231,48 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
     setMessage(null);
 
     try {
-      const result = await loginWithRole(selectedRole, {
-        email: data.email,
-        password: data.password
-      });
+      let result;
+      
+      // Student login with serial code
+      if (selectedRole === 'student') {
+        const response = await fetch('http://localhost:5000/api/auth/login/student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serial_code: data.email, // email field contains serial code for students
+            password: data.password
+          })
+        });
+        result = await response.json();
+      }
+      // Parent login with phone
+      else if (selectedRole === 'parent') {
+        const response = await fetch('http://localhost:5000/api/auth/login/parent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: data.email, // email field contains phone for parents
+            password: data.password
+          })
+        });
+        result = await response.json();
+      }
+      // Other roles use standard login
+      else {
+        result = await loginWithRole(selectedRole, {
+          email: data.email,
+          password: data.password
+        });
+      }
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Login successful! Redirecting to dashboard...' });
         
-        // Store remember me preference
+        // Store token and user if provided
+        if (result.token) {
+          localStorage.setItem('token', result.token);
+        }
+        
         if (data.rememberMe) {
           localStorage.setItem('rememberedEmail', data.email);
         } else {
@@ -247,10 +280,13 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
         }
 
         setTimeout(() => {
-          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
+          const dashboard = selectedRole === 'student' ? 'dashboard-student' : 
+                          selectedRole === 'parent' ? 'dashboard-parent' : 
+                          getRoleDashboard(selectedRole);
+          onNavigate(dashboard);
         }, 1500);
       } else {
-        setMessage({ type: 'error', text: 'Invalid credentials. Please try again.' });
+        setMessage({ type: 'error', text: result.message || 'Invalid credentials. Please try again.' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Network error. Please check your connection.' });
@@ -304,14 +340,18 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
     }
   };
 
-  // Load remembered email
+  // Load remembered email or set default
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
     if (rememberedEmail) {
       loginForm.setValue('email', rememberedEmail);
       loginForm.setValue('rememberMe', true);
+    } else if (selectedRole !== 'student' && selectedRole !== 'parent') {
+      // Set default credentials for management roles
+      loginForm.setValue('email', 'reponse@gmail.com');
+      loginForm.setValue('password', '2026');
     }
-  }, []);
+  }, [selectedRole]);
 
   // Role Selection Step
   if (step === 'select') {
@@ -480,22 +520,39 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
             </CardHeader>
             <CardContent className="p-6">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
-                  <TabsTrigger
-                    value="login"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white transition-all"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Login
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="register"
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Register
-                  </TabsTrigger>
-                </TabsList>
+                {(selectedRole === 'student' || selectedRole === 'parent') ? (
+                  <div className="mb-6">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800 font-medium">
+                        {selectedRole === 'student' ? 'Student registration requires additional information.' : 'Parent registration requires additional information.'}
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => onNavigate('register')}
+                        className="mt-3 bg-blue-500 hover:bg-blue-600 text-white"
+                      >
+                        Go to Registration Page
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
+                    <TabsTrigger
+                      value="login"
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white transition-all"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Login
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="register"
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Register
+                    </TabsTrigger>
+                  </TabsList>
+                )}
 
                 {/* Message Alert */}
                 <AnimatePresence mode="wait">
@@ -527,37 +584,64 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                 {/* Login Form */}
                 <TabsContent value="login" className="mt-0">
                   <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                    {/* Email Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email" className="text-gray-700 font-medium">
-                        Email Address
-                      </Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="login-email"
-                          type="email"
-                          placeholder="Enter your email"
-                          className="pl-10 border-2 border-gray-200 focus:border-yellow-400 h-12 transition-colors"
-                          {...loginForm.register('email', { 
-                            required: 'Email is required',
-                            pattern: {
-                              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                              message: 'Invalid email address'
-                            }
-                          })}
-                        />
+                    {/* Serial Code Field for Students */}
+                    {selectedRole === 'student' ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="login-serial" className="text-gray-700 font-medium">
+                          Nimero y'Umunyeshuri (Serial Code)
+                        </Label>
+                        <div className="relative">
+                          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Input
+                            id="login-serial"
+                            type="text"
+                            placeholder="Andika nimero yawe"
+                            className="pl-10 border-2 border-gray-200 focus:border-yellow-400 h-12 transition-colors"
+                            {...loginForm.register('email', { required: 'Serial code is required' })}
+                          />
+                        </div>
+                        {loginForm.formState.errors.email && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-red-500 text-sm"
+                          >
+                            {loginForm.formState.errors.email.message}
+                          </motion.p>
+                        )}
                       </div>
-                      {loginForm.formState.errors.email && (
-                        <motion.p
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="text-red-500 text-sm"
-                        >
-                          {loginForm.formState.errors.email.message}
-                        </motion.p>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email" className="text-gray-700 font-medium">
+                          Email Address
+                        </Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Input
+                            id="login-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            className="pl-10 border-2 border-gray-200 focus:border-yellow-400 h-12 transition-colors"
+                            {...loginForm.register('email', { 
+                              required: 'Email is required',
+                              pattern: {
+                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                message: 'Invalid email address'
+                              }
+                            })}
+                          />
+                        </div>
+                        {loginForm.formState.errors.email && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-red-500 text-sm"
+                          >
+                            {loginForm.formState.errors.email.message}
+                          </motion.p>
+                        )}
+                      </div>
+                    )}
 
                     {/* Password Field */}
                     <div className="space-y-2">
@@ -630,19 +714,6 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                         </>
                       )}
                     </Button>
-
-                    {/* Default Credentials Hint */}
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-600 font-medium mb-2">Default Credentials:</p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Email:</span>
-                        <code className="bg-gray-200 px-2 py-1 rounded text-gray-700">reponse@gmail.com</code>
-                      </div>
-                      <div className="flex items-center justify-between text-sm mt-1">
-                        <span className="text-gray-500">Password:</span>
-                        <code className="bg-gray-200 px-2 py-1 rounded text-gray-700">2026</code>
-                      </div>
-                    </div>
                   </form>
                 </TabsContent>
 

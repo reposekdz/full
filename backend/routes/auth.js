@@ -957,6 +957,83 @@ router.put('/change-password', [
   }
 });
 
+// Student serial code login (serial_code + password)
+router.post('/login/student', [
+  body('serial_code').notEmpty().withMessage('Serial code is required'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { serial_code, password } = req.body;
+
+    const [users] = await pool.execute(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE u.student_id = ? AND r.name = 'student' AND u.is_active = true
+    `, [serial_code]);
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid serial code or password'
+      });
+    }
+
+    const user = users[0];
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid serial code or password'
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, username: user.username, role: 'student' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    await pool.execute(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Student login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        student_id: user.student_id,
+        role: 'student',
+        first_name: user.first_name,
+        last_name: user.last_name,
+        user_type: 'student'
+      }
+    });
+
+  } catch (error) {
+    console.error('Student login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // Parent phone-based login (phone + password)
 router.post('/login/parent', [
   body('phone').notEmpty().withMessage('Phone number is required'),

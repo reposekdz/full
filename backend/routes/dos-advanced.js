@@ -1,380 +1,557 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
-const multer = require('multer');
-const path = require('path');
-const bcrypt = require('bcryptjs');
+const { pool } = require('../config/database');
 
-// Configure multer for DOS uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = file.fieldname === 'workshop_images' ? 'uploads/workshops/' : 'uploads/teachers/';
-    cb(null, folder);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+// ============ TEACHERS MANAGEMENT ============
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) return cb(null, true);
-    cb(new Error('Only image and PDF files allowed'));
-  }
-});
-
-// Academic Year Management
-router.get('/academic-years', async (req, res) => {
-  try {
-    const [years] = await db.query(`
-      SELECT ay.*, 
-             COUNT(DISTINCT e.student_id) as total_students,
-             COUNT(DISTINCT c.id) as total_classes
-      FROM academic_years ay
-      LEFT JOIN enrollments e ON ay.id = e.academic_year_id
-      LEFT JOIN classes c ON ay.id = c.academic_year_id
-      GROUP BY ay.id
-      ORDER BY ay.start_date DESC
-    `);
-    res.json({ success: true, years });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Create academic year (Rwanda format: 2025-2026)
-router.post('/academic-years', async (req, res) => {
-  try {
-    const { year_name, start_date, end_date, is_current } = req.body;
-    
-    if (is_current) {
-      await db.query(`UPDATE academic_years SET is_current = 0`);
-    }
-    
-    const [result] = await db.query(
-      `INSERT INTO academic_years (year_name, start_date, end_date, is_current, status) 
-       VALUES (?, ?, ?, ?, 'active')`,
-      [year_name, start_date, end_date, is_current ? 1 : 0]
-    );
-    res.json({ success: true, yearId: result.insertId });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Teacher Management
+// Get all teachers
 router.get('/teachers', async (req, res) => {
   try {
-    const [teachers] = await db.query(`
-      SELECT t.*, u.email, u.phone,
-             COUNT(DISTINCT tc.class_id) as classes_count,
-             COUNT(DISTINCT c.id) as courses_count
-      FROM teachers t
-      JOIN users u ON t.user_id = u.id
-      LEFT JOIN teacher_classes tc ON t.id = tc.teacher_id
-      LEFT JOIN courses c ON t.id = c.teacher_id
-      GROUP BY t.id
-      ORDER BY t.created_at DESC
+    const [teachers] = await pool.query(`
+      SELECT t.*, 
+        (SELECT COUNT(*) FROM teacher_assignments WHERE teacher_id = t.id AND is_active = true) as active_assignments
+      FROM dos_teachers t
+      WHERE t.is_active = true
+      ORDER BY t.last_name, t.first_name
     `);
-    res.json({ success: true, teachers });
+    res.json(teachers);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching teachers:', error);
+    res.status(500).json({ message: 'Error fetching teachers' });
   }
 });
 
-// Add teacher with credentials
-router.post('/teachers', upload.single('profile_image'), async (req, res) => {
+// Get single teacher
+router.get('/teachers/:id', async (req, res) => {
   try {
-    const { 
-      first_name, last_name, email, phone, password, 
-      specialization, qualification, experience_years, 
-      date_of_birth, address, emergency_contact 
-    } = req.body;
+    const [teachers] = await pool.query('SELECT * FROM dos_teachers WHERE id = ?', [req.params.id]);
+    if (teachers.length === 0) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
     
-    const hashedPassword = await bcrypt.hash(password || '2026', 10);
-    const profile_image = req.file ? `/uploads/teachers/${req.file.filename}` : null;
+    // Get assignments
+    const [assignments] = await pool.query(`
+      SELECT ta.*, c.name as class_name, co.name as course_name, co.code as course_code
+      FROM teacher_assignments ta
+      JOIN dos_classes c ON ta.class_id = c.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.teacher_id = ? AND ta.is_active = true
+    `, [req.params.id]);
     
-    // Create user account
-    const [userResult] = await db.query(
-      `INSERT INTO users (email, password, role, first_name, last_name, phone, profile_image) 
-       VALUES (?, ?, 'teacher', ?, ?, ?, ?)`,
-      [email, hashedPassword, first_name, last_name, phone, profile_image]
-    );
-    
-    // Create teacher profile
-    const [teacherResult] = await db.query(
-      `INSERT INTO teachers (user_id, specialization, qualification, experience_years, date_of_birth, address, emergency_contact, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
-      [userResult.insertId, specialization, qualification, experience_years, date_of_birth, address, emergency_contact]
-    );
-    
-    res.json({ success: true, teacherId: teacherResult.insertId, userId: userResult.insertId });
+    teachers[0].assignments = assignments;
+    res.json(teachers[0]);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching teacher:', error);
+    res.status(500).json({ message: 'Error fetching teacher' });
+  }
+});
+
+// Create teacher
+router.post('/teachers', async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, specialization, qualification, experience_years, employee_id, hire_date } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO dos_teachers (first_name, last_name, email, phone, specialization, qualification, experience_years, employee_id, hire_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, email, phone, specialization, qualification, experience_years || 0, employee_id, hire_date]
+    );
+    
+    res.status(201).json({ message: 'Teacher created successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error creating teacher:', error);
+    res.status(500).json({ message: 'Error creating teacher' });
   }
 });
 
 // Update teacher
-router.put('/teachers/:id', upload.single('profile_image'), async (req, res) => {
+router.put('/teachers/:id', async (req, res) => {
   try {
-    const { specialization, qualification, experience_years, address, emergency_contact, status } = req.body;
+    const { first_name, last_name, email, phone, specialization, qualification, experience_years, employee_id, hire_date } = req.body;
     
-    let query = `UPDATE teachers SET specialization = ?, qualification = ?, experience_years = ?, address = ?, emergency_contact = ?, status = ?`;
-    const params = [specialization, qualification, experience_years, address, emergency_contact, status];
+    await pool.query(
+      'UPDATE dos_teachers SET first_name = ?, last_name = ?, email = ?, phone = ?, specialization = ?, qualification = ?, experience_years = ?, employee_id = ?, hire_date = ? WHERE id = ?',
+      [first_name, last_name, email, phone, specialization, qualification, experience_years, employee_id, hire_date, req.params.id]
+    );
     
-    query += ` WHERE id = ?`;
-    params.push(req.params.id);
-    
-    await db.query(query, params);
-    
-    if (req.file) {
-      const [teacher] = await db.query(`SELECT user_id FROM teachers WHERE id = ?`, [req.params.id]);
-      await db.query(`UPDATE users SET profile_image = ? WHERE id = ?`, 
-        [`/uploads/teachers/${req.file.filename}`, teacher[0].user_id]);
-    }
-    
-    res.json({ success: true });
+    res.json({ message: 'Teacher updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error updating teacher:', error);
+    res.status(500).json({ message: 'Error updating teacher' });
   }
 });
 
-// Class Management
+// Delete teacher
+router.delete('/teachers/:id', async (req, res) => {
+  try {
+    await pool.query('UPDATE dos_teachers SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Teacher deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting teacher:', error);
+    res.status(500).json({ message: 'Error deleting teacher' });
+  }
+});
+
+// ============ TRADES MANAGEMENT ============
+
+// Get all trades
+router.get('/trades', async (req, res) => {
+  try {
+    const [trades] = await pool.query(`
+      SELECT t.*, 
+        (SELECT COUNT(*) FROM dos_classes WHERE trade_id = t.id AND is_active = true) as class_count,
+        (SELECT COUNT(*) FROM dos_courses WHERE trade_id = t.id AND is_active = true) as course_count
+      FROM dos_trades t
+      WHERE t.is_active = true
+      ORDER BY t.name
+    `);
+    res.json(trades);
+  } catch (error) {
+    console.error('Error fetching trades:', error);
+    res.status(500).json({ message: 'Error fetching trades' });
+  }
+});
+
+// Create trade
+router.post('/trades', async (req, res) => {
+  try {
+    const { name, code, description, duration_years } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO dos_trades (name, code, description, duration_years) VALUES (?, ?, ?, ?)',
+      [name, code, description, duration_years || 3]
+    );
+    
+    res.status(201).json({ message: 'Trade created successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error creating trade:', error);
+    res.status(500).json({ message: 'Error creating trade' });
+  }
+});
+
+// Update trade
+router.put('/trades/:id', async (req, res) => {
+  try {
+    const { name, code, description, duration_years } = req.body;
+    
+    await pool.query(
+      'UPDATE dos_trades SET name = ?, code = ?, description = ?, duration_years = ? WHERE id = ?',
+      [name, code, description, duration_years, req.params.id]
+    );
+    
+    res.json({ message: 'Trade updated successfully' });
+  } catch (error) {
+    console.error('Error updating trade:', error);
+    res.status(500).json({ message: 'Error updating trade' });
+  }
+});
+
+// Delete trade
+router.delete('/trades/:id', async (req, res) => {
+  try {
+    await pool.query('UPDATE dos_trades SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Trade deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting trade:', error);
+    res.status(500).json({ message: 'Error deleting trade' });
+  }
+});
+
+// ============ COURSES MANAGEMENT ============
+
+// Get all courses
+router.get('/courses', async (req, res) => {
+  try {
+    const [courses] = await pool.query(`
+      SELECT c.*, t.name as trade_name, t.code as trade_code
+      FROM dos_courses c
+      LEFT JOIN dos_trades t ON c.trade_id = t.id
+      WHERE c.is_active = true
+      ORDER BY t.name, c.level, c.name
+    `);
+    res.json(courses);
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json({ message: 'Error fetching courses' });
+  }
+});
+
+// Create course
+router.post('/courses', async (req, res) => {
+  try {
+    const { name, code, trade_id, level, credits, hours_per_week, description } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO dos_courses (name, code, trade_id, level, credits, hours_per_week, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, code, trade_id, level, credits || 3, hours_per_week || 4, description]
+    );
+    
+    res.status(201).json({ message: 'Course created successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error creating course:', error);
+    res.status(500).json({ message: 'Error creating course' });
+  }
+});
+
+// Update course
+router.put('/courses/:id', async (req, res) => {
+  try {
+    const { name, code, trade_id, level, credits, hours_per_week, description } = req.body;
+    
+    await pool.query(
+      'UPDATE dos_courses SET name = ?, code = ?, trade_id = ?, level = ?, credits = ?, hours_per_week = ?, description = ? WHERE id = ?',
+      [name, code, trade_id, level, credits, hours_per_week, description, req.params.id]
+    );
+    
+    res.json({ message: 'Course updated successfully' });
+  } catch (error) {
+    console.error('Error updating course:', error);
+    res.status(500).json({ message: 'Error updating course' });
+  }
+});
+
+// Delete course
+router.delete('/courses/:id', async (req, res) => {
+  try {
+    await pool.query('UPDATE dos_courses SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Course deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    res.status(500).json({ message: 'Error deleting course' });
+  }
+});
+
+// ============ CLASSES MANAGEMENT ============
+
+// Get all classes
 router.get('/classes', async (req, res) => {
   try {
-    const { academic_year_id } = req.query;
-    let query = `
-      SELECT c.*, ay.year_name,
-             COUNT(DISTINCT e.student_id) as student_count,
-             COUNT(DISTINCT tc.teacher_id) as teacher_count
-      FROM classes c
-      JOIN academic_years ay ON c.academic_year_id = ay.id
-      LEFT JOIN enrollments e ON c.id = e.class_id
-      LEFT JOIN teacher_classes tc ON c.id = tc.class_id
-      WHERE 1=1
-    `;
-    const params = [];
-    
-    if (academic_year_id) {
-      query += ` AND c.academic_year_id = ?`;
-      params.push(academic_year_id);
-    }
-    
-    query += ` GROUP BY c.id ORDER BY c.level, c.name`;
-    const [classes] = await db.query(query, params);
-    res.json({ success: true, classes });
+    const [classes] = await pool.query(`
+      SELECT c.*, t.name as trade_name, t.code as trade_code,
+        (SELECT COUNT(*) FROM teacher_assignments WHERE class_id = c.id AND is_active = true) as assignment_count
+      FROM dos_classes c
+      LEFT JOIN dos_trades t ON c.trade_id = t.id
+      WHERE c.is_active = true
+      ORDER BY t.name, c.level, c.name
+    `);
+    res.json(classes);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching classes:', error);
+    res.status(500).json({ message: 'Error fetching classes' });
   }
 });
 
 // Create class
 router.post('/classes', async (req, res) => {
   try {
-    const { name, level, section, academic_year_id, trade_code, capacity, room_number } = req.body;
+    const { name, code, trade_id, level, capacity, academic_year } = req.body;
     
-    const [result] = await db.query(
-      `INSERT INTO classes (name, level, section, academic_year_id, trade_code, capacity, room_number, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
-      [name, level, section, academic_year_id, trade_code, capacity, room_number]
+    const [result] = await pool.query(
+      'INSERT INTO dos_classes (name, code, trade_id, level, capacity, academic_year) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, code, trade_id, level, capacity || 30, academic_year]
     );
-    res.json({ success: true, classId: result.insertId });
+    
+    res.status(201).json({ message: 'Class created successfully', id: result.insertId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error creating class:', error);
+    res.status(500).json({ message: 'Error creating class' });
   }
 });
 
-// Assign teacher to class
-router.post('/classes/:classId/teachers', async (req, res) => {
+// Update class
+router.put('/classes/:id', async (req, res) => {
   try {
-    const { teacher_id, subject, is_class_teacher } = req.body;
+    const { name, code, trade_id, level, capacity, academic_year } = req.body;
     
-    const [result] = await db.query(
-      `INSERT INTO teacher_classes (teacher_id, class_id, subject, is_class_teacher) 
-       VALUES (?, ?, ?, ?)`,
-      [teacher_id, req.params.classId, subject, is_class_teacher ? 1 : 0]
+    await pool.query(
+      'UPDATE dos_classes SET name = ?, code = ?, trade_id = ?, level = ?, capacity = ?, academic_year = ? WHERE id = ?',
+      [name, code, trade_id, level, capacity, academic_year, req.params.id]
     );
-    res.json({ success: true, assignmentId: result.insertId });
+    
+    res.json({ message: 'Class updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error updating class:', error);
+    res.status(500).json({ message: 'Error updating class' });
   }
 });
 
-// Workshop Management
-router.get('/workshops', async (req, res) => {
+// Delete class
+router.delete('/classes/:id', async (req, res) => {
   try {
-    const [workshops] = await db.query(`
-      SELECT w.*, 
-             COUNT(DISTINCT wp.id) as participant_count,
-             COUNT(DISTINCT wi.id) as image_count
-      FROM workshops w
-      LEFT JOIN workshop_participants wp ON w.id = wp.workshop_id
-      LEFT JOIN workshop_images wi ON w.id = wi.workshop_id
-      GROUP BY w.id
-      ORDER BY w.start_date DESC
+    await pool.query('UPDATE dos_classes SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Class deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting class:', error);
+    res.status(500).json({ message: 'Error deleting class' });
+  }
+});
+
+// ============ TEACHER ASSIGNMENTS ============
+
+// Get all assignments
+router.get('/assignments', async (req, res) => {
+  try {
+    const [assignments] = await pool.query(`
+      SELECT ta.*, 
+        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
+        c.name as class_name, c.code as class_code,
+        co.name as course_name, co.code as course_code, co.hours_per_week
+      FROM teacher_assignments ta
+      JOIN dos_teachers t ON ta.teacher_id = t.id
+      JOIN dos_classes c ON ta.class_id = c.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.is_active = true
+      ORDER BY t.last_name, c.name, co.name
     `);
-    res.json({ success: true, workshops });
+    res.json(assignments);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching assignments:', error);
+    res.status(500).json({ message: 'Error fetching assignments' });
   }
 });
 
-// Create workshop with images
-router.post('/workshops', upload.array('workshop_images', 15), async (req, res) => {
+// Check for conflicts before creating assignment
+router.post('/assignments/check-conflicts', async (req, res) => {
   try {
-    const { title, description, facilitator, start_date, end_date, venue, target_audience, max_participants } = req.body;
+    const { teacher_id, class_id, course_id, day_of_week, start_time, end_time } = req.body;
     
-    const [result] = await db.query(
-      `INSERT INTO workshops (title, description, facilitator, start_date, end_date, venue, target_audience, max_participants, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled')`,
-      [title, description, facilitator, start_date, end_date, venue, target_audience, max_participants]
-    );
-    
-    if (req.files && req.files.length > 0) {
-      const imagePromises = req.files.map(file => 
-        db.query(
-          `INSERT INTO workshop_images (workshop_id, image_url, caption) VALUES (?, ?, ?)`,
-          [result.insertId, `/uploads/workshops/${file.filename}`, file.originalname]
+    // Check teacher conflicts
+    const [teacherConflicts] = await pool.query(`
+      SELECT ta.id, c.name as class_name, co.name as course_name, ts.day_of_week, ts.start_time, ts.end_time
+      FROM teacher_assignments ta
+      JOIN timetable_slots ts ON ta.id = ts.assignment_id
+      JOIN dos_classes c ON ta.class_id = c.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.teacher_id = ? 
+        AND ts.day_of_week = ?
+        AND ta.is_active = true
+        AND (
+          (ts.start_time <= ? AND ts.end_time > ?) OR
+          (ts.start_time < ? AND ts.end_time >= ?) OR
+          (ts.start_time >= ? AND ts.end_time <= ?)
         )
-      );
-      await Promise.all(imagePromises);
-    }
+    `, [teacher_id, day_of_week, start_time, start_time, end_time, end_time, start_time, end_time]);
     
-    res.json({ success: true, workshopId: result.insertId, imagesUploaded: req.files?.length || 0 });
+    // Check class conflicts
+    const [classConflicts] = await pool.query(`
+      SELECT ta.id, CONCAT(t.first_name, ' ', t.last_name) as teacher_name, co.name as course_name, ts.day_of_week, ts.start_time, ts.end_time
+      FROM teacher_assignments ta
+      JOIN timetable_slots ts ON ta.id = ts.assignment_id
+      JOIN dos_teachers t ON ta.teacher_id = t.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.class_id = ? 
+        AND ts.day_of_week = ?
+        AND ta.is_active = true
+        AND (
+          (ts.start_time <= ? AND ts.end_time > ?) OR
+          (ts.start_time < ? AND ts.end_time >= ?) OR
+          (ts.start_time >= ? AND ts.end_time <= ?)
+        )
+    `, [class_id, day_of_week, start_time, start_time, end_time, end_time, start_time, end_time]);
+    
+    res.json({
+      hasConflicts: teacherConflicts.length > 0 || classConflicts.length > 0,
+      teacherConflicts,
+      classConflicts
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error checking conflicts:', error);
+    res.status(500).json({ message: 'Error checking conflicts' });
   }
 });
 
-// Get workshop images
-router.get('/workshops/:id/images', async (req, res) => {
+// Create assignment
+router.post('/assignments', async (req, res) => {
   try {
-    const [images] = await db.query(
-      `SELECT * FROM workshop_images WHERE workshop_id = ? ORDER BY uploaded_at DESC`,
-      [req.params.id]
-    );
-    res.json({ success: true, images });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Student Lifecycle Management
-router.get('/students/lifecycle', async (req, res) => {
-  try {
-    const { status, academic_year_id, trade_code } = req.query;
-    let query = `
-      SELECT s.*, u.email, u.phone, u.first_name, u.last_name,
-             e.academic_year_id, e.class_id, e.status as enrollment_status,
-             c.name as class_name, ay.year_name,
-             t.name as trade_name
-      FROM students s
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN enrollments e ON s.id = e.student_id
-      LEFT JOIN classes c ON e.class_id = c.id
-      LEFT JOIN academic_years ay ON e.academic_year_id = ay.id
-      LEFT JOIN trades t ON s.trade_code = t.code
-      WHERE 1=1
-    `;
-    const params = [];
+    const { teacher_id, class_id, course_id, academic_year, semester } = req.body;
     
-    if (status) {
-      query += ` AND s.status = ?`;
-      params.push(status);
-    }
-    if (academic_year_id) {
-      query += ` AND e.academic_year_id = ?`;
-      params.push(academic_year_id);
-    }
-    if (trade_code) {
-      query += ` AND s.trade_code = ?`;
-      params.push(trade_code);
-    }
-    
-    query += ` ORDER BY s.enrollment_date DESC`;
-    const [students] = await db.query(query, params);
-    res.json({ success: true, students });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Graduate students (mark as completed)
-router.post('/students/graduate', async (req, res) => {
-  try {
-    const { student_ids, graduation_date, certificate_issued } = req.body;
-    
-    const updatePromises = student_ids.map(id => 
-      db.query(
-        `UPDATE students SET status = 'graduated', graduation_date = ?, certificate_issued = ? WHERE id = ?`,
-        [graduation_date, certificate_issued ? 1 : 0, id]
-      )
+    const [result] = await pool.query(
+      'INSERT INTO teacher_assignments (teacher_id, class_id, course_id, academic_year, semester) VALUES (?, ?, ?, ?, ?)',
+      [teacher_id, class_id, course_id, academic_year, semester || 1]
     );
     
-    await Promise.all(updatePromises);
-    
-    // Update enrollments
-    await db.query(
-      `UPDATE enrollments SET status = 'completed' WHERE student_id IN (?)`,
-      [student_ids]
-    );
-    
-    res.json({ success: true, graduatedCount: student_ids.length });
+    res.status(201).json({ message: 'Assignment created successfully', id: result.insertId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error creating assignment:', error);
+    res.status(500).json({ message: 'Error creating assignment' });
   }
 });
 
-// Transfer student to different class/trade
-router.post('/students/:id/transfer', async (req, res) => {
+// Delete assignment
+router.delete('/assignments/:id', async (req, res) => {
   try {
-    const { new_class_id, new_trade_code, reason, effective_date } = req.body;
-    
-    // Log transfer
-    await db.query(
-      `INSERT INTO student_transfers (student_id, from_class_id, to_class_id, from_trade_code, to_trade_code, reason, effective_date) 
-       SELECT ?, e.class_id, ?, s.trade_code, ?, ?, ?
-       FROM students s
-       LEFT JOIN enrollments e ON s.id = e.student_id
-       WHERE s.id = ?`,
-      [req.params.id, new_class_id, new_trade_code, reason, effective_date, req.params.id]
-    );
-    
-    // Update student
-    if (new_trade_code) {
-      await db.query(`UPDATE students SET trade_code = ? WHERE id = ?`, [new_trade_code, req.params.id]);
-    }
-    
-    // Update enrollment
-    if (new_class_id) {
-      await db.query(`UPDATE enrollments SET class_id = ? WHERE student_id = ?`, [new_class_id, req.params.id]);
-    }
-    
-    res.json({ success: true });
+    await pool.query('UPDATE teacher_assignments SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Assignment deleted successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error deleting assignment:', error);
+    res.status(500).json({ message: 'Error deleting assignment' });
   }
 });
 
-// DOS Dashboard Statistics
+// ============ TIMETABLE SLOTS ============
+
+// Create timetable slot
+router.post('/timetable-slots', async (req, res) => {
+  try {
+    const { assignment_id, day_of_week, start_time, end_time, room } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO timetable_slots (assignment_id, day_of_week, start_time, end_time, room) VALUES (?, ?, ?, ?, ?)',
+      [assignment_id, day_of_week, start_time, end_time, room]
+    );
+    
+    res.status(201).json({ message: 'Timetable slot created successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error creating timetable slot:', error);
+    res.status(500).json({ message: 'Error creating timetable slot' });
+  }
+});
+
+// Get timetable for class
+router.get('/timetable/class/:classId', async (req, res) => {
+  try {
+    const [slots] = await pool.query(`
+      SELECT ts.*, 
+        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
+        co.name as course_name, co.code as course_code
+      FROM timetable_slots ts
+      JOIN teacher_assignments ta ON ts.assignment_id = ta.id
+      JOIN dos_teachers t ON ta.teacher_id = t.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.class_id = ? AND ta.is_active = true
+      ORDER BY 
+        FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
+        ts.start_time
+    `, [req.params.classId]);
+    
+    res.json(slots);
+  } catch (error) {
+    console.error('Error fetching class timetable:', error);
+    res.status(500).json({ message: 'Error fetching class timetable' });
+  }
+});
+
+// Get timetable for teacher
+router.get('/timetable/teacher/:teacherId', async (req, res) => {
+  try {
+    const [slots] = await pool.query(`
+      SELECT ts.*, 
+        c.name as class_name, c.code as class_code,
+        co.name as course_name, co.code as course_code
+      FROM timetable_slots ts
+      JOIN teacher_assignments ta ON ts.assignment_id = ta.id
+      JOIN dos_classes c ON ta.class_id = c.id
+      JOIN dos_courses co ON ta.course_id = co.id
+      WHERE ta.teacher_id = ? AND ta.is_active = true
+      ORDER BY 
+        FIELD(ts.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
+        ts.start_time
+    `, [req.params.teacherId]);
+    
+    res.json(slots);
+  } catch (error) {
+    console.error('Error fetching teacher timetable:', error);
+    res.status(500).json({ message: 'Error fetching teacher timetable' });
+  }
+});
+
+// ============ STUDENTS MANAGEMENT (Using existing students table) ============
+
+// Get all students
+router.get('/students', async (req, res) => {
+  try {
+    const [students] = await pool.query(`
+      SELECT * FROM students 
+      WHERE is_active = true 
+      ORDER BY last_name, first_name
+    `);
+    res.json(students);
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({ message: 'Error fetching students' });
+  }
+});
+
+// Get single student
+router.get('/students/:id', async (req, res) => {
+  try {
+    const [students] = await pool.query('SELECT * FROM students WHERE id = ?', [req.params.id]);
+    if (students.length === 0) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    res.json(students[0]);
+  } catch (error) {
+    console.error('Error fetching student:', error);
+    res.status(500).json({ message: 'Error fetching student' });
+  }
+});
+
+// Create student
+router.post('/students', async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, date_of_birth, gender, address, guardian_name, guardian_phone, class_id, enrollment_date } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO students (first_name, last_name, email, phone, date_of_birth, gender, address, guardian_name, guardian_phone, class_id, enrollment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, email, phone, date_of_birth, gender, address, guardian_name, guardian_phone, class_id, enrollment_date]
+    );
+    
+    res.status(201).json({ message: 'Student created successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error creating student:', error);
+    res.status(500).json({ message: 'Error creating student' });
+  }
+});
+
+// Update student
+router.put('/students/:id', async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, date_of_birth, gender, address, guardian_name, guardian_phone, class_id } = req.body;
+    
+    await pool.query(
+      'UPDATE students SET first_name = ?, last_name = ?, email = ?, phone = ?, date_of_birth = ?, gender = ?, address = ?, guardian_name = ?, guardian_phone = ?, class_id = ? WHERE id = ?',
+      [first_name, last_name, email, phone, date_of_birth, gender, address, guardian_name, guardian_phone, class_id, req.params.id]
+    );
+    
+    res.json({ message: 'Student updated successfully' });
+  } catch (error) {
+    console.error('Error updating student:', error);
+    res.status(500).json({ message: 'Error updating student' });
+  }
+});
+
+// Delete student
+router.delete('/students/:id', async (req, res) => {
+  try {
+    await pool.query('UPDATE students SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    res.status(500).json({ message: 'Error deleting student' });
+  }
+});
+
+// ============ DASHBOARD STATS ============
+
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    const [stats] = await db.query(`
-      SELECT 
-        (SELECT COUNT(*) FROM teachers WHERE status = 'active') as active_teachers,
-        (SELECT COUNT(*) FROM students WHERE status = 'active') as active_students,
-        (SELECT COUNT(*) FROM classes WHERE status = 'active') as active_classes,
-        (SELECT COUNT(*) FROM workshops WHERE status = 'scheduled' OR status = 'ongoing') as upcoming_workshops,
-        (SELECT COUNT(*) FROM students WHERE status = 'graduated' AND YEAR(graduation_date) = YEAR(CURDATE())) as graduates_this_year
-    `);
-    res.json({ success: true, stats: stats[0] });
+    const [teacherCount] = await pool.query('SELECT COUNT(*) as count FROM dos_teachers WHERE is_active = true');
+    const [studentCount] = await pool.query('SELECT COUNT(*) as count FROM students WHERE is_active = true');
+    const [classCount] = await pool.query('SELECT COUNT(*) as count FROM dos_classes WHERE is_active = true');
+    const [courseCount] = await pool.query('SELECT COUNT(*) as count FROM dos_courses WHERE is_active = true');
+    const [tradeCount] = await pool.query('SELECT COUNT(*) as count FROM dos_trades WHERE is_active = true');
+    const [assignmentCount] = await pool.query('SELECT COUNT(*) as count FROM teacher_assignments WHERE is_active = true');
+    
+    res.json({
+      teachers: teacherCount[0].count,
+      students: studentCount[0].count,
+      classes: classCount[0].count,
+      courses: courseCount[0].count,
+      trades: tradeCount[0].count,
+      assignments: assignmentCount[0].count
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ message: 'Error fetching dashboard stats' });
   }
 });
 

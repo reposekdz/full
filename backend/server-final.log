@@ -1,0 +1,25 @@
+
+================================================================================
+🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM
+================================================================================
+🚀 Server: http://localhost:5001 
+📊 Database: school_management
+🌍 Environment: production
+✅ Mounted 25 route modules
+
+📡 API Endpoints:
+   /api/auth              - Authentication
+   /api/developers        - Developers Team
+   /api/leadership        - School Leadership
+   /api/trades            - School Trades
+   /api/services          - School Services
+   /api/services-advanced - Advanced Services & Coaches
+   /api/sports            - Sports & Teams
+   /api/sports-players    - Players & Goals
+   /api/system-updates    - System Management
+   /api/advisor           - Advisor Dashboard
+
+✅ All systems operational
+================================================================================
+
+✅ Role credentials table initialized

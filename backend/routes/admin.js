@@ -210,4 +210,24 @@ router.get('/backups', authenticateToken, async (req, res) => {
   }
 });
 
+// Get all images
+router.get('/images', authenticateToken, async (req, res) => {
+  try {
+    const [images] = await pool.execute('SELECT * FROM gallery_images ORDER BY created_at DESC');
+    res.json({ success: true, images });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Fetch failed' });
+  }
+});
+
+// Get all content
+router.get('/content', authenticateToken, async (req, res) => {
+  try {
+    const [content] = await pool.execute('SELECT * FROM page_content ORDER BY updated_at DESC');
+    res.json({ success: true, content });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Fetch failed' });
+  }
+});
+
 module.exports = router;

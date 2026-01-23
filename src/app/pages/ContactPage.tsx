@@ -73,12 +73,12 @@ const ContactPage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
 
   const departments = [
-    { value: 'admissions', label: 'Admissions Office', icon: Building2 },
-    { value: 'academics', label: 'Academic Affairs', icon: FileText },
-    { value: 'finance', label: 'Finance Department', icon: FileText },
-    { value: 'student-services', label: 'Student Services', icon: User },
-    { value: 'technical-support', label: 'Technical Support', icon: Headphones },
-    { value: 'general', label: 'General Inquiry', icon: MessageCircle }
+    { value: 'admissions', label: 'Ibiro by\'Injira', icon: Building2 },
+    { value: 'academics', label: 'Amasomo', icon: FileText },
+    { value: 'finance', label: 'Amafaranga', icon: FileText },
+    { value: 'student-services', label: 'Serivisi z\'Abanyeshuri', icon: User },
+    { value: 'technical-support', label: 'Ubufasha bwa Tekiniki', icon: Headphones },
+    { value: 'general', label: 'Ibibazo Rusange', icon: MessageCircle }
   ];
 
   const faqs: FAQ[] = [
@@ -129,32 +129,32 @@ const ContactPage: React.FC = () => {
   const contactMethods = [
     {
       icon: Phone,
-      title: 'Phone Support',
-      description: 'Call us during office hours',
+      title: 'Telefone',
+      description: 'Duhamagare mu gihe cy\'akazi',
       value: '+250 788 987 830',
       action: 'tel:+250788987830',
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: Mail,
-      title: 'Email Us',
-      description: 'We respond within 24 hours',
+      title: 'Imeri',
+      description: 'Tuzasubiza mu masaha 24',
       value: 'info@gardentvet.rw',
       action: 'mailto:info@gardentvet.rw',
       color: 'from-green-500 to-green-600'
     },
     {
       icon: MessageCircle,
-      title: 'Live Chat',
-      description: 'Chat with our support team',
+      title: 'Ikiganiro',
+      description: 'Ganira n\'itsinda ryacu',
       value: 'Start Chat',
       action: 'chat',
       color: 'from-purple-500 to-purple-600'
     },
     {
       icon: MapPin,
-      title: 'Visit Us',
-      description: 'Main Campus Location',
+      title: 'Dusure',
+      description: 'Aho duherereyeho',
       value: 'Kigali, Rwanda',
       action: 'https://maps.google.com',
       color: 'from-orange-500 to-orange-600'
@@ -285,10 +285,10 @@ const ContactPage: React.FC = () => {
             24/7 Support Available
           </Badge>
           <h1 className="text-6xl font-black mb-6 bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-            GET IN TOUCH
+            TWANDIKIRE
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            We're here to help! Choose your preferred way to reach us and we'll respond as quickly as possible.
+            Turi hano kugirango tugufashe! Hitamo uburyo bushimishije bwo kutwandikira kandi tuzasubiza vuba bishoboka.
           </p>
         </motion.div>
 

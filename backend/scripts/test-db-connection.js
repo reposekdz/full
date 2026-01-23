@@ -1,67 +1,56 @@
-#!/usr/bin/env node
+const db = require('../config/database');
 
-const mysql = require('mysql2');
-require('dotenv').config();
-
-const testConnection = async () => {
-  console.log('Testing database connection...');
-  console.log('Configuration:');
-  console.log(`Host: ${process.env.DB_HOST}`);
-  console.log(`User: ${process.env.DB_USER}`);
-  console.log(`Password: ${process.env.DB_PASSWORD ? '[SET]' : '[EMPTY]'}`);
-  console.log(`Database: ${process.env.DB_NAME}`);
-  console.log(`Port: ${process.env.DB_PORT}`);
+async function testConnection() {
+  console.log('🔍 Testing database connection...\n');
 
   try {
-    // First try to connect without database to create it if needed
-    const connection = mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      port: process.env.DB_PORT || 3306,
-    });
-
-    const promiseConnection = connection.promise();
-    
     // Test basic connection
-    await promiseConnection.execute('SELECT 1');
-    console.log('✅ Basic connection successful');
+    const [result] = await db.query('SELECT 1 as test');
+    console.log('✅ Database connection successful!');
+    console.log(`   Test query result: ${result[0].test}\n`);
 
-    // Create database if it doesn't exist
-    await promiseConnection.execute(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`);
-    console.log('✅ Database created/verified');
+    // Get database name
+    const [dbInfo] = await db.query('SELECT DATABASE() as db_name');
+    console.log(`📊 Connected to database: ${dbInfo[0].db_name}\n`);
 
-    // Now connect to the specific database
-    const dbConnection = mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT || 3306,
-    });
+    // Check if tables exist
+    console.log('📋 Checking tables...');
+    const tables = [
+      'slides',
+      'news_articles',
+      'testimonials',
+      'school_stats',
+      'achievements',
+      'events',
+      'home_features',
+      'courses',
+      'users',
+      'roles'
+    ];
 
-    const promiseDbConnection = dbConnection.promise();
-    await promiseDbConnection.execute('SELECT 1');
-    console.log('✅ Database connection successful');
+    for (const table of tables) {
+      try {
+        const [rows] = await db.query(`SELECT COUNT(*) as count FROM ${table}`);
+        console.log(`   ✓ ${table.padEnd(20)} - ${rows[0].count} records`);
+      } catch (error) {
+        console.log(`   ✗ ${table.padEnd(20)} - Table does not exist`);
+      }
+    }
 
-    await promiseConnection.end();
-    await promiseDbConnection.end();
-    
-    console.log('✅ All database connections working properly');
-    
+    console.log('\n✅ Database test completed successfully!');
+    process.exit(0);
+
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    console.error('Full error:', error);
-    
-    // Suggest solutions
-    console.log('\n🔧 Possible solutions:');
-    console.log('1. Make sure MySQL is installed and running');
-    console.log('2. Check if the MySQL service is started');
-    console.log('3. Verify the database credentials in .env file');
-    console.log('4. Try running: npm run setup-db (if available)');
-    
+    console.error('\n❌ Database connection failed!');
+    console.error('Error:', error.message);
+    console.error('\nPlease check your .env file:');
+    console.error('  DB_HOST=localhost');
+    console.error('  DB_USER=root');
+    console.error('  DB_PASSWORD=your_password');
+    console.error('  DB_NAME=school_management');
+    console.error('  DB_PORT=3306\n');
     process.exit(1);
   }
-};
+}
 
 testConnection();

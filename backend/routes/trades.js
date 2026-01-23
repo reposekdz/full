@@ -20,12 +20,11 @@ router.get('/', async (req, res) => {
              COUNT(DISTINCT tc.id) as class_count,
              COUNT(DISTINCT e.student_id) as student_count
       FROM trades t
-      LEFT JOIN trade_levels tl ON t.trade_code = tl.trade_code
+      LEFT JOIN trade_levels tl ON t.code = tl.trade_code
       LEFT JOIN trade_classes tc ON tl.id = tc.trade_level_id
       LEFT JOIN enrollments e ON tc.id = e.class_id
-      WHERE t.is_active = true
       GROUP BY t.id
-      ORDER BY t.trade_code
+      ORDER BY t.code
     `);
     res.json({ success: true, trades });
   } catch (error) {
@@ -36,7 +35,7 @@ router.get('/', async (req, res) => {
 // Get trade details
 router.get('/:code', async (req, res) => {
   try {
-    const [trades] = await pool.execute(`SELECT * FROM trades WHERE trade_code = ?`, [req.params.code]);
+    const [trades] = await pool.execute(`SELECT * FROM trades WHERE code = ?`, [req.params.code]);
     const [levels] = await pool.execute(`SELECT * FROM trade_levels WHERE trade_code = ? ORDER BY level_number`, [req.params.code]);
     const [courses] = await pool.execute(`
       SELECT c.* FROM courses c
@@ -60,16 +59,16 @@ router.get('/:code', async (req, res) => {
 // Update trade (Admin/DOS)
 router.put('/:code', authenticateToken, requireRole('admin', 'dos', 'headmaster'), upload.single('image'), async (req, res) => {
   try {
-    const { trade_name, description_rw, description_en, description_fr, duration, requirements_rw, requirements_en, requirements_fr, career_prospects_rw, career_prospects_en, career_prospects_fr } = req.body;
-    let query = `UPDATE trades SET trade_name = ?, description_rw = ?, description_en = ?, description_fr = ?, duration = ?, requirements_rw = ?, requirements_en = ?, requirements_fr = ?, career_prospects_rw = ?, career_prospects_en = ?, career_prospects_fr = ?`;
-    const params = [trade_name, description_rw, description_en, description_fr, duration, requirements_rw, requirements_en, requirements_fr, career_prospects_rw, career_prospects_en, career_prospects_fr];
+    const { name, description_rw, description_en, description_fr, duration, requirements_rw, requirements_en, requirements_fr, career_prospects_rw, career_prospects_en, career_prospects_fr } = req.body;
+    let query = `UPDATE trades SET name = ?, description_rw = ?, description_en = ?, description_fr = ?, duration = ?, requirements_rw = ?, requirements_en = ?, requirements_fr = ?, career_prospects_rw = ?, career_prospects_en = ?, career_prospects_fr = ?`;
+    const params = [name, description_rw, description_en, description_fr, duration, requirements_rw, requirements_en, requirements_fr, career_prospects_rw, career_prospects_en, career_prospects_fr];
     
     if (req.file) {
-      query += `, image = ?`;
+      query += `, image_url = ?`;
       params.push(`/uploads/trades/${req.file.filename}`);
     }
     
-    query += ` WHERE trade_code = ?`;
+    query += ` WHERE code = ?`;
     params.push(req.params.code);
     
     await pool.execute(query, params);

@@ -73,9 +73,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [apiSlides, setApiSlides] = useState<any[]>([]);
+  const [stats, setStats] = useState({ students: 1248, teachers: 84, employmentRate: '95%', awards: 25 });
   const { t, language } = useLanguage();
-  const { slides: contextSlides, loading: contextLoading } = useContent();
 
   const defaultSlides = [
     { id: 1, title: 'Software Development', title_rw: 'Iterambere rya Porogaramu', image_url: sodSlide, trade_code: 'SOD' },
@@ -83,25 +82,24 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
     { id: 3, title: 'Automobile Technology', title_rw: 'Ikoranabuhanga ry\'Imodoka', image_url: autSlide, trade_code: 'AUT' }
   ];
 
-  const slides = apiSlides.length > 0 ? apiSlides : (contextSlides.length > 0 ? contextSlides : defaultSlides);
-  const loading = contextLoading && apiSlides.length === 0;
-
   useEffect(() => {
-    const fetchSlides = async () => {
+    const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/content/slides');
+        const response = await fetch('http://localhost:5000/api/homepage/stats');
         const data = await response.json();
-        if (data.success && data.slides && data.slides.length > 0) {
-          setApiSlides(data.slides.map((s: any) => ({
-            ...s,
-            image_url: s.image_url?.startsWith('/uploads') ? `http://localhost:5000${s.image_url}` : s.image_url
-          })));
+        if (data.success) {
+          setStats({
+            students: data.students,
+            teachers: data.teachers,
+            employmentRate: data.employmentRate,
+            awards: data.awards
+          });
         }
       } catch (error) {
-        console.log('Using default slides');
+        console.log('Using default stats');
       }
     };
-    fetchSlides();
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -121,23 +119,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="relative h-[800px] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"
-          />
-          <p className="text-white text-xl">{language === 'rw' ? 'Gutegereza...' : 'Loading...'}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative min-h-[550px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="relative h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Background Slides with Parallax Effect */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -183,29 +166,29 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Content - Split Layout */}
-      <div className="relative z-10 h-full py-8 lg:py-12">
+      <div className="relative z-10 h-full py-6 lg:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[450px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center h-full">
             
             {/* Left Side - Text Content */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="space-y-8"
+              className="space-y-5"
             >
               {/* Badge */}
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center gap-3"
+                className="flex items-center gap-2"
               >
-                <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
-                <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white text-lg px-6 py-2 font-bold border-0 shadow-lg">
+                <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
+                <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white text-base px-4 py-1.5 font-bold border-0 shadow-lg">
                   TVET Excellence 2026
                 </Badge>
-                <Sparkles className="w-8 h-8 text-green-400 animate-pulse" />
+                <Sparkles className="w-6 h-6 text-green-400 animate-pulse" />
               </motion.div>
 
               {/* Title */}
@@ -213,7 +196,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-tight"
+                className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight"
               >
                 <span className="bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-400 bg-clip-text text-transparent">
                   {language === 'rw' ? 'Garden TVET' : 'Garden TVET'}
@@ -229,7 +212,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-xl"
+                className="text-lg md:text-xl text-gray-300 leading-relaxed max-w-xl"
               >
                 {language === 'rw' 
                   ? 'Twigisha ubumenyi bw\'ikoranabuhanga buzakugeza ku ntsinzi. Hitamo umwuga wawe maze utangire urugendo rwawe rwo gutsinda.' 
@@ -241,22 +224,27 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="grid grid-cols-3 gap-6"
+                className="grid grid-cols-4 gap-3"
               >
-                <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                  <Users className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                  <p className="text-3xl font-black text-white">500+</p>
-                  <p className="text-sm text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
+                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <Users className="w-6 h-6 text-yellow-400 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-white">{stats.students}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
                 </div>
-                <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                  <Trophy className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                  <p className="text-3xl font-black text-white">95%</p>
-                  <p className="text-sm text-gray-300">{language === 'rw' ? 'Intsinzi' : 'Success'}</p>
+                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <GraduationCap className="w-6 h-6 text-blue-400 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-white">{stats.teachers}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abarimu' : 'Teachers'}</p>
                 </div>
-                <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-                  <GraduationCap className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                  <p className="text-3xl font-black text-white">3</p>
-                  <p className="text-sm text-gray-300">{language === 'rw' ? 'Amahugurwa' : 'Trades'}</p>
+                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <TrendingUp className="w-6 h-6 text-green-400 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-white">{stats.employmentRate}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Gushirwa mu kazi' : 'Employment'}</p>
+                </div>
+                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <Trophy className="w-6 h-6 text-amber-400 mx-auto mb-1" />
+                  <p className="text-2xl font-black text-white">{stats.awards}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Ibihembo' : 'Awards'}</p>
                 </div>
               </motion.div>
 
@@ -270,19 +258,19 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 <Button
                   size="lg"
                   onClick={() => onNavigate && onNavigate('trades')}
-                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-8 py-6 text-lg font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-6 py-5 text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-4 h-4 mr-2" />
                   {language === 'rw' ? 'Reba Amahugurwa' : 'View All Trades'}
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
                   onClick={() => onNavigate && onNavigate('login')}
-                  className="rounded-full px-8 py-6 text-lg font-bold bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 transition-all"
+                  className="rounded-full px-6 py-5 text-base font-bold bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 transition-all"
                 >
                   {language === 'rw' ? 'Injira' : 'Get Started'}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </motion.div>
             </motion.div>
@@ -292,15 +280,15 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="space-y-4"
+              className="space-y-3"
             >
               <motion.h2
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-2xl font-bold text-white mb-6 flex items-center gap-3"
+                className="text-xl font-bold text-white mb-4 flex items-center gap-2"
               >
-                <div className="w-12 h-1 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full" />
+                <div className="w-10 h-1 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full" />
                 {language === 'rw' ? 'Amahugurwa Yacu' : 'Our Trades'}
               </motion.h2>
 
@@ -327,7 +315,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                       <CardContent className="p-0">
                         <div className="flex items-stretch">
                           {/* Card Image */}
-                          <div className="relative w-32 h-32 flex-shrink-0 overflow-hidden">
+                          <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden">
                             <motion.img
                               src={card.image}
                               alt={language === 'rw' ? card.titleRw : t(card.titleKey)}
@@ -347,49 +335,49 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                               }}
                               className="absolute inset-0 flex items-center justify-center"
                             >
-                              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-xl border-2 border-white/30`}>
-                                <Icon className="w-7 h-7 text-white" />
+                              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-xl border-2 border-white/30`}>
+                                <Icon className="w-6 h-6 text-white" />
                               </div>
                             </motion.div>
                           </div>
 
                           {/* Card Content */}
-                          <div className="flex-1 p-4 flex flex-col justify-between">
+                          <div className="flex-1 p-3 flex flex-col justify-between">
                             <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge className={`bg-gradient-to-r ${card.gradient} text-white font-black text-sm px-3 py-0.5 border-0`}>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <Badge className={`bg-gradient-to-r ${card.gradient} text-white font-black text-xs px-2 py-0.5 border-0`}>
                                   {card.code}
                                 </Badge>
                                 <div className="flex items-center text-yellow-400">
-                                  <Star className="w-4 h-4 fill-current" />
-                                  <span className="text-sm font-bold ml-1">{card.rating}</span>
+                                  <Star className="w-3.5 h-3.5 fill-current" />
+                                  <span className="text-xs font-bold ml-1">{card.rating}</span>
                                 </div>
                               </div>
-                              <h3 className="text-lg font-bold text-white mb-1">
+                              <h3 className="text-base font-bold text-white mb-0.5">
                                 {language === 'rw' ? card.titleRw : t(card.titleKey)}
                               </h3>
-                              <p className="text-sm text-gray-300 line-clamp-1">
+                              <p className="text-xs text-gray-300 line-clamp-1">
                                 {language === 'rw' ? card.description : card.descriptionEn}
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between mt-3">
-                              <div className="flex items-center gap-4 text-xs text-gray-400">
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-3 text-xs text-gray-400">
                                 <span className="flex items-center gap-1">
-                                  <Users className="w-3.5 h-3.5" />
+                                  <Users className="w-3 h-3" />
                                   {card.students}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5" />
+                                  <Clock className="w-3 h-3" />
                                   {card.duration}
                                 </span>
                               </div>
                               <motion.div
                                 animate={{ x: isHovered ? 5 : 0 }}
-                                className="flex items-center text-white text-sm font-semibold"
+                                className="flex items-center text-white text-xs font-semibold"
                               >
                                 {language === 'rw' ? 'Reba' : 'View'}
-                                <ArrowRight className="w-4 h-4 ml-1" />
+                                <ArrowRight className="w-3 h-3 ml-1" />
                               </motion.div>
                             </div>
                           </div>
@@ -413,7 +401,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.1 }}
-                className="text-center pt-4"
+                className="text-center pt-2"
               >
                 <Button
                   variant="ghost"
@@ -430,7 +418,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Navigation Controls */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-4">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-4">
         <div className="flex space-x-2">
           {defaultSlides.map((_, index) => (
             <button

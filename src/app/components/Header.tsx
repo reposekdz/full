@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2, Code, Shield } from 'lucide-react';
 import { useLanguage, Language } from '@/app/contexts/LanguageContext';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -26,13 +26,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navItems = [
-    { key: 'home', icon: Home, label: t('home') || 'Ahabanza', subItems: [] },
-    { key: 'academics', icon: BookOpen, label: t('academics') || 'Amasomo', subItems: [] },
-    { key: 'sports', icon: Trophy, label: t('sports') || 'Siporo', subItems: [] },
-    { key: 'services', icon: Briefcase, label: t('services') || 'Serivisi', subItems: [] },
-    { key: 'trades', icon: Wrench, label: t('trades') || 'Imyuga', subItems: [] },
-    { key: 'contactUs', icon: Phone, label: t('contact') || 'Twandikire', subItems: [] },
-    { key: 'supports', icon: HelpCircle, label: t('support') || 'Ubufasha', subItems: [] },
+    { key: 'home', icon: Home, label: language === 'rw' ? 'Ahabanza' : 'Home', subItems: [] },
+    { key: 'academics', icon: BookOpen, label: language === 'rw' ? 'Amasomo' : 'Academics', subItems: [] },
+    { key: 'sports', icon: Trophy, label: language === 'rw' ? 'Siporo' : 'Sports', subItems: [] },
+    { key: 'services', icon: Briefcase, label: language === 'rw' ? 'Serivisi' : 'Services', subItems: [] },
+    { key: 'trades', icon: Wrench, label: language === 'rw' ? 'Imyuga' : 'Trades', subItems: [] },
+    { key: 'leadership', icon: Shield, label: language === 'rw' ? 'Ubuyobozi' : 'Leadership', subItems: [] },
+    { key: 'contactUs', icon: Phone, label: language === 'rw' ? 'Twandikire' : 'Contact', subItems: [] },
+    { key: 'supports', icon: HelpCircle, label: language === 'rw' ? 'Ubufasha' : 'Support', subItems: [] },
+    { key: 'developers', icon: Code, label: language === 'rw' ? 'Abatunganyije' : 'Developers', subItems: [] },
   ];
 
   const taglines = [

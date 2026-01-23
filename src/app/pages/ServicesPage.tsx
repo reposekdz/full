@@ -1,201 +1,416 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Briefcase, BookOpen, Heart, HelpCircle, Search, Calendar, Clock, User, Phone, Mail, MapPin, ChevronRight, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Briefcase, BookOpen, Heart, HelpCircle, Search, Calendar, Clock, User, Phone, Mail, MapPin, ChevronRight, Star, Loader2, ArrowLeft, Filter, X, CheckCircle, Building2, Users, Award, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Input } from '@/app/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 
 interface ServicesPageProps {
   onNavigate: (page: string) => void;
-  onLogout: () => void;
 }
 
-const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate, onLogout }) => {
+interface Service {
+  id: number;
+  name_rw: string;
+  name_en: string;
+  description_rw: string;
+  description_en: string;
+  category: string;
+  contact_person?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  location?: string;
+  schedule?: string;
+  is_active: boolean;
+}
+
+const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('library');
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const libraryResources = [
-    { id: 'l1', title: 'Ibitabo bya Tekiniki', titleEn: 'Technical Books', count: 1250, available: 980, category: 'Books', color: 'from-blue-500 to-indigo-500' },
-    { id: 'l2', title: 'Ibinyamakuru', titleEn: 'Journals', count: 450, available: 420, category: 'Journals', color: 'from-green-500 to-emerald-500' },
-    { id: 'l3', title: 'Amakuru ya Elegitoronike', titleEn: 'E-Resources', count: 3500, available: 3500, category: 'Digital', color: 'from-purple-500 to-pink-500' }
-  ];
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
-  const counselingServices = [
-    { id: 'cs1', name: 'Ubujyanama bw\'Amasomo', nameEn: 'Academic Counseling', counselor: 'Dr. Marie Uwase', available: 'Kuwa mbere - Kuwa gatanu', time: '09:00 - 17:00' },
-    { id: 'cs2', name: 'Ubujyanama bw\'Umwuga', nameEn: 'Career Counseling', counselor: 'Mr. Jean Mugisha', available: 'Kuwa kabiri - Kuwa kane', time: '10:00 - 16:00' },
-    { id: 'cs3', name: 'Ubujyanama bw\'Ubuzima bwo mu Mutwe', nameEn: 'Mental Health Counseling', counselor: 'Ms. Grace Mukamana', available: 'Kuwa mbere - Kuwa gatanu', time: '08:00 - 18:00' }
-  ];
+  const fetchServices = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/services/services');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.services)) {
+        setServices(data.services);
+      } else if (Array.isArray(data)) {
+        setServices(data);
+      } else {
+        setServices([]);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const healthServices = [
-    { id: 'hs1', name: 'Isuzuma Rusange', nameEn: 'General Checkup', doctor: 'Dr. Patrick Habimana', available: 'Buri munsi', time: '08:00 - 17:00' },
-    { id: 'hs2', name: 'Ubuvuzi bw\'Ihutirwa', nameEn: 'Emergency Care', doctor: 'Dr. Alice Uwera', available: '24/7', time: 'Igihe cyose' },
-    { id: 'hs3', name: 'Imiti', nameEn: 'Pharmacy', doctor: 'Pharmacist Sarah', available: 'Kuwa mbere - Kuwa gatanu', time: '08:00 - 18:00' }
+  const filteredServices = services.filter(service => {
+    const matchesSearch = service.name_rw.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         service.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         service.description_rw.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === 'all' || service.category === activeCategory;
+    return matchesSearch && matchesCategory && service.is_active;
+  });
+
+  const libraryServices = filteredServices.filter(s => s.category === 'library');
+  const counselingServices = filteredServices.filter(s => s.category === 'counseling');
+  const healthServices = filteredServices.filter(s => s.category === 'health');
+
+  const categories = [
+    { id: 'all', name: 'Byose', nameEn: 'All', icon: Briefcase, color: 'from-purple-600 to-indigo-600', count: filteredServices.length },
+    { id: 'library', name: 'Isomero', nameEn: 'Library', icon: BookOpen, color: 'from-blue-600 to-indigo-600', count: libraryServices.length },
+    { id: 'counseling', name: 'Ubujyanama', nameEn: 'Counseling', icon: HelpCircle, color: 'from-green-600 to-emerald-600', count: counselingServices.length },
+    { id: 'health', name: 'Ubuvuzi', nameEn: 'Health', icon: Heart, color: 'from-red-600 to-pink-600', count: healthServices.length }
   ];
 
   const stats = [
-    { label: 'Ibitabo', value: '1,250', icon: BookOpen, color: 'from-blue-600 to-indigo-600' },
-    { label: 'Abajyanama', value: '3', icon: HelpCircle, color: 'from-green-600 to-emerald-600' },
-    { label: 'Abaganga', value: '5', icon: Heart, color: 'from-red-600 to-pink-600' },
-    { label: 'Serivisi', value: '9', icon: Briefcase, color: 'from-purple-600 to-indigo-600' }
+    { label: 'Serivisi Zose', value: services.length, icon: Briefcase, color: 'from-purple-600 to-indigo-600' },
+    { label: 'Isomero', value: services.filter(s => s.category === 'library').length, icon: BookOpen, color: 'from-blue-600 to-indigo-600' },
+    { label: 'Ubujyanama', value: services.filter(s => s.category === 'counseling').length, icon: HelpCircle, color: 'from-green-600 to-emerald-600' },
+    { label: 'Ubuvuzi', value: services.filter(s => s.category === 'health').length, icon: Heart, color: 'from-red-600 to-pink-600' }
   ];
 
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 overflow-hidden">
-      <AdvancedLeftSidebar currentPage="services" onNavigate={onNavigate} onLogout={onLogout} />
-      
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-600 to-blue-600 flex items-center justify-center shadow-xl">
-                <Briefcase className="w-9 h-9 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl md:text-5xl font-black text-gray-900">Serivisi</h1>
-                <p className="text-lg text-gray-600 font-semibold mt-1">Isomero, Ubujyanama n'Ubuvuzi</p>
+  const ServiceCard = ({ service, index }: { service: Service; index: number }) => {
+    const colors = {
+      library: 'from-blue-500 to-indigo-500',
+      counseling: 'from-green-500 to-emerald-500',
+      health: 'from-red-500 to-pink-500'
+    };
+    const schedule = service.schedule ? JSON.parse(service.schedule) : {};
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        whileHover={{ scale: 1.02 }}
+        className="h-full"
+      >
+        <Card className="border-2 border-gray-200 hover:border-blue-400 hover:shadow-2xl transition-all h-full bg-white overflow-hidden group">
+          <div className={`h-2 bg-gradient-to-r ${colors[service.category as keyof typeof colors] || 'from-gray-500 to-gray-600'}`} />
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <Badge className={`mb-3 bg-gradient-to-r ${colors[service.category as keyof typeof colors]} text-white border-0`}>
+                  {service.category === 'library' ? 'Isomero' : service.category === 'counseling' ? 'Ubujyanama' : 'Ubuvuzi'}
+                </Badge>
+                <h3 className="text-2xl font-black text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{service.name_rw}</h3>
+                <p className="text-gray-600 font-semibold mb-3">{service.name_en}</p>
+                <p className="text-sm text-gray-700 line-clamp-3 mb-4">{service.description_rw}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {stats.map((stat, index) => (
-                <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-6 shadow-lg border-2 border-green-100">
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mx-auto mb-3`}>
-                    <stat.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <p className="text-3xl font-black text-gray-900 mb-1 text-center">{stat.value}</p>
-                  <p className="text-sm font-semibold text-gray-600 text-center">{stat.label}</p>
-                </motion.div>
-              ))}
+            <div className="space-y-2 mb-4">
+              {service.contact_person && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span className="font-semibold text-gray-700">{service.contact_person}</span>
+                </div>
+              )}
+              {schedule.days && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span className="text-gray-600">{schedule.days}</span>
+                </div>
+              )}
+              {schedule.hours && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="text-gray-600">{schedule.hours}</span>
+                </div>
+              )}
+              {service.location && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <span className="text-gray-600">{service.location}</span>
+                </div>
+              )}
             </div>
-          </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-2xl border-2 border-green-100 p-6 mb-8">
-            <div className="flex items-center space-x-3 mb-6">
-              <Search className="w-6 h-6 text-green-600" />
-              <h3 className="text-2xl font-black text-gray-900">Shakisha</h3>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setSelectedService(service)}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold"
+              >
+                Reba Byinshi
+              </Button>
+              <Button
+                onClick={() => { setSelectedService(service); setShowRequestModal(true); }}
+                variant="outline"
+                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold"
+              >
+                Saba
+              </Button>
             </div>
-            <Input placeholder="Shakisha serivisi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 text-lg border-2 border-green-200" />
-          </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-            <TabsList className="grid w-full grid-cols-3 h-14 bg-white border-2 border-green-200 rounded-2xl p-1">
-              <TabsTrigger value="library" className="text-base font-bold rounded-xl">Isomero</TabsTrigger>
-              <TabsTrigger value="counseling" className="text-base font-bold rounded-xl">Ubujyanama</TabsTrigger>
-              <TabsTrigger value="health" className="text-base font-bold rounded-xl">Ubuvuzi</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="library" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {libraryResources.map((resource, index) => (
-                  <motion.div key={resource.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}>
-                    <Card className={`border-2 border-blue-200 bg-gradient-to-br ${resource.color} text-white overflow-hidden`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-center mb-4">
-                          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <BookOpen className="w-10 h-10 text-white" />
-                          </div>
-                        </div>
-                        <h3 className="text-xl font-black text-center mb-2">{resource.title}</h3>
-                        <p className="text-white/90 text-center font-semibold mb-4">{resource.titleEn}</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center">
-                            <p className="text-2xl font-black">{resource.count}</p>
-                            <p className="text-xs text-white/80 font-semibold">Byose</p>
-                          </div>
-                          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center">
-                            <p className="text-2xl font-black">{resource.available}</p>
-                            <p className="text-xs text-white/80 font-semibold">Bihari</p>
-                          </div>
-                        </div>
-                        <Button className="w-full mt-4 bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-sm">
-                          Reba Byinshi <ChevronRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="counseling" className="mt-6">
-              <div className="space-y-4">
-                {counselingServices.map((service, index) => (
-                  <motion.div key={service.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}>
-                    <Card className="border-2 border-green-100 hover:border-green-400 hover:shadow-xl transition-all">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-2xl font-black text-gray-900 mb-2">{service.name}</h3>
-                            <p className="text-gray-600 font-semibold mb-4">{service.nameEn}</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2 text-sm">
-                                <User className="w-4 h-4 text-green-600" />
-                                <span className="font-bold">{service.counselor}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Calendar className="w-4 h-4 text-green-600" />
-                                <span className="font-semibold">{service.available}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Clock className="w-4 h-4 text-green-600" />
-                                <span className="font-semibold">{service.time}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold">
-                            Gira Gahunda
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="health" className="mt-6">
-              <div className="space-y-4">
-                {healthServices.map((service, index) => (
-                  <motion.div key={service.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}>
-                    <Card className="border-2 border-red-100 hover:border-red-400 hover:shadow-xl transition-all">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-2xl font-black text-gray-900 mb-2">{service.name}</h3>
-                            <p className="text-gray-600 font-semibold mb-4">{service.nameEn}</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2 text-sm">
-                                <User className="w-4 h-4 text-red-600" />
-                                <span className="font-bold">{service.doctor}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Calendar className="w-4 h-4 text-red-600" />
-                                <span className="font-semibold">{service.available}</span>
-                              </div>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <Clock className="w-4 h-4 text-red-600" />
-                                <span className="font-semibold">{service.time}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button className="bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold">
-                            Gira Gahunda
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-xl font-bold text-gray-700">Gutegura Serivisi...</p>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-8 px-4 shadow-2xl">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <Button
+              onClick={() => onNavigate('home')}
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Subira
+            </Button>
+          </div>
+
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+            <div className="flex items-center justify-center space-x-4 mb-4">
+              <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl">
+                <Briefcase className="w-12 h-12 text-white" />
+              </div>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black mb-3">Serivisi z'Ishuri</h1>
+            <p className="text-xl font-semibold text-white/90">Isomero, Ubujyanama n'Ubuvuzi - Serivisi Zose Zihari</p>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-2xl p-6 shadow-xl border-2 border-gray-100 hover:shadow-2xl transition-all"
+            >
+              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                <stat.icon className="w-8 h-8 text-white" />
+              </div>
+              <p className="text-4xl font-black text-gray-900 mb-2 text-center">{stat.value}</p>
+              <p className="text-sm font-bold text-gray-600 text-center">{stat.label}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Search & Filter */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-2xl border-2 border-gray-100 p-6 mb-8">
+          <div className="flex items-center space-x-3 mb-4">
+            <Search className="w-6 h-6 text-blue-600" />
+            <h3 className="text-2xl font-black text-gray-900">Shakisha Serivisi</h3>
+          </div>
+          <Input
+            placeholder="Andika izina rya serivisi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-14 text-lg border-2 border-gray-200 focus:border-blue-500"
+          />
+        </motion.div>
+
+        {/* Categories */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {categories.map((category, index) => (
+            <motion.button
+              key={category.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              onClick={() => setActiveCategory(category.id)}
+              className={`p-6 rounded-2xl border-2 transition-all ${
+                activeCategory === category.id
+                  ? 'bg-gradient-to-br ' + category.color + ' text-white border-transparent shadow-2xl scale-105'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:shadow-xl'
+              }`}
+            >
+              <category.icon className={`w-10 h-10 mx-auto mb-3 ${activeCategory === category.id ? 'text-white' : 'text-gray-600'}`} />
+              <p className="font-black text-lg mb-1">{category.name}</p>
+              <p className={`text-sm font-semibold ${activeCategory === category.id ? 'text-white/80' : 'text-gray-500'}`}>
+                {category.count} Serivisi
+              </p>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Services Grid */}
+        {filteredServices.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredServices.map((service, index) => (
+              <ServiceCard key={service.id} service={service} index={index} />
+            ))}
+          </div>
+        ) : (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+            <Search className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-2xl font-black text-gray-900 mb-2">Nta serivisi zabonetse</h3>
+            <p className="text-gray-600">Gerageza gushakisha izindi serivisi</p>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Service Detail Modal */}
+      <AnimatePresence>
+        {selectedService && !showRequestModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedService(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-3xl">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h2 className="text-3xl font-black mb-2">{selectedService.name_rw}</h2>
+                    <p className="text-xl font-semibold text-white/90">{selectedService.name_en}</p>
+                  </div>
+                  <Button
+                    onClick={() => setSelectedService(null)}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-xl font-black text-gray-900 mb-3">Ibisobanuro</h3>
+                  <p className="text-gray-700 leading-relaxed">{selectedService.description_rw}</p>
+                </div>
+
+                {selectedService.contact_person && (
+                  <div className="bg-blue-50 rounded-2xl p-6 mb-6">
+                    <h3 className="text-xl font-black text-gray-900 mb-4">Amakuru y'Itumanaho</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <User className="w-5 h-5 text-blue-600" />
+                        <span className="font-bold text-gray-900">{selectedService.contact_person}</span>
+                      </div>
+                      {selectedService.contact_email && (
+                        <div className="flex items-center space-x-3">
+                          <Mail className="w-5 h-5 text-blue-600" />
+                          <span className="text-gray-700">{selectedService.contact_email}</span>
+                        </div>
+                      )}
+                      {selectedService.contact_phone && (
+                        <div className="flex items-center space-x-3">
+                          <Phone className="w-5 h-5 text-blue-600" />
+                          <span className="text-gray-700">{selectedService.contact_phone}</span>
+                        </div>
+                      )}
+                      {selectedService.location && (
+                        <div className="flex items-center space-x-3">
+                          <MapPin className="w-5 h-5 text-blue-600" />
+                          <span className="text-gray-700">{selectedService.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowRequestModal(true)}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold h-12"
+                  >
+                    Saba Serivisi
+                  </Button>
+                  <Button
+                    onClick={() => setSelectedService(null)}
+                    variant="outline"
+                    className="border-2 border-gray-300 font-bold h-12"
+                  >
+                    Funga
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Request Modal */}
+      <AnimatePresence>
+        {showRequestModal && selectedService && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowRequestModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full"
+            >
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-t-3xl">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-black">Saba Serivisi</h2>
+                  <Button
+                    onClick={() => setShowRequestModal(false)}
+                    variant="ghost"
+                    className="text-white hover:bg-white/20"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-black text-gray-900 mb-2">Icyifuzo Cyoherejwe!</h3>
+                  <p className="text-gray-600">Icyifuzo cyawe cyo gukoresha <span className="font-bold">{selectedService.name_rw}</span> cyoherejwe neza. Tuzakumenyesha vuba.</p>
+                </div>
+
+                <Button
+                  onClick={() => { setShowRequestModal(false); setSelectedService(null); }}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold h-12"
+                >
+                  Siga
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

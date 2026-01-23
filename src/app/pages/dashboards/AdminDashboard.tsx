@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { LayoutDashboard, Users, BookOpen, LogOut, Settings, Bell, Activity, Shield, Database, FileText, BarChart3, Award, Target, Clock, DollarSign, Package } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -21,6 +21,17 @@ import BackupPage from '../admin/BackupPage';
 import LogsPage from '../admin/LogsPage';
 import StaffManagementPage from '../StaffManagementPage';
 import AdminStaffManagement from '../admin/AdminStaffManagement';
+import ContentManagementPage from '../admin/ContentManagementPage';
+import StudentManagementPage from '../admin/StudentManagementPage';
+import DisciplineManagementPage from '../admin/DisciplineManagementPage';
+import AdminStudentSheetsPage from '../admin/AdminStudentSheetsPage';
+import HomeworkManagementPage from '../admin/HomeworkManagementPage';
+import AssignmentsManagementPage from '../admin/AssignmentsManagementPage';
+import LiveChatManagementPage from '../admin/LiveChatManagementPage';
+import GamificationSystemPage from '../admin/GamificationSystemPage';
+import LiveStudySessionsPage from '../admin/LiveStudySessionsPage';
+import CollaborationStudyGroupsPage from '../admin/CollaborationStudyGroupsPage';
+import QuizSystemPage from '../admin/QuizSystemPage';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -59,6 +70,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
         return <LogsPage />;
       case 'staff-management':
         return user?.role === 'admin' ? <AdminStaffManagement /> : <StaffManagementPage />;
+      case 'content-management':
+        return <ContentManagementPage />;
+      case 'student-management':
+        return <StudentManagementPage />;
+      case 'discipline-management':
+        return <DisciplineManagementPage />;
+      case 'student-sheets':
+        return <AdminStudentSheetsPage />;
+      case 'homework-management':
+        return <HomeworkManagementPage />;
+      case 'assignments-management':
+        return <AssignmentsManagementPage />;
+      case 'live-chat':
+        return <LiveChatManagementPage />;
+      case 'gamification':
+        return <GamificationSystemPage />;
+      case 'live-study':
+        return <LiveStudySessionsPage />;
+      case 'collaboration':
+        return <CollaborationStudyGroupsPage />;
+      case 'quiz-system':
+        return <QuizSystemPage />;
       default:
         return <DashboardHome onNavigate={handleNavigation} />;
     }
@@ -113,7 +146,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
             </div>
           </div>
         </div>
-        {renderContent()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeInOut" }}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -126,7 +169,6 @@ interface DashboardHomeProps {
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState({ students: 0, teachers: 0, parents: 0, staff: 0, courses: 0, revenue: 0, stock: 0 });
   const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -151,8 +193,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
       if (logsData.success) setActivities(logsData.logs);
     } catch (error) {
       console.error('Fetch error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -201,14 +241,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
-          <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+          <div key={stat.title}>
             <Card className={`border-2 border-transparent hover:border-blue-200 transition-all hover:shadow-xl ${stat.bgColor}`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-600 mb-2">{stat.title}</p>
                     <p className="text-2xl font-black text-gray-900">
-                      {loading ? '...' : stat.value}
+                      {stat.value}
                     </p>
                   </div>
                   <div className={`${stat.iconBg} p-3 rounded-xl`}>
@@ -217,7 +257,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -259,20 +299,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading activities...</div>
-              ) : activities.length === 0 ? (
+              {activities.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No recent activities</div>
               ) : (
                 activities.map((activity, idx) => {
                   const Icon = getActivityIcon(activity.action);
                   const colors = getActivityColor(activity.action);
                   return (
-                    <motion.div
+                    <div
                       key={idx}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
                       className="flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 transition-colors"
                     >
                       <div className={`${colors.bg} p-2 rounded-lg`}>
@@ -282,7 +317,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
                         <p className="font-medium text-gray-900">{activity.action || 'System activity'}</p>
                         <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString()}</p>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })
               )}

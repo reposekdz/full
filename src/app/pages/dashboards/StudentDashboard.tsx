@@ -42,6 +42,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import StaffManagementPage from '../StaffManagementPage';
+import StudentCompetitionsPage from '../student/StudentCompetitionsPage';
+import LibraryPage from '../student/LibraryPage';
+import TransportPage from '../student/TransportPage';
+import HostelPage from '../student/HostelPage';
 
 interface StudentDashboardProps {
   onNavigate: (page: string) => void;
@@ -55,6 +59,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
   const handleNavigation = (page: string) => {
     if (page === 'staff-management') {
       setCurrentView('staff-management');
+    } else if (page === 'competitions') {
+      setCurrentView('competitions');
+    } else if (page === 'library') {
+      setCurrentView('library');
+    } else if (page === 'transport') {
+      setCurrentView('transport');
+    } else if (page === 'hostel') {
+      setCurrentView('hostel');
     } else {
       setCurrentView('dashboard');
       onNavigate(page);
@@ -67,6 +79,50 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
         <AdvancedLeftSidebar currentPage="staff-management" onNavigate={handleNavigation} onLogout={onLogout} />
         <div className="flex-1 overflow-auto">
           <StaffManagementPage />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'competitions') {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
+        <AdvancedLeftSidebar currentPage="competitions" onNavigate={handleNavigation} onLogout={onLogout} />
+        <div className="flex-1 overflow-auto">
+          <StudentCompetitionsPage />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'library') {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
+        <AdvancedLeftSidebar currentPage="library" onNavigate={handleNavigation} onLogout={onLogout} />
+        <div className="flex-1 overflow-auto">
+          <LibraryPage />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'transport') {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-green-50 via-teal-50 to-cyan-50 overflow-hidden">
+        <AdvancedLeftSidebar currentPage="transport" onNavigate={handleNavigation} onLogout={onLogout} />
+        <div className="flex-1 overflow-auto">
+          <TransportPage />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'hostel') {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 overflow-hidden">
+        <AdvancedLeftSidebar currentPage="hostel" onNavigate={handleNavigation} onLogout={onLogout} />
+        <div className="flex-1 overflow-auto">
+          <HostelPage />
         </div>
       </div>
     );

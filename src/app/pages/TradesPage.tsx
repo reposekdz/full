@@ -140,12 +140,17 @@ const TradesPage: React.FC = () => {
     const loadTrades = async () => {
       try {
         setLoading(true);
-        const response = await apiService.getPublicCourses();
-        if (response.success) {
-          // Convert course data to trade format with enhanced info
-          const enhancedTrades = response.trades.map((trade: any) => ({
-            ...trade,
+        const response = await fetch('http://localhost:5000/api/trades');
+        const data = await response.json();
+        if (data.success && data.trades) {
+          const enhancedTrades = data.trades.map((trade: any) => ({
+            id: trade.code.toLowerCase(),
+            title: trade.name,
+            code: trade.code,
             icon: getTradeIcon(trade.code),
+            image: trade.image_url || `https://images.unsplash.com/photo-1531498860502-7c67cf02f657?w=1080`,
+            description: trade.description_en || trade.description_rw,
+            features: trade.requirements_en ? trade.requirements_en.split(',').map((r: string) => r.trim()) : ['Professional Training', 'Industry Standards', 'Practical Skills'],
             levels: generateTradeLevels(trade),
             tools: generateTradeTools(trade.code),
             gallery: generateTradeGallery(trade.code),
@@ -160,10 +165,11 @@ const TradesPage: React.FC = () => {
             }
           }));
           setTrades(enhancedTrades);
+        } else {
+          setTrades(mockTrades);
         }
       } catch (error) {
         console.error('Error loading trades:', error);
-        // Fallback to mock data if API fails
         setTrades(mockTrades);
       } finally {
         setLoading(false);

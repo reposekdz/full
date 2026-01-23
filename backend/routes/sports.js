@@ -2,214 +2,188 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 
-// Get all sports teams
+// Get all teams
 router.get('/teams', async (req, res) => {
   try {
-    const { sport_type } = req.query;
-    let query = `
+    const [teams] = await pool.query(`
       SELECT t.*, 
-             COUNT(DISTINCT p.id) as player_count
-      FROM teams t
-      LEFT JOIN players p ON t.id = p.team_id
-      WHERE t.status = 'active'
-    `;
-    const params = [];
-    
-    if (sport_type) {
-      query += ` AND t.sport_type = ?`;
-      params.push(sport_type);
-    }
-    
-    query += ` GROUP BY t.id ORDER BY t.name`;
-    const [teams] = await pool.execute(query, params);
-    res.json({ success: true, teams });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get sports statistics
-router.get('/statistics', async (req, res) => {
-  try {
-    const [stats] = await pool.execute(`
-      SELECT 
-        (SELECT COUNT(*) FROM teams WHERE status = 'active') as total_teams,
-        (SELECT COUNT(*) FROM players WHERE status = 'active') as total_players,
-        (SELECT COUNT(*) FROM matches WHERE status = 'completed') as completed_matches,
-        (SELECT COUNT(*) FROM trophies) as total_trophies,
-        (SELECT COUNT(*) FROM matches WHERE status = 'scheduled' AND match_date >= CURDATE()) as upcoming_matches
+        (SELECT COUNT(*) FROM sports_achievements WHERE team_id = t.id) as achievements_count
+      FROM sports_teams t
+      WHERE t.is_active = true
+      ORDER BY t.id
     `);
-    res.json({ success: true, statistics: stats[0] });
+    
+    // Get achievements for each team
+    for (let team of teams) {
+      const [achievements] = await pool.query(
+        'SELECT title, year FROM sports_achievements WHERE team_id = ? ORDER BY year DESC',
+        [team.id]
+      );
+      team.achievements = achievements;
+    }
+    
+    res.json(teams);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching teams:', error);
+    res.status(500).json({ message: 'Error fetching teams' });
   }
 });
 
-// Get upcoming matches
-router.get('/matches/upcoming', async (req, res) => {
+// Get single team
+router.get('/teams/:id', async (req, res) => {
   try {
-    const { limit = 10, sport_type } = req.query;
-    let query = `
-      SELECT m.*, 
-             t1.name as home_team, t1.logo as home_logo,
-             t2.name as away_team, t2.logo as away_logo
-      FROM matches m
-      JOIN teams t1 ON m.home_team_id = t1.id
-      JOIN teams t2 ON m.away_team_id = t2.id
-      WHERE m.match_date >= CURDATE() AND m.status = 'scheduled'
-    `;
+    const [teams] = await pool.query(
+      'SELECT * FROM sports_teams WHERE id = ? AND is_active = true',
+      [req.params.id]
+    );
+    
+    if (teams.length === 0) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+    
+    const team = teams[0];
+    
+    // Get achievements
+    const [achievements] = await pool.query(
+      'SELECT * FROM sports_achievements WHERE team_id = ? ORDER BY year DESC',
+      [team.id]
+    );
+    team.achievements = achievements;
+    
+    res.json(team);
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    res.status(500).json({ message: 'Error fetching team' });
+  }
+});
+
+// Get all matches
+router.get('/matches', async (req, res) => {
+  try {
+    const { upcoming } = req.query;
+    let query = 'SELECT * FROM sports_matches WHERE 1=1';
     const params = [];
     
-    if (sport_type) {
-      query += ` AND m.sport_type = ?`;
-      params.push(sport_type);
+    if (upcoming === 'true') {
+      query += ' AND is_upcoming = true';
+    } else if (upcoming === 'false') {
+      query += ' AND is_upcoming = false';
     }
     
-    query += ` ORDER BY m.match_date ASC LIMIT ?`;
-    params.push(parseInt(limit));
+    query += ' ORDER BY match_date DESC';
     
-    const [matches] = await pool.execute(query, params);
-    res.json({ success: true, matches });
+    const [matches] = await pool.query(query, params);
+    res.json(matches);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching matches:', error);
+    res.status(500).json({ message: 'Error fetching matches' });
   }
 });
 
-// Get recent results
-router.get('/matches/results', async (req, res) => {
+// Admin: Create team
+router.post('/admin/teams', async (req, res) => {
   try {
-    const { limit = 10, sport_type } = req.query;
-    let query = `
-      SELECT m.*, 
-             t1.name as home_team, t1.logo as home_logo,
-             t2.name as away_team, t2.logo as away_logo
-      FROM matches m
-      JOIN teams t1 ON m.home_team_id = t1.id
-      JOIN teams t2 ON m.away_team_id = t2.id
-      WHERE m.status = 'completed'
-    `;
-    const params = [];
+    const { name, sport, players_count, wins, losses, draws, founded_year, coach, captain, description_rw, description_en, image_url } = req.body;
     
-    if (sport_type) {
-      query += ` AND m.sport_type = ?`;
-      params.push(sport_type);
-    }
+    const [result] = await pool.query(
+      'INSERT INTO sports_teams (name, sport, players_count, wins, losses, draws, founded_year, coach, captain, description_rw, description_en, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, sport, players_count || 0, wins || 0, losses || 0, draws || 0, founded_year, coach, captain, description_rw, description_en, image_url]
+    );
     
-    query += ` ORDER BY m.match_date DESC LIMIT ?`;
-    params.push(parseInt(limit));
-    
-    const [matches] = await pool.execute(query, params);
-    res.json({ success: true, matches });
+    res.status(201).json({ message: 'Team created successfully', id: result.insertId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error creating team:', error);
+    res.status(500).json({ message: 'Error creating team' });
   }
 });
 
-// Get top players
-router.get('/players/top', async (req, res) => {
+// Admin: Update team
+router.put('/admin/teams/:id', async (req, res) => {
   try {
-    const { sport_type, limit = 10 } = req.query;
-    let query = `
-      SELECT p.*, t.name as team_name,
-             SUM(ps.goals) as total_goals,
-             SUM(ps.assists) as total_assists,
-             COUNT(DISTINCT ps.match_id) as matches_played
-      FROM players p
-      LEFT JOIN teams t ON p.team_id = t.id
-      LEFT JOIN player_stats ps ON p.id = ps.player_id
-      WHERE p.status = 'active'
-    `;
-    const params = [];
+    const { name, sport, players_count, wins, losses, draws, founded_year, coach, captain, description_rw, description_en, image_url } = req.body;
     
-    if (sport_type) {
-      query += ` AND p.sport_type = ?`;
-      params.push(sport_type);
-    }
+    await pool.query(
+      'UPDATE sports_teams SET name = ?, sport = ?, players_count = ?, wins = ?, losses = ?, draws = ?, founded_year = ?, coach = ?, captain = ?, description_rw = ?, description_en = ?, image_url = ? WHERE id = ?',
+      [name, sport, players_count, wins, losses, draws, founded_year, coach, captain, description_rw, description_en, image_url, req.params.id]
+    );
     
-    query += ` GROUP BY p.id ORDER BY total_goals DESC, total_assists DESC LIMIT ?`;
-    params.push(parseInt(limit));
-    
-    const [players] = await pool.execute(query, params);
-    res.json({ success: true, players });
+    res.json({ message: 'Team updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error updating team:', error);
+    res.status(500).json({ message: 'Error updating team' });
   }
 });
 
-// Get trophies showcase
-router.get('/trophies', async (req, res) => {
+// Admin: Delete team
+router.delete('/admin/teams/:id', async (req, res) => {
   try {
-    const { sport_type, year } = req.query;
-    let query = `SELECT * FROM trophies WHERE 1=1`;
-    const params = [];
-    
-    if (sport_type) {
-      query += ` AND sport_type = ?`;
-      params.push(sport_type);
-    }
-    if (year) {
-      query += ` AND year = ?`;
-      params.push(year);
-    }
-    
-    query += ` ORDER BY year DESC, date_won DESC`;
-    const [trophies] = await pool.execute(query, params);
-    res.json({ success: true, trophies });
+    await pool.query('UPDATE sports_teams SET is_active = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Team deleted successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error deleting team:', error);
+    res.status(500).json({ message: 'Error deleting team' });
   }
 });
 
-// Get sports gallery
-router.get('/gallery', async (req, res) => {
+// Admin: Create match
+router.post('/admin/matches', async (req, res) => {
   try {
-    const { sport_type, limit = 20 } = req.query;
-    let query = `SELECT * FROM sports_gallery WHERE 1=1`;
-    const params = [];
+    const { team_id, team_name, opponent, score, result, match_date, match_time, venue, sport, is_upcoming } = req.body;
     
-    if (sport_type) {
-      query += ` AND sport_type = ?`;
-      params.push(sport_type);
-    }
+    const [matchResult] = await pool.query(
+      'INSERT INTO sports_matches (team_id, team_name, opponent, score, result, match_date, match_time, venue, sport, is_upcoming) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [team_id, team_name, opponent, score, result, match_date, match_time, venue, sport, is_upcoming]
+    );
     
-    query += ` ORDER BY event_date DESC LIMIT ?`;
-    params.push(parseInt(limit));
-    
-    const [gallery] = await pool.execute(query, params);
-    res.json({ success: true, gallery });
+    res.status(201).json({ message: 'Match created successfully', id: matchResult.insertId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error creating match:', error);
+    res.status(500).json({ message: 'Error creating match' });
   }
 });
 
-// Get sports by type
-router.get('/by-type/:sportType', async (req, res) => {
+// Admin: Update match
+router.put('/admin/matches/:id', async (req, res) => {
   try {
-    const { sportType } = req.params;
+    const { team_id, team_name, opponent, score, result, match_date, match_time, venue, sport, is_upcoming } = req.body;
     
-    const [teams] = await pool.execute(`SELECT * FROM teams WHERE sport_type = ? AND status = 'active'`, [sportType]);
-    const [players] = await pool.execute(`SELECT * FROM players WHERE sport_type = ? AND status = 'active' LIMIT 20`, [sportType]);
-    const [matches] = await pool.execute(`
-      SELECT m.*, t1.name as home_team, t2.name as away_team
-      FROM matches m
-      JOIN teams t1 ON m.home_team_id = t1.id
-      JOIN teams t2 ON m.away_team_id = t2.id
-      WHERE m.sport_type = ?
-      ORDER BY m.match_date DESC
-      LIMIT 10
-    `, [sportType]);
-    const [trophies] = await pool.execute(`SELECT * FROM trophies WHERE sport_type = ? ORDER BY year DESC`, [sportType]);
+    await pool.query(
+      'UPDATE sports_matches SET team_id = ?, team_name = ?, opponent = ?, score = ?, result = ?, match_date = ?, match_time = ?, venue = ?, sport = ?, is_upcoming = ? WHERE id = ?',
+      [team_id, team_name, opponent, score, result, match_date, match_time, venue, sport, is_upcoming, req.params.id]
+    );
     
-    res.json({ 
-      success: true, 
-      sportType,
-      teams,
-      players,
-      recentMatches: matches,
-      trophies
-    });
+    res.json({ message: 'Match updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error updating match:', error);
+    res.status(500).json({ message: 'Error updating match' });
+  }
+});
+
+// Admin: Delete match
+router.delete('/admin/matches/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM sports_matches WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Match deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting match:', error);
+    res.status(500).json({ message: 'Error deleting match' });
+  }
+});
+
+// Admin: Add achievement
+router.post('/admin/achievements', async (req, res) => {
+  try {
+    const { team_id, title, description, year, image_url } = req.body;
+    
+    const [result] = await pool.query(
+      'INSERT INTO sports_achievements (team_id, title, description, year, image_url) VALUES (?, ?, ?, ?, ?)',
+      [team_id, title, description, year, image_url]
+    );
+    
+    res.status(201).json({ message: 'Achievement added successfully', id: result.insertId });
+  } catch (error) {
+    console.error('Error adding achievement:', error);
+    res.status(500).json({ message: 'Error adding achievement' });
   }
 });
 
