@@ -26,13 +26,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navItems = [
-    { key: 'home', icon: Home, label: 'Home', subItems: [] },
-    { key: 'academics', icon: BookOpen, label: 'Academics', subItems: [] },
-    { key: 'sports', icon: Trophy, label: 'Sports', subItems: [] },
-    { key: 'services', icon: Briefcase, label: 'Services', subItems: [] },
-    { key: 'trades', icon: Wrench, label: 'Trades', subItems: [] },
-    { key: 'contactUs', icon: Phone, label: 'Contact Us', subItems: [] },
-    { key: 'supports', icon: HelpCircle, label: 'Support', subItems: [] },
+    { key: 'home', icon: Home, label: t('home') || 'Ahabanza', subItems: [] },
+    { key: 'academics', icon: BookOpen, label: t('academics') || 'Amasomo', subItems: [] },
+    { key: 'sports', icon: Trophy, label: t('sports') || 'Siporo', subItems: [] },
+    { key: 'services', icon: Briefcase, label: t('services') || 'Serivisi', subItems: [] },
+    { key: 'trades', icon: Wrench, label: t('trades') || 'Imyuga', subItems: [] },
+    { key: 'contactUs', icon: Phone, label: t('contact') || 'Twandikire', subItems: [] },
+    { key: 'supports', icon: HelpCircle, label: t('support') || 'Ubufasha', subItems: [] },
   ];
 
   const taglines = [
@@ -61,33 +61,47 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   return (
     <>
       <motion.header
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md overflow-hidden"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-white via-yellow-50 to-green-50 backdrop-blur-lg border-b border-yellow-200 shadow-2xl"
       >
-        <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16 md:h-20 gap-2">
-            {/* Logo */}
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20 sm:h-20 md:h-24 gap-3">
+            {/* Logo - Enhanced */}
             <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-1.5 sm:gap-2 cursor-pointer flex-shrink-0"
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 sm:gap-3 cursor-pointer flex-shrink-0 group"
               onClick={() => onNavigate('home')}
             >
-              <motion.img
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico"
-                alt="Logo"
-                className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain rounded-lg shadow-lg"
-              />
-              <div className="hidden md:block min-w-0">
-                <motion.p className="text-sm sm:text-base md:text-xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent leading-tight truncate">
-                  Garden TVET
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 rounded-2xl blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <motion.img
+                  src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico"
+                  alt="Garden TVET Logo"
+                  className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 object-contain rounded-2xl shadow-2xl ring-2 ring-yellow-300 group-hover:ring-4 group-hover:ring-yellow-400 transition-all"
+                />
+              </motion.div>
+              <div className="hidden sm:block min-w-0">
+                <motion.p 
+                  className="text-base sm:text-lg md:text-2xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight truncate"
+                  animate={{ backgroundPosition: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
+                  Garden TVET School
                 </motion.p>
                 <motion.p
                   key={currentTaglineIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-xs text-gray-600 leading-tight truncate"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-xs sm:text-sm font-semibold text-green-700 leading-tight truncate"
                 >
                   {taglines[currentTaglineIndex]}
                 </motion.p>
@@ -188,28 +202,67 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   </DropdownMenu>
                 )}
 
-                {/* Menu Icon */}
+                {/* Desktop Menu Icon - Enhanced */}
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="relative rounded-2xl border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-green-50 h-11 w-11 p-0 shadow-lg hover:shadow-2xl hover:border-yellow-400 transition-all group overflow-hidden"
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-30 transition-opacity"
+                    />
+                    <Menu className="w-5 h-5 text-green-700 relative z-10" />
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Mobile/Tablet - Enhanced Menu Button with School Name */}
+            <div className="lg:hidden flex items-center gap-3 flex-1 justify-end">
+              {/* School Name - Mobile/Tablet */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex-1 text-center"
+              >
+                <motion.p 
+                  className="text-sm sm:text-base md:text-lg font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight"
+                  animate={{ backgroundPosition: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
+                  Garden TVET School
+                </motion.p>
+              </motion.div>
+              
+              {/* Menu Button */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setIsSidebarOpen(true)}
-                  className="rounded-full border border-yellow-200 h-9 w-9 p-0 flex-shrink-0"
+                  className="relative rounded-2xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-green-50 h-14 w-14 p-0 shadow-lg hover:shadow-xl hover:border-yellow-500 transition-all group overflow-hidden flex-shrink-0"
                 >
-                  <Menu className="w-4 h-4 text-gray-700" />
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-20 transition-opacity"
+                  />
+                  <motion.div
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Menu className="w-7 h-7 text-green-700 relative z-10" />
+                  </motion.div>
                 </Button>
-              </div>
-            </div>
-
-            {/* Mobile/Tablet - Only Logo and Menu */}
-            <div className="lg:hidden flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsSidebarOpen(true)}
-                className="rounded-full border border-yellow-200 h-9 w-9 p-0"
-              >
-                <Menu className="w-4 h-4 text-gray-700" />
-              </Button>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -244,112 +297,160 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Enhanced Sidebar with Modern Animations */}
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetContent side="left" className="w-80 p-0">
+        <SheetContent side="left" className="w-80 sm:w-96 p-0 bg-gradient-to-br from-white via-yellow-50 to-green-50">
           <ScrollArea className="h-full">
             <div className="flex flex-col h-full">
-              <SheetHeader className="p-6 border-b bg-gradient-to-br from-yellow-500 to-green-500">
-                <div className="flex items-center space-x-3">
-                  <img 
-                    src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico" 
-                    alt="Logo" 
-                    className="h-12 w-12 rounded-lg bg-white p-1"
-                  />
-                  <div>
-                    <SheetTitle className="text-white text-lg">Garden TVET</SheetTitle>
-                    <p className="text-yellow-100 text-xs">Excellence in Education</p>
+              {/* Enhanced Header */}
+              <SheetHeader className="p-4 border-b-2 border-yellow-300 bg-gradient-to-br from-yellow-500 via-green-500 to-yellow-600 relative overflow-hidden h-20 sm:h-20 md:h-24">
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center space-x-3">
+                    <motion.div
+                      whileHover={{ rotate: 360, scale: 1.2 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <img 
+                        src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico" 
+                        alt="Logo" 
+                        className="h-14 w-14 rounded-2xl bg-white p-2 shadow-2xl ring-2 ring-yellow-300"
+                      />
+                    </motion.div>
+                    <div>
+                      <SheetTitle className="text-white text-xl font-black drop-shadow-lg">{t('schoolName') || 'Ishuri Garden TVET'}</SheetTitle>
+                      <p className="text-yellow-100 text-xs font-semibold">{t('tagline') || 'Uburezi Bwiza'}</p>
+                    </div>
                   </div>
+                  <motion.div
+                    whileHover={{ rotate: 90, scale: 1.2 }}
+                    whileTap={{ scale: 0.8 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="rounded-full bg-white/20 hover:bg-white/30 text-white h-10 w-10"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </motion.div>
                 </div>
               </SheetHeader>
 
+              {/* Enhanced Navigation */}
               <div className="flex-1 py-6 px-4">
-                <div className="space-y-1">
-                  <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase">Navigation</h3>
-                  {navItems.map((item) => {
+                <div className="space-y-2">
+                  <h3 className="px-3 mb-3 text-xs font-bold text-green-700 uppercase tracking-wider">{t('navigation') || 'Ibikubiyemo'}</h3>
+                  {navItems.map((item, index) => {
                     const Icon = item.icon;
 
                     return (
-                      <Button
+                      <motion.div
                         key={item.key}
-                        variant="ghost"
-                        onClick={() => {
-                          onNavigate(item.key);
-                          setIsSidebarOpen(false);
-                        }}
-                        className={`w-full justify-start px-3 py-2 ${
-                          currentPage === item.key ? 'bg-yellow-50 text-yellow-700 border-l-4 border-yellow-500' : ''
-                        }`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ x: 5 }}
                       >
-                        <Icon className="w-5 h-5 mr-3" />
-                        <span className="font-medium">{item.label}</span>
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            onNavigate(item.key);
+                            setIsSidebarOpen(false);
+                          }}
+                          className={`w-full justify-start px-4 py-2 rounded-xl transition-all ${
+                            currentPage === item.key 
+                              ? 'bg-gradient-to-r from-yellow-400 to-green-400 text-white shadow-lg border-l-4 border-green-600 font-bold' 
+                              : 'hover:bg-yellow-100 hover:border-l-4 hover:border-yellow-400'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          <span className="font-semibold">{item.label}</span>
+                        </Button>
+                      </motion.div>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="border-t p-4 bg-gray-50 space-y-3">
+              {/* Enhanced Footer */}
+              <div className="border-t-2 border-yellow-200 p-3 bg-gradient-to-br from-yellow-50 to-green-50 space-y-2 flex flex-col justify-center">
                 {!user ? (
                   <div className="space-y-2">
-                    <Button
-                      onClick={() => {
-                        onNavigate('login');
-                        setIsSidebarOpen(false);
-                      }}
-                      variant="outline"
-                      className="w-full rounded-full"
-                    >
-                      <LogIn className="w-4 h-4 mr-2" />
-                      {t('login')}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        onNavigate('register');
-                        setIsSidebarOpen(false);
-                      }}
-                      className="w-full rounded-full bg-gradient-to-br from-yellow-500 to-green-500"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      {t('register')}
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={() => {
+                          onNavigate('login');
+                          setIsSidebarOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-xl border-2 border-yellow-400 hover:bg-yellow-50 font-semibold shadow-md"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        {t('login') || 'Injira'}
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={() => {
+                          onNavigate('register');
+                          setIsSidebarOpen(false);
+                        }}
+                        className="w-full rounded-xl bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 font-bold shadow-lg"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        {t('register') || 'Iyandikishe'}
+                      </Button>
+                    </motion.div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white">
+                    <motion.div 
+                      className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-100 to-green-100 rounded-xl shadow-md border-2 border-yellow-300"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <Avatar className="h-12 w-12 ring-2 ring-yellow-400">
+                        <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold text-lg">
                           {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{user.first_name} {user.last_name}</p>
-                        <p className="text-xs text-yellow-700 truncate">{user.role}</p>
+                        <p className="text-sm font-bold truncate text-green-800">{user.first_name} {user.last_name}</p>
+                        <p className="text-xs text-yellow-700 font-semibold truncate">{user.role}</p>
                       </div>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        onNavigate(getRoleDashboard(user.role));
-                        setIsSidebarOpen(false);
-                      }}
-                      variant="outline"
-                      className="w-full rounded-full"
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        logout();
-                        onNavigate('home');
-                        setIsSidebarOpen(false);
-                      }}
-                      variant="outline"
-                      className="w-full rounded-full border-red-400 text-red-700"
-                    >
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Logout
-                    </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={() => {
+                          onNavigate(getRoleDashboard(user.role));
+                          setIsSidebarOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-xl border-2 border-green-400 hover:bg-green-50 font-semibold shadow-md"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        {t('dashboard') || 'Ibikubiyemo'}
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={() => {
+                          logout();
+                          onNavigate('home');
+                          setIsSidebarOpen(false);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-xl border-2 border-red-400 text-red-700 hover:bg-red-50 font-semibold shadow-md"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        {t('logout') || 'Sohoka'}
+                      </Button>
+                    </motion.div>
                   </div>
                 )}
               </div>

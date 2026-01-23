@@ -20,12 +20,51 @@ router.get('/news', async (req, res) => {
 router.get('/slides', async (req, res) => {
   try {
     const [slides] = await pool.execute(`
-      SELECT * FROM hero_slides WHERE is_active = true 
-      ORDER BY display_order ASC
+      SELECT * FROM carousel_slides WHERE is_active = true 
+      ORDER BY sort_order ASC
     `);
     res.json({ success: true, slides });
   } catch (error) {
     res.json({ success: true, slides: [] });
+  }
+});
+
+// Create slide (Admin only)
+router.post('/slides', authenticateToken, async (req, res) => {
+  try {
+    const { title, title_rw, description, description_rw, image_url, trade_code, sort_order } = req.body;
+    const [result] = await pool.execute(`
+      INSERT INTO carousel_slides (title, title_rw, description, description_rw, image_url, trade_code, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, true)
+    `, [title, title_rw, description, description_rw, image_url, trade_code, sort_order || 0]);
+    res.json({ success: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update slide (Admin only)
+router.put('/slides/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, title_rw, description, description_rw, image_url, trade_code, sort_order, is_active } = req.body;
+    await pool.execute(`
+      UPDATE carousel_slides 
+      SET title = ?, title_rw = ?, description = ?, description_rw = ?, image_url = ?, trade_code = ?, sort_order = ?, is_active = ?
+      WHERE id = ?
+    `, [title, title_rw, description, description_rw, image_url, trade_code, sort_order, is_active, req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete slide (Admin only)
+router.delete('/slides/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM carousel_slides WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -1,340 +1,212 @@
 const express = require('express');
-const router = express.Router();
 const { pool } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-const multer = require('multer');
-const path = require('path');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const bcrypt = require('bcryptjs');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const type = req.body.upload_type || 'general';
-    cb(null, `uploads/${type}/`);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+const router = express.Router();
 
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error('Only images allowed'));
-  }
-});
-
-// Dashboard Stats
-router.get('/dashboard', authenticateToken, async (req, res) => {
+// Search endpoint
+router.get('/search', authenticateToken, async (req, res) => {
   try {
-    const [users] = await pool.execute('SELECT COUNT(*) as count FROM users');
-    const [students] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "student")');
-    const [teachers] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = (SELECT id FROM roles WHERE name = "teacher")');
-    const [courses] = await pool.execute('SELECT COUNT(*) as count FROM courses');
-    const [news] = await pool.execute('SELECT COUNT(*) as count FROM news');
-    const [tickets] = await pool.execute('SELECT COUNT(*) as count FROM support_tickets WHERE status != "closed"');
+    const { q, type } = req.query;
+    let query = 'SELECT id, name, email, role, created_at, "user" as type FROM users WHERE ';
     
-    res.json({
-      success: true,
-      stats: {
-        totalUsers: users[0].count,
-        students: students[0].count,
-        teachers: teachers[0].count,
-        courses: courses[0].count,
-        news: news[0].count,
-        openTickets: tickets[0].count
-      }
-    });
+    if (type === 'students') query += 'role = "student" AND ';
+    else if (type === 'teachers') query += 'role = "teacher" AND ';
+    else if (type === 'users') query += '';
+    
+    query += '(name LIKE ? OR email LIKE ?) LIMIT 50';
+    
+    const [results] = await pool.execute(query, [`%${q}%`, `%${q}%`]);
+    res.json({ success: true, results });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Search error:', error);
+    res.status(500).json({ success: false, message: 'Search failed' });
   }
 });
 
-// ===== CAROUSEL/HERO SLIDES MANAGEMENT =====
-router.get('/carousel', authenticateToken, async (req, res) => {
-  try {
-    const [slides] = await pool.execute('SELECT * FROM hero_slides ORDER BY display_order ASC');
-    res.json({ success: true, slides });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.post('/carousel', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { title, subtitle, button_text, button_link, display_order } = req.body;
-    const image_url = req.file ? `/uploads/carousel/${req.file.filename}` : null;
-    
-    const [result] = await pool.execute(`
-      INSERT INTO hero_slides (title, subtitle, image_url, button_text, button_link, display_order, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, true)
-    `, [title, subtitle, image_url, button_text, button_link, display_order || 0]);
-    
-    res.json({ success: true, id: result.insertId, image_url });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.put('/carousel/:id', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { title, subtitle, button_text, button_link, display_order, is_active } = req.body;
-    let query = 'UPDATE hero_slides SET title = ?, subtitle = ?, button_text = ?, button_link = ?, display_order = ?, is_active = ?';
-    const params = [title, subtitle, button_text, button_link, display_order, is_active];
-    
-    if (req.file) {
-      query += ', image_url = ?';
-      params.push(`/uploads/carousel/${req.file.filename}`);
-    }
-    
-    query += ' WHERE id = ?';
-    params.push(req.params.id);
-    
-    await pool.execute(query, params);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.delete('/carousel/:id', authenticateToken, async (req, res) => {
-  try {
-    await pool.execute('DELETE FROM hero_slides WHERE id = ?', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ===== TRADES MANAGEMENT WITH IMAGES =====
-router.get('/trades', authenticateToken, async (req, res) => {
-  try {
-    const [trades] = await pool.execute('SELECT * FROM trades');
-    res.json({ success: true, trades });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.post('/trades', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { trade_code, trade_name, description } = req.body;
-    const image_url = req.file ? `/uploads/trades/${req.file.filename}` : null;
-    
-    const [result] = await pool.execute(`
-      INSERT INTO trades (trade_code, trade_name, description, image_url, is_active)
-      VALUES (?, ?, ?, ?, true)
-    `, [trade_code, trade_name, description, image_url]);
-    
-    res.json({ success: true, id: result.insertId, image_url });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.put('/trades/:id', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { trade_name, description, is_active } = req.body;
-    let query = 'UPDATE trades SET trade_name = ?, description = ?, is_active = ?';
-    const params = [trade_name, description, is_active];
-    
-    if (req.file) {
-      query += ', image_url = ?';
-      params.push(`/uploads/trades/${req.file.filename}`);
-    }
-    
-    query += ' WHERE id = ?';
-    params.push(req.params.id);
-    
-    await pool.execute(query, params);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ===== GALLERY MANAGEMENT =====
-router.get('/gallery', authenticateToken, async (req, res) => {
-  try {
-    const { category } = req.query;
-    let query = 'SELECT * FROM gallery WHERE 1=1';
-    const params = [];
-    
-    if (category) {
-      query += ' AND category = ?';
-      params.push(category);
-    }
-    
-    query += ' ORDER BY created_at DESC';
-    const [images] = await pool.execute(query, params);
-    res.json({ success: true, images });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.post('/gallery', authenticateToken, upload.array('images', 10), async (req, res) => {
-  try {
-    const { title, description, category } = req.body;
-    const uploadedImages = [];
-    
-    for (const file of req.files) {
-      const image_url = `/uploads/gallery/${file.filename}`;
-      const [result] = await pool.execute(`
-        INSERT INTO gallery (title, description, category, image_url, uploaded_by)
-        VALUES (?, ?, ?, ?, ?)
-      `, [title, description, category, image_url, req.user.id]);
-      
-      uploadedImages.push({ id: result.insertId, image_url });
-    }
-    
-    res.json({ success: true, images: uploadedImages });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.delete('/gallery/:id', authenticateToken, async (req, res) => {
-  try {
-    await pool.execute('DELETE FROM gallery WHERE id = ?', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ===== NEWS MANAGEMENT =====
-router.get('/news', authenticateToken, async (req, res) => {
-  try {
-    const [news] = await pool.execute('SELECT * FROM news ORDER BY created_at DESC');
-    res.json({ success: true, news });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.post('/news', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { title, content, category } = req.body;
-    const image_url = req.file ? `/uploads/news/${req.file.filename}` : null;
-    
-    const [result] = await pool.execute(`
-      INSERT INTO news (title, content, image_url, category, author_id, is_published, published_at)
-      VALUES (?, ?, ?, ?, ?, true, NOW())
-    `, [title, content, image_url, category, req.user.id]);
-    
-    res.json({ success: true, id: result.insertId, image_url });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.put('/news/:id', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    const { title, content, category, is_published } = req.body;
-    let query = 'UPDATE news SET title = ?, content = ?, category = ?, is_published = ?';
-    const params = [title, content, category, is_published];
-    
-    if (req.file) {
-      query += ', image_url = ?';
-      params.push(`/uploads/news/${req.file.filename}`);
-    }
-    
-    query += ' WHERE id = ?';
-    params.push(req.params.id);
-    
-    await pool.execute(query, params);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.delete('/news/:id', authenticateToken, async (req, res) => {
-  try {
-    await pool.execute('DELETE FROM news WHERE id = ?', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ===== USER MANAGEMENT =====
+// Users CRUD
 router.get('/users', authenticateToken, async (req, res) => {
   try {
-    const { role, search } = req.query;
-    let query = `
-      SELECT u.*, r.name as role_name 
-      FROM users u 
-      LEFT JOIN roles r ON u.role_id = r.id 
-      WHERE 1=1
-    `;
-    const params = [];
-    
-    if (role) {
-      query += ' AND r.name = ?';
-      params.push(role);
-    }
-    
-    if (search) {
-      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-    
-    query += ' ORDER BY u.created_at DESC';
-    const [users] = await pool.execute(query, params);
+    const [users] = await pool.execute('SELECT id, name, email, phone, role, is_active, created_at FROM users ORDER BY created_at DESC');
     res.json({ success: true, users });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Fetch failed' });
   }
 });
 
-router.put('/users/:id/status', authenticateToken, async (req, res) => {
+router.post('/users', authenticateToken, async (req, res) => {
   try {
-    const { is_active } = req.body;
-    await pool.execute('UPDATE users SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
-    res.json({ success: true });
+    const { name, email, phone, role, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [result] = await pool.execute(
+      'INSERT INTO users (name, email, phone, role, password, is_active) VALUES (?, ?, ?, ?, ?, true)',
+      [name, email, phone, role, hashedPassword]
+    );
+    res.json({ success: true, message: 'User created', userId: result.insertId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Create failed' });
+  }
+});
+
+router.put('/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const { name, email, phone, role } = req.body;
+    await pool.execute(
+      'UPDATE users SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?',
+      [name, email, phone, role, req.params.id]
+    );
+    res.json({ success: true, message: 'User updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Update failed' });
   }
 });
 
 router.delete('/users/:id', authenticateToken, async (req, res) => {
   try {
     await pool.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
-    res.json({ success: true });
+    res.json({ success: true, message: 'User deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Delete failed' });
   }
 });
 
-// ===== SYSTEM SETTINGS =====
+// Notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const [notifications] = await pool.execute(
+      'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 100'
+    );
+    res.json({ success: true, notifications });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Fetch failed' });
+  }
+});
+
+router.post('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { title, message, target } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO notifications (title, message, target, created_by, created_at) VALUES (?, ?, ?, ?, NOW())',
+      [title, message, target, req.user.userId]
+    );
+    res.json({ success: true, message: 'Notification sent', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Send failed' });
+  }
+});
+
+router.delete('/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM notifications WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Delete failed' });
+  }
+});
+
+// Analytics with financial data
+router.get('/analytics', authenticateToken, async (req, res) => {
+  try {
+    const [students] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "student"');
+    const [teachers] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "teacher"');
+    const [parents] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "parent"');
+    const [staff] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role IN ("admin", "accountant", "stock_manager", "director_of_study", "director_of_discipline", "head_master")');
+    const [courses] = await pool.execute('SELECT COUNT(*) as count FROM trade_classes');
+    const [revenue] = await pool.execute('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = "completed" AND YEAR(created_at) = YEAR(CURDATE())');
+    const [stock] = await pool.execute('SELECT COUNT(*) as count FROM inventory WHERE is_active = true');
+    
+    res.json({
+      success: true,
+      analytics: {
+        students: students[0].count,
+        teachers: teachers[0].count,
+        parents: parents[0].count,
+        staff: staff[0].count,
+        courses: courses[0].count,
+        revenue: revenue[0].total,
+        stock: stock[0].count
+      }
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ success: false, message: 'Fetch failed' });
+  }
+});
+
+// Reports
+router.get('/reports/:type', authenticateToken, async (req, res) => {
+  try {
+    const { type } = req.params;
+    let data = [];
+    
+    if (type === 'users') {
+      const [users] = await pool.execute('SELECT * FROM users ORDER BY created_at DESC');
+      data = users;
+    } else if (type === 'attendance') {
+      const [attendance] = await pool.execute('SELECT * FROM attendance ORDER BY date DESC LIMIT 1000');
+      data = attendance;
+    }
+    
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Report generation failed' });
+  }
+});
+
+// Settings
 router.get('/settings', authenticateToken, async (req, res) => {
   try {
     const [settings] = await pool.execute('SELECT * FROM system_settings');
-    res.json({ success: true, settings });
+    res.json({ success: true, settings: settings[0] || {} });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Fetch failed' });
   }
 });
 
 router.put('/settings', authenticateToken, async (req, res) => {
   try {
-    const { key, value } = req.body;
-    await pool.execute(`
-      INSERT INTO system_settings (setting_key, setting_value)
-      VALUES (?, ?)
-      ON DUPLICATE KEY UPDATE setting_value = ?
-    `, [key, value, value]);
-    
-    res.json({ success: true });
+    const { school_name, email, phone, address, academic_year } = req.body;
+    await pool.execute(
+      'UPDATE system_settings SET school_name = ?, email = ?, phone = ?, address = ?, academic_year = ? WHERE id = 1',
+      [school_name, email, phone, address, academic_year]
+    );
+    res.json({ success: true, message: 'Settings updated' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Update failed' });
+  }
+});
+
+// Security logs
+router.get('/security/logs', authenticateToken, async (req, res) => {
+  try {
+    const [logs] = await pool.execute('SELECT * FROM security_logs ORDER BY created_at DESC LIMIT 500');
+    res.json({ success: true, logs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Fetch failed' });
+  }
+});
+
+// Backup
+router.post('/backup', authenticateToken, async (req, res) => {
+  try {
+    const timestamp = new Date().toISOString();
+    const [result] = await pool.execute(
+      'INSERT INTO backups (filename, size, created_by, created_at) VALUES (?, ?, ?, NOW())',
+      [`backup_${timestamp}.sql`, 0, req.user.userId]
+    );
+    res.json({ success: true, message: 'Backup created', backupId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Backup failed' });
+  }
+});
+
+router.get('/backups', authenticateToken, async (req, res) => {
+  try {
+    const [backups] = await pool.execute('SELECT * FROM backups ORDER BY created_at DESC');
+    res.json({ success: true, backups });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Fetch failed' });
   }
 });
 

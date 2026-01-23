@@ -5,7 +5,7 @@ import { useAuth, UserRole } from '@/app/contexts/AuthContext';
 import { 
   Lock, Mail, ChevronRight, Sparkles, Eye, EyeOff, ArrowLeft,
   GraduationCap, Users, BookOpen, Shield, School, DollarSign, 
-  Package, Settings, User, Loader2, CheckCircle2, AlertCircle, KeyRound, X
+  Package, Settings, User, Loader2, CheckCircle2, AlertCircle, KeyRound, X, Phone
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -109,20 +109,46 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     setIsLoading(true);
 
     try {
-      const result = await loginWithRole(selectedRole, {
-        email: email || UNIFIED_EMAIL,
-        password: password || UNIFIED_PASSWORD
+      let endpoint = 'http://localhost:5000/api/auth/login';
+      let loginData: any = {};
+
+      if (selectedRole === 'parent') {
+        endpoint = 'http://localhost:5000/api/auth/login/parent';
+        loginData = {
+          phone: email,
+          password: password
+        };
+      } else {
+        loginData = {
+          username: email,
+          password: password
+        };
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(loginData)
       });
 
-      if (result.success) {
+      const data = await response.json();
+
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('userRole', selectedRole);
+        
         setSuccess(language === 'rw' ? 'Kwinjira byagenze neza! Gutegereza...' : 'Login successful! Redirecting...');
         setTimeout(() => {
-          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
+          onNavigate(getRoleDashboard(selectedRole));
         }, 1500);
       } else {
-        setError(language === 'rw' ? 'Email cyangwa ijambo ry\'ibanga sibyo' : 'Invalid email or password');
+        setError(language === 'rw' ? 'Amakuru yinjijwe ntabwo ari yo' : data.message || 'Invalid credentials');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError(language === 'rw' ? 'Hari ikibazo. Ongera ugerageze.' : 'Network error. Please try again.');
     } finally {
       setIsLoading(false);
@@ -138,20 +164,40 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     setError('');
     
     try {
-      const result = await loginWithRole(selectedRole, {
-        email: UNIFIED_EMAIL,
+      const loginData = {
+        username: UNIFIED_EMAIL,
         password: UNIFIED_PASSWORD
+      };
+
+      let endpoint = 'http://localhost:5000/api/auth/login';
+      if (selectedRole === 'parent') {
+        endpoint = 'http://localhost:5000/api/auth/login/parent';
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(loginData)
       });
 
-      if (result.success) {
+      const data = await response.json();
+
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('userRole', selectedRole);
+        
         setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
         setTimeout(() => {
-          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
+          onNavigate(getRoleDashboard(selectedRole));
         }, 1000);
       } else {
-        setError(language === 'rw' ? 'Kwinjira byanze' : 'Login failed');
+        setError(language === 'rw' ? 'Kwinjira byanze' : data.message || 'Login failed');
       }
     } catch (err) {
+      console.error('Quick login error:', err);
       setError(language === 'rw' ? 'Hari ikibazo' : 'Error occurred');
     } finally {
       setIsLoading(false);
@@ -203,7 +249,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50/30 to-yellow-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
@@ -245,7 +291,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               exit={{ opacity: 0, scale: 0.95, x: -50 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto">
                 {PUBLIC_ROLES.map((role, index) => renderRoleCard(role, index))}
               </div>
 
@@ -321,7 +367,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
                 </Button>
               </motion.div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                 {MANAGEMENT_ROLES.map((role, index) => renderRoleCard(role, index))}
               </div>
             </motion.div>
@@ -335,7 +381,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3 }}
-              className="max-w-md mx-auto"
+              className="max-w-sm mx-auto"
             >
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -371,13 +417,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
                 <p className="text-gray-500 text-sm">{selectedRoleData.description}</p>
               </motion.div>
 
-              <Card className="border-2 border-yellow-200 shadow-xl overflow-hidden">
-                <CardHeader className={`bg-gradient-to-r ${selectedRoleData.bgGradient} pb-4`}>
-                  <CardTitle className="text-center text-lg text-gray-800">
+              <Card className="border-2 border-yellow-200 shadow-2xl overflow-hidden backdrop-blur-sm bg-white/95">
+                <CardHeader className={`bg-gradient-to-r ${selectedRoleData.bgGradient} pb-3 pt-4`}>
+                  <CardTitle className="text-center text-base font-bold text-gray-800">
                     {language === 'rw' ? 'Kwinjira mu Sisitemu' : 'Login to Dashboard'}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-5">
                   <AnimatePresence mode="wait">
                     {error && (
                       <motion.div
@@ -407,105 +453,121 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
                     )}
                   </AnimatePresence>
 
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-gray-700 font-medium">
-                        {language === 'rw' ? 'Aderesi ya Email' : 'Email Address'}
+                  <form onSubmit={handleLogin} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-gray-700 font-medium text-sm">
+                        {selectedRole === 'parent' 
+                          ? (language === 'rw' ? 'Nimero ya Telefoni' : 'Phone Number')
+                          : (language === 'rw' ? 'Aderesi ya Email' : 'Email Address')
+                        }
                       </Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        {selectedRole === 'parent' ? (
+                          <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        ) : (
+                          <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        )}
                         <Input
                           id="email"
-                          type="email"
+                          type={selectedRole === 'parent' ? 'tel' : 'email'}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder={UNIFIED_EMAIL}
-                          className="pl-10 h-12 border-2 border-gray-200 focus:border-yellow-400 transition-colors"
+                          placeholder={selectedRole === 'parent' ? '0788123456' : UNIFIED_EMAIL}
+                          className="pl-9 h-10 border-2 border-gray-200 focus:border-yellow-400 transition-colors text-sm rounded-lg"
+                          required
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-gray-700 font-medium">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password" className="text-gray-700 font-medium text-sm">
                         {language === 'rw' ? "Ijambo ry'ibanga" : 'Password'}
                       </Label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                           id="password"
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="pl-10 pr-10 h-12 border-2 border-gray-200 focus:border-yellow-400 transition-colors"
+                          className="pl-9 pr-9 h-10 border-2 border-gray-200 focus:border-yellow-400 transition-colors text-sm rounded-lg"
                         />
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </motion.button>
                       </div>
                     </div>
 
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className={`w-full h-12 bg-gradient-to-r ${selectedRoleData.color} text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-70`}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          {language === 'rw' ? 'Gutegereza...' : 'Logging in...'}
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-5 h-5 mr-2" />
-                          {language === 'rw' ? 'Injira' : 'Login'}
-                        </>
-                      )}
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className={`w-full h-11 bg-gradient-to-r ${selectedRoleData.color} text-white font-bold text-base shadow-lg hover:shadow-xl transition-all disabled:opacity-70 rounded-lg mt-4`}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {language === 'rw' ? 'Gutegereza...' : 'Logging in...'}
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4 mr-2" />
+                            {language === 'rw' ? 'Injira' : 'Login'}
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
                   </form>
 
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleQuickLogin}
-                      disabled={isLoading}
-                      className="w-full h-10 border-2 border-green-400 text-green-700 hover:bg-green-50 font-semibold"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      {language === 'rw' ? 'Kwinjira Vuba' : 'Quick Login'}
-                    </Button>
-                    <p className="text-xs text-center text-gray-500 mt-2">
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleQuickLogin}
+                        disabled={isLoading}
+                        className="w-full h-9 border-2 border-green-400 text-green-700 hover:bg-green-50 font-semibold text-sm rounded-lg"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                        {language === 'rw' ? 'Kwinjira Vuba' : 'Quick Login'}
+                      </Button>
+                    </motion.div>
+                    <p className="text-xs text-center text-gray-500 mt-1.5">
                       {language === 'rw' ? 'Koresha amazina y\'ibanze' : 'Use default credentials'}
                     </p>
                   </div>
 
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 font-medium mb-2">
+                  <div className="mt-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1.5">
                       {language === 'rw' ? 'Amazina y\'ibanze:' : 'Default Credentials:'}
                     </p>
-                    <div className="flex items-center justify-between text-sm mb-1">
+                    <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-gray-500">Email:</span>
-                      <code className="bg-gray-200 px-2 py-1 rounded text-gray-700 text-xs">{UNIFIED_EMAIL}</code>
+                      <code className="bg-white px-2 py-0.5 rounded text-gray-700 text-xs font-mono">{UNIFIED_EMAIL}</code>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-500">Password:</span>
-                      <code className="bg-gray-200 px-2 py-1 rounded text-gray-700 text-xs">{UNIFIED_PASSWORD}</code>
+                      <code className="bg-white px-2 py-0.5 rounded text-gray-700 text-xs font-mono">{UNIFIED_PASSWORD}</code>
                     </div>
                   </div>
 
-                  <p className="text-center text-sm text-gray-500 mt-4">
+                  <p className="text-center text-xs text-gray-500 mt-3">
                     {language === 'rw' ? "Nta konti ufite?" : "Don't have an account?"}{' '}
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => onNavigate('register')}
-                      className="text-green-600 hover:text-green-700 font-semibold hover:underline"
+                      className="text-green-600 hover:text-green-700 font-bold hover:underline"
                     >
                       {language === 'rw' ? 'Iyandikishe' : 'Register'}
-                    </button>
+                    </motion.button>
                   </p>
                 </CardContent>
               </Card>

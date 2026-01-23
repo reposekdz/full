@@ -186,10 +186,51 @@ class ApiService {
 
   // Parent Management
   async registerParent(parentData: any) {
-    return this.request('/parents/register', {
+    const response = await fetch(`${API_BASE}/auth/register/parent`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(parentData)
     });
+    const data = await response.json();
+    if (data.success && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    return data;
+  }
+
+  async registerStudent(studentData: any) {
+    const response = await fetch(`${API_BASE}/auth/register/student`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(studentData)
+    });
+    const data = await response.json();
+    if (data.success && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    return data;
+  }
+
+  async getAvailableTrades() {
+    const response = await fetch(`${API_BASE}/auth/registration/trades`);
+    return response.json();
+  }
+
+  async checkEmailAvailability(email: string) {
+    const response = await fetch(`${API_BASE}/auth/check-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    });
+    return response.json();
   }
 
   async getParentChildren() {
@@ -636,6 +677,17 @@ class ApiService {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
+  }
+
+  async request(endpoint: string, options: any = {}) {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        ...this.getAuthHeaders(),
+        ...options.headers
+      }
+    });
+    return response.json();
   }
 }
 

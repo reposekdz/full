@@ -97,12 +97,12 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate, onLo
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-14 w-14 border-2 border-yellow-400">
                     <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-xl font-bold">
-                      {user.name.charAt(0)}
+                      {user?.name?.charAt(0) || user?.first_name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 truncate">{user.name}</p>
-                    <p className="text-xs text-gray-600 capitalize">{user.role.replace('_', ' ')}</p>
+                    <p className="font-bold text-gray-900 truncate">{user?.name || user?.first_name || 'User'}</p>
+                    <p className="text-xs text-gray-600 capitalize">{user?.role?.replace('_', ' ') || 'User'}</p>
                     <Badge className="mt-1 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs">
                       Active
                     </Badge>

@@ -518,10 +518,9 @@ router.get('/registration/trades', async (req, res) => {
         tl.full_name,
         tl.description,
         tl.capacity,
-        COUNT(tc.id) as class_count,
-        SUM(tc.current_enrollment) as total_students
+        COUNT(tc.id) as class_count
       FROM trade_levels tl
-      LEFT JOIN trade_classes tc ON tl.id = tc.trade_level_id AND tc.is_active = true
+      LEFT JOIN trade_classes tc ON tl.id = tc.id
       WHERE tl.is_active = true
       GROUP BY tl.id
       ORDER BY tl.trade_code, tl.level_number, tl.level_suffix
@@ -1105,10 +1104,9 @@ router.post('/register/parent-phone', [
 
     const [result] = await pool.execute(`
       INSERT INTO users (
-        username, email, password_hash, first_name, last_name, 
-        phone, address, role_id, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
-    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, address, parentRole[0].id]);
+        name, email, password, phone, role, is_active
+      ) VALUES (?, ?, ?, ?, 'parent', true)
+    `, [`${first_name} ${last_name}`, parentEmail, hashedPassword, phone]);
 
     const token = jwt.sign(
       { userId: result.insertId, username, role: 'parent' },

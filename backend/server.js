@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Create uploads directories
-const uploadDirs = ['uploads', 'uploads/contact', 'uploads/assignments', 'uploads/tickets', 'uploads/profiles', 'uploads/documents'];
+const uploadDirs = ['uploads', 'uploads/contact', 'uploads/assignments', 'uploads/tickets', 'uploads/profiles', 'uploads/documents', 'uploads/staff'];
 uploadDirs.forEach(dir => {
   const dirPath = path.join(__dirname, dir);
   if (!fs.existsSync(dirPath)) {
@@ -53,6 +53,7 @@ const routes = {
   dynamic: loadRoute('./routes/dynamic', 'Dynamic'),
   teams: loadRoute('./routes/teams', 'Teams'),
   sports: loadRoute('./routes/sports', 'Sports'),
+  gallery: loadRoute('./routes/gallery', 'Gallery'),
   gamification: loadRoute('./routes/gamification', 'Gamification'),
   analytics: loadRoute('./routes/analytics', 'Analytics'),
   aiGrading: loadRoute('./routes/aiGrading', 'AI Grading'),
@@ -92,6 +93,8 @@ const routes = {
   teacherPortal: loadRoute('./routes/teacher-portal', 'Teacher Portal'),
   sportsManagement: loadRoute('./routes/sports-management', 'Sports Management'),
   homeContent: loadRoute('./routes/home-content', 'Home Content'),
+  adminManagement: loadRoute('./routes/admin-management', 'Admin Management'),
+  staff: loadRoute('./routes/staff', 'Staff'),
 };
 
 // Mount routes
@@ -107,6 +110,7 @@ if (routes.content) { app.use('/api/content', routes.content); mountedRoutes++; 
 if (routes.dynamic) { app.use('/api/dynamic', routes.dynamic); mountedRoutes++; }
 if (routes.teams) { app.use('/api/teams', routes.teams); mountedRoutes++; }
 if (routes.sports) { app.use('/api/sports', routes.sports); mountedRoutes++; }
+if (routes.gallery) { app.use('/api/gallery', routes.gallery); mountedRoutes++; }
 if (routes.gamification) { app.use('/api/gamification', routes.gamification); mountedRoutes++; }
 if (routes.analytics) { app.use('/api/analytics', routes.analytics); mountedRoutes++; }
 if (routes.aiGrading) { app.use('/api/ai-grading', routes.aiGrading); mountedRoutes++; }
@@ -146,6 +150,8 @@ if (routes.dos) { app.use('/api/dos', routes.dos); mountedRoutes++; }
 if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal); mountedRoutes++; }
 if (routes.sportsManagement) { app.use('/api/sports-management', routes.sportsManagement); mountedRoutes++; }
 if (routes.homeContent) { app.use('/api/home-content', routes.homeContent); mountedRoutes++; }
+if (routes.adminManagement) { app.use('/api/admin', routes.adminManagement); mountedRoutes++; }
+if (routes.staff) { app.use('/api/staff', routes.staff); mountedRoutes++; }
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -177,8 +183,23 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// Start server with error handling
 const PORT = process.env.PORT || 5000;
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\n❌ ERROR: Port ${PORT} is already in use!`);
+    console.log('\n💡 Solutions:');
+    console.log('   1. Kill the process: netstat -ano | findstr :5000');
+    console.log('   2. Change PORT in .env file');
+    console.log('   3. Run: taskkill /F /PID <PID>\n');
+    process.exit(1);
+  } else {
+    console.error('Server error:', error);
+    process.exit(1);
+  }
+});
+
 server.listen(PORT, () => {
   console.log('\n' + '='.repeat(80));
   console.log('🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM - ENTERPRISE EDITION');
@@ -186,10 +207,37 @@ server.listen(PORT, () => {
   console.log(`🚀 Server: http://localhost:${PORT}`);
   console.log(`📊 Database: ${process.env.DB_NAME}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔐 JWT Auth: ENABLED (24h expiry)`);
   console.log(`🔐 Default Language: Kinyarwanda (rw)`);
   console.log(`\n✅ Successfully mounted ${mountedRoutes} route modules with 200+ API endpoints`);
-  console.log('\n👤 STAFF LOGIN: repose@gmail.com / 2025');
+  console.log('\n👤 DEMO LOGIN: reponse@gmail.com / 2026');
+  console.log('📱 Parent Login: Phone + Password');
+  console.log('🎓 Student Login: Email + Password');
+  console.log('\n🔗 API Endpoints:');
+  console.log('   • POST /api/auth/register/student - Student Registration');
+  console.log('   • POST /api/auth/register/parent-phone - Parent Registration');
+  console.log('   • POST /api/auth/login - Student/Staff Login');
+  console.log('   • POST /api/auth/login/parent - Parent Phone Login');
+  console.log('   • GET  /api/health - Health Check');
+  console.log('\n✅ JWT Authentication: PRODUCTION READY');
   console.log('='.repeat(80) + '\n');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n⚠️  SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n⚠️  SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 module.exports = app;

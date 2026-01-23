@@ -1,0 +1,10 @@
+export { default as ProfilePage } from './ProfilePage';
+export { default as SearchPage } from './SearchPage';
+export { default as NotificationsPage } from './NotificationsPage';
+export { default as UsersManagementPage } from './UsersManagementPage';
+export { default as AnalyticsPage } from './AnalyticsPage';
+export { default as ReportsPage } from './ReportsPage';
+export { default as SettingsPage } from './SettingsPage';
+export { default as SecurityPage } from './SecurityPage';
+export { default as BackupPage } from './BackupPage';
+export { default as LogsPage } from './LogsPage';

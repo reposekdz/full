@@ -12,7 +12,9 @@ import ContactPage from '@/app/pages/ContactPage';
 import SupportsPage from '@/app/pages/SupportsPage';
 import TeamsPage from '@/app/pages/TeamsPage';
 import LoginPage from '@/app/pages/LoginPage';
+import ModernLoginPage from '@/app/pages/ModernLoginPage';
 import RegisterPage from '@/app/pages/RegisterPage';
+import ModernRegisterPage from '@/app/pages/ModernRegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import RoleLoginPage from '@/app/pages/RoleLoginPage';
@@ -25,6 +27,10 @@ import TradeDetailPage from '@/app/pages/TradeDetailPage';
 import FootballPage from '@/app/pages/sports/FootballPage';
 import VolleyballPage from '@/app/pages/sports/VolleyballPage';
 import BasketballPage from '@/app/pages/sports/BasketballPage';
+import FootballDetailPage from '@/app/pages/FootballDetailPage';
+import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
+import NewsPage from '@/app/pages/NewsPage';
+import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import EnhancedAdminDashboard from '@/app/pages/dashboards/EnhancedAdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
@@ -122,11 +128,16 @@ const AppContent: React.FC = () => {
       case 'trade-aut':
         return <AUTTradePage onNavigate={handleNavigate} />;
       case 'sport-football':
-        return <FootballPage onNavigate={handleNavigate} />;
+        return <FootballDetailPage onNavigate={handleNavigate} />;
       case 'sport-volleyball':
-        return <VolleyballPage onNavigate={handleNavigate} />;
+        return <VolleyballDetailPage onNavigate={handleNavigate} />;
       case 'sport-basketball':
         return <BasketballPage onNavigate={handleNavigate} />;
+      case 'news':
+        return <NewsPage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('news/') ? currentPage : '':
+        const newsId = currentPage.split('/')[1];
+        return <NewsDetailPage newsId={newsId} onNavigate={handleNavigate} />;
       case 'sport-athletics':
         return <SportsPage onNavigate={handleNavigate} />;
       case 'sport-handball':
@@ -140,9 +151,9 @@ const AppContent: React.FC = () => {
       case 'teams':
         return <TeamsPage onNavigate={handleNavigate} />;
       case 'login':
-        return <LoginPage onNavigate={handleNavigate} />;
+        return <ModernLoginPage onNavigate={handleNavigate} />;
       case 'register':
-        return <RegisterPage onNavigate={handleNavigate} />;
+        return <ModernRegisterPage onNavigate={handleNavigate} />;
       case 'role-selection':
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       case 'role-login':

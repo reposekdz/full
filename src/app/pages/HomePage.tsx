@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Hero from '@/app/components/Hero';
+import CampusGallerySection from '@/app/components/CampusGallerySection';
 import { motion } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { 
@@ -561,10 +562,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             className="text-center mb-6 sm:mb-8 md:mb-12"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 sm:mb-4 bg-gradient-to-r from-[#ADFF2F] via-teal-600 to-blue-600 bg-clip-text text-transparent px-2">
-              Imibare Yacu
+              Ishuri ry'Imyuga n'Ubumenyi Ngiro
             </h2>
             <p className="text-gray-600 text-sm sm:text-base md:text-lg px-4">
-              Ishuri ry\'ubuhanga rifite imikorere myiza kandi ryizera
+              Ishuri ry'ubuhanga rifite imikorere myiza kandi ryizera
             </p>
           </motion.div>
 
@@ -804,6 +805,9 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+
+      {/* Campus Gallery Section */}
+      <CampusGallerySection />
 
       {/* Dual Portal Section */}
       <section className="py-16 bg-gradient-to-br from-gray-50 to-gray-100">

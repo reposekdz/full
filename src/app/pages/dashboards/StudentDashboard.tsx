@@ -41,6 +41,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import StaffManagementPage from '../StaffManagementPage';
 
 interface StudentDashboardProps {
   onNavigate: (page: string) => void;
@@ -49,6 +50,27 @@ interface StudentDashboardProps {
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  const handleNavigation = (page: string) => {
+    if (page === 'staff-management') {
+      setCurrentView('staff-management');
+    } else {
+      setCurrentView('dashboard');
+      onNavigate(page);
+    }
+  };
+
+  if (currentView === 'staff-management') {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-gray-50 via-yellow-50/30 to-green-50/30 overflow-hidden">
+        <AdvancedLeftSidebar currentPage="staff-management" onNavigate={handleNavigation} onLogout={onLogout} />
+        <div className="flex-1 overflow-auto">
+          <StaffManagementPage />
+        </div>
+      </div>
+    );
+  }
 
   const stats = [
     {
@@ -402,7 +424,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-yellow-50/30 to-green-50/30 overflow-hidden">
-      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
+      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={handleNavigation} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-gradient-to-r from-yellow-500 via-green-500 to-teal-500 text-white shadow-xl">

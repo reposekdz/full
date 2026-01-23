@@ -7,6 +7,9 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Card, CardContent } from '@/app/components/ui/card';
+import sodSlide from '@/assets/image slides/SOD slides.png';
+import bdcSlide from '@/assets/image slides/BDC slides.jpg';
+import autSlide from '@/assets/image slides/AUT slides.png';
 
 interface HeroProps {
   onNavigate?: (page: string) => void;
@@ -19,7 +22,7 @@ const skillCards = [
     titleRw: 'Iterambere rya Porogaramu',
     code: 'SOD',
     icon: Code,
-    image: 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2Z0d2FyZSUyMGRldmVsb3BtZW50JTIwY29kaW5nfGVufDF8fHx8MTc2ODcxODI3MXww&ixlib=rb-4.1.0&q=80&w=1080',
+    image: sodSlide,
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',
     glowColor: 'shadow-blue-500/50',
     bgGradient: 'from-blue-500/20 to-indigo-500/20',
@@ -36,7 +39,7 @@ const skillCards = [
     titleRw: 'Ubwubatsi bw\'Inyubako',
     code: 'BDC',
     icon: Building2,
-    image: 'https://images.unsplash.com/photo-1672072830247-85ac23671e96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBidWlsZGluZyUyMHNpdGV8ZW58MXx8fHwxNzY4NzMwNzQ0fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    image: bdcSlide,
     gradient: 'from-orange-500 via-amber-500 to-yellow-500',
     glowColor: 'shadow-orange-500/50',
     bgGradient: 'from-orange-500/20 to-amber-500/20',
@@ -53,7 +56,7 @@ const skillCards = [
     titleRw: 'Ikoranabuhanga ry\'Imodoka',
     code: 'AUTO',
     icon: Car,
-    image: 'https://images.unsplash.com/photo-1636761358757-0a616eb9e17e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdXRvbW9iaWxlJTIwbWVjaGFuaWMlMjB3b3Jrc2hvcHxlbnwxfHx8fDE3Njg4MDYyMTl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    image: autSlide,
     gradient: 'from-green-500 via-emerald-500 to-teal-500',
     glowColor: 'shadow-green-500/50',
     bgGradient: 'from-green-500/20 to-emerald-500/20',
@@ -70,19 +73,47 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [apiSlides, setApiSlides] = useState<any[]>([]);
   const { t, language } = useLanguage();
-  const { slides, loading } = useContent();
+  const { slides: contextSlides, loading: contextLoading } = useContent();
+
+  const defaultSlides = [
+    { id: 1, title: 'Software Development', title_rw: 'Iterambere rya Porogaramu', image_url: sodSlide, trade_code: 'SOD' },
+    { id: 2, title: 'Building Construction', title_rw: 'Ubwubatsi bw\'Inyubako', image_url: bdcSlide, trade_code: 'BDC' },
+    { id: 3, title: 'Automobile Technology', title_rw: 'Ikoranabuhanga ry\'Imodoka', image_url: autSlide, trade_code: 'AUT' }
+  ];
+
+  const slides = apiSlides.length > 0 ? apiSlides : (contextSlides.length > 0 ? contextSlides : defaultSlides);
+  const loading = contextLoading && apiSlides.length === 0;
+
+  useEffect(() => {
+    const fetchSlides = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/content/slides');
+        const data = await response.json();
+        if (data.success && data.slides && data.slides.length > 0) {
+          setApiSlides(data.slides.map((s: any) => ({
+            ...s,
+            image_url: s.image_url?.startsWith('/uploads') ? `http://localhost:5000${s.image_url}` : s.image_url
+          })));
+        }
+      } catch (error) {
+        console.log('Using default slides');
+      }
+    };
+    fetchSlides();
+  }, []);
 
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % Math.max(slides.length, 1));
+      setCurrentSlide((prev) => (prev + 1) % defaultSlides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPlaying, slides.length]);
+  }, [isPlaying]);
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % Math.max(slides.length, 1));
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + Math.max(slides.length, 1)) % Math.max(slides.length, 1));
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % defaultSlides.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + defaultSlides.length) % defaultSlides.length);
 
   const handleCardClick = (page: string) => {
     if (onNavigate) {
@@ -106,7 +137,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="relative min-h-[850px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="relative min-h-[550px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Background Slides with Parallax Effect */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -117,13 +148,13 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           transition={{ duration: 1 }}
           className="absolute inset-0"
         >
-          <ImageWithFallback
-            src={slides[currentSlide]?.image_url || skillCards[0].image}
-            alt={slides[currentSlide]?.title || 'Hero'}
+          <img
+            src={defaultSlides[currentSlide % defaultSlides.length].image_url}
+            alt={defaultSlides[currentSlide % defaultSlides.length].title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/80 to-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         </motion.div>
       </AnimatePresence>
 
@@ -152,9 +183,9 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Content - Split Layout */}
-      <div className="relative z-10 h-full py-12 lg:py-20">
+      <div className="relative z-10 h-full py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[700px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[450px]">
             
             {/* Left Side - Text Content */}
             <motion.div
@@ -189,7 +220,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 </span>
                 <br />
                 <span className="text-white">
-                  {language === 'rw' ? 'Ishuri ry\'Ubumenyi' : 'Technical School'}
+                  {language === 'rw' ? 'Ishuri ry\'Imyuga n\'Ubumenyi Ngiro' : 'Technical & Vocational School'}
                 </span>
               </motion.h1>
 
@@ -306,7 +337,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                               }}
                               transition={{ duration: 0.5 }}
                             />
-                            <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient} opacity-60 mix-blend-multiply`} />
+                            <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient} opacity-30 mix-blend-multiply`} />
                             
                             {/* Icon Overlay */}
                             <motion.div
@@ -401,7 +432,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       {/* Navigation Controls */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-4">
         <div className="flex space-x-2">
-          {slides.map((_, index) => (
+          {defaultSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}

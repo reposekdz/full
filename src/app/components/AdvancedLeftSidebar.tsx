@@ -136,6 +136,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       ],
       head_master: [
         { key: 'overview', icon: Home, label: 'Incamake', color: 'from-blue-500 to-indigo-500' },
+        { key: 'staff-management', icon: Users, label: 'Ubuyobozi bw\'Ishuri', color: 'from-purple-500 to-pink-500' },
         { key: 'staff', icon: Users, label: 'Abakozi', color: 'from-green-500 to-teal-500' },
         { key: 'students', icon: GraduationCap, label: 'Abanyeshuri', color: 'from-purple-500 to-violet-500' },
         { key: 'finances', icon: DollarSign, label: 'Amafaranga', color: 'from-orange-500 to-red-500' },
