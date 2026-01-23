@@ -4,7 +4,6 @@ const { pool } = require('../config/database');
 const multer = require('multer');
 const path = require('path');
 
-// Multer configuration for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/leadership/');
@@ -14,143 +13,99 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed'));
-  }
-});
+const upload = multer({ storage });
 
-// Get all leadership members
+// GET all leaders
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM leadership WHERE status = ? ORDER BY display_order ASC, created_at DESC',
-      ['active']
-    );
-    res.json(rows);
+    const [leaders] = await pool.query('SELECT * FROM leadership ORDER BY id ASC');
+    res.json(leaders);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching leaders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching leaders' });
   }
 });
 
-// Get single leadership member
+// GET single leader
 router.get('/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM leadership WHERE id = ?', [req.params.id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Leadership member not found' });
+    const [leaders] = await pool.query('SELECT * FROM leadership WHERE id = ?', [req.params.id]);
+    if (leaders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Leader not found' });
     }
-    res.json(rows[0]);
+    res.json(leaders[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching leader:', error);
+    res.status(500).json({ success: false, message: 'Error fetching leader' });
   }
 });
 
-// Create leadership member
+// POST new leader
 router.post('/', upload.single('image'), async (req, res) => {
   try {
     const {
-      name, role, department, biography_rw, biography_en,
-      email, phone, office_location, qualifications,
-      experience_years, specialization, achievements,
-      responsibilities, social_media, office_hours, display_order
+      name, role, department, biography_rw, email, phone,
+      office_location, qualifications, experience_years,
+      specialization, achievements, responsibilities, office_hours
     } = req.body;
 
     const image_url = req.file ? `/uploads/leadership/${req.file.filename}` : null;
 
     const [result] = await pool.query(
-      `INSERT INTO leadership (
-        name, role, department, biography_rw, biography_en,
-        email, phone, office_location, image_url,
-        qualifications, experience_years, specialization,
-        achievements, responsibilities, social_media,
-        office_hours, display_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name, role, department, biography_rw, biography_en,
-        email, phone, office_location, image_url,
-        qualifications, experience_years, specialization,
-        achievements, responsibilities, social_media,
-        office_hours, display_order || 0
-      ]
+      `INSERT INTO leadership (name, role, department, biography_rw, email, phone, 
+       office_location, image_url, qualifications, experience_years, specialization, 
+       achievements, responsibilities, office_hours) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, role, department, biography_rw, email, phone, office_location, image_url,
+       qualifications, experience_years, specialization, achievements, responsibilities, office_hours]
     );
 
-    res.status(201).json({ id: result.insertId, message: 'Leadership member created' });
+    res.json({ success: true, id: result.insertId, message: 'Leader added successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error adding leader:', error);
+    res.status(500).json({ success: false, message: 'Error adding leader' });
   }
 });
 
-// Update leadership member
+// PUT update leader
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const {
-      name, role, department, biography_rw, biography_en,
-      email, phone, office_location, qualifications,
-      experience_years, specialization, achievements,
-      responsibilities, social_media, office_hours, display_order
+      name, role, department, biography_rw, email, phone,
+      office_location, qualifications, experience_years,
+      specialization, achievements, responsibilities, office_hours
     } = req.body;
 
-    let updateQuery = `
-      UPDATE leadership SET
-        name = ?, role = ?, department = ?, biography_rw = ?, biography_en = ?,
-        email = ?, phone = ?, office_location = ?,
-        qualifications = ?, experience_years = ?, specialization = ?,
-        achievements = ?, responsibilities = ?, social_media = ?,
-        office_hours = ?, display_order = ?
-    `;
-
-    const params = [
-      name, role, department, biography_rw, biography_en,
-      email, phone, office_location,
-      qualifications, experience_years, specialization,
-      achievements, responsibilities, social_media,
-      office_hours, display_order || 0
-    ];
+    let updateQuery = `UPDATE leadership SET name=?, role=?, department=?, biography_rw=?, 
+                       email=?, phone=?, office_location=?, qualifications=?, experience_years=?, 
+                       specialization=?, achievements=?, responsibilities=?, office_hours=?`;
+    let params = [name, role, department, biography_rw, email, phone, office_location,
+                  qualifications, experience_years, specialization, achievements, responsibilities, office_hours];
 
     if (req.file) {
-      updateQuery += ', image_url = ?';
+      updateQuery += ', image_url=?';
       params.push(`/uploads/leadership/${req.file.filename}`);
     }
 
-    updateQuery += ' WHERE id = ?';
+    updateQuery += ' WHERE id=?';
     params.push(req.params.id);
 
     await pool.query(updateQuery, params);
-    res.json({ message: 'Leadership member updated' });
+    res.json({ success: true, message: 'Leader updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error updating leader:', error);
+    res.status(500).json({ success: false, message: 'Error updating leader' });
   }
 });
 
-// Delete leadership member
+// DELETE leader
 router.delete('/:id', async (req, res) => {
   try {
-    await pool.query('UPDATE leadership SET status = ? WHERE id = ?', ['inactive', req.params.id]);
-    res.json({ message: 'Leadership member deleted' });
+    await pool.query('DELETE FROM leadership WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Leader deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get leadership by department
-router.get('/department/:dept', async (req, res) => {
-  try {
-    const [rows] = await pool.query(
-      'SELECT * FROM leadership WHERE department = ? AND status = ? ORDER BY display_order ASC',
-      [req.params.dept, 'active']
-    );
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error deleting leader:', error);
+    res.status(500).json({ success: false, message: 'Error deleting leader' });
   }
 });
 

@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { ArrowLeft, Mail, Phone, MapPin, Github, Linkedin, Code, Award, Briefcase, GraduationCap, Star, Zap, Trophy, Target, CheckCircle, Calendar, Users, BookOpen } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft, Mail, Phone, MapPin, Github, Linkedin, Star, Zap, Trophy, CheckCircle, Users, BookOpen, Code, Award, Briefcase, Target, TrendingUp, Calendar, DollarSign, Package, Database, Cpu, Globe, MessageSquare, ThumbsUp, Eye, Share2, Download, Filter, Search } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Badge } from '@/app/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { Input } from '@/app/components/ui/input';
+import { Progress } from '@/app/components/ui/progress';
 
 interface DeveloperDetailPageProps {
   developerId: string;
@@ -11,11 +16,14 @@ interface DeveloperDetailPageProps {
 const DeveloperDetailPage: React.FC<DeveloperDetailPageProps> = ({ developerId, onNavigate }) => {
   const [developer, setDeveloper] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProject, setSelectedProject] = useState<any>(null);
 
   useEffect(() => {
     setLoading(true);
     // Fetch developer details
-    fetch(`http://localhost:5000/api/developers/team/${developerId}`)
+    fetch(`http://localhost:5001/api/developers/team/${developerId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -25,7 +33,7 @@ const DeveloperDetailPage: React.FC<DeveloperDetailPageProps> = ({ developerId, 
         }
       })
       .catch(() => {
-        // Use default data for Niyonkuru Reponse
+        // Use default data for developers
         if (developerId === '1') {
           setDeveloper({
             id: 1,
@@ -254,130 +262,154 @@ Reponse afite ibisubizo byinshi:
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-500 py-6">
+      <div className="bg-gradient-to-r from-yellow-600 to-green-600 text-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Button onClick={() => onNavigate('developers')} variant="ghost" className="text-white hover:bg-white/20">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Subira ku Itsinda
+          <Button
+            variant="ghost"
+            onClick={() => onNavigate('developers')}
+            className="text-white hover:bg-white/20 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Subira ku batunganyije
           </Button>
+          
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl font-bold"
+            >
+              {developer?.name?.split(' ').map((n: string) => n[0]).join('') || 'NR'}
+            </motion.div>
+            
+            <div className="flex-1">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-4xl font-black mb-2"
+              >
+                {developer?.name || 'N/A'}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-xl text-white/90 mb-4"
+              >
+                {developer?.role || 'N/A'}
+              </motion.p>
+              
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  <span>{developer?.email || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  <span>{developer?.phone || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>{developer?.location || 'Kigali, Rwanda'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Profile Section */}
+      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Sidebar - Fixed */}
-          <div className="lg:col-span-1">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="sticky top-24">
-              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-yellow-400 p-6">
-                {/* Circular Avatar */}
-                <div className="flex justify-center mb-6">
-                  <div className="relative">
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      className="w-48 h-48 rounded-full overflow-hidden border-8 border-gradient-to-br from-yellow-400 to-green-400 shadow-2xl"
-                    >
-                      {developer?.image && (
-                        <img src={developer.image} alt={developer?.name || 'Developer'} className="w-full h-full object-cover" />
-                      )}
-                    </motion.div>
-                    <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-gradient-to-br from-yellow-400 to-green-400 rounded-full flex items-center justify-center shadow-xl">
-                      <Star className="w-8 h-8 text-white fill-current" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center mb-6">
-                  <h1 className="text-2xl font-black text-gray-900 mb-2">{developer?.name || 'N/A'}</h1>
-                  <p className="text-base font-bold bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent mb-4">{developer?.role || 'N/A'}</p>
-                </div>
-                    
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-3 text-gray-700 p-3 bg-gray-50 rounded-xl">
-                    <MapPin className="w-5 h-5 text-yellow-600" />
-                    <span className="text-sm">{developer?.location || 'Kigali, Rwanda'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-700 p-3 bg-gray-50 rounded-xl">
-                    <Mail className="w-5 h-5 text-green-600" />
-                    <a href={`mailto:${developer?.email}`} className="hover:text-green-600 text-sm truncate">{developer?.email || 'N/A'}</a>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-700 p-3 bg-gray-50 rounded-xl">
-                    <Phone className="w-5 h-5 text-yellow-600" />
-                    <a href={`tel:${developer?.phone}`} className="hover:text-yellow-600 text-sm">{developer?.phone || 'N/A'}</a>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <a href={developer?.github || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-yellow-400 to-green-400 text-white py-3 rounded-xl font-bold text-center hover:shadow-lg transition-shadow flex items-center justify-center gap-2">
-                    <Github className="w-5 h-5" />
-                    GitHub
-                  </a>
-                  <a href={developer?.linkedin || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-green-400 to-yellow-400 text-white py-3 rounded-xl font-bold text-center hover:shadow-lg transition-shadow flex items-center justify-center gap-2">
-                    <Linkedin className="w-5 h-5" />
-                    LinkedIn
-                  </a>
-                </div>
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-xl p-8"
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Users className="w-6 h-6 text-yellow-600" />
+                Amakuru Yihariye
+              </h2>
+              <div className="prose prose-lg max-w-none text-gray-700 whitespace-pre-line">
+                {developer?.bio || 'Nta makuru'}
               </div>
             </motion.div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Bio */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-3xl shadow-xl p-8">
-              <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3">
-                <BookOpen className="w-6 h-6 text-yellow-600" />
-                Amateka Yanjye
-              </h2>
-              <div className="prose prose-lg max-w-none text-gray-700 whitespace-pre-line leading-relaxed">
-                {developer?.bio || 'Nta makuru'}
-              </div>
-            </motion.div>
-
-            {/* Skills */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-3xl shadow-xl p-8">
-              <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3">
-                <Zap className="w-6 h-6 text-green-600" />
-                Ubumenyi Bwanjye
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {developer?.skills?.map((skill: string, i: number) => (
-                  <span key={i} className="px-4 py-2 bg-gradient-to-r from-yellow-400 to-green-400 text-white font-bold rounded-full shadow-lg">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Projects */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-3xl shadow-xl p-8">
-              <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3">
-                <Briefcase className="w-6 h-6 text-yellow-600" />
-                Imishinga Yakoze
-              </h2>
-              <div className="space-y-4">
-                {developer?.projects?.map((project: any, i: number) => (
-                  <div key={i} className="border-l-4 border-green-400 pl-4 py-2">
-                    <h3 className="font-bold text-lg text-gray-900">{project.name}</h3>
-                    <p className="text-gray-600">{project.role} • {project.year}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Achievements */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white rounded-3xl shadow-xl p-8">
-              <h2 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3">
-                <Trophy className="w-6 h-6 text-yellow-600" />
-                Ibihembo Yaronse
-              </h2>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white rounded-2xl shadow-xl p-6"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-600" />
+                Ubushobozi Bukuru
+              </h3>
               <div className="space-y-3">
-                {developer?.achievements?.map((achievement: string, i: number) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                    <span className="text-gray-700 font-semibold">{achievement}</span>
+                {(developer?.skills || [
+                  'Full-Stack Development',
+                  'Database Design', 
+                  'System Architecture',
+                  'Team Leadership',
+                  'Project Management',
+                  'Problem Solving'
+                ]).map((skill: string) => (
+                  <div key={skill} className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-gray-700">{skill}</span>
                   </div>
                 ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl shadow-xl p-6"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-600" />
+                Ibihembo
+              </h3>
+              <div className="space-y-3">
+                {(developer?.achievements || [
+                  'Best Student Developer 2025',
+                  'Innovation Award 2025',
+                  'Best Graduation Project 2026',
+                  'Young Developer Award 2026'
+                ]).map((award: string) => (
+                  <div key={award} className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    <span className="text-gray-700 text-sm">{award}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-2xl shadow-xl p-6"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Github className="w-5 h-5 text-yellow-600" />
+                Ihuza
+              </h3>
+              <div className="space-y-3">
+                <a href={developer?.github || '#'} className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                  <Github className="w-4 h-4" />
+                  <span>GitHub</span>
+                </a>
+                <a href={developer?.linkedin || '#'} className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                  <Linkedin className="w-4 h-4" />
+                  <span>LinkedIn</span>
+                </a>
               </div>
             </motion.div>
           </div>

@@ -4,12 +4,14 @@ import { UserPlus, Eye, EyeOff, Mail, Lock, User, Phone, AlertCircle, CheckCircl
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RegisterPageProps {
   onNavigate: (page: string) => void;
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
+  const { getRoleDashboard } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
@@ -107,7 +109,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       let payload: any = {};
 
       if (formData.role === 'parent') {
-        endpoint = 'http://localhost:5000/api/auth/register/parent';
+        endpoint = 'http://localhost:5001/api/auth/register/parent';
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -120,7 +122,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           national_id: formData.nationalId
         };
       } else if (formData.role === 'student') {
-        endpoint = 'http://localhost:5000/api/auth/register/student';
+        endpoint = 'http://localhost:5001/api/auth/register/student';
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -152,7 +154,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
       if (data.success) {
         setSuccess('Kwiyandikisha byagenze neza! Urakwiye kwinjira.');
-        setTimeout(() => onNavigate('login'), 2000);
+        
+        // Store token and user data for automatic login
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+        
+        // Redirect to appropriate dashboard
+        const dashboardPage = getRoleDashboard(formData.role);
+        setTimeout(() => onNavigate(dashboardPage), 1500);
       } else {
         setError(data.message || 'Kwiyandikisha ntibyakunze. Gerageza ukundi.');
       }

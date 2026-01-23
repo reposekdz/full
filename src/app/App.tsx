@@ -13,11 +13,12 @@ import SupportsPage from '@/app/pages/SupportsPage';
 import TeamsPage from '@/app/pages/TeamsPage';
 import DeveloperTeamPage from '@/app/pages/DeveloperTeamPage';
 import DeveloperDetailPage from '@/app/pages/DeveloperDetailPage';
+import MusoniDetailPage from '@/app/pages/MusoniDetailPage';
+import ZamiruDetailPage from '@/app/pages/ZamiruDetailPage';
+import NiyonsengaDetailPage from '@/app/pages/NiyonsengaDetailPage';
 import LeadershipPage from '@/app/pages/LeadershipPage';
 import LeaderDetailPage from '@/app/pages/LeaderDetailPage';
-import LoginPage from '@/app/pages/LoginPage';
 import ModernLoginPage from '@/app/pages/ModernLoginPage';
-import RegisterPage from '@/app/pages/RegisterPage';
 import ModernRegisterPage from '@/app/pages/ModernRegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
@@ -27,9 +28,7 @@ import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
 import BDCTradePage from '@/app/pages/trades/BDCTradePage';
 import AUTTradePage from '@/app/pages/trades/AUTTradePage';
-import TradeDetailPage from '@/app/pages/TradeDetailPage';
-import FootballPage from '@/app/pages/sports/FootballPage';
-import VolleyballPage from '@/app/pages/sports/VolleyballPage';
+
 import BasketballPage from '@/app/pages/sports/BasketballPage';
 import FootballDetailPage from '@/app/pages/FootballDetailPage';
 import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
@@ -44,12 +43,13 @@ import HeadMasterDashboard from '@/app/pages/dashboards/HeadMasterDashboard';
 import TeacherDashboard from '@/app/pages/dashboards/TeacherDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
 import StockManagerDashboard from '@/app/pages/dashboards/StockManagerDashboard';
+import ResponsesPage from '@/app/pages/ResponsesPage';
 import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const { user, logout, login, getRoleDashboard } = useAuth();
+  const { user, logout, getRoleDashboard } = useAuth();
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -154,6 +154,10 @@ const AppContent: React.FC = () => {
         return <DeveloperTeamPage onNavigate={handleNavigate} />;
       case currentPage.startsWith('developer/') ? currentPage : '':
         const devId = currentPage.split('/')[1];
+        if (devId === '1') return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
+        if (devId === '2') return <MusoniDetailPage onNavigate={handleNavigate} />;
+        if (devId === '3') return <ZamiruDetailPage onNavigate={handleNavigate} />;
+        if (devId === '4') return <NiyonsengaDetailPage onNavigate={handleNavigate} />;
         return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
       case 'leadership':
         return <LeadershipPage onNavigate={handleNavigate} />;
@@ -174,6 +178,8 @@ const AppContent: React.FC = () => {
         return <SearchPage onNavigate={handleNavigate} />;
       case 'admin-panel':
         return <AdminPage />;
+      case 'responses':
+        return <ResponsesPage />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
