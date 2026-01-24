@@ -1,8 +1,294 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const bcrypt = require('bcrypt');
 
 const router = express.Router();
+
+// ================== ADMIN/TEACHER ENDPOINTS ==================
+
+// Get all students (Admin/Teacher)
+router.get('/list', authenticateToken, async (req, res) => {
+  try {
+    const { search, class_id, status, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
+        u.is_active, u.created_at,
+        sp.admission_number, sp.date_of_birth, sp.gender, sp.blood_group, sp.address,
+        GROUP_CONCAT(DISTINCT tc.name) as classes
+      FROM users u
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
+      LEFT JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE u.role = 'student'
+    `;
+    const params = [];
+
+    if (search) {
+      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR sp.admission_number LIKE ?)`;
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
+    }
+
+    if (class_id) {
+      query += ` AND e.class_id = ?`;
+      params.push(class_id);
+    }
+
+    if (status === 'active') {
+      query += ` AND u.is_active = 1`;
+    } else if (status === 'inactive') {
+      query += ` AND u.is_active = 0`;
+    }
+
+    query += ` GROUP BY u.id ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [students] = await pool.execute(query, params);
+
+    let countQuery = 'SELECT COUNT(DISTINCT u.id) as total FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id LEFT JOIN enrollments e ON u.id = e.student_id WHERE u.role = "student"';
+    const countParams = [];
+    
+    if (search) {
+      countQuery += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR sp.admission_number LIKE ?)`;
+      const searchParam = `%${search}%`;
+      countParams.push(searchParam, searchParam, searchParam, searchParam);
+    }
+    if (class_id) {
+      countQuery += ` AND e.class_id = ?`;
+      countParams.push(class_id);
+    }
+    if (status === 'active') {
+      countQuery += ` AND u.is_active = 1`;
+    } else if (status === 'inactive') {
+      countQuery += ` AND u.is_active = 0`;
+    }
+
+    const [[{ total }]] = await pool.execute(countQuery, countParams);
+
+    res.json({
+      success: true,
+      students,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('List students error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch students' });
+  }
+});
+
+// Get student by ID (Admin/Teacher)
+router.get('/details/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [students] = await pool.execute(`
+      SELECT u.*, sp.*,
+        u.id as user_id, sp.id as profile_id
+      FROM users u
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.id = ? AND u.role = 'student'
+    `, [id]);
+
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const [enrollments] = await pool.execute(`
+      SELECT e.*, tc.name as class_name, tc.level
+      FROM enrollments e
+      JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE e.student_id = ?
+    `, [id]);
+
+    const [medicalRecords] = await pool.execute(`
+      SELECT * FROM student_medical_records WHERE student_id = ? ORDER BY created_at DESC
+    `, [id]);
+
+    res.json({
+      success: true,
+      student: students[0],
+      enrollments,
+      medical_records: medicalRecords
+    });
+  } catch (error) {
+    console.error('Get student details error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch student details' });
+  }
+});
+
+// Create new student (Admin)
+router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const {
+      first_name, last_name, email, phone, password,
+      admission_number, date_of_birth, gender, blood_group, address,
+      guardian_name, guardian_phone, guardian_email
+    } = req.body;
+
+    if (!first_name || !last_name || !email) {
+      return res.status(400).json({ success: false, message: 'First name, last name, and email are required' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password || 'student123', 10);
+    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+
+    const [userResult] = await pool.execute(`
+      INSERT INTO users (username, email, password, first_name, last_name, phone, role, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 'student', 1)
+    `, [username, email, hashedPassword, first_name, last_name, phone]);
+
+    const studentId = userResult.insertId;
+
+    await pool.execute(`
+      INSERT INTO student_profiles (
+        user_id, admission_number, date_of_birth, gender, blood_group, address,
+        guardian_name, guardian_phone, guardian_email
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [studentId, admission_number, date_of_birth, gender, blood_group, address, guardian_name, guardian_phone, guardian_email]);
+
+    res.json({
+      success: true,
+      message: 'Student created successfully',
+      student: { id: studentId, username, email, first_name, last_name }
+    });
+  } catch (error) {
+    console.error('Create student error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.code === 'ER_DUP_ENTRY' ? 'Email or admission number already exists' : 'Failed to create student'
+    });
+  }
+});
+
+// Update student (Admin)
+router.put('/update/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      first_name, last_name, email, phone, is_active,
+      admission_number, date_of_birth, gender, blood_group, address,
+      guardian_name, guardian_phone, guardian_email
+    } = req.body;
+
+    await pool.execute(`
+      UPDATE users SET
+        first_name = COALESCE(?, first_name),
+        last_name = COALESCE(?, last_name),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        is_active = COALESCE(?, is_active)
+      WHERE id = ? AND role = 'student'
+    `, [first_name, last_name, email, phone, is_active, id]);
+
+    await pool.execute(`
+      UPDATE student_profiles SET
+        admission_number = COALESCE(?, admission_number),
+        date_of_birth = COALESCE(?, date_of_birth),
+        gender = COALESCE(?, gender),
+        blood_group = COALESCE(?, blood_group),
+        address = COALESCE(?, address),
+        guardian_name = COALESCE(?, guardian_name),
+        guardian_phone = COALESCE(?, guardian_phone),
+        guardian_email = COALESCE(?, guardian_email)
+      WHERE user_id = ?
+    `, [admission_number, date_of_birth, gender, blood_group, address, guardian_name, guardian_phone, guardian_email, id]);
+
+    res.json({ success: true, message: 'Student updated successfully' });
+  } catch (error) {
+    console.error('Update student error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update student' });
+  }
+});
+
+// Delete student (Admin)
+router.delete('/delete/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute('DELETE FROM users WHERE id = ? AND role = "student"', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    res.json({ success: true, message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Delete student error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete student' });
+  }
+});
+
+// Add medical record (Admin/Teacher)
+router.post('/medical/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { record_type, description, medical_officer, treatment, notes } = req.body;
+
+    const [result] = await pool.execute(`
+      INSERT INTO student_medical_records (student_id, record_type, description, medical_officer, treatment, notes, recorded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [id, record_type, description, medical_officer, treatment, notes, req.user.id]);
+
+    res.json({
+      success: true,
+      message: 'Medical record added successfully',
+      record_id: result.insertId
+    });
+  } catch (error) {
+    console.error('Add medical record error:', error);
+    res.status(500).json({ success: false, message: 'Failed to add medical record' });
+  }
+});
+
+// Get student statistics (Admin)
+router.get('/statistics', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const [[{ total_students }]] = await pool.execute('SELECT COUNT(*) as total_students FROM users WHERE role = "student"');
+    const [[{ active_students }]] = await pool.execute('SELECT COUNT(*) as active_students FROM users WHERE role = "student" AND is_active = 1');
+    const [[{ inactive_students }]] = await pool.execute('SELECT COUNT(*) as inactive_students FROM users WHERE role = "student" AND is_active = 0');
+
+    const [byGender] = await pool.execute(`
+      SELECT sp.gender, COUNT(*) as count
+      FROM users u
+      JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.role = 'student'
+      GROUP BY sp.gender
+    `);
+
+    const [byClass] = await pool.execute(`
+      SELECT tc.name as class_name, COUNT(DISTINCT e.student_id) as student_count
+      FROM enrollments e
+      JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE e.status = 'active'
+      GROUP BY tc.id
+      ORDER BY student_count DESC
+    `);
+
+    res.json({
+      success: true,
+      statistics: {
+        total_students,
+        active_students,
+        inactive_students,
+        by_gender: byGender,
+        by_class: byClass
+      }
+    });
+  } catch (error) {
+    console.error('Get statistics error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch statistics' });
+  }
+});
+
+// ================== STUDENT-SPECIFIC ENDPOINTS ==================
 
 // Get student dashboard data
 router.get('/dashboard', authenticateToken, requireRole('student'), async (req, res) => {

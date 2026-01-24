@@ -6,13 +6,17 @@ import Header from '@/app/components/Header';
 import { BottomNav } from '@/app/components/BottomNav';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
+import EnhancedSportsPage from '@/app/pages/EnhancedSportsPage';
 import ServicesPage from '@/app/pages/ServicesPage';
 import TradesPage from '@/app/pages/TradesPage';
 import ContactPage from '@/app/pages/ContactPage';
 import SupportsPage from '@/app/pages/SupportsPage';
+import ModernSupportPage from '@/app/pages/ModernSupportPage';
+import AdvancedSupportPage from '@/app/pages/AdvancedSupportPage';
 import TeamsPage from '@/app/pages/TeamsPage';
 import DeveloperTeamPage from '@/app/pages/DeveloperTeamPage';
 import DeveloperDetailPage from '@/app/pages/DeveloperDetailPage';
+import DevelopersAdmin from '@/app/components/developers/DevelopersAdmin';
 import MusoniDetailPage from '@/app/pages/MusoniDetailPage';
 import ZamiruDetailPage from '@/app/pages/ZamiruDetailPage';
 import NiyonsengaDetailPage from '@/app/pages/NiyonsengaDetailPage';
@@ -24,6 +28,8 @@ import SearchPage from '@/app/pages/SearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import RoleLoginPage from '@/app/pages/RoleLoginPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
+import ModernTradesPage from '@/app/pages/ModernTradesPage';
+import TradeDetailPage from '@/app/pages/TradeDetailPage';
 import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
 import BDCTradePage from '@/app/pages/trades/BDCTradePage';
@@ -32,6 +38,7 @@ import AUTTradePage from '@/app/pages/trades/AUTTradePage';
 import BasketballPage from '@/app/pages/sports/BasketballPage';
 import FootballDetailPage from '@/app/pages/FootballDetailPage';
 import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
+import TeamDetailPage from '@/app/pages/TeamDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
@@ -116,13 +123,16 @@ const AppContent: React.FC = () => {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       case 'sports':
-        return <SportsPage onNavigate={handleNavigate} />;
+        return <EnhancedSportsPage onNavigate={handleNavigate} />;
       case 'services':
         return <ServicesPage onNavigate={handleNavigate} />;
       case 'trades':
-        return <TradesPage />;
+        return <ModernTradesPage onNavigate={handleNavigate} />;
       case 'trades-showcase':
         return <TradesShowcasePage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('trade/') ? currentPage : '':
+        const tradeId = currentPage.split('/')[1];
+        return <TradeDetailPage tradeId={tradeId} onNavigate={handleNavigate} />;
       case 'trade-sod':
         return <SODTradePage onNavigate={handleNavigate} />;
       case 'trade-bdc':
@@ -133,6 +143,9 @@ const AppContent: React.FC = () => {
         return <FootballDetailPage onNavigate={handleNavigate} />;
       case 'sport-volleyball':
         return <VolleyballDetailPage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('sport-team/') ? currentPage : '':
+        const teamId = currentPage.split('/')[1];
+        return <TeamDetailPage teamId={teamId} onNavigate={handleNavigate} />;
       case 'sport-basketball':
         return <BasketballPage onNavigate={handleNavigate} />;
       case 'news':
@@ -149,7 +162,7 @@ const AppContent: React.FC = () => {
       case 'contactUs':
         return <ContactPage />;
       case 'supports':
-        return <SupportsPage />;
+        return <AdvancedSupportPage />;
       case 'developers':
         return <DeveloperTeamPage onNavigate={handleNavigate} />;
       case currentPage.startsWith('developer/') ? currentPage : '':
@@ -178,6 +191,8 @@ const AppContent: React.FC = () => {
         return <SearchPage onNavigate={handleNavigate} />;
       case 'admin-panel':
         return <AdminPage />;
+      case 'admin-developers':
+        return <DevelopersAdmin />;
       case 'responses':
         return <ResponsesPage />;
       default:

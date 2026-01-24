@@ -8,7 +8,231 @@ const router = express.Router();
 
 // ================= USER MANAGEMENT =================
 
-// Get all users (admin only)
+// Get roles list
+router.get('/roles/list', authenticateToken, async (req, res) => {
+  try {
+    const roles = [
+      { id: 1, name: 'student', display_name: 'Student' },
+      { id: 2, name: 'teacher', display_name: 'Teacher' },
+      { id: 3, name: 'parent', display_name: 'Parent' },
+      { id: 4, name: 'admin', display_name: 'Admin' },
+      { id: 5, name: 'super_admin', display_name: 'Super Admin' },
+      { id: 6, name: 'accountant', display_name: 'Accountant' },
+      { id: 7, name: 'stock_manager', display_name: 'Stock Manager' },
+      { id: 8, name: 'headmaster', display_name: 'Headmaster' },
+      { id: 9, name: 'director_study', display_name: 'Director of Studies' },
+      { id: 10, name: 'director_discipline', display_name: 'Director of Discipline' }
+    ];
+
+    res.json({
+      success: true,
+      roles
+    });
+
+  } catch (error) {
+    console.error('Get roles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Get all users
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 100, page = 1 } = req.query;
+    const offset = (page - 1) * limit;
+
+    const [users] = await pool.execute(`
+      SELECT 
+        u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.role,
+        u.is_active, u.last_login, u.created_at, u.updated_at,
+        u.role as role_name
+      FROM users u
+      ORDER BY u.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [parseInt(limit), offset]);
+
+    const [[{ total }]] = await pool.execute('SELECT COUNT(*) as total FROM users');
+
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Create new user
+router.post('/', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'headmaster'),
+  body('username').optional(),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('first_name').notEmpty().withMessage('First name is required'),
+  body('last_name').notEmpty().withMessage('Last name is required'),
+  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { username, email, first_name, last_name, password, phone, role_id, date_of_birth } = req.body;
+    
+    const roleMap = {
+      1: 'student', 2: 'teacher', 3: 'parent', 4: 'admin', 5: 'super_admin',
+      6: 'accountant', 7: 'stock_manager', 8: 'headmaster', 9: 'director_study', 10: 'director_discipline'
+    };
+    const role = roleMap[role_id] || 'student';
+
+    const generatedUsername = username || email.split('@')[0];
+
+    const [existingUsers] = await pool.execute(
+      'SELECT id FROM users WHERE username = ? OR email = ?',
+      [generatedUsername, email]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username or email already exists'
+      });
+    }
+
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password || 'password123', saltRounds);
+
+    const [result] = await pool.execute(
+      `INSERT INTO users (username, email, first_name, last_name, password_hash, phone, role, date_of_birth) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [generatedUsername, email, first_name, last_name, password_hash, phone, role, date_of_birth]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: {
+        id: result.insertId,
+        username: generatedUsername,
+        email,
+        first_name,
+        last_name,
+        phone,
+        role
+      }
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Update user
+router.put('/:id', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'headmaster')
+], async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, first_name, last_name, phone, role_id, is_active, date_of_birth } = req.body;
+
+    const [existingUser] = await pool.execute('SELECT id FROM users WHERE id = ?', [id]);
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const roleMap = {
+      1: 'student', 2: 'teacher', 3: 'parent', 4: 'admin', 5: 'super_admin',
+      6: 'accountant', 7: 'stock_manager', 8: 'headmaster', 9: 'director_study', 10: 'director_discipline'
+    };
+    const role = role_id ? roleMap[role_id] : undefined;
+
+    await pool.execute(`
+      UPDATE users SET 
+        email = COALESCE(?, email),
+        first_name = COALESCE(?, first_name),
+        last_name = COALESCE(?, last_name),
+        phone = COALESCE(?, phone),
+        role = COALESCE(?, role),
+        is_active = COALESCE(?, is_active),
+        date_of_birth = COALESCE(?, date_of_birth),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [email, first_name, last_name, phone, role, is_active, date_of_birth, id]);
+
+    res.json({
+      success: true,
+      message: 'User updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Delete user
+router.delete('/:id', [
+  authenticateToken,
+  requireRole('admin', 'super_admin')
+], async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [existingUser] = await pool.execute('SELECT id FROM users WHERE id = ?', [id]);
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Get all users (admin only) - legacy route
 router.get('/admin/users', [
   authenticateToken,
   requireRole('admin', 'super_admin')

@@ -2,8 +2,244 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const bcrypt = require('bcrypt');
 
 const router = express.Router();
+
+// ================== ADMIN ENDPOINTS ==================
+
+// Get all teachers (Admin)
+router.get('/list', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { search, department, status, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
+        u.is_active, u.created_at,
+        (SELECT COUNT(DISTINCT c.id) FROM classes c WHERE c.teacher_id = u.id AND c.is_active = 1) as class_count,
+        (SELECT COUNT(DISTINCT e.student_id) FROM enrollments e 
+         JOIN classes c ON e.class_id = c.id 
+         WHERE c.teacher_id = u.id AND e.status = 'active') as student_count
+      FROM users u
+      WHERE u.role = 'teacher'
+    `;
+    const params = [];
+
+    if (search) {
+      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)`;
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam);
+    }
+
+    if (status === 'active') {
+      query += ` AND u.is_active = 1`;
+    } else if (status === 'inactive') {
+      query += ` AND u.is_active = 0`;
+    }
+
+    query += ` ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [teachers] = await pool.execute(query, params);
+
+    let countQuery = 'SELECT COUNT(*) as total FROM users WHERE role = "teacher"';
+    const countParams = [];
+    if (search) {
+      countQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+      const searchParam = `%${search}%`;
+      countParams.push(searchParam, searchParam, searchParam);
+    }
+    if (status === 'active') {
+      countQuery += ` AND is_active = 1`;
+    } else if (status === 'inactive') {
+      countQuery += ` AND is_active = 0`;
+    }
+
+    const [[{ total }]] = await pool.execute(countQuery, countParams);
+
+    res.json({
+      success: true,
+      teachers,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('List teachers error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch teachers' });
+  }
+});
+
+// Get teacher by ID (Admin)
+router.get('/details/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [teachers] = await pool.execute(`
+      SELECT u.*
+      FROM users u
+      WHERE u.id = ? AND u.role = 'teacher'
+    `, [id]);
+
+    if (teachers.length === 0) {
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
+    }
+
+    const [classes] = await pool.execute(`
+      SELECT c.*, co.name as course_name,
+        COUNT(DISTINCT e.student_id) as student_count
+      FROM classes c
+      JOIN courses co ON c.course_id = co.id
+      LEFT JOIN enrollments e ON c.id = e.class_id AND e.status = 'active'
+      WHERE c.teacher_id = ?
+      GROUP BY c.id
+    `, [id]);
+
+    const [assignments] = await pool.execute(`
+      SELECT a.*, s.name as subject_name
+      FROM assignments a
+      JOIN subjects s ON a.subject_id = s.id
+      WHERE a.teacher_id = ?
+      ORDER BY a.due_date DESC
+      LIMIT 10
+    `, [id]);
+
+    const [[metrics]] = await pool.execute(`
+      SELECT 
+        (SELECT COUNT(*) FROM grades WHERE teacher_id = ?) as total_grades,
+        (SELECT COUNT(*) FROM attendance WHERE marked_by = ?) as total_attendance_marked,
+        (SELECT COUNT(DISTINCT class_id) FROM classes WHERE teacher_id = ?) as active_classes
+    `, [id, id, id]);
+
+    res.json({
+      success: true,
+      teacher: teachers[0],
+      classes,
+      assignments,
+      metrics
+    });
+  } catch (error) {
+    console.error('Get teacher details error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch teacher details' });
+  }
+});
+
+// Create new teacher (Admin)
+router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, password, department, qualification, specialization } = req.body;
+
+    if (!first_name || !last_name || !email) {
+      return res.status(400).json({ success: false, message: 'First name, last name, and email are required' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password || 'teacher123', 10);
+    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+
+    const [result] = await pool.execute(`
+      INSERT INTO users (username, email, password, first_name, last_name, phone, role, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 'teacher', 1)
+    `, [username, email, hashedPassword, first_name, last_name, phone]);
+
+    res.json({
+      success: true,
+      message: 'Teacher created successfully',
+      teacher: { id: result.insertId, username, email, first_name, last_name }
+    });
+  } catch (error) {
+    console.error('Create teacher error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.code === 'ER_DUP_ENTRY' ? 'Email already exists' : 'Failed to create teacher'
+    });
+  }
+});
+
+// Update teacher (Admin)
+router.put('/update/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { first_name, last_name, email, phone, is_active } = req.body;
+
+    const [result] = await pool.execute(`
+      UPDATE users SET
+        first_name = COALESCE(?, first_name),
+        last_name = COALESCE(?, last_name),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        is_active = COALESCE(?, is_active)
+      WHERE id = ? AND role = 'teacher'
+    `, [first_name, last_name, email, phone, is_active, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
+    }
+
+    res.json({ success: true, message: 'Teacher updated successfully' });
+  } catch (error) {
+    console.error('Update teacher error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update teacher' });
+  }
+});
+
+// Delete teacher (Admin)
+router.delete('/delete/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await pool.execute('DELETE FROM users WHERE id = ? AND role = "teacher"', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
+    }
+
+    res.json({ success: true, message: 'Teacher deleted successfully' });
+  } catch (error) {
+    console.error('Delete teacher error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete teacher' });
+  }
+});
+
+// Get teacher statistics (Admin)
+router.get('/admin/statistics', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+  try {
+    const [[{ total_teachers }]] = await pool.execute('SELECT COUNT(*) as total_teachers FROM users WHERE role = "teacher"');
+    const [[{ active_teachers }]] = await pool.execute('SELECT COUNT(*) as active_teachers FROM users WHERE role = "teacher" AND is_active = 1');
+
+    const [teacherPerformance] = await pool.execute(`
+      SELECT u.id, u.first_name, u.last_name,
+        COUNT(DISTINCT c.id) as classes_taught,
+        COUNT(DISTINCT e.student_id) as total_students,
+        COUNT(DISTINCT g.id) as grades_submitted
+      FROM users u
+      LEFT JOIN classes c ON u.id = c.teacher_id AND c.is_active = 1
+      LEFT JOIN enrollments e ON c.id = e.class_id AND e.status = 'active'
+      LEFT JOIN grades g ON u.id = g.teacher_id
+      WHERE u.role = 'teacher'
+      GROUP BY u.id
+      ORDER BY classes_taught DESC, total_students DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      success: true,
+      statistics: {
+        total_teachers,
+        active_teachers,
+        top_performers: teacherPerformance
+      }
+    });
+  } catch (error) {
+    console.error('Get teacher statistics error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch statistics' });
+  }
+});
+
+// ================== TEACHER-SPECIFIC ENDPOINTS ==================
 
 // Get teacher's classes
 router.get('/classes', authenticateToken, requireRole('teacher'), async (req, res) => {

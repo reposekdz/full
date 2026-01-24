@@ -1,334 +1,351 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Users, Calendar, Award, TrendingUp, Target, Medal, Star, ChevronRight, ArrowLeft, Search, Filter, X, MapPin, Clock, Shield, Loader2 } from 'lucide-react';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, Users, Award, TrendingUp, ArrowRight, Sparkles, Star, Target, Zap, Crown, Flame } from 'lucide-react';
 
 interface SportsPageProps {
   onNavigate: (page: string) => void;
 }
 
 const SportsPage: React.FC<SportsPageProps> = ({ onNavigate }) => {
-  const [activeTab, setActiveTab] = useState('teams');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [teams, setTeams] = useState<any[]>([]);
-  const [matches, setMatches] = useState<any[]>([]);
-  const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [hoveredTeam, setHoveredTeam] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
+    fetchTeams();
   }, []);
 
-  const fetchData = async () => {
+  const fetchTeams = async () => {
     try {
-      const [teamsRes, matchesRes, upcomingRes] = await Promise.all([
-        fetch('http://localhost:5000/api/sports/teams'),
-        fetch('http://localhost:5000/api/sports/matches?upcoming=false'),
-        fetch('http://localhost:5000/api/sports/matches?upcoming=true')
-      ]);
-      
-      const teamsData = await teamsRes.json();
-      const matchesData = await matchesRes.json();
-      const upcomingData = await upcomingRes.json();
-      
-      setTeams(Array.isArray(teamsData) ? teamsData : []);
-      setMatches(Array.isArray(matchesData) ? matchesData : []);
-      setUpcomingMatches(Array.isArray(upcomingData) ? upcomingData : []);
+      const response = await fetch('http://localhost:5000/api/sports/teams');
+      const data = await response.json();
+      if (data.success) {
+        const filteredTeams = data.teams.filter((team: any) => 
+          team.sport_type === 'football' || team.sport_type === 'volleyball'
+        );
+        setTeams(filteredTeams);
+      }
     } catch (error) {
-      console.error('Error fetching sports data:', error);
-      setTeams([]);
-      setMatches([]);
-      setUpcomingMatches([]);
+      console.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const stats = [
-    { label: 'Amakipe', value: teams.length, icon: Users, color: 'from-blue-600 to-indigo-600' },
-    { label: 'Intsinzi', value: teams.reduce((sum, t) => sum + (t.wins || 0), 0), icon: Trophy, color: 'from-green-600 to-emerald-600' },
-    { label: 'Imikino', value: matches.length, icon: Target, color: 'from-purple-600 to-pink-600' },
-    { label: 'Ibihembo', value: teams.reduce((sum, t) => sum + (t.achievements?.length || 0), 0), icon: Award, color: 'from-yellow-600 to-orange-600' }
-  ];
-
-  const filteredTeams = teams.filter(team =>
-    team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    team.sport.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-16 h-16 animate-spin text-green-600 mx-auto mb-4" />
-          <p className="text-xl font-bold text-gray-700">Gutegura Siporo...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50 flex items-center justify-center">
+        <motion.div animate={{ rotate: 360, scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+          <Trophy className="w-20 h-20 text-green-600" />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-      <div className="bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white py-8 px-4 shadow-2xl">
-        <div className="max-w-7xl mx-auto">
-          <Button onClick={() => onNavigate('home')} variant="ghost" className="text-white hover:bg-white/20 mb-6">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Subira
-          </Button>
-
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <div className="flex items-center justify-center space-x-4 mb-4">
-              <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl">
-                <Trophy className="w-12 h-12 text-white" />
-              </div>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-black mb-3">Siporo n'Imikino</h1>
-            <p className="text-xl font-semibold text-white/90">Amakipe, Imikino n'Intsinzi - Garden TVET Sports</p>
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-50">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(30)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              x: [0, Math.random() * 20 - 10, 0],
+              opacity: [0.1, 0.3, 0.1],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 3 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          >
+            {i % 3 === 0 ? '⚽' : i % 3 === 1 ? '🏐' : '🏆'}
           </motion.div>
-        </div>
+        ))}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl p-6 shadow-xl border-2 border-gray-100">
-              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center mx-auto mb-4`}>
-                <stat.icon className="w-8 h-8 text-white" />
-              </div>
-              <p className="text-4xl font-black text-gray-900 mb-2 text-center">{stat.value}</p>
-              <p className="text-sm font-bold text-gray-600 text-center">{stat.label}</p>
-            </motion.div>
-          ))}
+      {/* Hero Section */}
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-500 opacity-90" />
+        <div className="absolute inset-0">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 50, repeat: Infinity, ease: 'linear' }}
+            className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+            className="absolute bottom-10 right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"
+          />
         </div>
 
-        <div className="flex gap-4 mb-8">
-          {['teams', 'matches', 'upcoming'].map((tab) => (
-            <Button key={tab} onClick={() => setActiveTab(tab)}
-              className={`flex-1 h-14 text-lg font-bold ${activeTab === tab ? 'bg-gradient-to-r from-green-600 to-blue-600 text-white' : 'bg-white text-gray-700 border-2 border-gray-200'}`}>
-              {tab === 'teams' ? 'Amakipe' : tab === 'matches' ? 'Imikino Yakinnye' : 'Imikino Izaza'}
-            </Button>
-          ))}
-        </div>
-
-        {activeTab === 'teams' && (
-          <>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-2xl border-2 border-gray-100 p-6 mb-8">
-              <div className="flex items-center space-x-3 mb-4">
-                <Search className="w-6 h-6 text-green-600" />
-                <h3 className="text-2xl font-black text-gray-900">Shakisha Ikipe</h3>
-              </div>
-              <Input placeholder="Andika izina ry'ikipe..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-14 text-lg border-2 border-gray-200" />
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+              className="inline-flex items-center gap-6 mb-8"
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="bg-white p-8 rounded-3xl shadow-2xl"
+              >
+                <Trophy className="w-20 h-20 text-green-600" />
+              </motion.div>
+              <h1 className="text-8xl font-black text-white drop-shadow-2xl">
+                SIPORO
+              </h1>
+              <motion.div
+                animate={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                className="bg-white p-8 rounded-3xl shadow-2xl"
+              >
+                <Crown className="w-20 h-20 text-yellow-600" />
+              </motion.div>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredTeams.map((team, index) => (
-                <motion.div key={team.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-                  <Card className="border-2 border-gray-200 hover:border-green-400 hover:shadow-2xl transition-all overflow-hidden group">
-                    <div className="h-2 bg-gradient-to-r from-green-500 to-blue-500" />
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <Badge className="mb-3 bg-gradient-to-r from-green-600 to-blue-600 text-white border-0">{team.sport}</Badge>
-                          <h3 className="text-2xl font-black text-gray-900 mb-2 group-hover:text-green-600 transition-colors">{team.name}</h3>
-                          <p className="text-sm text-gray-700 mb-4 line-clamp-2">{team.description_rw}</p>
-                        </div>
-                      </div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl text-white font-black mb-8 drop-shadow-lg"
+            >
+              Amakipe ya Siporo ya Garden TVET School
+            </motion.p>
 
-                      <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="bg-green-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-black text-green-600">{team.wins || 0}</p>
-                          <p className="text-xs text-gray-600 font-semibold">Intsinzi</p>
-                        </div>
-                        <div className="bg-red-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-black text-red-600">{team.losses || 0}</p>
-                          <p className="text-xs text-gray-600 font-semibold">Gutsindwa</p>
-                        </div>
-                        <div className="bg-blue-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-black text-blue-600">{team.players_count || 0}</p>
-                          <p className="text-xs text-gray-600 font-semibold">Abakinnyi</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Shield className="w-4 h-4 text-green-600" />
-                          <span className="font-semibold text-gray-700">Umutoza: {team.coach}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Star className="w-4 h-4 text-green-600" />
-                          <span className="font-semibold text-gray-700">Kapiteni: {team.captain}</span>
-                        </div>
-                      </div>
-
-                      <Button onClick={() => setSelectedTeam(team)}
-                        className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-bold">
-                        Reba Byinshi
-                      </Button>
-                    </CardContent>
-                  </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-wrap justify-center gap-6"
+            >
+              {[
+                { icon: Trophy, label: 'Intsinzi Nyinshi', color: 'yellow' },
+                { icon: Users, label: `${teams.length} Amakipe`, color: 'green' },
+                { icon: Star, label: 'Abakinnyi Beza', color: 'yellow' },
+                { icon: Flame, label: 'Imikino Myinshi', color: 'green' },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.1, y: -5 }}
+                  className="bg-white/20 backdrop-blur-md px-8 py-4 rounded-2xl border-2 border-white/50 shadow-xl"
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className={`w-7 h-7 text-${item.color}-100`} />
+                    <span className="font-black text-white text-lg">{item.label}</span>
+                  </div>
                 </motion.div>
               ))}
-            </div>
-          </>
-        )}
-
-        {activeTab === 'matches' && (
-          <div className="space-y-4">
-            {matches.map((match, index) => (
-              <motion.div key={match.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}>
-                <Card className={`border-2 ${match.result === 'win' ? 'border-green-200 bg-green-50' : match.result === 'loss' ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'} hover:shadow-xl transition-all`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <Badge className={`mb-3 ${match.result === 'win' ? 'bg-green-600' : match.result === 'loss' ? 'bg-red-600' : 'bg-yellow-600'} text-white`}>
-                          {match.result === 'win' ? 'INTSINZI' : match.result === 'loss' ? 'GUTSINDWA' : 'KURINGANIZA'}
-                        </Badge>
-                        <h3 className="text-xl font-black text-gray-900 mb-2">{match.team_name} vs {match.opponent}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{match.match_date}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span>{match.venue}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-4xl font-black text-gray-900">{match.score}</p>
-                        <Badge className="mt-2">{match.sport}</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'upcoming' && (
-          <div className="space-y-4">
-            {upcomingMatches.map((match, index) => (
-              <motion.div key={match.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}>
-                <Card className="border-2 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <Badge className="mb-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white">{match.sport}</Badge>
-                        <h3 className="text-2xl font-black text-gray-900 mb-2">{match.team_name} vs {match.opponent}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span className="font-semibold">{match.match_date}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span className="font-semibold">{match.match_time}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-4 h-4" />
-                            <span className="font-semibold">{match.venue}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {selectedTeam && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedTeam(null)}>
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-3xl">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-black mb-2">{selectedTeam.name}</h2>
-                    <p className="text-xl font-semibold text-white/90">{selectedTeam.sport}</p>
-                  </div>
-                  <Button onClick={() => setSelectedTeam(null)} variant="ghost" className="text-white hover:bg-white/20">
-                    <X className="w-6 h-6" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="bg-green-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-black text-green-600">{selectedTeam.wins || 0}</p>
-                    <p className="text-sm text-gray-600 font-semibold">Intsinzi</p>
-                  </div>
-                  <div className="bg-red-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-black text-red-600">{selectedTeam.losses || 0}</p>
-                    <p className="text-sm text-gray-600 font-semibold">Gutsindwa</p>
-                  </div>
-                  <div className="bg-yellow-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-black text-yellow-600">{selectedTeam.draws || 0}</p>
-                    <p className="text-sm text-gray-600 font-semibold">Kuringaniza</p>
-                  </div>
-                  <div className="bg-blue-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-black text-blue-600">{selectedTeam.players_count || 0}</p>
-                    <p className="text-sm text-gray-600 font-semibold">Abakinnyi</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h3 className="text-xl font-black text-gray-900 mb-3">Ibisobanuro</h3>
-                  <p className="text-gray-700 leading-relaxed">{selectedTeam.description_rw}</p>
-                </div>
-
-                <div className="bg-blue-50 rounded-2xl p-6 mb-6">
-                  <h3 className="text-xl font-black text-gray-900 mb-4">Amakuru y'Ikipe</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Umutoza:</span>
-                      <span className="font-bold text-gray-900">{selectedTeam.coach}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Kapiteni:</span>
-                      <span className="font-bold text-gray-900">{selectedTeam.captain}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Yashinzwe:</span>
-                      <span className="font-bold text-gray-900">{selectedTeam.founded_year}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h3 className="text-xl font-black text-gray-900 mb-4">Ibihembo</h3>
-                  <div className="space-y-2">
-                    {selectedTeam.achievements && selectedTeam.achievements.map((achievement: any, index: number) => (
-                      <div key={index} className="flex items-center space-x-3 bg-yellow-50 rounded-lg p-3">
-                        <Award className="w-5 h-5 text-yellow-600" />
-                        <span className="font-semibold text-gray-900">{achievement.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Button onClick={() => setSelectedTeam(null)} className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold h-12">
-                  Funga
-                </Button>
-              </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      </section>
+
+      {/* Teams Section */}
+      <section className="py-20 px-4 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-6xl font-black text-gray-900 mb-4 bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
+              Amakipe Yacu
+            </h2>
+            <p className="text-2xl text-gray-600 font-bold">Hitamo ikipe ukunde urebe byose</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            {teams.map((team, index) => {
+              const isFootball = team.icon === '⚽';
+              const gradientColors = isFootball
+                ? 'from-yellow-400 via-green-400 to-yellow-500'
+                : 'from-green-400 via-yellow-400 to-green-500';
+
+              return (
+                <motion.div
+                  key={team.id}
+                  initial={{ opacity: 0, y: 100, rotateY: -30 }}
+                  animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                  transition={{
+                    delay: index * 0.2,
+                    type: 'spring',
+                    stiffness: 100,
+                    damping: 15,
+                  }}
+                  whileHover={{ scale: 1.02, y: -10 }}
+                  onHoverStart={() => setHoveredTeam(team.id)}
+                  onHoverEnd={() => setHoveredTeam(null)}
+                  onClick={() => onNavigate(`sport-team/${team.id}`)}
+                  className="group relative cursor-pointer"
+                  style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+                >
+                  {/* Glow Effect */}
+                  <motion.div
+                    animate={{
+                      opacity: hoveredTeam === team.id ? 0.8 : 0,
+                      scale: hoveredTeam === team.id ? 1.1 : 1,
+                    }}
+                    className={`absolute inset-0 bg-gradient-to-r ${gradientColors} rounded-2xl blur-2xl`}
+                  />
+
+                  {/* Main Card */}
+                  <div className={`relative bg-gradient-to-br ${gradientColors} p-1.5 rounded-2xl shadow-xl`}>
+                    <div className="bg-white rounded-xl overflow-hidden">
+                      {/* Image Section */}
+                      <div className="relative h-48 overflow-hidden">
+                        <motion.img
+                          whileHover={{ scale: 1.15, rotate: 3 }}
+                          transition={{ duration: 0.6 }}
+                          src={team.image_url}
+                          alt={team.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent`} />
+
+                        {/* Floating Sparkles */}
+                        <motion.div
+                          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+                          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                          className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg"
+                        >
+                          <Sparkles className="w-4 h-4 text-yellow-500" />
+                        </motion.div>
+
+                        {/* Animated Icon */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <motion.div
+                            animate={{
+                              scale: [1, 1.1, 1],
+                              rotate: [0, 5, -5, 0],
+                            }}
+                            transition={{ duration: 4, repeat: Infinity }}
+                            className="text-6xl drop-shadow-xl"
+                          >
+                            {team.icon}
+                          </motion.div>
+                        </div>
+
+                        {/* Team Name Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <motion.div
+                            initial={{ x: -30, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: index * 0.2 + 0.3 }}
+                          >
+                            <h3 className="text-2xl font-black text-white mb-1 drop-shadow-xl">
+                              {team.name}
+                            </h3>
+                            <p className="text-sm text-white/90 font-bold drop-shadow-lg">
+                              {team.name_en}
+                            </p>
+                          </motion.div>
+                        </div>
+                      </div>
+
+                      {/* Content Section */}
+                      <div className={`p-4 bg-gradient-to-br ${isFootball ? 'from-yellow-50 to-green-50' : 'from-green-50 to-yellow-50'}`}>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-4 font-medium line-clamp-2">
+                          {team.description}
+                        </p>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          {[
+                            { icon: Users, value: team.total_players, label: 'Abakinnyi', color: 'yellow' },
+                            { icon: Trophy, value: team.total_achievements, label: 'Ibihembo', color: 'green' },
+                          ].map((stat, i) => (
+                            <motion.div
+                              key={i}
+                              whileHover={{ scale: 1.05 }}
+                              className={`text-center p-3 bg-gradient-to-br from-${stat.color}-100 to-white rounded-lg shadow-sm hover:shadow-md transition-all`}
+                            >
+                              <stat.icon className={`w-5 h-5 mx-auto mb-1 text-${stat.color}-700`} />
+                              <p className="text-lg font-black text-gray-900">{stat.value}</p>
+                              <p className="text-xs text-gray-600 font-bold">{stat.label}</p>
+                            </motion.div>
+                          ))}
+                        </div>
+
+                        {/* Action Button */}
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`w-full bg-gradient-to-r ${gradientColors} text-white py-3 rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2`}
+                        >
+                          <Trophy className="w-4 h-4" />
+                          Reba Byose
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hover Indicator */}
+                  <AnimatePresence>
+                    {hoveredTeam === team.id && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-white px-8 py-4 rounded-2xl shadow-2xl z-20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-gray-900 text-lg">Kanda urebe byose</span>
+                          <ArrowRight className="w-6 h-6 text-green-600" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-500 rounded-[3rem] p-12 text-center shadow-2xl"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-8xl mb-6"
+            >
+              🏆
+            </motion.div>
+            <h3 className="text-5xl font-black text-white mb-6">Wifuza Kwinjira mu Kipe?</h3>
+            <p className="text-2xl text-white/90 mb-8 font-bold">Tanga ubushobozi bwawe kandi ube umwe mu bakinnyi bacu!</p>
+            <motion.button
+              whileHover={{ scale: 1.1, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white text-gray-900 px-12 py-6 rounded-2xl font-black text-2xl shadow-2xl hover:shadow-3xl transition-all inline-flex items-center gap-4"
+            >
+              <Users className="w-8 h-8" />
+              Injira Ubu
+              <ArrowRight className="w-8 h-8" />
+            </motion.button>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 };

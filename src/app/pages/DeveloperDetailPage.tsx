@@ -22,12 +22,15 @@ const DeveloperDetailPage: React.FC<DeveloperDetailPageProps> = ({ developerId, 
 
   useEffect(() => {
     setLoading(true);
-    // Fetch developer details
-    fetch(`http://localhost:5001/api/developers/team/${developerId}`)
+    fetch(`http://localhost:5000/api/developers/team/${developerId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setDeveloper(data.developer);
+          const dev = data.developer;
+          // Parse JSON fields
+          if (typeof dev.skills === 'string') dev.skills = JSON.parse(dev.skills);
+          if (typeof dev.achievements === 'string') dev.achievements = JSON.parse(dev.achievements);
+          setDeveloper(dev);
         } else {
           throw new Error('No data');
         }
@@ -277,9 +280,19 @@ Reponse afite ibisubizo byinshi:
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl font-bold"
+              className="w-32 h-32 rounded-full bg-white/20 backdrop-blur-sm overflow-hidden"
             >
-              {developer?.name?.split(' ').map((n: string) => n[0]).join('') || 'NR'}
+              {developer?.image_url ? (
+                <img 
+                  src={`http://localhost:5000${developer.image_url}`} 
+                  alt={developer.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl font-bold">
+                  {developer?.name?.split(' ').map((n: string) => n[0]).join('') || 'NR'}
+                </div>
+              )}
             </motion.div>
             
             <div className="flex-1">
@@ -296,7 +309,7 @@ Reponse afite ibisubizo byinshi:
                 transition={{ delay: 0.1 }}
                 className="text-xl text-white/90 mb-4"
               >
-                {developer?.role || 'N/A'}
+                {developer?.role_rw || developer?.role || 'N/A'}
               </motion.p>
               
               <div className="flex flex-wrap gap-4">
@@ -333,7 +346,7 @@ Reponse afite ibisubizo byinshi:
                 Amakuru Yihariye
               </h2>
               <div className="prose prose-lg max-w-none text-gray-700 whitespace-pre-line">
-                {developer?.bio || 'Nta makuru'}
+                {developer?.description_rw || developer?.description || developer?.bio || 'Nta makuru'}
               </div>
             </motion.div>
           </div>
@@ -350,13 +363,8 @@ Reponse afite ibisubizo byinshi:
                 Ubushobozi Bukuru
               </h3>
               <div className="space-y-3">
-                {(developer?.skills || [
-                  'Full-Stack Development',
-                  'Database Design', 
-                  'System Architecture',
-                  'Team Leadership',
-                  'Project Management',
-                  'Problem Solving'
+                {(Array.isArray(developer?.skills) ? developer.skills : [
+                  'React', 'TypeScript', 'Node.js', 'MySQL'
                 ]).map((skill: string) => (
                   <div key={skill} className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
@@ -377,11 +385,8 @@ Reponse afite ibisubizo byinshi:
                 Ibihembo
               </h3>
               <div className="space-y-3">
-                {(developer?.achievements || [
-                  'Best Student Developer 2025',
-                  'Innovation Award 2025',
-                  'Best Graduation Project 2026',
-                  'Young Developer Award 2026'
+                {(Array.isArray(developer?.achievements) ? developer.achievements : [
+                  'Best Developer 2025'
                 ]).map((award: string) => (
                   <div key={award} className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-yellow-500" />
@@ -402,11 +407,11 @@ Reponse afite ibisubizo byinshi:
                 Ihuza
               </h3>
               <div className="space-y-3">
-                <a href={developer?.github || '#'} className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                <a href={developer?.github_url || developer?.github || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
                   <Github className="w-4 h-4" />
                   <span>GitHub</span>
                 </a>
-                <a href={developer?.linkedin || '#'} className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                <a href={developer?.linkedin_url || developer?.linkedin || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800">
                   <Linkedin className="w-4 h-4" />
                   <span>LinkedIn</span>
                 </a>

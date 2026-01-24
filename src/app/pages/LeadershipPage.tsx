@@ -31,7 +31,26 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
     try {
       const response = await fetch('http://localhost:5000/api/leadership');
       const data = await response.json();
-      setLeaders(Array.isArray(data) ? data : []);
+      const roleOrder = {
+        'Umwene Ishuri': 1,
+        'School Owner': 1,
+        'Umujyanama': 2,
+        'Advisor': 2,
+        'DOS': 3,
+        'Umubitsi': 4,
+        'Accountant': 4,
+        'Umuyobozi Mukuru': 5,
+        'Head Teacher': 5,
+        'Patron': 6,
+        'DOD': 7,
+        'Matron': 8
+      };
+      const sortedData = Array.isArray(data) ? data.sort((a, b) => {
+        const aOrder = roleOrder[a.role] || 999;
+        const bOrder = roleOrder[b.role] || 999;
+        return aOrder - bOrder;
+      }) : [];
+      setLeaders(sortedData);
     } catch (error) {
       console.error('Error fetching leadership:', error);
       setLeaders([]);

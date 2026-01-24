@@ -135,204 +135,103 @@ const TradesShowcasePage: React.FC<TradesShowcasePageProps> = ({ onNavigate }) =
         <p className="text-xl text-gray-600 font-medium">Our Professional Trade Programs</p>
       </div>
 
-      {/* Main Showcase */}
+      {/* Trade Cards Grid */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -100 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="border-4 border-yellow-300 shadow-2xl overflow-hidden">
-              <CardContent className="p-0">
-                <div className="grid md:grid-cols-2 gap-0">
-                  {/* Left Side - Image/Visual */}
-                  <div className="relative min-h-[500px] overflow-hidden">
-                    <img 
-                      src={currentTrade.imageUrl}
-                      alt={currentTrade.fullName}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/60" />
-                    
-                    <div className="relative p-12 flex flex-col justify-center items-center h-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {trades.map((trade, index) => {
+            const Icon = trade.icon;
+            return (
+              <motion.div
+                key={trade.id}
+                initial={{ opacity: 0, y: 50, rotateY: -15 }}
+                animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                transition={{ delay: index * 0.2, type: 'spring', stiffness: 100 }}
+                whileHover={{ scale: 1.05, y: -15, rotateY: 5 }}
+                onClick={() => onNavigate(`trade-${trade.id.toLowerCase()}`)}
+                className="group relative cursor-pointer perspective-1000"
+                style={{ transformStyle: 'preserve-3d' }}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 rounded-3xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500"
+                />
+                
+                <Card className="relative border-4 border-yellow-300 shadow-2xl overflow-hidden hover:shadow-3xl transition-all">
+                  <CardContent className="p-0">
+                    <div className="relative h-64 overflow-hidden">
+                      <motion.img
+                        src={trade.imageUrl}
+                        alt={trade.fullName}
+                        className="w-full h-full object-cover"
+                        whileHover={{ scale: 1.15, rotate: 2 }}
+                        transition={{ duration: 0.6 }}
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${trade.color} opacity-60 group-hover:opacity-40 transition-opacity`} />
+                      
                       <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ type: 'spring', duration: 0.8 }}
-                        className="mb-6"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                        className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-xl"
                       >
-                        <div className="bg-white/20 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border-4 border-white/30">
-                          <Icon className="h-32 w-32 text-white" />
+                        <Sparkles className="w-6 h-6 text-yellow-500" />
+                      </motion.div>
+                      
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border-4 border-white/30">
+                          <Icon className="h-20 w-20 text-white" />
                         </div>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-center"
-                      >
-                        <Badge className="bg-yellow-500/90 backdrop-blur-sm text-white border-yellow-300/50 text-xl px-6 py-2 mb-4">
-                          {currentTrade.tagline}
-                        </Badge>
-                        <h2 className="text-5xl font-black text-white mb-2 drop-shadow-lg">
-                          {currentTrade.name}
-                        </h2>
-                        <p className="text-2xl text-white/90 font-semibold drop-shadow-md">
-                          {currentTrade.fullName}
-                        </p>
-                      </motion.div>
-
-                      {/* Stats */}
-                      <div className="grid grid-cols-3 gap-4 mt-8 w-full">
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.4 }}
-                          className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center border-2 border-white/30"
-                        >
-                          <Users className="h-6 w-6 text-white mx-auto mb-1" />
-                          <p className="text-2xl font-black text-white">{currentTrade.stats.students}</p>
-                          <p className="text-xs text-white/80">Students</p>
-                        </motion.div>
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5 }}
-                          className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center border-2 border-white/30"
-                        >
-                          <Award className="h-6 w-6 text-white mx-auto mb-1" />
-                          <p className="text-2xl font-black text-white">{currentTrade.stats.teachers}</p>
-                          <p className="text-xs text-white/80">Teachers</p>
-                        </motion.div>
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.6 }}
-                          className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center border-2 border-white/30"
-                        >
-                          <TrendingUp className="h-6 w-6 text-white mx-auto mb-1" />
-                          <p className="text-2xl font-black text-white">{currentTrade.stats.successRate}%</p>
-                          <p className="text-xs text-white/80">Success</p>
-                        </motion.div>
+                      </div>
+                      
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+                        <h3 className="text-2xl font-black text-white mb-1">{trade.name}</h3>
+                        <p className="text-sm text-white/90 font-semibold">{trade.fullName}</p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Right Side - Details */}
-                  <div className="p-12 bg-white">
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <h3 className="text-3xl font-black text-gray-900 mb-4">
-                        Ibyerekeye Uyu Mwuga
-                      </h3>
-                      <p className="text-lg text-gray-700 mb-6">
-                        {currentTrade.description}
-                      </p>
-
-                      {/* Levels */}
-                      <div className="mb-6">
-                        <h4 className="text-sm font-bold text-gray-700 mb-3">Inzego:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {currentTrade.levels.map((level, idx) => (
-                            <motion.div
-                              key={level}
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.4 + idx * 0.1 }}
-                            >
-                              <Badge className={`bg-gradient-to-r ${currentTrade.color} text-white text-sm px-4 py-2`}>
-                                {level}
-                              </Badge>
-                            </motion.div>
-                          ))}
+                    
+                    <div className="p-6 bg-white">
+                      <p className="text-gray-700 mb-4 line-clamp-2">{trade.description}</p>
+                      
+                      <div className="flex items-center gap-2 mb-4">
+                        {trade.levels.slice(0, 3).map((level, idx) => (
+                          <Badge key={idx} className={`bg-gradient-to-r ${trade.color} text-white text-xs`}>
+                            {level}
+                          </Badge>
+                        ))}
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="text-center p-2 bg-gray-50 rounded-lg">
+                          <Users className="w-4 h-4 mx-auto mb-1 text-gray-600" />
+                          <p className="text-lg font-black text-gray-900">{trade.stats.students}</p>
+                          <p className="text-xs text-gray-600">Abanyeshuri</p>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded-lg">
+                          <Award className="w-4 h-4 mx-auto mb-1 text-gray-600" />
+                          <p className="text-lg font-black text-gray-900">{trade.stats.teachers}</p>
+                          <p className="text-xs text-gray-600">Abarimu</p>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded-lg">
+                          <TrendingUp className="w-4 h-4 mx-auto mb-1 text-gray-600" />
+                          <p className="text-lg font-black text-gray-900">{trade.stats.successRate}%</p>
+                          <p className="text-xs text-gray-600">Intsinzi</p>
                         </div>
                       </div>
-
-                      {/* Highlights */}
-                      <div className="mb-8">
-                        <h4 className="text-sm font-bold text-gray-700 mb-3">Ibintu Biziga:</h4>
-                        <div className="space-y-2">
-                          {currentTrade.highlights.map((highlight, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.5 + idx * 0.1 }}
-                              className="flex items-center"
-                            >
-                              <CheckCircle className={`h-5 w-5 mr-2 bg-gradient-to-r ${currentTrade.color} bg-clip-text text-transparent`} />
-                              <span className="text-gray-700">{highlight}</span>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-4">
-                        <Button 
-                          className="flex-1 bg-gradient-to-r from-yellow-500 via-yellow-400 to-green-500 hover:from-yellow-600 hover:via-yellow-500 hover:to-green-600 text-white font-bold py-6 text-lg shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-0"
-                          size="lg"
-                          onClick={() => onNavigate('register')}
-                        >
-                          Tangira
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          className="flex-1 border-3 border-yellow-400 text-gray-800 font-bold py-6 text-lg hover:bg-gradient-to-r hover:from-green-500 hover:to-yellow-500 hover:text-white hover:border-transparent transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
-                          size="lg"
-                          onClick={() => onNavigate('trades')}
-                        >
-                          Menya Byinshi
-                        </Button>
-                      </div>
-                    </motion.div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Navigation Controls */}
-        <div className="flex justify-center items-center gap-4 mt-8">
-          <Button
-            onClick={prevSlide}
-            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transform hover:scale-110 transition-all"
-            size="icon"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-
-          {/* Dots */}
-          <div className="flex gap-2">
-            {trades.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentSlide(idx)}
-                className={`transition-all ${
-                  idx === currentSlide
-                    ? 'w-12 h-3 bg-gradient-to-r from-yellow-500 to-green-500'
-                    : 'w-3 h-3 bg-gray-300 hover:bg-gray-400'
-                } rounded-full`}
-              />
-            ))}
-          </div>
-
-          <Button
-            onClick={nextSlide}
-            className="bg-gradient-to-r from-green-500 to-yellow-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transform hover:scale-110 transition-all"
-            size="icon"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </Button>
+                      
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-full py-3 bg-gradient-to-r ${trade.color} text-white text-sm font-bold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2`}
+                      >
+                        Reba Byinshi
+                        <ArrowRight className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <div className="absolute inset-0 border-4 border-transparent group-hover:border-yellow-400 rounded-3xl transition-all duration-500 pointer-events-none" />
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
