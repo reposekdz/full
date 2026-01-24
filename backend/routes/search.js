@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
     const { q, type, limit = 20 } = req.query;
     
     if (!q || q.trim().length < 2) {
-      return res.json({ success: true, results: [] });
+      return res.json({ success: true, results: {}, totalResults: 0 });
     }
 
     const searchTerm = `%${q}%`;
@@ -18,7 +18,9 @@ router.get('/', async (req, res) => {
       exams: [],
       trades: [],
       sports: [],
-      notifications: []
+      notifications: [],
+      news: [],
+      gallery: []
     };
 
     // Search courses
@@ -57,10 +59,10 @@ router.get('/', async (req, res) => {
     // Search trades
     if (!type || type === 'trades') {
       const [trades] = await db.query(
-        `SELECT id, code, name_rw, name_en, description_rw, 'trade' as type 
-         FROM trades WHERE name_rw LIKE ? OR name_en LIKE ? OR code LIKE ? 
+        `SELECT id, code, name_rw, name_en, description_rw, description_en, 'trade' as type 
+         FROM trades WHERE name_rw LIKE ? OR name_en LIKE ? OR code LIKE ? OR description_rw LIKE ? OR description_en LIKE ?
          LIMIT ?`,
-        [searchTerm, searchTerm, searchTerm, parseInt(limit)]
+        [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, parseInt(limit)]
       );
       results.trades = trades;
     }
@@ -87,8 +89,48 @@ router.get('/', async (req, res) => {
       results.notifications = notifications;
     }
 
+    // Search news articles
+    if (!type || type === 'news') {
+      try {
+        const [news] = await db.query(
+          `SELECT id, title, description, category, created_at, 'news' as type 
+           FROM news_articles WHERE (title LIKE ? OR description LIKE ? OR content LIKE ?) AND is_active = true
+           ORDER BY created_at DESC LIMIT ?`,
+          [searchTerm, searchTerm, searchTerm, parseInt(limit)]
+        );
+        results.news = news;
+      } catch (err) {
+        console.log('News table not available');
+      }
+    }
+
+    // Search gallery
+    if (!type || type === 'gallery') {
+      try {
+        const [gallery] = await db.query(
+          `SELECT id, title, title_rw, description, category, image_url, 'gallery' as type 
+           FROM gallery_images WHERE (title LIKE ? OR title_rw LIKE ? OR description LIKE ?) AND is_active = true
+           LIMIT ?`,
+          [searchTerm, searchTerm, searchTerm, parseInt(limit)]
+        );
+        results.gallery = gallery;
+      } catch (err) {
+        console.log('Gallery table not available');
+      }
+    }
+
     // Calculate total results
     const totalResults = Object.values(results).reduce((sum, arr) => sum + arr.length, 0);
+
+    // Log search for analytics
+    try {
+      await db.query(
+        'INSERT INTO search_logs (search_query, search_type, results_count, ip_address) VALUES (?, ?, ?, ?)',
+        [q, type || 'all', totalResults, req.ip]
+      );
+    } catch (err) {
+      console.log('Search logging not available');
+    }
 
     res.json({
       success: true,

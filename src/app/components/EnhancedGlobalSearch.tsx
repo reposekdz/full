@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, User, BookOpen, FileText, Calendar, Trophy, Bell, TrendingUp, Award, Users, Sparkles, ArrowRight, Clock, Hash, Mail, Phone, MapPin, Filter, SortAsc } from 'lucide-react';
+import { Search, X, Loader2, User, BookOpen, FileText, Calendar, Trophy, Bell, TrendingUp, Award, Users, Sparkles, ArrowRight, Clock, Hash, Mail, Phone, MapPin, Filter, SortAsc, Mic, MicOff, Image, Newspaper, Star, Zap, History, TrendingDown, Globe, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/app/components/ui/dropdown-menu';
 
 interface SearchResult {
   id: number;
@@ -34,6 +35,10 @@ const typeConfig: Record<string, { icon: any; color: string; label: string; grad
   sport: { icon: Trophy, color: 'bg-yellow-500', label: 'Sports', gradient: 'from-yellow-500 to-orange-500' },
   notification: { icon: Bell, color: 'bg-pink-500', label: 'Notifications', gradient: 'from-pink-500 to-rose-500' },
   trade: { icon: Award, color: 'bg-indigo-500', label: 'Trades', gradient: 'from-indigo-500 to-purple-500' },
+  news: { icon: Newspaper, color: 'bg-blue-500', label: 'News', gradient: 'from-blue-500 to-cyan-500' },
+  gallery: { icon: Image, color: 'bg-purple-500', label: 'Gallery', gradient: 'from-purple-500 to-pink-500' },
+  student: { icon: User, color: 'bg-teal-500', label: 'Students', gradient: 'from-teal-500 to-cyan-500' },
+  teacher: { icon: Users, color: 'bg-violet-500', label: 'Teachers', gradient: 'from-violet-500 to-purple-500' },
 };
 
 const quickSearches = [
@@ -41,6 +46,9 @@ const quickSearches = [
   { query: 'ibizamini', icon: Calendar, label: 'Ibizamini', color: 'red' },
   { query: 'siporo', icon: Trophy, label: 'Siporo', color: 'yellow' },
   { query: 'amahugurwa', icon: Award, label: 'Amahugurwa', color: 'indigo' },
+  { query: 'amakuru', icon: Newspaper, label: 'Amakuru', color: 'blue' },
+  { query: 'amafoto', icon: Image, label: 'Amafoto', color: 'purple' },
+  { query: 'ubuyobozi', icon: Shield, label: 'Ubuyobozi', color: 'cyan' },
 ];
 
 export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate }) => {
@@ -51,6 +59,10 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
   const [totalResults, setTotalResults] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'relevance' | 'date' | 'name'>('relevance');
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { language } = useLanguage();
@@ -79,11 +91,45 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     const saved = localStorage.getItem('recentSearches');
     if (saved) setRecentSearches(JSON.parse(saved));
 
+    fetchTrendingSearches();
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  const fetchTrendingSearches = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/advanced-search/popular');
+      const data = await response.json();
+      if (data.success) {
+        setTrendingSearches(data.popular.map((p: any) => p.search_query).slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Failed to fetch trending searches:', error);
+    }
+  };
+
+  const startVoiceSearch = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = language === 'rw' ? 'rw-RW' : language === 'fr' ? 'fr-FR' : 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setQuery(transcript);
+      };
+      recognition.onerror = () => setIsListening(false);
+
+      recognition.start();
+    }
+  };
 
   useEffect(() => {
     const searchDebounce = setTimeout(() => {
@@ -101,16 +147,35 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
   const performSearch = async (searchQuery: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const typeParam = filterType !== 'all' ? `&type=${filterType}` : '';
+      const response = await fetch(`http://localhost:5000/api/search?q=${encodeURIComponent(searchQuery)}${typeParam}`);
       const data = await response.json();
       
       if (data.success) {
-        setResults(data.results);
+        let searchResults = data.results;
+        
+        // Apply sorting
+        Object.keys(searchResults).forEach(key => {
+          if (sortBy === 'name') {
+            searchResults[key].sort((a: any, b: any) => {
+              const aName = a.name || a.title || a.first_name || '';
+              const bName = b.name || b.title || b.first_name || '';
+              return aName.localeCompare(bName);
+            });
+          } else if (sortBy === 'date') {
+            searchResults[key].sort((a: any, b: any) => {
+              const aDate = a.created_at || a.exam_date || a.due_date || '';
+              const bDate = b.created_at || b.exam_date || b.due_date || '';
+              return new Date(bDate).getTime() - new Date(aDate).getTime();
+            });
+          }
+        });
+        
+        setResults(searchResults);
         setTotalResults(data.totalResults);
       }
     } catch (error) {
       console.error('Search error:', error);
-      // Fuzzy fallback search
       setResults(getFallbackResults(searchQuery));
       setTotalResults(Object.values(results).flat().length);
     } finally {
@@ -122,7 +187,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     const lower = q.toLowerCase();
     const fallback: any = {};
     
-    // Courses - English and Kinyarwanda
+    // Courses
     if (lower.includes('cours') || lower.includes('class') || lower.includes('amasomo') || 
         lower.includes('isomo') || lower.includes('somo') || lower.includes('course')) {
       fallback.courses = [
@@ -131,7 +196,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Exams - English and Kinyarwanda
+    // Exams
     if (lower.includes('exam') || lower.includes('test') || lower.includes('ibizamini') || 
         lower.includes('ikizamini') || lower.includes('zamin') || lower.includes('quiz')) {
       fallback.exams = [
@@ -140,7 +205,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Assignments - English and Kinyarwanda
+    // Assignments
     if (lower.includes('assign') || lower.includes('homework') || lower.includes('ibikorwa') || 
         lower.includes('akazi') || lower.includes('work') || lower.includes('task')) {
       fallback.assignments = [
@@ -149,7 +214,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Sports - English and Kinyarwanda
+    // Sports
     if (lower.includes('sport') || lower.includes('team') || lower.includes('siporo') || 
         lower.includes('imikino') || lower.includes('umukino') || lower.includes('game')) {
       fallback.sports = [
@@ -158,7 +223,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Trades - English and Kinyarwanda
+    // Trades
     if (lower.includes('trade') || lower.includes('program') || lower.includes('amahugurwa') || 
         lower.includes('ubwubatsi') || lower.includes('ikoranabuhanga') || lower.includes('skill')) {
       fallback.trades = [
@@ -168,7 +233,25 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Notifications - English and Kinyarwanda
+    // News
+    if (lower.includes('news') || lower.includes('article') || lower.includes('amakuru') || 
+        lower.includes('inkuru') || lower.includes('announcement')) {
+      fallback.news = [
+        { id: 1, type: 'news', title: 'Latest News', description: 'View recent news and announcements' },
+        { id: 2, type: 'news', title: 'School Updates', description: 'Important school updates' }
+      ];
+    }
+    
+    // Gallery
+    if (lower.includes('photo') || lower.includes('image') || lower.includes('gallery') || 
+        lower.includes('amafoto') || lower.includes('ifoto') || lower.includes('picture')) {
+      fallback.gallery = [
+        { id: 1, type: 'gallery', title: 'Photo Gallery', description: 'Browse school photos' },
+        { id: 2, type: 'gallery', title: 'Event Photos', description: 'View event galleries' }
+      ];
+    }
+    
+    // Notifications
     if (lower.includes('notif') || lower.includes('alert') || lower.includes('amakuru') || 
         lower.includes('ubutumwa') || lower.includes('message')) {
       fallback.notifications = [
@@ -176,11 +259,11 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // If no specific match, provide general suggestions
+    // Default suggestions
     if (Object.keys(fallback).length === 0) {
       fallback.courses = [{ id: 1, type: 'course', name: 'Browse Courses', code: 'ALL', description: 'View courses' }];
-      fallback.exams = [{ id: 1, type: 'exam', title: 'View Exams', exam_type: 'All', description: 'Browse exams' }];
       fallback.trades = [{ id: 1, type: 'trade', name_en: 'View Trades', code: 'ALL', description: 'Browse trade programs' }];
+      fallback.news = [{ id: 1, type: 'news', title: 'Latest News', description: 'View recent news' }];
     }
     
     return fallback;
@@ -200,7 +283,11 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       exam: 'exams',
       sport: 'sports',
       trade: 'trades',
-      notification: 'notifications'
+      notification: 'notifications',
+      news: 'home',
+      gallery: 'home',
+      student: 'home',
+      teacher: 'home'
     };
 
     if (onNavigate && typeRoutes[result.type]) {
@@ -315,9 +402,21 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                       placeholder={language === 'rw' ? 'Andika aho ushaka gushakisha...' : 'Type anything to search...'}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      className="pl-14 sm:pl-20 pr-12 sm:pr-16 h-12 sm:h-16 text-base sm:text-lg font-medium border-2 border-gray-200 focus:border-yellow-400 rounded-2xl shadow-inner bg-white/80 backdrop-blur-sm"
+                      className="pl-14 sm:pl-20 pr-24 sm:pr-32 h-12 sm:h-16 text-base sm:text-lg font-medium border-2 border-gray-200 focus:border-yellow-400 rounded-2xl shadow-inner bg-white/80 backdrop-blur-sm"
                       autoFocus
                     />
+                    {/* Voice Search Button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={startVoiceSearch}
+                      disabled={isListening}
+                      className={`absolute right-14 sm:right-20 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 rounded-full transition-all ${
+                        isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'hover:bg-blue-50 hover:text-blue-600'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    </Button>
                     {loading && (
                       <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center">
@@ -348,23 +447,49 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
 
                 {/* Quick Searches - Responsive */}
                 {!query && (
-                  <div className="flex flex-wrap gap-2 mt-3 sm:mt-4">
-                    {quickSearches.map((quick, idx) => {
-                      const Icon = quick.icon;
-                      return (
-                        <Button
-                          key={idx}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setQuery(quick.query)}
-                          className="rounded-full border-2 hover:border-yellow-400 hover:bg-yellow-50 hover:scale-105 transition-all text-xs sm:text-sm"
-                        >
-                          <Icon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                          <span className="hidden xs:inline">{quick.label}</span>
-                          <span className="xs:hidden">{quick.query}</span>
-                        </Button>
-                      );
-                    })}
+                  <div className="space-y-3 mt-3 sm:mt-4">
+                    <div className="flex flex-wrap gap-2">
+                      {quickSearches.map((quick, idx) => {
+                        const Icon = quick.icon;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setQuery(quick.query)}
+                            className="rounded-full border-2 hover:border-yellow-400 hover:bg-yellow-50 hover:scale-105 transition-all text-xs sm:text-sm"
+                          >
+                            <Icon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            <span className="hidden xs:inline">{quick.label}</span>
+                            <span className="xs:hidden">{quick.query}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Trending Searches */}
+                    {trendingSearches.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" />
+                          {language === 'rw' ? 'Ibyashakishijwe cyane' : 'Trending Searches'}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {trendingSearches.map((trend, idx) => (
+                            <Button
+                              key={idx}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setQuery(trend)}
+                              className="rounded-full text-xs bg-gradient-to-r from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border border-orange-200"
+                            >
+                              <Star className="w-3 h-3 mr-1 text-orange-500" />
+                              {trend}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -373,14 +498,50 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-3 flex items-center gap-2 text-sm"
+                    className="mt-3 flex items-center justify-between flex-wrap gap-2"
                   >
-                    <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
-                      {totalResults} {language === 'rw' ? 'ibisubizo' : 'results'}
-                    </Badge>
-                    <span className="text-gray-500 text-xs sm:text-sm">
-                      {language === 'rw' ? `kubera "${query}"` : `for "${query}"`}
-                    </span>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                        {totalResults} {language === 'rw' ? 'ibisubizo' : 'results'}
+                      </Badge>
+                      <span className="text-gray-500 text-xs sm:text-sm">
+                        {language === 'rw' ? `kubera "${query}"` : `for "${query}"`}
+                      </span>
+                    </div>
+                    
+                    {/* Filter and Sort Controls */}
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="rounded-full text-xs h-7">
+                            <Filter className="w-3 h-3 mr-1" />
+                            {filterType === 'all' ? 'All' : filterType}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setFilterType('all')}>All Types</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('courses')}>Courses</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('trades')}>Trades</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('exams')}>Exams</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('sports')}>Sports</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('news')}>News</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="rounded-full text-xs h-7">
+                            <SortAsc className="w-3 h-3 mr-1" />
+                            {sortBy === 'relevance' ? 'Relevance' : sortBy === 'date' ? 'Date' : 'Name'}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setSortBy('relevance')}>Relevance</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSortBy('date')}>Date</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSortBy('name')}>Name</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </motion.div>
                 )}
               </div>

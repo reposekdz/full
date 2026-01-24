@@ -14,6 +14,12 @@ const AdvancedSupportPage: React.FC = () => {
   const [ticketData, setTicketData] = useState({ name: '', email: '', phone: '', subject: '', message: '', priority: 'medium' });
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState('popular');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('all');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     fetch('http://localhost:5000/api/support/categories')
@@ -27,6 +33,18 @@ const AdvancedSupportPage: React.FC = () => {
     fetch('http://localhost:5000/api/support/resources')
       .then(res => res.json())
       .then(data => { if (data.success) setResources(data.resources); });
+
+    const saved = localStorage.getItem('supportSearchHistory');
+    if (saved) setSearchHistory(JSON.parse(saved));
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('support-search')?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   const getIcon = (iconName: string) => {
@@ -53,12 +71,70 @@ const AdvancedSupportPage: React.FC = () => {
     setFaqs(faqs.map(f => f.id === faqId ? { ...f, helpful_count: f.helpful_count + 1 } : f));
   };
 
+  const searchInContent = (text: string, term: string) => {
+    return text?.toLowerCase().includes(term.toLowerCase());
+  };
+
   const filteredFaqs = faqs
-    .filter(f => (!selectedCategory || f.category_id === selectedCategory) &&
-      (!searchTerm || f.question.toLowerCase().includes(searchTerm.toLowerCase()) || f.question_rw?.toLowerCase().includes(searchTerm.toLowerCase())))
+    .filter(f => {
+      if (selectedCategory && f.category_id !== selectedCategory) return false;
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      return searchInContent(f.question, term) || searchInContent(f.question_rw, term) || 
+             searchInContent(f.answer, term) || searchInContent(f.answer_rw, term);
+    })
     .sort((a, b) => sortBy === 'popular' ? b.views - a.views : b.helpful_count - a.helpful_count);
 
-  const filteredResources = resources.filter(r => !selectedCategory || r.category_id === selectedCategory);
+  const filteredResources = resources.filter(r => {
+    if (selectedCategory && r.category_id !== selectedCategory) return false;
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return searchInContent(r.title, term) || searchInContent(r.title_rw, term) ||
+           searchInContent(r.description, term) || searchInContent(r.description_rw, term);
+  });
+
+  const allSearchResults = {
+    faqs: filteredFaqs,
+    resources: filteredResources,
+    total: filteredFaqs.length + filteredResources.length
+  };
+
+  const getSearchSuggestions = () => {
+    if (!searchTerm || searchTerm.length < 2) return [];
+    const suggestions = new Set<string>();
+    faqs.forEach(f => {
+      if (searchInContent(f.question, searchTerm)) suggestions.add(language === 'rw' ? f.question_rw : f.question);
+    });
+    return Array.from(suggestions).slice(0, 5);
+  };
+
+  const getPopularSearches = () => {
+    return faqs.sort((a, b) => b.views - a.views).slice(0, 5).map(f => language === 'rw' ? f.question_rw : f.question);
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    setShowSearchResults(true);
+    if (term && !searchHistory.includes(term)) {
+      const newHistory = [term, ...searchHistory].slice(0, 10);
+      setSearchHistory(newHistory);
+      localStorage.setItem('supportSearchHistory', JSON.stringify(newHistory));
+    }
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('supportSearchHistory');
+  };
+
+  const highlightText = (text: string, highlight: string) => {
+    if (!highlight.trim()) return text;
+    const regex = new RegExp(`(${highlight})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) => 
+      regex.test(part) ? <mark key={i} className="bg-yellow-200 font-bold">{part}</mark> : part
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
@@ -90,11 +166,394 @@ const AdvancedSupportPage: React.FC = () => {
             <p className="text-2xl text-white font-black mb-8 drop-shadow-lg">
               {language === 'rw' ? 'Ikigo Cyuzuye cy\'Ubufasha bwa Garden TVET School' : 'Garden TVET School Comprehensive Support Center'}
             </p>
+            
+            {/* Advanced Search in Hero */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="max-w-4xl mx-auto">
+              <div className="relative">
+                <div className={`bg-white rounded-2xl shadow-2xl transition-all ${
+                  searchFocused ? 'ring-4 ring-yellow-300' : ''
+                }`}>
+                  <div className="flex items-center gap-4 p-4">
+                    <div className="relative flex-shrink-0">
+                      <Search className="w-8 h-8 text-green-600" />
+                      {searchTerm && (
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 0.5, repeat: Infinity }}
+                          className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"
+                        />
+                      )}
+                    </div>
+                    <input
+                      id="support-search"
+                      type="text"
+                      placeholder={language === 'rw' ? 'Shakisha ibibazo, ibisubizo, ibikoresho... (Ctrl+K)' : 'Search questions, answers, resources... (Ctrl+K)'}
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setShowDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setSearchFocused(true);
+                        setShowDropdown(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setSearchFocused(false);
+                          setShowDropdown(false);
+                        }, 200);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchTerm) {
+                          handleSearch(searchTerm);
+                          setShowDropdown(false);
+                        }
+                      }}
+                      className="flex-1 text-xl font-bold focus:outline-none text-gray-900 placeholder:text-gray-400"
+                    />
+                    {searchTerm && (
+                      <motion.button
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        onClick={() => {
+                          setSearchTerm('');
+                          setShowSearchResults(false);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                      >
+                        <span className="text-2xl">✕</span>
+                      </motion.button>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={searchFilter}
+                        onChange={(e) => setSearchFilter(e.target.value)}
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-400 to-green-400 text-white font-bold focus:outline-none cursor-pointer"
+                      >
+                        <option value="all">{language === 'rw' ? 'Byose' : 'All'}</option>
+                        <option value="faqs">FAQs</option>
+                        <option value="resources">{language === 'rw' ? 'Ibikoresho' : 'Resources'}</option>
+                      </select>
+                      {searchTerm && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleSearch(searchTerm)}
+                          className="px-6 py-2 bg-gradient-to-r from-green-400 to-yellow-400 text-white rounded-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                        >
+                          {language === 'rw' ? 'Shakisha' : 'Search'}
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Advanced Dropdown */}
+                  <AnimatePresence>
+                    {showDropdown && searchFocused && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-t border-gray-200 overflow-hidden"
+                      >
+                        <div className="p-4 max-h-96 overflow-y-auto">
+                          {/* Live Search Results Preview */}
+                          {searchTerm.length >= 2 && (
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                                  <Zap className="w-4 h-4 text-yellow-500" />
+                                  {language === 'rw' ? 'Ibisubizo Byihuse' : 'Quick Results'}
+                                </p>
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">
+                                  {allSearchResults.total} {language === 'rw' ? 'byabonetse' : 'found'}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {getSearchSuggestions().map((suggestion, i) => (
+                                  <motion.button
+                                    key={i}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.05 }}
+                                    onClick={() => handleSearch(suggestion)}
+                                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 text-gray-700 font-semibold transition-all group"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Search className="w-4 h-4 text-green-600 group-hover:scale-110 transition-transform" />
+                                      <span className="flex-1">{highlightText(suggestion, searchTerm)}</span>
+                                      <span className="text-xs text-gray-400 group-hover:text-green-600">→</span>
+                                    </div>
+                                  </motion.button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Recent Searches */}
+                          {!searchTerm && searchHistory.length > 0 && (
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-gray-500" />
+                                  {language === 'rw' ? 'Ishakisha Ryashize' : 'Recent Searches'}
+                                </p>
+                                <button
+                                  onClick={clearSearchHistory}
+                                  className="text-xs text-red-500 hover:text-red-700 font-bold"
+                                >
+                                  {language === 'rw' ? 'Siba' : 'Clear'}
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {searchHistory.slice(0, 5).map((search, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => handleSearch(search)}
+                                    className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-600 font-semibold transition-all flex items-center gap-3 group"
+                                  >
+                                    <Clock className="w-4 h-4 text-gray-400 group-hover:text-green-600" />
+                                    <span className="flex-1">{search}</span>
+                                    <span className="text-xs text-gray-400 group-hover:text-green-600">→</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Popular Searches */}
+                          {!searchTerm && (
+                            <div>
+                              <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-yellow-500" />
+                                {language === 'rw' ? 'Ibibazo Bikunze Gushakishwa' : 'Popular Searches'}
+                              </p>
+                              <div className="space-y-2">
+                                {getPopularSearches().map((search, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => handleSearch(search)}
+                                    className="w-full text-left px-4 py-2 rounded-lg hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 text-gray-600 font-semibold transition-all flex items-center gap-3 group"
+                                  >
+                                    <Star className="w-4 h-4 text-yellow-500 group-hover:scale-110 transition-transform" />
+                                    <span className="flex-1 line-clamp-1">{search}</span>
+                                    <span className="text-xs text-gray-400 group-hover:text-green-600">→</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Keyboard Shortcuts */}
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 font-bold mb-2">{language === 'rw' ? 'Utubuto tw\'Ibanze' : 'Keyboard Shortcuts'}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <div className="flex items-center gap-1 text-xs">
+                                <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 font-mono">Ctrl</kbd>
+                                <span className="text-gray-400">+</span>
+                                <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 font-mono">K</kbd>
+                                <span className="text-gray-600 ml-1">{language === 'rw' ? 'Shakisha' : 'Search'}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs">
+                                <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 font-mono">Enter</kbd>
+                                <span className="text-gray-600 ml-1">{language === 'rw' ? 'Shakisha' : 'Search'}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs">
+                                <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 font-mono">Esc</kbd>
+                                <span className="text-gray-600 ml-1">{language === 'rw' ? 'Funga' : 'Close'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                {/* Quick Search Stats */}
+                {searchTerm && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 flex items-center justify-center gap-6 text-white"
+                  >
+                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-bold">{allSearchResults.total} {language === 'rw' ? 'Ibisubizo' : 'Results'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full">
+                      <FileText className="w-5 h-5" />
+                      <span className="font-bold">{filteredFaqs.length} FAQs</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full">
+                      <Download className="w-5 h-5" />
+                      <span className="font-bold">{filteredResources.length} {language === 'rw' ? 'Ibikoresho' : 'Resources'}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4">
+        {/* Comprehensive Search Results Page */}
+        {showSearchResults && searchTerm && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-12"
+          >
+            <div className="bg-white rounded-3xl shadow-2xl p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-4xl font-black text-gray-900 mb-2">
+                    {language === 'rw' ? 'Ibisubizo by\'Ishakisha' : 'Search Results'}
+                  </h2>
+                  <p className="text-gray-600 font-bold">
+                    {allSearchResults.total} {language === 'rw' ? 'ibisubizo byabonetse kuri' : 'results found for'} "{searchTerm}"
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setShowSearchResults(false);
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-green-400 text-white rounded-xl font-bold hover:shadow-lg transition-all"
+                >
+                  {language === 'rw' ? 'Funga' : 'Close'}
+                </button>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex gap-3 mb-6">
+                {[
+                  { id: 'all', label: language === 'rw' ? 'Byose' : 'All', count: allSearchResults.total },
+                  { id: 'faqs', label: 'FAQs', count: filteredFaqs.length },
+                  { id: 'resources', label: language === 'rw' ? 'Ibikoresho' : 'Resources', count: filteredResources.length }
+                ].map(filter => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setSearchFilter(filter.id)}
+                    className={`px-6 py-3 rounded-xl font-bold transition-all ${
+                      searchFilter === filter.id
+                        ? 'bg-gradient-to-r from-yellow-400 to-green-400 text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                ))}
+              </div>
+
+              {/* FAQs Results */}
+              {(searchFilter === 'all' || searchFilter === 'faqs') && filteredFaqs.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <MessageCircle className="w-6 h-6 text-green-600" />
+                    FAQs ({filteredFaqs.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {filteredFaqs.slice(0, searchFilter === 'faqs' ? undefined : 5).map((faq, i) => (
+                      <motion.div
+                        key={faq.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="bg-gradient-to-br from-yellow-50 to-green-50 rounded-xl p-5 hover:shadow-lg transition-all cursor-pointer"
+                        onClick={() => {
+                          setExpandedFaq(faq.id);
+                          setShowSearchResults(false);
+                          setActiveTab('faqs');
+                        }}
+                      >
+                        <h4 className="text-lg font-black text-gray-900 mb-2">
+                          {language === 'rw' ? faq.question_rw : faq.question}
+                        </h4>
+                        <p className="text-gray-700 line-clamp-2 mb-3">
+                          {language === 'rw' ? faq.answer_rw : faq.answer}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <ThumbsUp className="w-4 h-4" /> {faq.helpful_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="w-4 h-4" /> {faq.views} views
+                          </span>
+                          <span className="ml-auto text-green-600 font-bold">{language === 'rw' ? 'Reba →' : 'View →'}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resources Results */}
+              {(searchFilter === 'all' || searchFilter === 'resources') && filteredResources.length > 0 && (
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-yellow-600" />
+                    {language === 'rw' ? 'Ibikoresho' : 'Resources'} ({filteredResources.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {filteredResources.slice(0, searchFilter === 'resources' ? undefined : 6).map((resource, i) => {
+                      const Icon = resource.resource_type === 'video' ? Video : resource.resource_type === 'link' ? LinkIcon : FileText;
+                      return (
+                        <motion.div
+                          key={resource.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="bg-gradient-to-br from-green-50 to-yellow-50 rounded-xl p-5 hover:shadow-lg transition-all"
+                        >
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="bg-gradient-to-br from-yellow-400 to-green-400 p-3 rounded-xl">
+                              <Icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-black text-gray-900 mb-1">
+                                {language === 'rw' ? resource.title_rw : resource.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 line-clamp-2">{language === 'rw' ? resource.description_rw : resource.description}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500 flex items-center gap-1">
+                              <Download className="w-4 h-4" /> {resource.downloads}
+                            </span>
+                            <button className="px-4 py-2 bg-gradient-to-r from-yellow-400 to-green-400 text-white rounded-lg font-bold hover:shadow-lg transition-all text-sm">
+                              {language === 'rw' ? 'Fungura' : 'Open'}
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* No Results */}
+              {allSearchResults.total === 0 && (
+                <div className="text-center py-12">
+                  <Search className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-2xl font-black text-gray-900 mb-2">
+                    {language === 'rw' ? 'Nta bisubizo byabonetse' : 'No Results Found'}
+                  </h3>
+                  <p className="text-gray-600 font-bold mb-6">
+                    {language === 'rw' ? 'Gerageza gukoresha amagambo atandukanye' : 'Try using different keywords'}
+                  </p>
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-green-400 text-white rounded-xl font-bold hover:shadow-lg transition-all"
+                  >
+                    {language === 'rw' ? 'Siba Ishakisha' : 'Clear Search'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
         {/* Article Content Section */}
         <div className="mb-12">
           <div className="bg-white rounded-3xl shadow-2xl p-12">
