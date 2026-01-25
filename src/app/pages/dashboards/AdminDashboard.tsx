@@ -32,6 +32,7 @@ import GamificationSystemPage from '../admin/GamificationSystemPage';
 import LiveStudySessionsPage from '../admin/LiveStudySessionsPage';
 import CollaborationStudyGroupsPage from '../admin/CollaborationStudyGroupsPage';
 import QuizSystemPage from '../admin/QuizSystemPage';
+import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -99,6 +100,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
+      <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage={currentView} onNavigate={handleNavigation} onLogout={onLogout} />
       
       <div className="flex-1 overflow-auto">

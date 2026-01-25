@@ -59,8 +59,9 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate, onLo
   const quickLinks = [
     { key: 'home', icon: Home, label: 'Ahabanza', color: 'from-yellow-500 to-amber-500' },
     { key: 'academics', icon: BookOpen, label: 'Amasomo', color: 'from-green-500 to-teal-500' },
+    { key: 'students-management', icon: Users, label: 'Abanyeshuri', color: 'from-blue-500 to-indigo-500', roles: ['admin', 'super_admin', 'headmaster', 'dos', 'dod', 'accountant', 'patron', 'teacher'] },
     { key: 'sports', icon: Trophy, label: 'Siporo', color: 'from-orange-500 to-red-500' },
-    { key: 'teams', icon: Users, label: 'Amatsinda', color: 'from-blue-500 to-indigo-500' },
+    { key: 'teams', icon: Users, label: 'Amatsinda', color: 'from-purple-500 to-pink-500' },
   ];
 
   const recentActivities = [
@@ -189,26 +190,28 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({ currentPage, onNavigate, onLo
                   exit={{ height: 0, opacity: 0 }}
                 >
                   <CardContent className="space-y-2 pb-4">
-                    {quickLinks.map((link) => {
-                      const Icon = link.icon;
-                      return (
-                        <Button
-                          key={link.key}
-                          variant="ghost"
-                          onClick={() => onNavigate && onNavigate(link.key)}
-                          className={`w-full justify-start h-11 ${
-                            currentPage === link.key
-                              ? 'bg-gradient-to-r from-yellow-100 to-green-100 text-yellow-700 border-l-4 border-yellow-500'
-                              : 'hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50'
-                          }`}
-                        >
-                          <div className={`p-2 rounded-md bg-gradient-to-br ${link.color} mr-3`}>
-                            <Icon className="h-4 w-4 text-white" />
-                          </div>
-                          <span className="font-medium">{link.label}</span>
-                        </Button>
-                      );
-                    })}
+                    {quickLinks
+                      .filter(link => !link.roles || link.roles.includes(user?.role || ''))
+                      .map((link) => {
+                        const Icon = link.icon;
+                        return (
+                          <Button
+                            key={link.key}
+                            variant="ghost"
+                            onClick={() => onNavigate && onNavigate(link.key)}
+                            className={`w-full justify-start h-11 ${
+                              currentPage === link.key
+                                ? 'bg-gradient-to-r from-yellow-100 to-green-100 text-yellow-700 border-l-4 border-yellow-500'
+                                : 'hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-md bg-gradient-to-br ${link.color} mr-3`}>
+                              <Icon className="h-4 w-4 text-white" />
+                            </div>
+                            <span className="font-medium">{link.label}</span>
+                          </Button>
+                        );
+                      })}
                   </CardContent>
                 </motion.div>
               )}

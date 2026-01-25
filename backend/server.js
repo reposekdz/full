@@ -121,7 +121,8 @@ const routes = {
   teams: loadRoute('./routes/teams', 'Teams'),
   
   // Trades & Services
-  trades: loadRoute('./routes/trades', 'Trades'),
+  trades: loadRoute('./routes/unified-trades-api', 'Unified Trades API'),
+  tradeImages: loadRoute('./routes/trade-images', 'Trade Images'),
   services: loadRoute('./routes/services', 'Services'),
   servicesAdvanced: loadRoute('./routes/services-advanced', 'Services Advanced'),
   
@@ -154,6 +155,10 @@ const routes = {
   adminManagement: loadRoute('./routes/admin-management', 'Admin Management'),
   adminAdvanced: loadRoute('./routes/admin-advanced', 'Admin Advanced'),
   accountant: loadRoute('./routes/accountant', 'Accountant'),
+  studentPayments: loadRoute('./routes/studentPayments', 'Student Payments'),
+  paymentAnalytics: loadRoute('./routes/paymentAnalytics', 'Payment Analytics'),
+  accountantManagement: loadRoute('./routes/accountantManagement', 'Accountant Management'),
+  classes: loadRoute('./routes/classes', 'Classes'),
   docs: loadRoute('./routes/docs', 'Documentation'),
   
   // Library & Hostel
@@ -281,8 +286,9 @@ if (routes.sportsAdvanced) { app.use('/api/sports-advanced', routes.sportsAdvanc
 if (routes.sportsManagement) { app.use('/api/sports-management', routes.sportsManagement); mountedRoutes++; }
 if (routes.teams) { app.use('/api/teams', routes.teams); mountedRoutes++; }
 
-// Trades & Services
+// Trades & Services (Unified: trades + courses + classes)
 if (routes.trades) { app.use('/api/trades', routes.trades); mountedRoutes++; }
+if (routes.tradeImages) { app.use('/api/trade-images', routes.tradeImages); mountedRoutes++; }
 if (routes.services) { app.use('/api/services', routes.services); mountedRoutes++; }
 if (routes.servicesAdvanced) { app.use('/api/services-advanced', routes.servicesAdvanced); mountedRoutes++; }
 
@@ -315,6 +321,10 @@ if (routes.admin) { app.use('/api/admin', routes.admin); mountedRoutes++; }
 if (routes.adminManagement) { app.use('/api/admin-management', routes.adminManagement); mountedRoutes++; }
 if (routes.adminAdvanced) { app.use('/api/admin-advanced', routes.adminAdvanced); mountedRoutes++; }
 if (routes.accountant) { app.use('/api/accountant', routes.accountant); mountedRoutes++; }
+if (routes.studentPayments) { app.use('/api/accountant', routes.studentPayments); mountedRoutes++; }
+if (routes.paymentAnalytics) { app.use('/api/accountant', routes.paymentAnalytics); mountedRoutes++; }
+if (routes.accountantManagement) { app.use('/api/accountant', routes.accountantManagement); mountedRoutes++; }
+if (routes.classes) { app.use('/api/classes', routes.classes); mountedRoutes++; }
 if (routes.docs) { app.use('/api/docs', routes.docs); mountedRoutes++; }
 
 // Library, Hostel & Transport

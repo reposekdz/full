@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { notifyConductRemoval, notifyLeaveApproval } = require('../utils/parentNotifications');
 
 const router = express.Router();
 
@@ -110,6 +111,9 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
     // Update discipline record as notified
     await pool.execute('UPDATE discipline_records SET parent_notified = true WHERE id = ?', [result.insertId]);
 
+    // Auto-notify parents
+    await notifyConductRemoval(student_id, { conduct_type, severity, description, action_taken, removed_by_name: req.user.name });
+
     res.json({ success: true, message: 'Conduct removed and parents notified', recordId: result.insertId });
   } catch (error) {
     console.error('Remove conduct error:', error);
@@ -160,6 +164,9 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
 
     // Update leave record as notified
     await pool.execute('UPDATE student_leaves SET parent_notified = true WHERE id = ?', [result.insertId]);
+
+    // Auto-notify parents
+    await notifyLeaveApproval(student_id, { leave_type, reason, lesson_missed, start_time, end_time, approved_by_name: req.user.name });
 
     res.json({ success: true, message: 'Leave recorded and parents notified', leaveId: result.insertId });
   } catch (error) {

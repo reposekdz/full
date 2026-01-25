@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool: db } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Get homepage statistics - Real data from database

@@ -41,6 +41,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface StockManagerDashboardProps {
   onNavigate: (page: string) => void;
@@ -365,6 +366,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-white overflow-hidden">
+      <UniversalMessagingWidget />
       <LeftSidebar currentPage="stock-manager-dashboard" onNavigate={onNavigate} />
       
       <div className="flex-1 flex flex-col overflow-hidden">

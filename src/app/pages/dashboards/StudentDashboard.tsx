@@ -46,6 +46,7 @@ import StudentCompetitionsPage from '../student/StudentCompetitionsPage';
 import LibraryPage from '../student/LibraryPage';
 import TransportPage from '../student/TransportPage';
 import HostelPage from '../student/HostelPage';
+import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface StudentDashboardProps {
   onNavigate: (page: string) => void;
@@ -480,6 +481,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-yellow-50/30 to-green-50/30 overflow-hidden">
+      <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage="dashboard" onNavigate={handleNavigation} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col overflow-hidden">

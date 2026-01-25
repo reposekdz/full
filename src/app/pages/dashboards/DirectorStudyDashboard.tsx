@@ -317,7 +317,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat, index) => {
+              {stats && stats.length > 0 && stats.map((stat, index) => {
                 const Icon = stat.icon;
                 const TrendIcon = stat.trend === 'up' ? ArrowUpRight : ArrowDownRight;
                 return (

@@ -25,6 +25,7 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Switch } from '@/app/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/components/ui/collapsible';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
+import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface EnhancedTeacherDashboardProps {
   onNavigate: (page: string) => void;
@@ -314,6 +315,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
+      <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
       
       <div className="flex-1 overflow-auto">

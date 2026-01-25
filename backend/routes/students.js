@@ -125,12 +125,13 @@ router.get('/details/:id', authenticateToken, async (req, res) => {
 });
 
 // Create new student (Admin)
-router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'headmaster', 'dos'), async (req, res) => {
   try {
     const {
       first_name, last_name, email, phone, password,
       admission_number, date_of_birth, gender, blood_group, address,
-      guardian_name, guardian_phone, guardian_email
+      guardian_name, guardian_phone, guardian_email,
+      trade_code, level_number, level_suffix
     } = req.body;
 
     if (!first_name || !last_name || !email) {
@@ -138,7 +139,7 @@ router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'h
     }
 
     const hashedPassword = await bcrypt.hash(password || 'student123', 10);
-    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+    const username = admission_number || `STD${Date.now()}`;
 
     const [userResult] = await pool.execute(`
       INSERT INTO users (username, email, password, first_name, last_name, phone, role, is_active)
@@ -152,7 +153,23 @@ router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'h
         user_id, admission_number, date_of_birth, gender, blood_group, address,
         guardian_name, guardian_phone, guardian_email
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [studentId, admission_number, date_of_birth, gender, blood_group, address, guardian_name, guardian_phone, guardian_email]);
+    `, [studentId, username, date_of_birth, gender, blood_group, address, guardian_name, guardian_phone, guardian_email]);
+
+    // Auto-enroll student in trade class if provided
+    if (trade_code && level_number) {
+      const [tradeClass] = await pool.execute(`
+        SELECT id FROM trade_classes 
+        WHERE trade_code = ? AND level_number = ? AND level_suffix = ?
+        LIMIT 1
+      `, [trade_code, level_number, level_suffix || '']);
+
+      if (tradeClass.length > 0) {
+        await pool.execute(`
+          INSERT INTO enrollments (student_id, class_id, enrollment_date, status)
+          VALUES (?, ?, NOW(), 'active')
+        `, [studentId, tradeClass[0].id]);
+      }
+    }
 
     res.json({
       success: true,

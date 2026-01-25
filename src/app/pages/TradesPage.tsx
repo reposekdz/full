@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import TradeDetailPage from './TradeDetailPage';
 import { 
   Code, 
   HardHat, 
@@ -121,7 +122,11 @@ interface Trade {
   };
 }
 
-const TradesPage: React.FC = () => {
+interface TradesPageProps {
+  onNavigate: (page: string) => void;
+}
+
+const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
@@ -134,43 +139,120 @@ const TradesPage: React.FC = () => {
   const [activeStatistic, setActiveStatistic] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTradeCode, setSelectedTradeCode] = useState<string | null>(() => {
+    // Restore selected trade from localStorage
+    const saved = localStorage.getItem('trades_selected_code');
+    return saved || null;
+  });
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [tradeGalleries, setTradeGalleries] = useState<{[key: string]: any[]}>({});
+  const [loadingGallery, setLoadingGallery] = useState(false);
+
+  // Save selected trade code to localStorage
+  useEffect(() => {
+    if (selectedTradeCode) {
+      localStorage.setItem('trades_selected_code', selectedTradeCode);
+    } else {
+      localStorage.removeItem('trades_selected_code');
+    }
+  }, [selectedTradeCode]);
+
+  // Load gallery images for a trade
+  const loadTradeGallery = async (tradeCode: string) => {
+    if (tradeGalleries[tradeCode]) return; // Already loaded
+    
+    try {
+      setLoadingGallery(true);
+      const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${tradeCode}`);
+      const data = await response.json();
+      
+      if (data.success && data.gallery) {
+        setTradeGalleries(prev => ({
+          ...prev,
+          [tradeCode]: data.gallery
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading gallery for ${tradeCode}:`, error);
+    } finally {
+      setLoadingGallery(false);
+    }
+  };
 
   // Load trades data from database
   useEffect(() => {
     const loadTrades = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/trades');
+        const response = await fetch('http://localhost:5000/api/trades/all');
         const data = await response.json();
-        if (data.success && data.trades) {
-          const enhancedTrades = data.trades.map((trade: any) => ({
-            id: trade.code.toLowerCase(),
-            title: trade.name,
-            code: trade.code,
-            icon: getTradeIcon(trade.code),
-            image: trade.image_url || `https://images.unsplash.com/photo-1531498860502-7c67cf02f657?w=1080`,
-            description: trade.description_en || trade.description_rw,
-            features: trade.requirements_en ? trade.requirements_en.split(',').map((r: string) => r.trim()) : ['Professional Training', 'Industry Standards', 'Practical Skills'],
-            levels: generateTradeLevels(trade),
-            tools: generateTradeTools(trade.code),
-            gallery: generateTradeGallery(trade.code),
-            workshops: generateTradeWorkshops(trade.code),
-            instructors: generateTradeInstructors(trade.code),
-            careerPaths: generateCareerPaths(trade.code),
+        
+        if (data.success && data.trades && data.trades.length > 0) {
+          // Group trades by base type (SOD, BDC, AUTO)
+          const tradeGroups: any = {};
+          
+          data.trades.forEach((trade: any) => {
+            const baseType = trade.code.replace(/L[345]/, ''); // Extract SOD, BDC, or AUTO
+            if (!tradeGroups[baseType]) {
+              tradeGroups[baseType] = {
+                baseType,
+                name: trade.name.replace(/Level [345] /, ''),
+                name_rw: trade.name_rw,
+                description: trade.description || trade.description_rw,
+                levels: []
+              };
+            }
+            
+            const level = trade.code.match(/L[345]/)?.[0] || '';
+            tradeGroups[baseType].levels.push({
+              level: `Level ${level.replace('L', '')}`,
+              code: trade.code,
+              duration: `${trade.duration_years || 2} Years`,
+              description: trade.description || trade.description_rw,
+              modules: (trade.courses || []).map((c: any) => c.name),
+              courses: trade.courses || [],
+              hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
+              classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
+            });
+          });
+
+          // Convert to array and create enhanced trades
+          const enhancedTrades = Object.values(tradeGroups).map((group: any) => ({
+            id: group.baseType,
+            title: group.name_rw || group.name,
+            code: group.baseType,
+            icon: getTradeIcon(group.baseType),
+            image: getTradeImage(group.baseType),
+            description: group.description || 'Porogaramu y\'amahugurwa y\'ikoranabuhanga',
+            features: ['Amahugurwa y\'Umwuga', 'Ibipimo by\'Inganda', 'Ubumenyi Bufatika', 'Witeguye Akazi', 'Abarimu b\'Inzobere'],
+            levels: group.levels.sort((a: any, b: any) => a.level.localeCompare(b.level)),
+            tools: [],
+            gallery: [],
+            workshops: [],
+            instructors: [],
+            careerPaths: [],
             statistics: {
-              students: trade.student_count || 0,
+              students: group.levels.reduce((sum: number, l: any) => sum + (l.total_students || 0), 0),
               successRate: 95,
               graduationRate: 92,
               employmentRate: 88
             }
           }));
+          
+          setAllTrades(enhancedTrades);
           setTrades(enhancedTrades);
-        } else {
-          setTrades(mockTrades);
+          
+          // Load galleries for all trades
+          enhancedTrades.forEach(trade => {
+            loadTradeGallery(trade.code);
+          });
         }
       } catch (error) {
         console.error('Error loading trades:', error);
-        setTrades(mockTrades);
       } finally {
         setLoading(false);
       }
@@ -179,185 +261,169 @@ const TradesPage: React.FC = () => {
     loadTrades();
   }, []);
 
-  // Helper functions for generating trade data
-  const getTradeIcon = (code: string) => {
-    const icons: { [key: string]: any } = {
-      'SOD': Code,
-      'BDC': HardHat,
-      'AUTO': Wrench
-    };
-    return icons[code] || Code;
-  };
+  // Search from database - comprehensive search
+  useEffect(() => {
+    const searchDatabase = async () => {
+      if (searchTerm === '') {
+        setSearchResults([]);
+        if (selectedCategory === 'All') {
+          setTrades(allTrades);
+        } else {
+          setTrades(allTrades.filter(t => t.code === selectedCategory));
+        }
+        return;
+      }
 
-  const generateTradeLevels = (trade: any) => {
-    const duration = trade.duration_months || 24;
-    const levels = [];
-    
-    if (duration >= 12) {
-      levels.push({
-        level: `Level 3 ${trade.code}`,
-        duration: '1 Year',
-        description: `Foundation level training in ${trade.title.toLowerCase()}`,
-        modules: generateModules(trade.code, 3)
-      });
-    }
-    
-    if (duration >= 24) {
-      levels.push({
-        level: `Level 4 ${trade.code}`,
-        duration: '1 Year',
-        description: `Advanced training in ${trade.title.toLowerCase()}`,
-        modules: generateModules(trade.code, 4)
-      });
-    }
-    
-    return levels;
-  };
+      setSearchLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.append('q', searchTerm);
+        
+        const response = await fetch(`http://localhost:5000/api/trades/search/query?${params}`);
+        const data = await response.json();
+        
+        if (data.success && data.results) {
+          const results: any[] = [];
+          const tradeGroups: any = {};
+          
+          // Process trades from search
+          if (data.results.trades) {
+            data.results.trades.forEach((trade: any) => {
+              const baseType = trade.code.replace(/L[345]/, '');
+              
+              if (!tradeGroups[baseType]) {
+                tradeGroups[baseType] = {
+                  baseType,
+                  name: trade.name_rw || trade.name.replace(/Level [345] /, ''),
+                  description: trade.description || trade.description_rw,
+                  levels: []
+                };
+              }
+              
+              const level = trade.code.match(/L[345]/)?.[0] || '';
+              tradeGroups[baseType].levels.push({
+                level: `Level ${level.replace('L', '')}`,
+                code: trade.code,
+                duration: `${trade.duration_years || 2} Years`,
+                description: trade.description || trade.description_rw,
+                modules: [],
+                courses: [],
+                hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
+                classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
+              });
+            });
+          }
+          
+          // Process courses from search
+          if (data.results.courses) {
+            data.results.courses.forEach((course: any) => {
+              results.push({
+                type: 'course',
+                tradeCode: course.trade_code,
+                tradeName: course.trade_name,
+                name: course.name_rw || course.name,
+                code: course.code,
+                credits: course.credits,
+                icon: BookOpen
+              });
+            });
+          }
+          
+          // Process classes from search
+          if (data.results.classes) {
+            data.results.classes.forEach((cls: any) => {
+              results.push({
+                type: 'class',
+                name: cls.name,
+                courseName: cls.course_name,
+                courseCode: cls.course_code,
+                icon: Users
+              });
+            });
+          }
 
-  const generateModules = (code: string, level: number) => {
-    const moduleMap: { [key: string]: { [key: number]: string[] } } = {
-      'SOD': {
-        3: ['HTML/CSS/JavaScript', 'Python Programming', 'Database Fundamentals', 'Git Version Control', 'Problem Solving'],
-        4: ['React & Vue.js', 'Node.js & Express', 'SQL & NoSQL Databases', 'API Development', 'Mobile App Development']
-      },
-      'BDC': {
-        3: ['Construction Basics', 'Building Materials', 'Safety Protocols', 'Technical Drawing', 'Site Preparation'],
-        4: ['Advanced Construction', 'Project Management', 'Structural Design', 'Quality Control', 'Sustainable Building']
-      },
-      'AUTO': {
-        3: ['Engine Fundamentals', 'Electrical Systems', 'Basic Diagnostics', 'Vehicle Maintenance', 'Safety Procedures'],
-        4: ['Advanced Diagnostics', 'Hybrid Technology', 'Electronic Systems', 'Engine Performance', 'Workshop Management']
+          const enhancedTrades = Object.values(tradeGroups).map((group: any) => ({
+            id: group.baseType,
+            title: group.name,
+            code: group.baseType,
+            icon: getTradeIcon(group.baseType),
+            image: getTradeImage(group.baseType),
+            description: group.description || 'Porogaramu y\'amahugurwa y\'ikoranabuhanga',
+            features: ['Amahugurwa y\'Umwuga', 'Ibipimo by\'Inganda', 'Ubumenyi Bufatika', 'Witeguye Akazi', 'Abarimu b\'Inzobere'],
+            levels: group.levels.sort((a: any, b: any) => a.level.localeCompare(b.level)),
+            tools: [],
+            gallery: [],
+            workshops: [],
+            instructors: [],
+            careerPaths: [],
+            statistics: {
+              students: 0,
+              successRate: 95,
+              graduationRate: 92,
+              employmentRate: 88
+            }
+          }));
+          
+          // Apply category filter
+          const filteredResults = selectedCategory === 'All' 
+            ? enhancedTrades 
+            : enhancedTrades.filter(t => t.code === selectedCategory);
+          
+          setSearchResults(results);
+          setTrades(filteredResults);
+        } else {
+          setSearchResults([]);
+          setTrades([]);
+        }
+      } catch (error) {
+        console.error('Error searching:', error);
+        setSearchResults([]);
+        setTrades([]);
+      } finally {
+        setSearchLoading(false);
       }
     };
-    
-    return moduleMap[code]?.[level] || ['Professional Training', 'Technical Skills', 'Industry Standards', 'Practical Application', 'Career Preparation'];
+
+    const debounceTimer = setTimeout(() => {
+      searchDatabase();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, selectedCategory, allTrades]);
+
+  const getTradeIcon = (code: string) => {
+    if (code === 'SOD') return Code;
+    if (code === 'BDC') return HardHat;
+    if (code === 'AUTO') return Wrench;
+    return Code;
   };
 
-  const generateTradeTools = (code: string) => {
-    const toolsMap: { [key: string]: any[] } = {
-      'SOD': [
-        { name: 'Visual Studio Code', icon: Code, description: 'Modern code editor with intelligent features', image: 'https://images.unsplash.com/photo-1544006659-f0b21884ce1d?w=300', category: 'Development Tools' },
-        { name: 'React', icon: Code, description: 'Popular JavaScript library for building user interfaces', image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300', category: 'Frameworks' },
-        { name: 'Node.js', icon: Laptop, description: 'JavaScript runtime for server-side development', image: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=300', category: 'Backend' },
-        { name: 'Git', icon: Settings, description: 'Version control system for tracking code changes', image: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=300', category: 'Development Tools' }
-      ],
-      'BDC': [
-        { name: 'AutoCAD', icon: Building, description: 'Computer-aided design software for construction', image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=300', category: 'Design Software' },
-        { name: 'Construction Tools', icon: HardHat, description: 'Professional construction equipment and tools', image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=300', category: 'Hand Tools' },
-        { name: 'Safety Equipment', icon: Shield, description: 'Personal protective equipment for construction sites', image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300', category: 'Safety' },
-        { name: 'Measuring Tools', icon: Target, description: 'Precision measuring instruments for construction', image: 'https://images.unsplash.com/photo-1609205925242-9cba5b19c9a7?w=300', category: 'Measurement' }
-      ],
-      'AUTO': [
-        { name: 'Diagnostic Scanner', icon: Wrench, description: 'Advanced automotive diagnostic equipment', image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=300', category: 'Diagnostics' },
-        { name: 'Workshop Tools', icon: Settings, description: 'Professional automotive repair tools', image: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300', category: 'Hand Tools' },
-        { name: 'Lift Equipment', icon: TrendingUp, description: 'Hydraulic lifts and garage equipment', image: 'https://images.unsplash.com/photo-1609069985744-95be8e1c1d8b?w=300', category: 'Equipment' },
-        { name: 'Testing Equipment', icon: BarChart3, description: 'Electronic testing and measurement tools', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=300', category: 'Testing' }
-      ]
-    };
-
-    return toolsMap[code] || [];
+  const getTradeImage = (code: string) => {
+    if (code === 'SOD') return 'http://localhost:5000/uploads/trades/sod.jpg';
+    if (code === 'BDC') return 'http://localhost:5000/uploads/trades/bdc.jpg';
+    if (code === 'AUTO') return 'http://localhost:5000/uploads/trades/aut1.jpg';
+    return 'http://localhost:5000/uploads/trades/sod.jpg';
   };
 
-  const generateTradeGallery = (code: string) => {
-    const galleryMap: { [key: string]: any[] } = {
-      'SOD': [
-        { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', title: 'Students learning web development', category: 'Classroom', description: 'Students working on modern web development projects' },
-        { url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800', title: 'Programming workspace', category: 'Workspace', description: 'Modern programming workspace with multiple monitors' },
-        { url: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=800', title: 'Code development', category: 'Projects', description: 'Students working on real-world coding projects' },
-        { url: 'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800', title: 'Mobile app development', category: 'Projects', description: 'Creating mobile applications with modern frameworks' }
-      ],
-      'BDC': [
-        { url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800', title: 'Construction workshop', category: 'Workshop', description: 'Hands-on construction training facility' },
-        { url: 'https://images.unsplash.com/photo-1585504198199-20277593b94f?w=800', title: 'Building techniques', category: 'Training', description: 'Learning modern construction techniques' },
-        { url: 'https://images.unsplash.com/photo-1590845947426-c4a88c96a048?w=800', title: 'Site work', category: 'Practical', description: 'Real construction site experience' },
-        { url: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800', title: 'Safety training', category: 'Safety', description: 'Construction safety protocols and training' }
-      ],
-      'AUTO': [
-        { url: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800', title: 'Automotive workshop', category: 'Workshop', description: 'Modern automotive repair facility' },
-        { url: 'https://images.unsplash.com/photo-1615906841282-a2b0c5845a61?w=800', title: 'Engine diagnostics', category: 'Training', description: 'Learning advanced engine diagnostic techniques' },
-        { url: 'https://images.unsplash.com/photo-1589734760604-86cc61f96ddb?w=800', title: 'Student practice', category: 'Practical', description: 'Students practicing automotive repair skills' },
-        { url: 'https://images.unsplash.com/photo-1609069985744-95be8e1c1d8b?w=800', title: 'Modern equipment', category: 'Equipment', description: 'State-of-the-art automotive equipment' }
-      ]
-    };
-
-    return galleryMap[code] || [];
-  };
-
-  const generateTradeWorkshops = (code: string) => {
-    // Generate workshop data based on trade
-    return [
-      { name: `${code} Fundamentals`, description: 'Introduction to basic concepts and techniques', duration: '2 weeks', capacity: 25, instructor: 'Professional Instructor', image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400' },
-      { name: `Advanced ${code}`, description: 'Advanced techniques and industry practices', duration: '3 weeks', capacity: 20, instructor: 'Senior Instructor', image: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400' }
-    ];
-  };
-
-  const generateTradeInstructors = (code: string) => {
-    return [
-      { name: 'John Mugisha', role: 'Senior Instructor', experience: '15 years', specialization: `${code} Expert`, image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150', email: 'j.mugisha@school.rw' },
-      { name: 'Marie Uwimana', role: 'Assistant Instructor', experience: '8 years', specialization: `${code} Specialist`, image: 'https://images.unsplash.com/photo-1494790108755-2616b612b134?w=150', email: 'm.uwimana@school.rw' }
-    ];
-  };
-
-  const generateCareerPaths = (code: string) => {
-    const careerMap: { [key: string]: any[] } = {
-      'SOD': [
-        { title: 'Full Stack Developer', description: 'Build complete web applications', averageSalary: '$50,000+', growthRate: '+15%' },
-        { title: 'Mobile App Developer', description: 'Create mobile applications', averageSalary: '$55,000+', growthRate: '+18%' },
-        { title: 'Software Engineer', description: 'Design and develop software systems', averageSalary: '$65,000+', growthRate: '+12%' }
-      ],
-      'BDC': [
-        { title: 'Construction Manager', description: 'Oversee construction projects', averageSalary: '$45,000+', growthRate: '+10%' },
-        { title: 'Site Supervisor', description: 'Manage construction sites', averageSalary: '$40,000+', growthRate: '+8%' },
-        { title: 'Building Inspector', description: 'Ensure construction quality', averageSalary: '$42,000+', growthRate: '+7%' }
-      ],
-      'AUTO': [
-        { title: 'Automotive Technician', description: 'Diagnose and repair vehicles', averageSalary: '$38,000+', growthRate: '+9%' },
-        { title: 'Service Manager', description: 'Manage automotive service departments', averageSalary: '$48,000+', growthRate: '+6%' },
-        { title: 'Auto Shop Owner', description: 'Run your own automotive business', averageSalary: '$55,000+', growthRate: '+12%' }
-      ]
-    };
-
-    return careerMap[code] || [];
-  };
-
-  // Mock data as fallback
-  const mockTrades: Trade[] = [
-    {
-      id: 'sod',
-      title: 'Software Development',
-      code: 'SOD',
-      icon: Code,
-      image: 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2Z0d2FyZSUyMGRldmVsb3BtZW50JTIwY29kaW5nfGVufDF8fHx8MTc2ODcxODI3MXww&ixlib=rb-4.1.0&q=80&w=1080',
-      description: 'Master the art of software development with cutting-edge technologies, real-world projects, and industry-standard practices.',
-      features: ['Modern Programming Languages', 'Full-Stack Development', 'Mobile App Development', 'Database Management', 'Industry Projects'],
-      levels: [],
-      tools: [],
-      gallery: [],
-      workshops: [],
-      instructors: [],
-      careerPaths: [],
-      statistics: { students: 0, successRate: 95, graduationRate: 92, employmentRate: 88 }
-    }
-  ];
+  if (selectedTradeCode) {
+    return <TradeDetailPage tradeCode={selectedTradeCode} onBack={() => setSelectedTradeCode(null)} />;
+  }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading trades...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Iratunganya imyuga...</p>
         </div>
       </div>
     );
   }
 
-  // Filter functions
-  const filteredTrades = trades.filter(trade => {
-    const matchesSearch = trade.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trade.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || trade.code === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Filter functions with enhanced search
+  const filteredTrades = trades;
+  const searchResultsCount = filteredTrades.length + searchResults.length;
+  const hasActiveSearch = searchTerm !== '' || selectedCategory !== 'All';
 
   const filteredGallery = selectedTrade?.gallery.filter(item => 
     galleryFilter === 'All' || item.category === galleryFilter
@@ -373,8 +439,8 @@ const TradesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header Section */}
-      <div className="relative bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 text-white py-20">
-        <div className="absolute inset-0 bg-black/20"></div>
+      <div className="relative bg-gradient-to-r from-green-600 via-yellow-500 to-lime-500 text-white py-20">
+        <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -382,83 +448,711 @@ const TradesPage: React.FC = () => {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
-              Our Trades
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-yellow-50 to-green-50 bg-clip-text text-transparent">
+              Imyuga Yacu
             </h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Discover world-class technical programs that prepare you for successful careers in today's dynamic industries
+            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
+              Menya porogaramu z'ikoranabuhanga zo mu rwego rwo hejuru zitegura umwuga utsinzi mu nganda zigezweho
             </p>
             <div className="flex flex-wrap justify-center gap-4 mb-8">
               <Badge className="text-lg px-6 py-2 bg-white/10 text-white hover:bg-white/20 transition-colors">
                 <Users className="w-5 h-5 mr-2" />
-                {trades.reduce((total, trade) => total + trade.statistics.students, 0)}+ Students
+                {trades.reduce((total, trade) => total + trade.statistics.students, 0)}+ Abanyeshuri
               </Badge>
               <Badge className="text-lg px-6 py-2 bg-white/10 text-white hover:bg-white/20 transition-colors">
                 <Trophy className="w-5 h-5 mr-2" />
-                95% Success Rate
+                95% Intsinzi
               </Badge>
               <Badge className="text-lg px-6 py-2 bg-white/10 text-white hover:bg-white/20 transition-colors">
                 <Briefcase className="w-5 h-5 mr-2" />
-                Industry Partnerships
+                Ubufatanye n'Inganda
               </Badge>
+            </div>
+
+            {/* Search Bar in Hero */}
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20 shadow-2xl">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/70 w-5 h-5" />
+                    {searchLoading && (
+                      <div className="absolute left-12 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/50 border-t-white"></div>
+                      </div>
+                    )}
+                    <Input
+                      type="text"
+                      placeholder="Shakisha imyuga, amasomo, cyangwa ikoranabuhanga..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setShowSearchResults(true);
+                      }}
+                      onFocus={() => {
+                        setSearchFocused(true);
+                        setShowSearchResults(true);
+                      }}
+                      onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                      className="pl-12 h-14 text-lg bg-white/20 border-white/30 text-white placeholder:text-white/70 focus:bg-white/30 focus:ring-2 focus:ring-white/50 transition-all"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => {
+                          setSearchTerm('');
+                          setShowSearchResults(false);
+                        }}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  <Select value={selectedCategory} onValueChange={(value) => {
+                    setSelectedCategory(value);
+                    setShowSearchResults(true);
+                  }}>
+                    <SelectTrigger className="sm:w-56 h-14 bg-white/20 border-white/30 text-white hover:bg-white/30 transition-all">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Ibyiciro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">Ibyiciro Byose</SelectItem>
+                      {trades.map((trade) => (
+                        <SelectItem key={trade.code} value={trade.code}>
+                          {trade.code} - {trade.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Live Search Results Preview */}
+                {(searchFocused || showSearchResults) && hasActiveSearch && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 bg-white rounded-xl shadow-2xl overflow-hidden"
+                  >
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-yellow-50 border-b border-green-200">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-700">
+                          {searchResultsCount} {searchResultsCount === 1 ? 'Igisubizo cyabonetse' : 'Ibisubizo byabonetse'}
+                        </p>
+                        {hasActiveSearch && (
+                          <button
+                            onClick={() => {
+                              setSearchTerm('');
+                              setSelectedCategory('All');
+                              setShowSearchResults(false);
+                            }}
+                            className="text-xs text-gray-600 hover:text-gray-900 underline"
+                          >
+                            Siba byose
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {/* Trades */}
+                      {filteredTrades.slice(0, 2).map((trade) => (
+                        <div
+                          key={trade.code}
+                          onClick={() => {
+                            setSelectedTradeCode(trade.code);
+                            setShowSearchResults(false);
+                          }}
+                          className="p-4 hover:bg-green-50 cursor-pointer transition-colors border-b border-gray-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-green-600 to-yellow-600 rounded-lg">
+                              <trade.icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-gray-900">{trade.title}</h4>
+                                <Badge className="bg-blue-100 text-blue-700 text-xs">Umwuga</Badge>
+                              </div>
+                              <p className="text-xs text-gray-600 line-clamp-1">{trade.description}</p>
+                            </div>
+                            <Badge className="bg-green-100 text-green-700">{trade.code}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Courses */}
+                      {searchResults.filter(r => r.type === 'course').slice(0, 3).map((result, idx) => (
+                        <div
+                          key={`course-${idx}`}
+                          onClick={() => {
+                            const baseCode = result.tradeCode?.replace(/L[345]/, '') || result.tradeCode;
+                            setSelectedTradeCode(baseCode);
+                            setShowSearchResults(false);
+                          }}
+                          className="p-4 hover:bg-yellow-50 cursor-pointer transition-colors border-b border-gray-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg">
+                              <result.icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-gray-900">{result.name}</h4>
+                                <Badge className="bg-yellow-100 text-yellow-700 text-xs">Isomo</Badge>
+                              </div>
+                              <p className="text-xs text-gray-600">{result.tradeName} • {result.code} • {result.credits} credits</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Instructors */}
+                      {searchResults.filter(r => r.type === 'instructor').slice(0, 3).map((result, idx) => (
+                        <div
+                          key={`instructor-${idx}`}
+                          onClick={() => {
+                            const baseCode = result.tradeCode?.replace(/L[345]/, '') || result.tradeCode;
+                            setSelectedTradeCode(baseCode);
+                            setShowSearchResults(false);
+                          }}
+                          className="p-4 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
+                              <result.icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-gray-900">{result.name}</h4>
+                                <Badge className="bg-blue-100 text-blue-700 text-xs">Umwarimu</Badge>
+                              </div>
+                              <p className="text-xs text-gray-600">{result.tradeName} • {result.specialization}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {searchResultsCount > 8 && (
+                        <div className="p-3 text-center bg-gray-50">
+                          <button
+                            onClick={() => setShowSearchResults(false)}
+                            className="text-sm text-green-600 hover:text-green-700 font-medium"
+                          >
+                            Reba {searchResultsCount - 8} ibindi hasi ↓
+                          </button>
+                        </div>
+                      )}
+                      {searchResultsCount === 0 && (
+                        <div className="p-8 text-center">
+                          <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-600 font-medium">Nta kibazo cyabonetse</p>
+                          <p className="text-sm text-gray-500 mt-1">Gerageza ijambo rishya</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Search and Filter Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 w-full lg:max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search trades..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 text-lg border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+      {/* Enhanced Trade Cards - Below Hero (No Overlap) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-12">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent"
+          >
+            Hitamo Umwuga Wawe
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-gray-600 max-w-3xl mx-auto"
+          >
+            Reba imyuga yacu yose kandi uhitemo icyo ukunda. Buri mwuga ufite amahugurwa yuzuye, abarimu b'inzobere, n'amahirwe menshi y'akazi.
+          </motion.p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {trades.map((trade, index) => {
+            const isSOD = trade.code === 'SOD';
+            const isBDC = trade.code === 'BDC';
+            const isAUTO = trade.code === 'AUTO';
+            
+            return (
+              <motion.div
+                key={trade.code}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.2 }}
+                whileHover={{ y: -10, scale: 1.02 }}
+                className="bg-gradient-to-br from-white via-green-50 to-yellow-50 rounded-3xl p-8 border-2 border-green-200 hover:shadow-2xl transition-all duration-500 cursor-pointer"
+                onClick={() => setSelectedTradeCode(trade.code)}
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-4 bg-gradient-to-r from-green-600 to-yellow-600 rounded-2xl shadow-lg">
+                    <trade.icon className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <Badge className="mb-2 bg-gradient-to-r from-green-600 to-yellow-600 text-white">
+                      {trade.code}
+                    </Badge>
+                    <h3 className="text-2xl font-bold text-gray-900">{trade.title}</h3>
+                  </div>
+                </div>
+                
+                <div className="space-y-4 mb-6">
+                  <p className="text-gray-700 leading-relaxed">
+                    {isSOD && (
+                      <>
+                        Iterambere rya Software ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora 
+                        porogaramu z'urubuga (websites), porogaramu z'itelifone (mobile apps), imikino (games), n'ibindi bikoresho bya software. 
+                        Abanyeshuri biga ururimi rw'ikoranabuhanga nka JavaScript, Python, Java, C++, React, Node.js, Angular, Vue.js, n'ibindi byinshi. 
+                        Biga kandi uburyo bwo gukora ububiko bw'amakuru (databases) nka MySQL, MongoDB, PostgreSQL, Firebase, n'ibindi. 
+                        Muri ubu burezi, abanyeshuri bamenya gukora API (Application Programming Interfaces), gukoresha cloud computing 
+                        (AWS, Azure, Google Cloud), Docker, Kubernetes, n'ikoranabuhanga rigezweho rya DevOps. Biga kandi cybersecurity 
+                        (umutekano wa data), encryption, authentication, n'uburyo bwo kurinda porogaramu. Porogaramu yacu itanga amahugurwa 
+                        yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu iterambere rya software. 
+                        Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software (software developers), web developers, mobile app 
+                        developers, game developers, data scientists, AI/ML engineers, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi 
+                        ni menshi cyane kuko software irakenewe mu nganda zose - amabanki, ibigo by'ubuzima, amasosiyete y'ikoranabuhanga, 
+                        guverinoma, n'ibindi byinshi.
+                      </>
+                    )}
+                    {isBDC && (
+                      <>
+                        Ubwubatsi n'Inyubako ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, 
+                        inzira, amazu y'ubucuruzi, amazu y'ishuri, ibitaro, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya 
+                        amazu n'ibindi bintu by'ubwubatsi ukoresheje porogaramu nka AutoCAD, Revit, SketchUp, ArchiCAD, n'ibindi. Biga kandi 
+                        gukoresha ibikoresho by'ubwubatsi nka mashini zo kubaka, ibikoresho byo gupima, ibikoresho byo gusya sima, n'ibindi. 
+                        Muri ubu burezi, abanyeshuri bamenya uburyo bwo gukora imishinga y'ubwubatsi, gucunga abantu (project management), 
+                        gucunga ibikoresho, gucunga amafaranga, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi ibipimo by'ubwubatsi 
+                        (building codes), umutekano ku murimo (safety standards), ubwiza bw'amazu (architectural design), n'uburambe 
+                        bw'ibikoresho (material science). Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite 
+                        abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi 
+                        (builders), abashushanya (architects), abacunga imishinga (project managers), abagenzuzi b'ubwubatsi (construction 
+                        supervisors), cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ubwubatsi burakenewe mu 
+                        iterambere ry'igihugu - kubaka amazu, inzira, ibitaro, amashuri, n'ibindi bintu by'ingenzi.
+                      </>
+                    )}
+                    {isAUTO && (
+                      <>
+                        Ikoranabuhanga ry'Ibinyabiziga ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gusana 
+                        ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo bwo gusana moteri 
+                        (engines) - moteri za petrol, diesel, hybrid, n'electric motors. Biga kandi gusana electrical systems - batteries, 
+                        alternators, starters, wiring, n'ibindi bintu by'amashanyarazi mu binyabiziga. Muri ubu burezi, abanyeshuri bamenya 
+                        gusana brakes (freni), suspension systems (amajosi), steering systems (steering), transmission (gearbox), n'ibindi bintu 
+                        by'ibinyabiziga. Biga kandi gukoresha ibikoresho byo gusana nka diagnostic tools (ibikoresho byo gusuzuma), scan tools, 
+                        multimeters, oscilloscopes, n'ibindi. Porogaramu yacu yita cyane ku koranabuhanga rigezweho rya hybrid vehicles 
+                        (ibinyabiziga bya hybrid) na electric vehicles (ibinyabiziga by'amashanyarazi), kuko ari byo bizaza. Biga kandi uburyo 
+                        bwo gukora serivisi y'ibinyabiziga, guhindura amavuta (oil change), gusuzuma ibinyabiziga (vehicle inspection), n'ibindi. 
+                        Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe 
+                        bwinshi mu koranabuhanga ry'ibinyabiziga. Nyuma y'amahugurwa, abanyeshuri bashobora gukora mu magaraje (garages), mu nganda 
+                        z'ibinyabiziga (automotive companies) nka Toyota, Volkswagen, Mercedes-Benz, n'ibindi, cyangwa bakongera kwiga muri kaminuza. 
+                        Amahirwe y'akazi ni menshi cyane kuko ibinyabiziga birakenewe cyane kandi bikeneye abantu bazi kubisana no kubikora serivisi.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="bg-white rounded-xl p-4 shadow-md">
+                    <div className="text-2xl font-bold text-green-600">{trade.statistics.students}+</div>
+                    <div className="text-xs text-gray-600">Abanyeshuri</div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-md">
+                    <div className="text-2xl font-bold text-yellow-600">{trade.statistics.successRate}%</div>
+                    <div className="text-xs text-gray-600">Intsinzi</div>
+                  </div>
+                </div>
+
+                <Button className="w-full bg-gradient-to-r from-green-600 to-yellow-600 hover:opacity-90 text-white font-semibold py-6 text-lg shadow-lg">
+                  <ArrowRight className="w-5 h-5 mr-2" />
+                  Reba Amakuru Yuzuye
+                </Button>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Ireme ry'Uburezi - Educational Philosophy Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 mb-12 border-2 border-green-100"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
+              Ireme ry'Uburezi mu Myuga Yacu - Iterambere ry'Ubushobozi bw'Abanyeshuri
+            </h2>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Uburezi bw'ikoranabuhanga bugamije guteza imbere ubushobozi bw'abanyeshuri mu bijyanye n'umwuga, 
+              kubategura gukora imirimo ikomeye mu nganda, no kubafasha kuba inzobere mu myuga yabo. Dufite porogaramu 
+              zuzuye z'amahugurwa akurikije ibipimo mpuzamahanga, abarimu b'inzobere, n'ibikoresho bigezweho.
+            </p>
+          </div>
+
+          {/* Enhanced Trade Cards with More Details */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            {trades.map((trade, index) => {
+              const isSOD = trade.code === 'SOD';
+              const isBDC = trade.code === 'BDC';
+              const isAUTO = trade.code === 'AUTO';
+              
+              return (
+                <motion.div
+                  key={trade.code}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.2 }}
+                  whileHover={{ y: -10, scale: 1.02 }}
+                  className="bg-gradient-to-br from-green-50 via-yellow-50 to-lime-50 rounded-3xl p-8 border-2 border-green-200 hover:shadow-2xl transition-all duration-500 cursor-pointer"
+                  onClick={() => setSelectedTradeCode(trade.code)}
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-4 bg-gradient-to-r from-green-600 to-yellow-600 rounded-2xl shadow-lg">
+                      <trade.icon className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <Badge className="mb-2 bg-gradient-to-r from-green-600 to-yellow-600 text-white">
+                        {trade.code}
+                      </Badge>
+                      <h3 className="text-2xl font-bold text-gray-900">{trade.title}</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <p className="text-gray-700 leading-relaxed">
+                      {isSOD && (
+                        <>
+                          Iterambere rya Software ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora 
+                          porogaramu z'urubuga, porogaramu z'itelifone, imikino, n'ibindi bikoresho bya software. Abanyeshuri biga 
+                          ururimi rw'ikoranabuhanga nka JavaScript, Python, React, Node.js, n'ibindi byinshi. Biga kandi uburyo bwo 
+                          gukora database, API, cloud computing, cybersecurity, n'ikoranabuhanga rigezweho rya AI/ML. Porogaramu yacu 
+                          itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe 
+                          bwinshi mu iterambere rya software. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software, 
+                          web developers, mobile app developers, game developers, cyangwa bakongera kwiga muri kaminuza.
+                        </>
+                      )}
+                      {isBDC && (
+                        <>
+                          Ubwubatsi n'Inyubako ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, 
+                          inzira, amazu y'ubucuruzi, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya amazu, 
+                          gukoresha ibikoresho by'ubwubatsi, gupima, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi uburyo bwo 
+                          gukora imishinga y'ubwubatsi, gucunga abantu, n'ibikoresho. Porogaramu yacu itanga amahugurwa yuzuye 
+                          akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. 
+                          Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi, abashushanya, abacunga imishinga, cyangwa 
+                          bakongera kwiga muri kaminuza.
+                        </>
+                      )}
+                      {isAUTO && (
+                        <>
+                          Ikoranabuhanga ry'Ibinyabiziga ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo 
+                          gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo 
+                          bwo gusana moteri, gearbox, brakes, electrical systems, n'ibindi bintu by'ibinyabiziga. Biga kandi uburyo 
+                          bwo gukoresha ibikoresho byo gusana, diagnostics, n'ikoranabuhanga rigezweho rya hybrid na electric vehicles. 
+                          Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere 
+                          bafite uburambe bwinshi mu koranabuhanga ry'ibinyabiziga. Nyuma y'amahugurwa, abanyeshuri bashobora gukora 
+                          mu magaraje, mu nganda z'ibinyabiziga, cyangwa bakongera kwiga muri kaminuza.
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-yellow-600" />
+                      Ibintu by'Ingenzi:
+                    </h4>
+                    {isSOD && [
+                      'Kwiga ururimi rw\'ikoranabuhanga: JavaScript, Python, Java, C++, React, Node.js',
+                      'Gukora porogaramu z\'urubuga (websites) n\'imbuga nkoranyambaga (web apps)',
+                      'Gukora porogaramu z\'itelifone (mobile apps) kuri Android na iOS',
+                      'Kwiga database: MySQL, MongoDB, PostgreSQL, Firebase',
+                      'Cloud Computing: AWS, Azure, Google Cloud, Docker, Kubernetes',
+                      'Cybersecurity: Umutekano wa data, encryption, authentication',
+                      'AI/ML: Artificial Intelligence, Machine Learning, Data Science',
+                      'Imyitozo mu nganda: Google, Microsoft, Amazon, n\'ibindi'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+                    {isBDC && [
+                      'Gushushanya amazu n\'ibindi bintu by\'ubwubatsi (AutoCAD, Revit)',
+                      'Gukoresha ibikoresho by\'ubwubatsi: mashini, ibikoresho byo gupima',
+                      'Kwiga uburyo bwo kubaka amazu, inzira, n\'ibindi bintu',
+                      'Gucunga imishinga y\'ubwubatsi: abantu, ibikoresho, amafaranga',
+                      'Kwiga ibipimo by\'ubwubatsi: umutekano, ubwiza, n\'uburambe',
+                      'Imyitozo mu nganda: amasosiyete y\'ubwubatsi, ibigo by\'ubwubatsi',
+                      'Impamyabumenyi z\'ubwubatsi: certificates, diplomas, degrees'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+                    {isAUTO && [
+                      'Gusana moteri: petrol, diesel, hybrid, electric motors',
+                      'Gusana electrical systems: batteries, alternators, starters',
+                      'Gusana brakes, suspension, steering systems',
+                      'Diagnostics: gukoresha ibikoresho byo gusuzuma ibinyabiziga',
+                      'Hybrid & Electric Vehicles: ikoranabuhanga rigezweho',
+                      'Imyitozo mu nganda: Toyota, Volkswagen, n\'ibindi',
+                      'Impamyabumenyi: ASE, NATEF, manufacturer certifications'
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-white rounded-xl p-4 shadow-md">
+                      <div className="text-2xl font-bold text-green-600">{trade.statistics.students}+</div>
+                      <div className="text-xs text-gray-600">Abanyeshuri</div>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-md">
+                      <div className="text-2xl font-bold text-yellow-600">{trade.statistics.successRate}%</div>
+                      <div className="text-xs text-gray-600">Intsinzi</div>
+                    </div>
+                  </div>
+
+                  <Button className="w-full bg-gradient-to-r from-green-600 to-yellow-600 hover:opacity-90 text-white font-semibold py-6 text-lg shadow-lg">
+                    <ArrowRight className="w-5 h-5 mr-2" />
+                    Reba Amakuru Yuzuye
+                  </Button>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div className="prose prose-lg max-w-none">
+            <div className="bg-gradient-to-r from-green-100 to-yellow-100 rounded-2xl p-8 mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-green-600" />
+                Intego z'Uburezi bw'Ikoranabuhanga
+              </h3>
+              <p className="text-gray-800 leading-relaxed mb-4">
+                Ishuri ryacu rifite intego yo guteza imbere abanyeshuri bafite ubushobozi bwo gukora imirimo itandukanye mu nganda. 
+                Tubafasha kumenya ikoranabuhanga rigezweho, tubabigisha uburyo bwo gukemura ibibazo, kandi tubategura kugira uruhare 
+                mu iterambere ry'igihugu. Uburezi bwacu bushingiye ku mahugurwa y'umwuga akurikije ibipimo mpuzamahanga, 
+                bukaba bufite ibice bitatu by'ingenzi: amahugurwa mu ishuri, imyitozo mu nganda, n'isuzuma ry'ubushobozi.
+              </p>
+              <p className="text-gray-800 leading-relaxed mb-4">
+                Mu myuga yacu yose, abanyeshuri biga amasomo menshi ajyanye n'umwuga wabo. Muri Software Development (SOD), 
+                biga gukora porogaramu z'urubuga, porogaramu z'itelifone, n'imikino. Muri Building and Construction (BDC), 
+                biga kubaka amazu, kubaka inzira, n'ibindi bintu by'ubwubatsi. Muri Automotive Technology (AUTO), 
+                biga gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white rounded-xl p-6 border-2 border-green-200 shadow-lg">
+                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-green-600" />
+                  Inzego z'Amahugurwa
+                </h4>
+                <p className="text-gray-700 leading-relaxed mb-3">
+                  Porogaramu zacu zigizwe n'inzego eshatu: Urwego rwa 3 (L3), Urwego rwa 4 (L4), n'Urwego rwa 5 (L5). 
+                  Buri rwego rufite amasomo yihariye kandi rukaba rufite igihe runaka cyo kwigiramo. Urwego rwa 3 ni urwo 
+                  shingiro aho abanyeshuri biga ibintu by'ibanze by'umwuga wabo. Urwego rwa 4 ni urwo hagati aho biga ibintu 
+                  birambuye kandi bigoye. Urwego rwa 5 ni urwo hejuru aho biga ibintu by'umwuga bihanitse kandi bakamenya 
+                  gukora imirimo ikomeye mu nganda.
+                </p>
+                <p className="text-gray-700 leading-relaxed">
+                  Muri buri rwego, abanyeshuri bakora imyitozo myinshi mu mashuri yacu afite ibikoresho bigezweho. 
+                  Bakora imishinga itandukanye, bakamenya gukora mu itsinda, kandi bakamenya gukemura ibibazo. 
+                  Nyuma y'amahugurwa mu ishuri, bajya mu nganda gukora imyitozo ifatika aho bamenya uburyo inganda zikora.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 border-2 border-yellow-200 shadow-lg">
+                <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-yellow-600" />
+                  Abarimu n'Abafasha
+                </h4>
+                <p className="text-gray-700 leading-relaxed mb-3">
+                  Ishuri ryacu rifite abarimu b'inzobere bafite uburambe bwinshi mu myuga yabo. Abarimu bacu bize muri kaminuza 
+                  nziza kandi bafite impamyabumenyi z'umwuga. Benshi muri bo bakoze mu nganda imyaka myinshi mbere yo kuza kwigisha, 
+                  bituma bafite ubumenyi bufatika bwo gushyira mu bikorwa. Abarimu bacu bafasha abanyeshuri kumenya ibintu byose 
+                  bijyanye n'umwuga wabo, bakabafasha no mu bibazo by'ubuzima n'imibereho.
+                </p>
+                <p className="text-gray-700 leading-relaxed">
+                  Usibye abarimu, dufite n'abafasha batandukanye bafasha abanyeshuri mu bintu bitandukanye. Dufite abafasha 
+                  mu mashuri y'ikoranabuhanga, abafasha mu bitabo, n'abafasha mu kubungabunga umutekano. Abanyeshuri bacu 
+                  bafite uburenganzira bwo kubaza ibibazo byose kandi bakahabwa igisubizo cyiza.
+                </p>
               </div>
             </div>
-            
-            <div className="flex flex-wrap items-center gap-4">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48 h-12">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Categories</SelectItem>
-                  {trades.map((trade) => (
-                    <SelectItem key={trade.code} value={trade.code}>
-                      {trade.code} - {trade.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="px-4 py-2"
-                >
-                  <Grid3X3 className="w-4 h-4 mr-2" />
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="px-4 py-2"
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  List
-                </Button>
+
+            <div className="bg-gradient-to-r from-yellow-100 to-green-100 rounded-2xl p-8 mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Target className="w-6 h-6 text-yellow-600" />
+                Ibikoresho n'Ikoranabuhanga
+              </h3>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Ishuri ryacu rifite ibikoresho bigezweho byose bikenewe mu mahugurwa y'umwuga. Dufite amashuri y'ikoranabuhanga 
+                afite mudasobwa zigezweho, ibikoresho by'ubwubatsi, n'ibikoresho byo gusana ibinyabiziga. Abanyeshuri bacu 
+                bakoresha ibikoresho nk'ibyo bakoreshwa mu nganda, bituma bategerezwa neza akazi.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 border border-green-300">
+                  <h5 className="font-semibold text-gray-900 mb-2">Software Development</h5>
+                  <p className="text-sm text-gray-700">
+                    Mudasobwa zigezweho, porogaramu z'iterambere, ikoranabuhanga rya Cloud, n'ibindi bikoresho by'iterambere rya software.
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-yellow-300">
+                  <h5 className="font-semibold text-gray-900 mb-2">Building & Construction</h5>
+                  <p className="text-sm text-gray-700">
+                    Ibikoresho by'ubwubatsi, mashini zo kubaka, ibikoresho byo gupima, n'ibindi bikoresho by'ubwubatsi.
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-green-300">
+                  <h5 className="font-semibold text-gray-900 mb-2">Automotive Technology</h5>
+                  <p className="text-sm text-gray-700">
+                    Ibikoresho byo gusana ibinyabiziga, mashini zo gukora serivisi, ikoranabuhanga rya diagnostics, n'ibindi.
+                  </p>
+                </div>
               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 border-2 border-green-200 shadow-lg mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Briefcase className="w-6 h-6 text-green-600" />
+                Imyitozo mu Nganda n'Amahirwe y'Akazi
+              </h3>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Porogaramu zacu zose zirimo imyitozo mu nganda aho abanyeshuri bajya gukora imirimo ifatika. Dufite ubufatanye 
+                n'inganda nyinshi mu Rwanda no mu mahanga zihabwa abanyeshuri amahirwe yo kujya gukora imyitozo. Iyi myitozo 
+                ifasha abanyeshuri kumenya uburyo inganda zikora, bakamenya gukora mu itsinda, kandi bakamenya gukemura ibibazo 
+                bifatika. Nyuma y'imyitozo, abanyeshuri benshi bahabwa akazi mu nganda aho bakoze imyitozo.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Ishuri ryacu rifite ikigo gishinzwe gufasha abanyeshuri kubona akazi. Iki kigo gifasha abanyeshuri gukora CV, 
+                gukora ikiganiro cy'akazi, no kubona amakuru y'akazi. Dufite kandi urutonde rw'inganda zifitanye isano n'ishuri 
+                ryacu kandi zikeneye abakozi bafite ubushobozi. Abanyeshuri bacu barangije amahugurwa bafite amahirwe menshi yo 
+                kubona akazi keza mu nganda zitandukanye.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
+                  <CheckCircle2 className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <h5 className="font-semibold text-gray-900 mb-1">Imyitozo mu Nganda</h5>
+                    <p className="text-sm text-gray-700">
+                      Abanyeshuri bakora imyitozo mu nganda iminsi 90 kugeza 180 buri mwaka, aho bamenya gukora imirimo ifatika.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-yellow-50 rounded-lg">
+                  <CheckCircle2 className="w-6 h-6 text-yellow-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <h5 className="font-semibold text-gray-900 mb-1">Amahirwe y'Akazi</h5>
+                    <p className="text-sm text-gray-700">
+                      88% by'abanyeshuri bacu barangije amahugurwa babona akazi mu gihe cy'amezi 6 nyuma yo kurangiza.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-yellow-50 rounded-2xl p-8 border-2 border-green-200">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Rocket className="w-6 h-6 text-green-600" />
+                Ejo Hazaza bw'Abanyeshuri Bacu
+              </h3>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Abanyeshuri bacu barangije amahugurwa bafite ubushobozi bwo gukora imirimo itandukanye mu nganda. Bafite 
+                ubumenyi bufatika, bafite ubushobozi bwo gukemura ibibazo, kandi bafite imyifatire myiza yo gukora. Benshi 
+                muri bo bakora mu nganda nziza, abandi bakora imirimo yabo, abandi bakajya gukomeza kwiga muri kaminuza.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Ishuri ryacu rifite abanyeshuri benshi barangije amahugurwa kandi bakaba bakora imirimo nziza. Benshi muri bo 
+                ni inzobere mu myuga yabo, abandi ni ba manager mu nganda, abandi ni ba entrepreneur bafite ibigo byabo. 
+                Dushimira cyane abanyeshuri bacu kandi turabafasha mu bintu byose bakeneye.
+              </p>
+              <p className="text-gray-700 leading-relaxed">
+                Niba ushaka kuba umwe mu banyeshuri bacu, ushobora kuzuza ifishi yo kwiyandikisha cyangwa ukaduhamagara. 
+                Tuzakwakira neza kandi tukazakwereka ibintu byose bijyanye n'amahugurwa yacu. Turakwifuriza amahirwe!
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Active Search Indicator */}
+        {hasActiveSearch && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-green-100 to-yellow-100 rounded-xl p-4 mb-6 border-2 border-green-200"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-green-600 to-yellow-600 rounded-lg">
+                  <Search className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {searchResultsCount} {searchResultsCount === 1 ? 'Umwuga wabonetse' : 'Imyuga yabonetse'}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {searchTerm && `Ushakisha: "${searchTerm}"`}
+                    {searchTerm && selectedCategory !== 'All' && ' • '}
+                    {selectedCategory !== 'All' && `Icyiciro: ${selectedCategory}`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('All');
+                  setShowSearchResults(false);
+                }}
+                variant="outline"
+                size="sm"
+                className="bg-white hover:bg-gray-50"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Siba
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
+          <div className="flex flex-wrap items-center gap-4 justify-end">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="px-4 py-2"
+              >
+                <Grid3X3 className="w-4 h-4 mr-2" />
+                Grid
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="px-4 py-2"
+              >
+                <List className="w-4 h-4 mr-2" />
+                List
+              </Button>
             </div>
           </div>
         </div>
@@ -484,7 +1178,7 @@ const TradesPage: React.FC = () => {
                 className={`group cursor-pointer ${
                   viewMode === 'list' ? 'lg:flex lg:items-center lg:space-x-6' : ''
                 }`}
-                onClick={() => setSelectedTrade(trade)}
+                onClick={() => setSelectedTradeCode(trade.code)}
               >
                 <Card className="h-full border-2 border-transparent hover:border-blue-300 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50">
                   <div className={`relative overflow-hidden ${
@@ -506,7 +1200,7 @@ const TradesPage: React.FC = () => {
                       <div className="absolute bottom-4 right-4">
                         <div className="flex items-center text-white text-sm">
                           <Users className="w-4 h-4 mr-1" />
-                          {trade.statistics.students} Students
+                          {trade.statistics.students} Abanyeshuri
                         </div>
                       </div>
                     </div>
@@ -533,23 +1227,23 @@ const TradesPage: React.FC = () => {
                         ))}
                         {trade.features.length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{trade.features.length - 3} more
+                            +{trade.features.length - 3} ibindi
                           </Badge>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {trade.statistics.successRate}%
-                          </div>
-                          <div className="text-xs text-gray-600">Success Rate</div>
-                        </div>
                         <div className="text-center p-3 bg-green-50 rounded-lg">
                           <div className="text-2xl font-bold text-green-600">
+                            {trade.statistics.successRate}%
+                          </div>
+                          <div className="text-xs text-gray-600">Intsinzi</div>
+                        </div>
+                        <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                          <div className="text-2xl font-bold text-yellow-600">
                             {trade.statistics.employmentRate}%
                           </div>
-                          <div className="text-xs text-gray-600">Employment</div>
+                          <div className="text-xs text-gray-600">Akazi</div>
                         </div>
                       </div>
                     </div>
@@ -569,8 +1263,8 @@ const TradesPage: React.FC = () => {
             <div className="text-gray-400 mb-4">
               <Search className="w-16 h-16 mx-auto mb-4" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No trades found</h3>
-            <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">Nta myuga yabonetse</h3>
+            <p className="text-gray-500">Gerageza guhindura ibyo ushakisha cyangwa muyunguruzi</p>
           </motion.div>
         )}
       </div>
@@ -743,25 +1437,44 @@ const TradesPage: React.FC = () => {
                   </TabsContent>
 
                   <TabsContent value="curriculum" className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {selectedTrade.levels.map((level, index) => (
+                    <div className="space-y-6">
+                      {selectedTrade.levels.map((level: any, index) => (
                         <Card key={index}>
                           <CardHeader>
                             <CardTitle className="flex items-center justify-between">
-                              <span>{level.level}</span>
+                              <span>{level.level} - {level.code}</span>
                               <Badge variant="outline">{level.duration}</Badge>
                             </CardTitle>
                             <CardDescription>{level.description}</CardDescription>
                           </CardHeader>
-                          <CardContent>
-                            <h6 className="font-semibold mb-3">Core Modules:</h6>
-                            <div className="space-y-2">
-                              {level.modules.map((module, moduleIndex) => (
-                                <div key={moduleIndex} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                  <span className="text-sm">{module}</span>
-                                </div>
-                              ))}
+                          <CardContent className="space-y-4">
+                            {level.hasClasses && (
+                              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                                <h6 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                  <Users className="w-4 h-4" />
+                                  Classes: {level.classes.join(' & ')}
+                                </h6>
+                                <p className="text-xs text-gray-600">
+                                  Students study the same courses but in different class sections
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <h6 className="font-semibold mb-3 flex items-center gap-2">
+                                <BookOpen className="w-4 h-4" />
+                                Core Courses ({level.courses.length}):
+                              </h6>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {level.courses.map((course: any, courseIndex: number) => (
+                                  <div key={courseIndex} className="flex items-start gap-2 p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
+                                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-medium block">{course.name}</span>
+                                      <span className="text-xs text-gray-500">{course.code}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -834,62 +1547,92 @@ const TradesPage: React.FC = () => {
                   </TabsContent>
 
                   <TabsContent value="gallery" className="space-y-6">
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <Button
-                        variant={galleryFilter === 'All' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setGalleryFilter('All')}
-                      >
-                        All Photos
-                      </Button>
-                      {galleryCategories.map((category) => (
-                        <Button
-                          key={category}
-                          variant={galleryFilter === category ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setGalleryFilter(category)}
-                        >
-                          {category}
-                        </Button>
-                      ))}
-                    </div>
+                    {(() => {
+                      const currentGallery = tradeGalleries[selectedTrade.code] || [];
+                      const categories = Array.from(new Set(currentGallery.map(item => item.category)));
+                      const filtered = galleryFilter === 'All' 
+                        ? currentGallery 
+                        : currentGallery.filter(item => item.category === galleryFilter);
+                      
+                      return (
+                        <>
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            <Button
+                              variant={galleryFilter === 'All' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setGalleryFilter('All')}
+                            >
+                              Ifoto Zose ({currentGallery.length})
+                            </Button>
+                            {categories.map((category) => {
+                              const count = currentGallery.filter(item => item.category === category).length;
+                              return (
+                                <Button
+                                  key={category}
+                                  variant={galleryFilter === category ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setGalleryFilter(category)}
+                                >
+                                  {category} ({count})
+                                </Button>
+                              );
+                            })}
+                          </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <AnimatePresence mode="wait">
-                        {filteredGallery.map((item, index) => (
-                          <motion.div
-                            key={`${item.url}-${galleryFilter}`}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="group cursor-pointer relative"
-                            onClick={() => setSelectedGalleryImage(item.url)}
-                          >
-                            <div className="aspect-square relative overflow-hidden rounded-lg">
-                              <ImageWithFallback
-                                src={item.url}
-                                alt={item.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              <div className="absolute bottom-4 left-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <h4 className="font-semibold mb-1">{item.title}</h4>
-                                <p className="text-sm text-gray-200">{item.description}</p>
-                              </div>
-                              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <ZoomIn className="w-6 h-6 text-white" />
-                              </div>
-                              <div className="absolute top-4 left-4">
-                                <Badge className="bg-white/90 text-gray-800">
-                                  {item.category}
-                                </Badge>
-                              </div>
+                          {loadingGallery ? (
+                            <div className="text-center py-12">
+                              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                              <p className="text-gray-600">Iratunganya ifoto...</p>
                             </div>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
+                          ) : filtered.length === 0 ? (
+                            <div className="text-center py-12">
+                              <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                              <p className="text-gray-600 font-medium">Nta foto ihari</p>
+                              <p className="text-sm text-gray-500 mt-1">Shyiramo ifoto mu bwoko bw'ibikoresho</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <AnimatePresence mode="wait">
+                                {filtered.map((item, index) => (
+                                  <motion.div
+                                    key={`${item.url}-${galleryFilter}`}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="group cursor-pointer relative"
+                                    onClick={() => setSelectedGalleryImage(`http://localhost:5000${item.url}`)}
+                                  >
+                                    <div className="aspect-square relative overflow-hidden rounded-lg border-2 border-gray-200 hover:border-green-400 transition-colors">
+                                      <ImageWithFallback
+                                        src={`http://localhost:5000${item.url}`}
+                                        alt={item.title}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                      <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <h4 className="font-semibold mb-1 text-sm">{item.title}</h4>
+                                        <p className="text-xs text-gray-200">{item.category}</p>
+                                      </div>
+                                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="bg-white/90 rounded-full p-2">
+                                          <ZoomIn className="w-5 h-5 text-gray-800" />
+                                        </div>
+                                      </div>
+                                      <div className="absolute top-4 left-4">
+                                        <Badge className="bg-gradient-to-r from-green-600 to-yellow-600 text-white border-0">
+                                          {item.category}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                ))}
+                              </AnimatePresence>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </TabsContent>
 
                   <TabsContent value="instructors" className="space-y-6">

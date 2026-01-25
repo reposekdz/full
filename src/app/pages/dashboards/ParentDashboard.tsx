@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import ParentDashboardPage from '../parent/ParentDashboardPage';
+import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface ParentDashboardProps {
   onNavigate: (page: string) => void;
@@ -16,6 +17,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate, on
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
+      <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage={currentView} onNavigate={handleNavigation} onLogout={onLogout} />
       <div className="flex-1 overflow-auto">
         <ParentDashboardPage />

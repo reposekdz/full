@@ -1,208 +1,878 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Users, BookOpen, Award, Code, Hammer, Car, Mail, Phone, Star } from 'lucide-react';
-import { useLanguage } from '@/app/contexts/LanguageContext';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Code, HardHat, Wrench, ArrowLeft, BookOpen, Users, Trophy, 
+  CheckCircle2, Star, Award, Target, Briefcase, Clock, Mail,
+  Phone, MapPin, Calendar, TrendingUp, Zap, Sparkles, Rocket,
+  GraduationCap, Building, Globe, Shield, Heart, Share2, Download,
+  Play, ChevronRight, Eye, ThumbsUp, MessageCircle, Image as ImageIcon,
+  ZoomIn, X
+} from 'lucide-react';
+import { Button } from '@/app/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
+import { Badge } from '@/app/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
+import { Progress } from '@/app/components/ui/progress';
+import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 
 interface TradeDetailPageProps {
-  tradeId: string;
-  onNavigate: (page: string) => void;
+  tradeCode: string;
+  onBack: () => void;
 }
 
-const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeId, onNavigate }) => {
-  const { language } = useLanguage();
-  const [data, setData] = useState<any>(null);
+const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) => {
+  const [trade, setTrade] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('instructors');
+  const [selectedLevel, setSelectedLevel] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    // Restore active tab from localStorage
+    const saved = localStorage.getItem(`trade_${tradeCode}_active_tab`);
+    return saved || 'overview';
+  });
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(false);
+  const [galleryFilter, setGalleryFilter] = useState('All');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Save active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem(`trade_${tradeCode}_active_tab`, activeTab);
+  }, [activeTab, tradeCode]);
+
+  // Load gallery
+  useEffect(() => {
+    const loadGallery = async () => {
+      try {
+        setLoadingGallery(true);
+        const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${tradeCode}`);
+        const data = await response.json();
+        if (data.success && data.gallery) {
+          setGallery(data.gallery);
+        }
+      } catch (error) {
+        console.error('Error loading gallery:', error);
+      } finally {
+        setLoadingGallery(false);
+      }
+    };
+    loadGallery();
+  }, [tradeCode]);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/trades/${tradeId}`)
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) setData(result);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [tradeId]);
+    const loadTradeDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/api/trades/all');
+        const data = await response.json();
+        
+        if (data.success && data.trades) {
+          const tradeGroups: any = {};
+          
+          data.trades.forEach((t: any) => {
+            const baseType = t.code.replace(/L[345]/, '');
+            if (!tradeGroups[baseType]) {
+              const nameRw = baseType === 'SOD' ? 'Iterambere rya Software' : 
+                            baseType === 'BDC' ? 'Ubwubatsi n\'Inyubako' : 
+                            baseType === 'AUTO' ? 'Ikoranabuhanga ry\'Ibinyabiziga' : t.name;
+              tradeGroups[baseType] = {
+                baseType,
+                name: nameRw,
+                description: t.description_rw || t.description,
+                levels: []
+              };
+            }
+            
+            const level = t.code.match(/L[345]/)?.[0] || '';
+            tradeGroups[baseType].levels.push({
+              level: `Urwego rwa ${level.replace('L', '')}`,
+              code: t.code,
+              duration: `Imyaka ${t.duration_years || 2}`,
+              description: t.description_rw || t.description,
+              courses: t.courses || [],
+              hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
+              classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Itsinda A', 'Itsinda B'] : ['Itsinda Rimwe']
+            });
+          });
+
+          const foundTrade = tradeGroups[tradeCode];
+          if (foundTrade) {
+            setTrade({
+              ...foundTrade,
+              icon: getTradeIcon(tradeCode),
+              statistics: {
+                students: foundTrade.levels.reduce((sum: number, l: any) => sum + (l.total_students || 0), 0),
+                successRate: 95,
+                graduationRate: 92,
+                employmentRate: 88
+              }
+            });
+            setSelectedLevel(foundTrade.levels[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading trade:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTradeDetails();
+  }, [tradeCode]);
+
+  const getTradeIcon = (code: string) => {
+    if (code === 'SOD') return Code;
+    if (code === 'BDC') return HardHat;
+    if (code === 'AUTO') return Wrench;
+    return Code;
+  };
+
+  const getGradientColors = (code: string) => {
+    if (code === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
+    if (code === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
+    if (code === 'AUTO') return 'from-green-600 via-emerald-500 to-teal-400';
+    return 'from-green-600 to-yellow-400';
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-green-50">
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity }}>
-          <BookOpen className="w-20 h-20 text-green-600" />
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Tegereza amakuru y'umwuga...</p>
+        </div>
       </div>
     );
   }
 
-  if (!data) return null;
-
-  const { trade, instructors, courses } = data;
-  const getIcon = () => {
-    switch (trade.code) {
-      case 'SOD': return Code;
-      case 'BDC': return Hammer;
-      case 'AUT': return Car;
-      default: return BookOpen;
-    }
-  };
-  const Icon = getIcon();
-  const gradient = trade.code === 'SOD' ? 'from-yellow-400 via-green-400 to-yellow-500' :
-                   trade.code === 'BDC' ? 'from-green-400 via-yellow-400 to-green-500' :
-                   'from-yellow-500 via-green-500 to-yellow-400';
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
-      {/* Header */}
-      <div className={`bg-gradient-to-r ${gradient} text-white py-12`}>
-        <div className="max-w-7xl mx-auto px-4">
-          <button onClick={() => onNavigate('trades')} className="flex items-center gap-2 text-white/90 hover:text-white mb-6 font-bold">
-            <ArrowLeft className="w-5 h-5" /> {language === 'rw' ? 'Subira ku Myuga' : 'Back to Trades'}
-          </button>
-          
-          <div className="flex items-center gap-6">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-8xl">
-              {trade.icon}
-            </motion.div>
-            <div>
-              <h1 className="text-5xl font-black mb-2">{language === 'rw' ? trade.name_rw : trade.name}</h1>
-              <p className="text-xl text-white/90 mb-4">{trade.code}</p>
-              <p className="text-lg text-white/80">{language === 'rw' ? trade.description_rw : trade.description}</p>
-            </div>
-          </div>
+  if (!trade) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Umwuga ntubonetse</h2>
+          <Button onClick={onBack}>Subira Inyuma</Button>
         </div>
       </div>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {[
-            { icon: Users, value: trade.total_students, label: language === 'rw' ? 'Abanyeshuri' : 'Students', color: 'yellow' },
-            { icon: Users, value: instructors.length, label: language === 'rw' ? 'Abarimu' : 'Instructors', color: 'green' },
-            { icon: BookOpen, value: courses.length, label: language === 'rw' ? 'Amasomo' : 'Courses', color: 'yellow' }
-          ].map((stat, i) => (
+  const TradeIcon = trade.icon;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      {/* Hero Section with Gradient */}
+      <div className={`relative bg-gradient-to-r ${getGradientColors(tradeCode)} text-white overflow-hidden`}>
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <Button 
+            onClick={onBack}
+            variant="ghost" 
+            className="mb-6 text-white hover:bg-white/20"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Subira ku Myuga
+          </Button>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                <TradeIcon className="w-12 h-12" />
+              </div>
+              <div>
+                <Badge className="mb-2 bg-white/20 text-white hover:bg-white/30">
+                  {tradeCode}
+                </Badge>
+                <h1 className="text-5xl md:text-7xl font-bold mb-2">
+                  {trade.name}
+                </h1>
+              </div>
+            </div>
+
+            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl leading-relaxed">
+              {trade.description}
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+              >
+                <Users className="w-8 h-8 mb-2" />
+                <div className="text-3xl font-bold">{trade.statistics.students}+</div>
+                <div className="text-sm text-white/80">Abanyeshuri</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+              >
+                <Trophy className="w-8 h-8 mb-2" />
+                <div className="text-3xl font-bold">{trade.statistics.successRate}%</div>
+                <div className="text-sm text-white/80">Igipimo cy'Intsinzi</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+              >
+                <GraduationCap className="w-8 h-8 mb-2" />
+                <div className="text-3xl font-bold">{trade.statistics.graduationRate}%</div>
+                <div className="text-sm text-white/80">Kurangiza</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20"
+              >
+                <Briefcase className="w-8 h-8 mb-2" />
+                <div className="text-3xl font-bold">{trade.statistics.employmentRate}%</div>
+                <div className="text-sm text-white/80">Akazi</div>
+              </motion.div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all`}>
+                  <Download className="w-5 h-5 mr-2" />
+                  Kuramo Inyandiko
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className={`bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all`}>
+                  <Play className="w-5 h-5 mr-2" />
+                  Reba Amashusho
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all">
+                  <Share2 className="w-5 h-5 mr-2" />
+                  Sangiza
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-50 to-transparent"></div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-5 h-14 bg-white shadow-lg rounded-xl p-1">
+            <TabsTrigger value="overview" className="text-sm font-medium">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Incamake
+            </TabsTrigger>
+            <TabsTrigger value="levels" className="text-sm font-medium">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Inzego n'Amasomo
+            </TabsTrigger>
+            <TabsTrigger value="instructors" className="text-sm font-medium">
+              <Users className="w-4 h-4 mr-2" />
+              Abarimu
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="text-sm font-medium">
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Amafoto
+            </TabsTrigger>
+            <TabsTrigger value="careers" className="text-sm font-medium">
+              <Rocket className="w-4 h-4 mr-2" />
+              Imyuga
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-8">
             <motion.div
-              key={i}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`bg-gradient-to-br from-${stat.color}-100 to-white rounded-2xl shadow-lg p-6 text-center`}
+              className="space-y-8"
             >
-              <stat.icon className={`w-12 h-12 mx-auto mb-3 text-${stat.color}-600`} />
-              <p className="text-4xl font-black text-gray-900 mb-2">{stat.value}</p>
-              <p className="text-gray-600 font-bold">{stat.label}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8">
-          {[
-            { id: 'instructors', label: language === 'rw' ? 'Abarimu' : 'Instructors', icon: Users },
-            { id: 'courses', label: language === 'rw' ? 'Amasomo' : 'Courses', icon: BookOpen }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-                activeTab === tab.id
-                  ? `bg-gradient-to-r ${gradient} text-white shadow-lg`
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <tab.icon className="w-5 h-5" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Instructors Tab */}
-        {activeTab === 'instructors' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {instructors.map((instructor: any, index: number) => (
-              <motion.div
-                key={instructor.id}
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-100 to-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {instructor.image_url ? (
-                      <img src={`http://localhost:5000${instructor.image_url}`} alt={instructor.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Users className="w-12 h-12 text-gray-400" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-black text-gray-900 mb-1">{instructor.name_rw || instructor.name}</h3>
-                    <p className="text-sm text-gray-600 font-bold mb-3">{instructor.role_rw || instructor.role}</p>
-                    <p className="text-sm text-gray-700 mb-3">{instructor.specialization_rw || instructor.specialization}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3" /> {instructor.email}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {instructor.phone}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-1 text-yellow-500">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="text-sm font-bold text-gray-700">{instructor.experience_years} {language === 'rw' ? 'imyaka' : 'years'}</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-
-        {/* Courses Tab */}
-        {activeTab === 'courses' && (
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map(level => {
-              const levelCourses = courses.filter((c: any) => c.level === level);
-              if (levelCourses.length === 0) return null;
-
-              return (
-                <div key={level}>
-                  <h3 className="text-2xl font-black text-gray-900 mb-4">
-                    Level {level}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {levelCourses.map((course: any, index: number) => (
+              {/* What We Do Section with Images */}
+              <Card className="border-2 border-gray-100 shadow-2xl overflow-hidden">
+                <CardHeader className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                  <CardTitle className="flex items-center gap-3 text-3xl">
+                    <Sparkles className="w-8 h-8" />
+                    Ibyo Dukora
+                  </CardTitle>
+                  <CardDescription className="text-white/90 text-lg">
+                    Reba ibikoresho byacu bigezweho n'amahugurwa y'ubuhanga
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {[
+                      { title: 'Amahugurwa y\'Ubuhanga', desc: 'Ubunararibonye bw\'ibikoresho nyakuri', icon: Target },
+                      { title: 'Amazu y\'Ikoranabuhanga', desc: 'Ibikoresho n\'uburyo bw\'inganda', icon: Building },
+                      { title: 'Kwiga ku Mishinga', desc: 'Imishinga n\'ibibazo by\'ukuri', icon: Rocket },
+                      { title: 'Ubufatanye n\'Inganda', desc: 'Gukorana n\'amasosiyete akomeye', icon: Briefcase },
+                      { title: 'Porogaramu z\'Impamyabumenyi', desc: 'Impamyabumenyi zemewe n\'inganda', icon: Award },
+                      { title: 'Ubufasha mu Kazi', desc: 'Gushyira mu kazi no kuyobora umwuga', icon: TrendingUp }
+                    ].map((item, index) => (
                       <motion.div
-                        key={course.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all"
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        className="bg-gradient-to-br from-green-50 via-yellow-50 to-lime-50 p-6 rounded-2xl border-2 border-green-100 shadow-lg hover:shadow-2xl transition-all"
                       >
-                        <div className="flex items-start gap-4">
-                          <div className={`bg-gradient-to-br ${gradient} p-3 rounded-xl`}>
-                            <BookOpen className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-lg font-black text-gray-900">{language === 'rw' ? course.name_rw : course.name}</h4>
-                              <span className="text-xs font-bold text-gray-500">{course.code}</span>
-                            </div>
-                            <p className="text-sm text-gray-700 mb-3">{course.description_rw}</p>
-                            <div className="flex items-center gap-4">
-                              <span className="text-xs font-bold text-green-600">Level {course.level}</span>
-                              <span className="text-xs font-bold text-yellow-600">{course.credits} Credits</span>
-                            </div>
-                          </div>
+                        <div className="p-3 bg-gradient-to-r from-green-500 to-yellow-400 rounded-xl w-fit mb-4">
+                          <item.icon className="w-6 h-6 text-white" />
                         </div>
+                        <h4 className="font-bold text-lg mb-2 text-gray-800">{item.title}</h4>
+                        <p className="text-gray-600 text-sm">{item.desc}</p>
                       </motion.div>
                     ))}
                   </div>
+
+                  {/* Facility Images Gallery */}
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold flex items-center gap-2">
+                      <ImageIcon className="w-6 h-6 text-green-600" />
+                      Ibikoresho Byacu n'Ibikorwa by'Abanyeshuri
+                    </h3>
+                    {loadingGallery ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600">Iratunganya amafoto...</p>
+                      </div>
+                    ) : gallery.length === 0 ? (
+                      <div className="text-center py-8">
+                        <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">Nta mafoto ahari</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {gallery.slice(0, 8).map((item, i) => (
+                          <motion.div
+                            key={i}
+                            whileHover={{ scale: 1.05 }}
+                            onClick={() => setSelectedImage(`http://localhost:5000${item.url}`)}
+                            className="aspect-square bg-gradient-to-br from-green-200 via-yellow-200 to-lime-200 rounded-xl overflow-hidden shadow-lg cursor-pointer relative group"
+                          >
+                            <ImageWithFallback
+                              src={`http://localhost:5000${item.url}`}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute bottom-2 left-2 right-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-xs font-semibold truncate">{item.title}</p>
+                              <p className="text-xs text-white/80">{item.category}</p>
+                            </div>
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-white/90 rounded-full p-1">
+                                <ZoomIn className="w-4 h-4 text-gray-800" />
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Meet Our Teachers Section */}
+              <Card className="border-2 border-gray-100 shadow-2xl overflow-hidden">
+                <CardHeader className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                  <CardTitle className="flex items-center gap-3 text-3xl">
+                    <Users className="w-8 h-8" />
+                    Hura n'Abarimu Bacu Banyobozi
+                  </CardTitle>
+                  <CardDescription className="text-white/90 text-lg">
+                    Wiga ku banyobozi b'inganda bafite uburambe bw'imyaka myinshi
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[
+                      { name: 'John Doe', role: 'Umwarimu Mukuru', exp: 'Imyaka 15+', spec: trade.name, rating: 4.9 },
+                      { name: 'Jane Smith', role: 'Umwarimu w\'Ubuyobozi', exp: 'Imyaka 12+', spec: trade.name, rating: 4.8 },
+                      { name: 'Mike Johnson', role: 'Umwarimu w\'Ikoranabuhanga', exp: 'Imyaka 10+', spec: trade.name, rating: 4.9 },
+                      { name: 'Sarah Williams', role: 'Umuyobozi w\'Aho Dukora', exp: 'Imyaka 8+', spec: trade.name, rating: 4.7 },
+                      { name: 'David Brown', role: 'Umuhanga w\'Inganda', exp: 'Imyaka 20+', spec: trade.name, rating: 5.0 },
+                      { name: 'Emily Davis', role: 'Umuhugurwa w\'Ubuhanga', exp: 'Imyaka 9+', spec: trade.name, rating: 4.8 }
+                    ].map((teacher, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ y: -8 }}
+                        className="bg-gradient-to-br from-white via-green-50 to-yellow-50 rounded-2xl p-6 border-2 border-green-100 shadow-lg hover:shadow-2xl transition-all"
+                      >
+                        <div className="flex items-start gap-4 mb-4">
+                          <Avatar className="w-16 h-16 border-4 border-white shadow-lg">
+                            <AvatarFallback className={`text-xl font-bold bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                              {teacher.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-lg text-gray-800">{teacher.name}</h4>
+                            <p className="text-sm text-gray-600 mb-1">{teacher.role}</p>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-semibold text-gray-700">{teacher.rating}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock className="w-4 h-4 text-green-600" />
+                            <span>Uburambe bw'Imyaka {teacher.exp}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Target className="w-4 h-4 text-green-600" />
+                            <span>{teacher.spec}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Mail className="w-4 h-4 text-green-600" />
+                            <span className="truncate">{teacher.name.toLowerCase().replace(' ', '.')}@school.rw</span>
+                          </div>
+                        </div>
+                        <Button className={`w-full mt-4 bg-gradient-to-r ${getGradientColors(tradeCode)} hover:opacity-90`}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Vugana n'Umwarimu
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                  <Card className="border-2 border-gray-100 shadow-xl">
+                    <CardHeader className="bg-gradient-to-r from-green-50 via-yellow-50 to-lime-50">
+                      <CardTitle className="flex items-center gap-2 text-2xl">
+                        <Award className="w-6 h-6 text-green-600" />
+                        Ibintu by'Ingenzi bya Porogaramu
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[
+                          'Ibikoresho by\'Inganda',
+                          'Amahugurwa y\'Ubuhanga',
+                          'Abarimu Banyobozi',
+                          'Ubufasha mu Gushaka Akazi',
+                          'Ibikoresho Bigezweho',
+                          'Porogaramu z\'Impamyabumenyi',
+                          'Amahirwe yo Gukora Imyitozo',
+                          'Gahunda z\'Amahugurwa Yoroshye'
+                        ].map((feature, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg hover:shadow-md transition-shadow"
+                          >
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            <span className="font-medium text-gray-800">{feature}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2 border-gray-100 shadow-xl">
+                    <CardHeader className="bg-gradient-to-r from-yellow-50 via-lime-50 to-green-50">
+                      <CardTitle className="flex items-center gap-2 text-2xl">
+                        <Target className="w-6 h-6 text-yellow-600" />
+                        Ibyavuye mu Kwiga
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {[
+                          'Kumenya ubuhanga bw\'ibanze n\'uburyo bw\'inganda',
+                          'Guteza imbere ubushobozi bwo gukemura ibibazo no gutekereza',
+                          'Kubona uburambe bw\'ubuhanga n\'ikoranabuhanga rigezweho',
+                          'Kubaka dosiye y\'umwuga y\'imishinga yarangiye',
+                          'Kwitegura ibizamini by\'impamyabumenyi z\'inganda',
+                          'Guhuza n\'abanyobozi b\'inganda n\'abo mwigana'
+                        ].map((outcome, index) => (
+                          <div key={index} className="flex items-start gap-3">
+                            <div className="mt-1 p-1 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full">
+                              <Star className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-gray-700 leading-relaxed">{outcome}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              );
-            })}
-          </div>
-        )}
+
+                <div className="space-y-6">
+                  <Card className="border-2 border-gray-100 shadow-xl bg-gradient-to-br from-green-50 via-yellow-50 to-lime-50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-green-600" />
+                        Amakuru Yihuse
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600">Igihe</span>
+                        <span className="font-semibold">Imyaka 2-3</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600">Inzego</span>
+                        <span className="font-semibold">Inzego {trade.levels.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600">Amasomo Yose</span>
+                        <span className="font-semibold">
+                          Amasomo {trade.levels.reduce((sum: number, l: any) => sum + l.courses.length, 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600">Uburyo</span>
+                        <span className="font-semibold">Igihe cyose</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-gray-600">Ururimi</span>
+                        <span className="font-semibold">Icyongereza/Ikinyarwanda</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2 border-gray-100 shadow-xl bg-gradient-to-br from-green-500 via-yellow-400 to-lime-400 text-white">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <Zap className="w-5 h-5" />
+                        Andikisha Ubu
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-white/90 text-sm">
+                        Tangira urugendo rwawe muri {trade.name} uyu munsi!
+                      </p>
+                      <Button className="w-full bg-white text-green-700 hover:bg-gray-100 font-bold">
+                        <Rocket className="w-4 h-4 mr-2" />
+                        Andikisha Kwinjira
+                      </Button>
+                      <Button variant="outline" className="w-full border-white text-white hover:bg-white/20">
+                        <Phone className="w-4 h-4 mr-2" />
+                        Hamagara Kwinjira
+                      </Button>
+                      <Button variant="outline" className="w-full border-white text-white hover:bg-white/20">
+                        <Download className="w-4 h-4 mr-2" />
+                        Kuramo Inyandiko
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          {/* Levels & Courses Tab */}
+          <TabsContent value="levels" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg mb-4">Hitamo Urwego</h3>
+                {trade.levels.map((level: any, index: number) => (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedLevel(level)}
+                    className={`w-full text-left p-4 rounded-xl transition-all ${
+                      selectedLevel?.code === level.code
+                        ? `bg-gradient-to-r ${getGradientColors(tradeCode)} text-white shadow-lg`
+                        : 'bg-white hover:bg-gray-50 border-2 border-gray-100'
+                    }`}
+                  >
+                    <div className="font-semibold">{level.level}</div>
+                    <div className={`text-sm ${selectedLevel?.code === level.code ? 'text-white/80' : 'text-gray-500'}`}>
+                      {level.courses.length} Amasomo
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="lg:col-span-3">
+                {selectedLevel && (
+                  <motion.div
+                    key={selectedLevel.code}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                  >
+                    <Card className="border-2 border-gray-100 shadow-xl">
+                      <CardHeader className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-2xl">{selectedLevel.level}</CardTitle>
+                            <CardDescription className="text-white/80 mt-2">
+                              {selectedLevel.description}
+                            </CardDescription>
+                          </div>
+                          <Badge className="bg-white/20 text-white">
+                            {selectedLevel.duration}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        {selectedLevel.hasClasses && (
+                          <div className="mb-6 p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
+                            <h6 className="font-semibold mb-2 flex items-center gap-2">
+                              <Users className="w-5 h-5 text-blue-600" />
+                              Amatsinda: {selectedLevel.classes.join(' na ')}
+                            </h6>
+                            <p className="text-sm text-gray-600">
+                              Abanyeshuri biga amasomo amwe ariko mu matsinda atandukanye
+                            </p>
+                          </div>
+                        )}
+
+                        <h6 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                          <BookOpen className="w-5 h-5 text-blue-600" />
+                          Amasomo y'Ibanze ({selectedLevel.courses.length})
+                        </h6>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {selectedLevel.courses.map((course: any, index: number) => (
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="flex items-start gap-3 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg hover:shadow-md transition-all border border-gray-100"
+                            >
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-semibold block text-gray-800">
+                                  {course.name}
+                                </span>
+                                <span className="text-xs text-gray-500">{course.code}</span>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Instructors Tab */}
+          <TabsContent value="instructors" className="space-y-6">
+            <Card className="border-2 border-gray-100 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+                <CardTitle className="text-2xl">Hura n'Abarimu Bacu Banyobozi</CardTitle>
+                <CardDescription>
+                  Wiga ku banyobozi b'inganda bafite uburambe bw'imyaka myinshi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ y: -5 }}
+                      className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-100 shadow-lg"
+                    >
+                      <Avatar className="w-20 h-20 mb-4 border-4 border-white shadow-lg">
+                        <AvatarFallback className="text-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                          IN
+                        </AvatarFallback>
+                      </Avatar>
+                      <h4 className="font-bold text-lg mb-1">Izina ry'Umwarimu</h4>
+                      <p className="text-sm text-gray-600 mb-3">Umwarimu Mukuru w'{trade.name}</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>Uburambe bw'imyaka 10+</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="w-4 h-4" />
+                          <span>umwarimu@ishuri.rw</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gallery Tab */}
+          <TabsContent value="gallery" className="space-y-6">
+            <Card className="border-2 border-gray-100 shadow-xl">
+              <CardHeader className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                <CardTitle className="text-2xl">Amafoto y'Ibikoresho n'Ibikorwa</CardTitle>
+                <CardDescription className="text-white/90">
+                  Reba ibikoresho byacu n'ibikorwa by'abanyeshuri
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {(() => {
+                  const categories = Array.from(new Set(gallery.map(item => item.category)));
+                  const filtered = galleryFilter === 'All' ? gallery : gallery.filter(item => item.category === galleryFilter);
+                  
+                  return (
+                    <>
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        <Button
+                          variant={galleryFilter === 'All' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setGalleryFilter('All')}
+                          className={galleryFilter === 'All' ? `bg-gradient-to-r ${getGradientColors(tradeCode)}` : ''}
+                        >
+                          Ifoto Zose ({gallery.length})
+                        </Button>
+                        {categories.map((category) => {
+                          const count = gallery.filter(item => item.category === category).length;
+                          return (
+                            <Button
+                              key={category}
+                              variant={galleryFilter === category ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setGalleryFilter(category)}
+                              className={galleryFilter === category ? `bg-gradient-to-r ${getGradientColors(tradeCode)}` : ''}
+                            >
+                              {category} ({count})
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      {loadingGallery ? (
+                        <div className="text-center py-12">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                          <p className="text-gray-600">Iratunganya amafoto...</p>
+                        </div>
+                      ) : filtered.length === 0 ? (
+                        <div className="text-center py-12">
+                          <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-600 font-medium">Nta mafoto ahari</p>
+                          <p className="text-sm text-gray-500 mt-1">Shyiramo amafoto mu bwoko bw'ibikoresho</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <AnimatePresence mode="wait">
+                            {filtered.map((item, index) => (
+                              <motion.div
+                                key={`${item.url}-${galleryFilter}`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileHover={{ scale: 1.05 }}
+                                className="group cursor-pointer relative"
+                                onClick={() => setSelectedImage(`http://localhost:5000${item.url}`)}
+                              >
+                                <div className="aspect-square relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-green-400 transition-colors shadow-lg">
+                                  <ImageWithFallback
+                                    src={`http://localhost:5000${item.url}`}
+                                    alt={item.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                  <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <h4 className="font-semibold mb-1 text-sm">{item.title}</h4>
+                                    <p className="text-xs text-gray-200">{item.category}</p>
+                                  </div>
+                                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="bg-white/90 rounded-full p-2">
+                                      <ZoomIn className="w-5 h-5 text-gray-800" />
+                                    </div>
+                                  </div>
+                                  <div className="absolute top-4 left-4">
+                                    <Badge className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white border-0`}>
+                                      {item.category}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Careers Tab */}
+          <TabsContent value="careers" className="space-y-6">
+            <Card className="border-2 border-gray-100 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
+                <CardTitle className="text-2xl">Amahirwe y'Akazi</CardTitle>
+                <CardDescription>
+                  Reba inzira z'akazi zishimishije nyuma yo kurangiza
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { title: 'Umukozi Muto', salary: '$30,000 - $50,000', growth: '+15%' },
+                    { title: 'Umukozi Mukuru', salary: '$60,000 - $90,000', growth: '+20%' },
+                    { title: 'Umuyobozi w\'Ikoranabuhanga', salary: '$80,000 - $120,000', growth: '+25%' },
+                    { title: 'Umuyobozi w\'Umushinga', salary: '$70,000 - $100,000', growth: '+18%' }
+                  ].map((career, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-gradient-to-br from-white to-green-50 rounded-xl p-6 border-2 border-green-100 shadow-lg"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h4 className="font-bold text-lg mb-1">{career.title}</h4>
+                          <Badge className="bg-green-100 text-green-700">
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            {career.growth} Ikura
+                          </Badge>
+                        </div>
+                        <Briefcase className="w-8 h-8 text-green-600" />
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Umushahara Rusange</span>
+                        <span className="font-bold text-green-600">{career.salary}</span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <Button
+            onClick={() => setSelectedImage(null)}
+            variant="ghost"
+            size="sm"
+            className="absolute top-4 right-4 text-white bg-black/20 hover:bg-black/40"
+          >
+            <X className="w-6 h-6" />
+          </Button>
+          <img 
+            src={selectedImage} 
+            alt="Gallery" 
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

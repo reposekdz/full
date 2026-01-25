@@ -143,12 +143,12 @@ const roles = [
   {
     role: 'parent' as UserRole,
     title: 'Umubyeyi',
-    subtitle: 'Parent Portal',
+    subtitle: 'Urubuga rw\'Ababyeyi',
     description: "Kugenzura iterambere ry'umwana wawe",
     icon: Users,
     color: 'from-pink-500 to-rose-600',
     bgGradient: 'from-pink-50 to-rose-50',
-    features: ['Student Progress', 'Communication', 'Payments', 'Reports']
+    features: ['Iterambere ry\'Umwana', 'Ubutumwa', 'Kwishyura', 'Raporo']
   }
 ];
 

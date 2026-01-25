@@ -51,12 +51,63 @@ import TeacherDashboard from '@/app/pages/dashboards/TeacherDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
 import StockManagerDashboard from '@/app/pages/dashboards/StockManagerDashboard';
 import ResponsesPage from '@/app/pages/ResponsesPage';
+import StudentsManagementPage from '@/app/pages/StudentsManagementPage';
+import PaymentsManagement from '@/app/pages/accountant/PaymentsManagement';
+import { ExpensesManagement, InvoicesManagement } from '@/app/pages/accountant/AllAccountantPages';
+import EnhancedStudentPayments from '@/app/pages/accountant/EnhancedStudentPayments';
+import BudgetsManagement from '@/app/pages/accountant/BudgetsManagementPage';
+import SalariesManagement from '@/app/pages/accountant/SalariesManagementPage';
+import TransactionsManagement from '@/app/pages/accountant/TransactionsManagementPage';
+import FinancialReports from '@/app/pages/accountant/FinancialReportsPage';
+import TimetableView from '@/app/pages/accountant/TimetableView';
 import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Restore page from localStorage on mount
+    const saved = localStorage.getItem('app_current_page');
+    return saved || 'home';
+  });
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const { user, logout, getRoleDashboard } = useAuth();
+
+  // Save current page to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('app_current_page', currentPage);
+  }, [currentPage]);
+
+  // Restore scroll position after page loads
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('app_scroll_position');
+    if (savedScroll) {
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScroll));
+        sessionStorage.removeItem('app_scroll_position');
+      }, 100);
+    }
+  }, []);
+
+  // Auto-logout on page refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (user) {
+        logout();
+        localStorage.removeItem('app_current_page');
+        sessionStorage.clear();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [user, logout]);
+
+  // Save scroll position before unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem('app_scroll_position', window.scrollY.toString());
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -83,6 +134,9 @@ const AppContent: React.FC = () => {
       case 'teacher':
         return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'accountant':
+        if (currentPage.startsWith('payments-') || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
+          return null;
+        }
         return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'stock_manager':
         return <StockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -127,9 +181,12 @@ const AppContent: React.FC = () => {
       case 'services':
         return <ServicesPage onNavigate={handleNavigate} />;
       case 'trades':
-        return <ModernTradesPage onNavigate={handleNavigate} />;
+        return <TradesPage onNavigate={handleNavigate} />;
       case 'trades-showcase':
         return <TradesShowcasePage onNavigate={handleNavigate} />;
+      case currentPage.startsWith('trade-detail/') ? currentPage : '':
+        const detailTradeId = currentPage.split('/')[1];
+        return <TradeDetailPage tradeId={detailTradeId} onNavigate={handleNavigate} />;
       case currentPage.startsWith('trade/') ? currentPage : '':
         const tradeId = currentPage.split('/')[1];
         return <TradeDetailPage tradeId={tradeId} onNavigate={handleNavigate} />;
@@ -195,6 +252,26 @@ const AppContent: React.FC = () => {
         return <DevelopersAdmin />;
       case 'responses':
         return <ResponsesPage />;
+      case 'students-management':
+        return <StudentsManagementPage onNavigate={handleNavigate} />;
+      case 'student-payments-management':
+        return <EnhancedStudentPayments onNavigate={handleNavigate} />;
+      case 'payments-management':
+        return <PaymentsManagement onNavigate={handleNavigate} />;
+      case 'expenses-management':
+        return <ExpensesManagement onNavigate={handleNavigate} />;
+      case 'invoices-management':
+        return <InvoicesManagement onNavigate={handleNavigate} />;
+      case 'budgets-management':
+        return <BudgetsManagement onNavigate={handleNavigate} />;
+      case 'salaries-management':
+        return <SalariesManagement onNavigate={handleNavigate} />;
+      case 'transactions-management':
+        return <TransactionsManagement onNavigate={handleNavigate} />;
+      case 'financial-reports':
+        return <FinancialReports onNavigate={handleNavigate} />;
+      case 'timetable-view':
+        return <TimetableView onNavigate={handleNavigate} />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
@@ -207,17 +284,15 @@ const AppContent: React.FC = () => {
         onNavigate={handleNavigate}
         onSearch={() => handleNavigate('search')}
       />
-      <main className="pt-14 sm:pt-16 md:pt-20 pb-16 sm:pb-20 lg:pb-0 w-full overflow-x-hidden">
+      <main className="pt-14 sm:pt-16 md:pt-20 w-full overflow-x-hidden">
         {renderPage()}
       </main>
       {!user && <Footer onNavigate={handleNavigate} />}
-      {!user && (
-        <BottomNav
-          currentPage={currentPage}
-          onNavigate={handleNavigate}
-          onSearch={() => handleNavigate('search')}
-        />
-      )}
+      <BottomNav
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onSearch={() => handleNavigate('search')}
+      />
     </div>
   );
 };
