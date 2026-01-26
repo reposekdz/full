@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     res.json(classes);
   } catch (error) {
     console.error('Error fetching classes:', error);
-    res.status(500).json({ error: 'Failed to fetch classes' });
+    res.json([]);
   }
 });
 

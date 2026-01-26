@@ -181,8 +181,8 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
   // Login form
   const loginForm = useForm<LoginFormData>({
     defaultValues: {
-      email: 'reponse@gmail.com',
-      password: '2026',
+      email: 'reponsekdz06@gmail.com',
+      password: '',
       rememberMe: false
     }
   });
@@ -348,8 +348,8 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
       loginForm.setValue('rememberMe', true);
     } else if (selectedRole !== 'student' && selectedRole !== 'parent') {
       // Set default credentials for management roles
-      loginForm.setValue('email', 'reponse@gmail.com');
-      loginForm.setValue('password', '2026');
+      loginForm.setValue('email', 'reponsekdz06@gmail.com');
+      loginForm.setValue('password', '');
     }
   }, [selectedRole]);
 

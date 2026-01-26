@@ -19,8 +19,7 @@ interface ModernLoginPageProps {
   onNavigate: (page: string) => void;
 }
 
-const UNIFIED_EMAIL = 'reponse@gmail.com';
-const UNIFIED_PASSWORD = '2026';
+const UNIFIED_EMAIL = 'reponsekdz06@gmail.com';
 const MS_ACCESS_CODE = 'g@2026';
 
 const PUBLIC_ROLES = [
@@ -104,8 +103,8 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
         }
       } else {
         result = await loginWithRole(selectedRole, {
-          email: email || UNIFIED_EMAIL,
-          password: password || UNIFIED_PASSWORD
+          email: email,
+          password: password
         });
 
         if (result.success) {
@@ -124,24 +123,6 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleQuickLogin = async () => {
-    if (!selectedRole) return;
-    setEmail(UNIFIED_EMAIL);
-    setPassword(UNIFIED_PASSWORD);
-    setIsLoading(true);
-    
-    try {
-      const result = await loginWithRole(selectedRole, { email: UNIFIED_EMAIL, password: UNIFIED_PASSWORD });
-      if (result.success) {
-        setSuccess('Login successful!');
-        setTimeout(() => onNavigate((result as any).dashboardPage || getRoleDashboard(selectedRole)), 1000);
-      }
-    } catch (err) {
-      setError('Login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50 flex items-center justify-center p-4">
@@ -388,19 +369,6 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
                       </Button>
                     </form>
 
-                    {selectedRole !== 'parent' && selectedRole !== 'student' && (
-                      <div className="mt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleQuickLogin}
-                          className="w-full h-10 border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
-                        >
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Quick Login
-                        </Button>
-                      </div>
-                    )}
 
                     {(selectedRole === 'parent' || selectedRole === 'student') && (
                       <div className="mt-4 text-center">

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trades & Courses - School Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Trades, Levels & Courses</h1>
+            <p class="text-gray-600">Complete structure of all trades and their courses</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"></div>
+
+        <!-- Loading State -->
+        <div id="loading" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+
+        <!-- Trades Structure -->
+        <div id="trades-container" class="space-y-6 hidden"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function fetchTradesStructure() {
+            try {
+                const response = await fetch(`${API_URL}/trades-courses/structure`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displaySummary(data.summary);
+                    displayTrades(data.structure);
+                }
+            } catch (error) {
+                console.error('Error fetching trades:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-center text-red-600">
+                        <p class="text-xl font-bold mb-2">Error loading data</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displaySummary(summary) {
+            const summaryHTML = `
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Trades</p>
+                            <p class="text-3xl font-bold text-blue-600">${summary.total_trades}</p>
+                        </div>
+                        <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Courses</p>
+                            <p class="text-3xl font-bold text-green-600">${summary.total_courses}</p>
+                        </div>
+                        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Students</p>
+                            <p class="text-3xl font-bold text-purple-600">${summary.total_students}</p>
+                        </div>
+                        <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            `;
+            document.getElementById('summary').innerHTML = summaryHTML;
+        }
+
+        function displayTrades(trades) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('trades-container').classList.remove('hidden');
+            
+            const tradesHTML = trades.map(trade => `
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold mb-2">${trade.name}</h2>
+                                <p class="text-blue-100">${trade.description}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-block bg-white text-blue-600 px-3 py-1 rounded-full font-bold text-sm mb-2">${trade.code}</span>
+                                <p class="text-sm text-blue-100">${trade.duration_months} Months</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4 mt-4">
+                            <span class="bg-white/20 px-3 py-1 rounded text-sm">${trade.total_levels} Levels</span>
+                            <span class="bg-white/20 px-3 py-1 rounded text-sm">${trade.total_courses} Courses</span>
+                            <span class="bg-white/20 px-3 py-1 rounded text-sm">${trade.total_students} Students</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 space-y-4">
+                        ${trade.levels.map(level => `
+                            <div class="border rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 px-4 py-3 border-b">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="font-bold text-lg text-gray-900">${level.level_name}</h3>
+                                        <div class="flex space-x-2">
+                                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">${level.courses.length} Courses</span>
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">${level.total_students} Students</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-4 space-y-3">
+                                    ${level.courses.map(course => `
+                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                            <div class="flex-1">
+                                                <div class="flex items-center space-x-2">
+                                                    <p class="font-semibold text-gray-900">${course.name}</p>
+                                                    ${!course.is_active ? '<span class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Inactive</span>' : ''}
+                                                </div>
+                                                <p class="text-sm text-gray-600 mt-1">Teacher: ${course.teacher_name}</p>
+                                                <div class="flex items-center space-x-4 mt-1">
+                                                    <span class="text-xs text-gray-500">Capacity: ${course.capacity}</span>
+                                                    <span class="text-xs text-gray-500">Enrolled: ${course.student_count}/${course.capacity}</span>
+                                                    <span class="text-xs ${course.student_count >= course.capacity ? 'text-red-600' : 'text-green-600'}">
+                                                        ${Math.round((course.student_count / course.capacity) * 100)}% Full
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="text-right ml-4">
+                                                <p class="text-sm text-gray-600">Students</p>
+                                                <p class="text-2xl font-bold text-blue-600">${course.student_count}</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('trades-container').innerHTML = tradesHTML;
+        }
+
+        // Load data on page load
+        fetchTradesStructure();
+    </script>
+</body>
+</html>

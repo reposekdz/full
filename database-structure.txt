@@ -1,0 +1,4509 @@
+
+=== DATABASE TABLES ===
+
+1. about_content
+2. academic_calendar
+3. academic_performance
+4. academic_progress
+5. academic_years
+6. achievement_badges
+7. achievements
+8. activity_log
+9. admin_users
+10. admission_applications
+11. admission_comments
+12. admission_interviews
+13. admission_workflow
+14. admissions_sessions
+15. advisor_tasks
+16. ai_grading_models
+17. ai_grading_results
+18. alumni
+19. alumni_event_registrations
+20. alumni_events
+21. alumni_jobs
+22. announcement_attachments
+23. announcements
+24. article_ratings
+25. assignment_analytics
+26. assignment_files
+27. assignment_grades
+28. assignment_submissions
+29. assignments
+30. attendance
+31. audit_logs
+32. backups
+33. badges
+34. badges_achievements
+35. behavior_points
+36. book_issues
+37. bookmarks
+38. budgets
+39. cafeteria_menu
+40. cafeteria_order_items
+41. cafeteria_orders
+42. callback_requests
+43. certificate_templates
+44. certificates
+45. chat_messages
+46. chat_sessions
+47. class_analytics
+48. class_attendance_sheets
+49. class_discipline_sheets
+50. class_payment_sheets
+51. class_payment_summary
+52. class_performance_sheets
+53. class_schedules
+54. class_sheets
+55. class_structure
+56. class_student_sheets
+57. class_students
+58. class_subjects
+59. class_summary_stats
+60. class_teachers
+61. class_timetable
+62. classes
+63. club_members
+64. clubs
+65. cms_content
+66. collaboration_group_members
+67. collaboration_groups
+68. conduct_history
+69. conduct_records
+70. contact_messages
+71. contact_submissions
+72. content_items
+73. counseling_sessions
+74. course_materials
+75. courses
+76. curriculum
+77. custom_reports
+78. daily_attendance_summary
+79. developer_team
+80. developers
+81. discipline_analytics
+82. discipline_cases
+83. discipline_conducts
+84. discipline_incidents
+85. discipline_records
+86. discussion_forums
+87. dod_activity_log
+88. dod_notifications
+89. dos_classes
+90. dos_courses
+91. dos_teachers
+92. dos_trades
+93. dynamic_content
+94. email_messages
+95. email_templates
+96. emergency_contacts
+97. engagement_metrics
+98. enrollments
+99. event_images
+100. event_participants
+101. events
+102. exam_invigilators
+103. exam_monitoring
+104. exam_registrations
+105. exam_results
+106. exam_schedules
+107. exam_sessions
+108. examination_schedule
+109. exams
+110. expenses
+111. features
+112. fee_payments
+113. fee_structure
+114. fee_structures
+115. fee_types
+116. fees
+117. financial_analytics
+118. financial_reports
+119. forum_posts
+120. gallery
+121. gallery_images
+122. gamification_points
+123. grades
+124. group_members
+125. group_post_comments
+126. group_post_likes
+127. group_posts
+128. hero_slides
+129. holiday_package_progress
+130. holiday_packages
+131. home_content
+132. home_features
+133. home_sections
+134. home_slides
+135. home_statistics
+136. home_visits
+137. homework
+138. homework_submissions
+139. hostel_allocations
+140. hostel_applications
+141. hostel_rooms
+142. inventory
+143. inventory_items
+144. invoices
+145. knowledge_articles
+146. knowledge_base
+147. knowledge_graph
+148. leadership
+149. learning_analytics_events
+150. learning_materials
+151. learning_notifications
+152. learning_paths
+153. learning_resources
+154. leave_requests
+155. levels
+156. library_books
+157. library_borrowings
+158. live_study_sessions
+159. matches
+160. media_library
+161. messages
+162. new_comers
+163. news
+164. news_articles
+165. notification_preferences
+166. notifications
+167. online_quizzes
+168. parent_child_links
+169. parent_communications
+170. parent_details
+171. parent_discipline_notifications
+172. parent_feedback
+173. parent_meetings
+174. parent_notifications
+175. parent_sheets
+176. parent_student
+177. parent_student_links
+178. parents
+179. payment_reminders
+180. payments
+181. peer_reviews
+182. permissions
+183. player_stats
+184. players
+185. predictive_alerts
+186. predictive_analytics
+187. punishments
+188. question_bank
+189. quick_links
+190. quiz_answers
+191. quiz_attempts
+192. quiz_questions
+193. quizzes
+194. real_time_dashboard_metrics
+195. realtime_messages
+196. realtime_notifications
+197. refresh_tokens
+198. registration_notifications
+199. reports
+200. role_credentials
+201. role_permissions
+202. roles
+203. rooms
+204. salaries
+205. salary_payments
+206. scheduled_reports
+207. school_leadership
+208. school_services
+209. school_stats
+210. search_history
+211. search_logs
+212. security_logs
+213. service_items
+214. service_requests
+215. services
+216. session_participants
+217. slides
+218. sms_campaigns
+219. sms_messages
+220. sms_queue
+221. sms_role_permissions
+222. sms_templates
+223. sport_achievements
+224. sport_coaches
+225. sport_players
+226. sport_teams
+227. sports
+228. sports_achievements
+229. sports_categories
+230. sports_coaches
+231. sports_events
+232. sports_gallery
+233. sports_matches
+234. sports_members
+235. sports_players
+236. sports_team_members
+237. sports_team_overview
+238. sports_teams
+239. staff
+240. staff_management
+241. stock_categories
+242. stock_items
+243. stock_movements
+244. stock_transactions
+245. student_achievements
+246. student_attendance
+247. student_attendance_alerts
+248. student_attendance_tracking
+249. student_badges
+250. student_behavior
+251. student_behavior_analytics
+252. student_behavior_log
+253. student_class_enrollment
+254. student_comprehensive_sheets
+255. student_concept_mastery
+256. student_conduct_tracking
+257. student_fees
+258. student_learning_analytics
+259. student_learning_paths
+260. student_leave_requests
+261. student_leaves
+262. student_lessons
+263. student_levels
+264. student_location_tracking
+265. student_medical_records
+266. student_movements
+267. student_parents
+268. student_performance
+269. student_performance_summary
+270. student_performance_tracking
+271. student_points
+272. student_profiles
+273. student_progress
+274. student_rankings
+275. student_removals
+276. student_sheets
+277. student_subject_performance
+278. student_term_reports
+279. student_transfers
+280. students
+281. study_group_members
+282. study_groups
+283. subjects
+284. submission_attachments
+285. submission_files
+286. support_articles
+287. support_categories
+288. support_faqs
+289. support_resources
+290. support_responses
+291. support_tickets
+292. system_alerts
+293. system_config
+294. system_logs
+295. system_settings
+296. teacher_assignments
+297. teacher_classes
+298. teacher_performance_metrics
+299. teachers
+300. teams
+301. testimonials
+302. ticket_attachments
+303. ticket_responses
+304. timetable
+305. timetable_entries
+306. timetable_slots
+307. trade_classes
+308. trade_courses
+309. trade_facilities
+310. trade_instructors
+311. trade_levels
+312. trade_programs
+313. trade_students
+314. trades
+315. transactions
+316. transport_bookings
+317. transport_route_assignments
+318. transport_routes
+319. transport_vehicles
+320. trending_searches
+321. trophies
+322. uploaded_files
+323. user_activities
+324. user_activity_logs
+325. user_badges
+326. user_permissions
+327. users
+328. workshop_images
+329. workshop_participants
+330. workshops
+
+Total: 330 tables
+
+
+=== TABLE STRUCTURES ===
+
+
+about_content:
+  - id (int(11)) [PRI]
+  - section_title (varchar(255)) 
+  - main_title (varchar(255)) 
+  - subtitle (varchar(255)) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - features (longtext) 
+  - statistics (longtext) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+academic_calendar:
+  - id (int(11)) [PRI]
+  - event_name (varchar(255)) 
+  - event_type (varchar(100)) 
+  - event_date (date) 
+  - description (text) 
+  - created_at (timestamp) 
+
+academic_performance:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - subject (varchar(100)) 
+  - exam_type (enum('quiz','midterm','final','practical')) 
+  - score (decimal(5,2)) 
+  - max_score (decimal(5,2)) 
+  - percentage (decimal(5,2)) 
+  - grade (varchar(5)) 
+  - term (varchar(20)) 
+  - academic_year (varchar(20)) 
+  - teacher_id (int(11)) [MUL]
+  - remarks (text) 
+  - created_at (timestamp) 
+
+academic_progress:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - course_id (int(11)) 
+  - term (enum('term1','term2','term3')) 
+  - academic_year (varchar(10)) 
+  - marks (decimal(5,2)) 
+  - grade (varchar(5)) 
+  - rank_in_class (int(11)) 
+  - teacher_comment_rw (text) 
+  - teacher_comment_en (text) 
+  - advisor_comment_rw (text) 
+  - advisor_comment_en (text) 
+  - strengths_rw (text) 
+  - strengths_en (text) 
+  - areas_improvement_rw (text) 
+  - areas_improvement_en (text) 
+  - parent_notified (tinyint(1)) 
+  - parent_signature (tinyint(1)) 
+  - created_at (timestamp) 
+
+academic_years:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - start_date (date) 
+  - end_date (date) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+achievement_badges:
+  - id (int(11)) [PRI]
+  - badge_name (varchar(100)) 
+  - badge_description (text) 
+  - badge_icon (varchar(255)) 
+  - badge_category (enum('academic','participation','collaboration','consistency','excellence','special')) 
+  - points_value (int(11)) 
+  - rarity (enum('common','uncommon','rare','epic','legendary')) 
+  - unlock_criteria (longtext) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+achievements:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - year (varchar(4)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+activity_log:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - action_type (varchar(100)) 
+  - action_description (text) 
+  - ip_address (varchar(50)) 
+  - user_agent (text) 
+  - created_at (timestamp) 
+
+admin_users:
+  - id (int(11)) [PRI]
+  - username (varchar(100)) [UNI]
+  - email (varchar(255)) [UNI]
+  - password (varchar(255)) 
+  - role (enum('super_admin','admin','editor')) 
+  - is_active (tinyint(1)) 
+  - last_login (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - profile_image (varchar(500)) 
+
+admission_applications:
+  - id (int(11)) [PRI]
+  - session_id (int(11)) [MUL]
+  - application_number (varchar(50)) [UNI]
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - email (varchar(255)) [MUL]
+  - phone (varchar(20)) 
+  - date_of_birth (date) 
+  - gender (enum('male','female','other')) 
+  - address (text) 
+  - course_id (int(11)) [MUL]
+  - previous_education (text) 
+  - documents (longtext) 
+  - status (enum('pending','under_review','approved','rejected','waitlisted')) [MUL]
+  - application_date (date) 
+  - reviewed_by (int(11)) [MUL]
+  - review_notes (text) 
+  - reviewed_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+admission_comments:
+  - id (int(11)) [PRI]
+  - application_id (int(11)) [MUL]
+  - user_id (int(11)) 
+  - comment (text) 
+  - created_at (timestamp) 
+
+admission_interviews:
+  - id (int(11)) [PRI]
+  - application_id (int(11)) [MUL]
+  - interview_date (date) 
+  - interview_time (time) 
+  - interviewer_id (int(11)) 
+  - location (varchar(200)) 
+  - notes (text) 
+  - status (enum('scheduled','completed','cancelled')) 
+  - created_at (timestamp) 
+
+admission_workflow:
+  - id (int(11)) [PRI]
+  - application_id (int(11)) [MUL]
+  - stage (varchar(100)) 
+  - status (varchar(50)) 
+  - reviewer_id (int(11)) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+admissions_sessions:
+  - id (int(11)) [PRI]
+  - session_name (varchar(100)) 
+  - academic_year_id (int(11)) [MUL]
+  - start_date (date) 
+  - end_date (date) 
+  - status (enum('upcoming','open','closed','cancelled')) [MUL]
+  - description (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+advisor_tasks:
+  - id (int(11)) [PRI]
+  - advisor_id (int(11)) 
+  - task_type (enum('call','meeting','report','follow_up','visit','other')) 
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - priority (enum('low','medium','high','urgent')) 
+  - due_date (datetime) 
+  - related_student_id (int(11)) 
+  - related_parent_id (int(11)) 
+  - status (enum('pending','in_progress','completed','cancelled')) 
+  - completion_date (datetime) 
+  - notes_rw (text) 
+  - notes_en (text) 
+  - created_at (timestamp) 
+
+ai_grading_models:
+  - id (int(11)) [PRI]
+  - model_name (varchar(100)) 
+  - model_type (enum('essay','code','math','general')) 
+  - version (varchar(20)) 
+  - accuracy_score (decimal(5,2)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+ai_grading_results:
+  - id (int(11)) [PRI]
+  - submission_id (int(11)) 
+  - submission_type (enum('assignment','quiz','homework')) 
+  - model_id (int(11)) [MUL]
+  - ai_score (decimal(5,2)) 
+  - confidence_level (decimal(5,2)) 
+  - detailed_feedback (longtext) 
+  - strengths (longtext) 
+  - weaknesses (longtext) 
+  - improvement_suggestions (longtext) 
+  - grammar_score (decimal(5,2)) 
+  - coherence_score (decimal(5,2)) 
+  - creativity_score (decimal(5,2)) 
+  - processed_at (timestamp) 
+
+alumni:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [UNI]
+  - graduation_year (int(11)) [MUL]
+  - current_occupation (varchar(200)) 
+  - company (varchar(200)) 
+  - position (varchar(200)) 
+  - email (varchar(100)) 
+  - phone (varchar(20)) 
+  - address (text) 
+  - linkedin (varchar(255)) 
+  - achievements (longtext) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+alumni_event_registrations:
+  - id (int(11)) [PRI]
+  - event_id (int(11)) [MUL]
+  - alumni_id (int(11)) 
+  - registered_at (timestamp) 
+
+alumni_events:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - event_date (date) 
+  - event_time (time) 
+  - location (varchar(255)) 
+  - organizer_id (int(11)) 
+  - max_attendees (int(11)) 
+  - status (enum('upcoming','completed','cancelled')) 
+  - created_at (timestamp) 
+
+alumni_jobs:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - company (varchar(200)) 
+  - description (text) 
+  - requirements (text) 
+  - location (varchar(200)) 
+  - salary_range (varchar(100)) 
+  - posted_by (int(11)) 
+  - application_url (varchar(255)) 
+  - status (enum('active','closed')) 
+  - created_at (timestamp) 
+
+announcement_attachments:
+  - id (int(11)) [PRI]
+  - announcement_id (int(11)) [MUL]
+  - file_url (varchar(500)) 
+  - file_name (varchar(255)) 
+  - file_type (varchar(100)) 
+  - uploaded_at (timestamp) 
+
+announcements:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - content (text) 
+  - target_audience (enum('all','students','teachers','parents','staff')) [MUL]
+  - priority (enum('low','normal','high','urgent')) [MUL]
+  - published_by (int(11)) [MUL]
+  - published_at (timestamp) 
+  - expires_at (timestamp) 
+  - status (enum('draft','published','expired','archived')) [MUL]
+  - attachment_url (varchar(500)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+article_ratings:
+  - id (int(11)) [PRI]
+  - article_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - rating (tinyint(4)) 
+  - feedback (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+assignment_analytics:
+  - id (int(11)) [PRI]
+  - assignment_id (int(11)) [UNI]
+  - class_id (int(11)) [MUL]
+  - total_students (int(11)) 
+  - submitted_count (int(11)) 
+  - graded_count (int(11)) 
+  - average_marks (decimal(10,2)) 
+  - highest_marks (decimal(10,2)) 
+  - lowest_marks (decimal(10,2)) 
+  - pass_count (int(11)) 
+  - fail_count (int(11)) 
+  - pass_rate (decimal(5,2)) 
+  - on_time_submissions (int(11)) 
+  - late_submissions (int(11)) 
+  - updated_at (timestamp) 
+
+assignment_files:
+  - id (int(11)) [PRI]
+  - assignment_id (int(11)) [MUL]
+  - file_name (varchar(500)) 
+  - file_path (varchar(1000)) 
+  - file_type (varchar(100)) 
+  - file_size (bigint(20)) 
+  - uploaded_at (timestamp) 
+
+assignment_grades:
+  - id (int(11)) [PRI]
+  - submission_id (int(11)) [UNI]
+  - marks_obtained (decimal(10,2)) 
+  - total_marks (int(11)) 
+  - percentage (decimal(5,2)) 
+  - grade (varchar(5)) 
+  - feedback (longtext) 
+  - graded_by (int(11)) [MUL]
+  - graded_at (datetime) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+assignment_submissions:
+  - id (int(11)) [PRI]
+  - assignment_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - submission_text (text) 
+  - attachment_url (varchar(500)) 
+  - submitted_at (timestamp) 
+  - marks_obtained (decimal(5,2)) 
+  - feedback (text) 
+  - graded_by (int(11)) [MUL]
+  - graded_at (timestamp) 
+  - status (enum('submitted','graded','late','missing')) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+assignments:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - due_date (datetime) [MUL]
+  - max_marks (decimal(5,2)) 
+  - attachment_url (varchar(500)) 
+  - instructions (text) 
+  - status (enum('draft','published','closed')) 
+  - is_published (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+attendance:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - attendance_date (date) 
+  - status (enum('present','absent','late','excused')) 
+  - notes (text) 
+  - marked_by (int(11)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+audit_logs:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - action (varchar(100)) [MUL]
+  - table_name (varchar(100)) 
+  - record_id (int(11)) 
+  - old_values (longtext) 
+  - new_values (longtext) 
+  - ip_address (varchar(45)) 
+  - user_agent (text) 
+  - created_at (timestamp) [MUL]
+
+backups:
+  - id (int(11)) [PRI]
+  - filename (varchar(255)) 
+  - size (bigint(20)) 
+  - created_by (int(11)) 
+  - created_at (timestamp) [MUL]
+
+badges:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - description (text) 
+  - icon (varchar(255)) 
+  - points_required (int(11)) 
+  - created_at (timestamp) 
+
+badges_achievements:
+  - id (int(11)) [PRI]
+  - badge_name (varchar(200)) 
+  - badge_description (text) 
+  - badge_icon (varchar(500)) 
+  - badge_category (varchar(100)) [MUL]
+  - criteria (longtext) 
+  - points_value (int(11)) 
+  - rarity (enum('common','uncommon','rare','epic','legendary')) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+behavior_points:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - points (int(11)) 
+  - reason (varchar(255)) 
+  - point_type (enum('amanota_meza','amanota_mabi')) [MUL]
+  - awarded_by (int(11)) 
+  - created_at (timestamp) 
+
+book_issues:
+  - id (int(11)) [PRI]
+  - book_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - issue_date (date) [MUL]
+  - due_date (date) 
+  - return_date (date) 
+  - issued_by (int(11)) [MUL]
+  - fine_amount (decimal(10,2)) 
+  - created_at (timestamp) 
+
+bookmarks:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - item_type (varchar(50)) 
+  - item_id (int(11)) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+budgets:
+  - id (int(11)) [PRI]
+  - category (varchar(100)) 
+  - allocated_amount (decimal(15,2)) 
+  - spent_amount (decimal(15,2)) 
+  - remaining_amount (decimal(15,2)) 
+  - fiscal_year (varchar(20)) 
+  - status (enum('active','completed','exceeded')) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+cafeteria_menu:
+  - id (int(11)) [PRI]
+  - item_name (varchar(200)) 
+  - category (varchar(100)) [MUL]
+  - price (decimal(10,2)) 
+  - description (text) 
+  - available (tinyint(1)) 
+  - image_url (varchar(255)) 
+  - created_at (timestamp) 
+
+cafeteria_order_items:
+  - id (int(11)) [PRI]
+  - order_id (int(11)) [MUL]
+  - menu_item_id (int(11)) [MUL]
+  - quantity (int(11)) 
+  - price (decimal(10,2)) 
+
+cafeteria_orders:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - item_id (int(11)) [MUL]
+  - quantity (int(11)) 
+  - total_amount (decimal(10,2)) 
+  - order_date (datetime) [MUL]
+  - status (enum('pending','preparing','ready','completed','cancelled')) 
+  - payment_status (enum('paid','pending')) 
+
+callback_requests:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - phone (varchar(50)) 
+  - preferred_time (varchar(50)) 
+  - preferred_date (date) [MUL]
+  - reason (text) 
+  - status (enum('pending','scheduled','completed','cancelled')) [MUL]
+  - notes (text) 
+  - handled_by (int(11)) [MUL]
+  - handled_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+certificate_templates:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - type (varchar(100)) 
+  - design (longtext) 
+  - fields (longtext) 
+  - active (tinyint(1)) 
+  - created_at (timestamp) 
+
+certificates:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - certificate_number (varchar(100)) [UNI]
+  - certificate_type (varchar(100)) 
+  - template_id (int(11)) 
+  - issue_date (date) 
+  - verification_code (varchar(100)) [UNI]
+  - data (longtext) 
+  - status (enum('issued','revoked')) 
+  - revoked_at (timestamp) 
+  - revoke_reason (text) 
+  - revoked_by (int(11)) 
+  - created_at (timestamp) 
+
+chat_messages:
+  - id (int(11)) [PRI]
+  - session_id (varchar(100)) [MUL]
+  - sender (enum('user','agent','bot')) 
+  - message (text) 
+  - created_at (timestamp) [MUL]
+
+chat_sessions:
+  - id (int(11)) [PRI]
+  - session_id (varchar(100)) [UNI]
+  - visitor_name (varchar(100)) 
+  - visitor_email (varchar(100)) 
+  - status (enum('active','closed')) 
+  - created_at (timestamp) 
+  - closed_at (timestamp) 
+
+class_analytics:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - analysis_date (date) [MUL]
+  - total_students (int(11)) 
+  - average_attendance (decimal(5,2)) 
+  - average_grade (decimal(5,2)) 
+  - conduct_incidents (int(11)) 
+  - top_performers (int(11)) 
+  - at_risk_students (int(11)) 
+  - participation_rate (decimal(5,2)) 
+  - assignment_completion_rate (decimal(5,2)) 
+  - created_at (timestamp) 
+
+class_attendance_sheets:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - attendance_date (date) 
+  - status (enum('present','absent','late','excused')) 
+  - subject (varchar(100)) 
+  - marked_by (int(11)) [MUL]
+  - remarks (text) 
+  - created_at (timestamp) 
+
+class_discipline_sheets:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - incident_date (date) 
+  - conduct_type (enum('warning','suspension','expulsion','late','absence','misbehavior','uniform','other')) 
+  - severity (enum('low','medium','high','critical')) 
+  - description (text) 
+  - action_taken (text) 
+  - status (enum('active','resolved')) 
+  - recorded_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+class_payment_sheets:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - total_fees (decimal(15,2)) 
+  - paid_amount (decimal(15,2)) 
+  - balance (decimal(15,2)) 
+  - payment_status (enum('paid','partial','unpaid')) 
+  - last_payment_date (date) 
+  - last_updated (timestamp) 
+
+class_payment_summary:
+  - id (int(11)) [PRI]
+  - class_structure_id (int(11)) [MUL]
+  - total_students (int(11)) 
+  - paid_students (int(11)) 
+  - unpaid_students (int(11)) 
+  - partial_paid_students (int(11)) 
+  - total_expected (decimal(15,2)) 
+  - total_collected (decimal(15,2)) 
+  - total_outstanding (decimal(15,2)) 
+  - last_updated (timestamp) 
+
+class_performance_sheets:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - subject (varchar(100)) 
+  - term (varchar(20)) 
+  - quiz_score (decimal(5,2)) 
+  - midterm_score (decimal(5,2)) 
+  - final_score (decimal(5,2)) 
+  - total_score (decimal(5,2)) 
+  - percentage (decimal(5,2)) 
+  - grade (varchar(5)) 
+  - position (int(11)) 
+  - remarks (text) 
+  - recorded_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+class_schedules:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - day_of_week (enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')) 
+  - start_time (time) 
+  - end_time (time) 
+  - room (varchar(50)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+class_sheets:
+  - id (int(11)) [PRI]
+  - class_structure_id (int(11)) [MUL]
+  - sheet_name (varchar(255)) 
+  - academic_year (varchar(20)) 
+  - total_students (int(11)) 
+  - male_students (int(11)) 
+  - female_students (int(11)) 
+  - class_teacher_id (int(11)) [MUL]
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+class_structure:
+  - id (int(11)) [PRI]
+  - trade (enum('SOD','AUT','BDC')) [MUL]
+  - level (varchar(20)) 
+  - section (varchar(10)) 
+  - class_name (varchar(100)) 
+  - capacity (int(11)) 
+  - current_enrollment (int(11)) 
+  - class_teacher_id (int(11)) [MUL]
+  - status (enum('active','inactive')) 
+  - created_at (timestamp) 
+
+class_student_sheets:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - student_name (varchar(255)) 
+  - gender (enum('Male','Female')) 
+  - enrollment_date (date) 
+  - status (enum('active','transferred','dropped','graduated')) 
+  - position_in_class (int(11)) 
+  - added_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+class_students:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - student_id (int(11)) 
+  - student_name (varchar(255)) 
+  - student_code (varchar(50)) 
+  - enrollment_date (date) 
+  - status (varchar(20)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+class_subjects:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+
+class_summary_stats:
+  - id (int(11)) [PRI]
+  - class_sheet_id (int(11)) [UNI]
+  - total_students (int(11)) 
+  - present_today (int(11)) 
+  - absent_today (int(11)) 
+  - avg_performance (decimal(5,2)) 
+  - total_incidents (int(11)) 
+  - paid_students (int(11)) 
+  - unpaid_students (int(11)) 
+  - last_updated (timestamp) 
+
+class_teachers:
+  - id (int(11)) [PRI]
+  - teacher_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - created_at (timestamp) 
+
+class_timetable:
+  - id (int(11)) [PRI]
+  - trade (varchar(100)) 
+  - class_level (varchar(50)) 
+  - day_of_week (enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')) 
+  - subject (varchar(100)) 
+  - teacher_id (int(11)) [MUL]
+  - start_time (time) 
+  - end_time (time) 
+  - room (varchar(50)) 
+  - academic_year (varchar(20)) 
+  - status (enum('active','inactive')) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+classes:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - course_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - capacity (int(11)) 
+  - current_enrollment (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+  - trade_code (varchar(20)) 
+  - level (varchar(10)) 
+  - section (varchar(10)) 
+  - name_rw (varchar(255)) 
+
+club_members:
+  - id (int(11)) [PRI]
+  - club_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - join_date (date) 
+  - status (enum('active','inactive')) 
+
+clubs:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - description (text) 
+  - category (varchar(100)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - max_members (int(11)) 
+  - meeting_schedule (varchar(255)) 
+  - status (enum('active','inactive')) 
+  - created_at (timestamp) 
+
+cms_content:
+  - id (int(11)) [PRI]
+  - section (varchar(50)) [MUL]
+  - title (varchar(255)) 
+  - subtitle (varchar(255)) 
+  - description (text) 
+  - content (longtext) 
+  - image (varchar(255)) 
+  - link (varchar(255)) 
+  - metadata (longtext) 
+  - display_order (int(11)) [MUL]
+  - active (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+collaboration_group_members:
+  - id (int(11)) [PRI]
+  - group_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - role (enum('leader','member','observer')) 
+  - joined_at (timestamp) 
+  - is_active (tinyint(1)) 
+  - contribution_score (decimal(5,2)) 
+
+collaboration_groups:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - description (text) 
+  - creator_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - max_members (int(11)) 
+  - is_active (tinyint(1)) 
+  - collaboration_type (enum('study_group','project_team','peer_learning','skill_sharing')) 
+  - rules (text) 
+  - created_at (timestamp) 
+
+conduct_history:
+  - id (int(11)) [PRI]
+  - conduct_id (int(11)) [MUL]
+  - action_type (enum('created','updated','removed','restored')) 
+  - action_by (int(11)) [MUL]
+  - action_date (datetime) 
+  - previous_status (varchar(50)) 
+  - new_status (varchar(50)) 
+  - notes (text) 
+
+conduct_records:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - type (varchar(50)) 
+  - description (text) 
+  - severity (varchar(20)) 
+  - status (varchar(20)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+contact_messages:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - email (varchar(255)) [MUL]
+  - phone (varchar(20)) 
+  - subject (varchar(500)) 
+  - message (text) 
+  - category (enum('inquiry','admission','partnership','feedback','other')) [MUL]
+  - status (enum('new','read','replied','archived')) [MUL]
+  - ip_address (varchar(50)) 
+  - user_agent (text) 
+  - replied_at (timestamp) 
+  - reply_message (text) 
+  - created_at (timestamp) 
+
+contact_submissions:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - email (varchar(255)) [MUL]
+  - phone (varchar(50)) 
+  - department (enum('admissions','academics','finance','student-services','technical-support','general')) [MUL]
+  - subject (varchar(500)) 
+  - message (text) 
+  - priority (enum('low','normal','high','urgent')) 
+  - attachment (varchar(500)) 
+  - status (enum('pending','in_progress','resolved','closed')) [MUL]
+  - response (text) 
+  - responded_by (int(11)) [MUL]
+  - responded_at (timestamp) 
+  - created_at (timestamp) [MUL]
+  - updated_at (timestamp) 
+
+content_items:
+  - id (int(11)) [PRI]
+  - type (varchar(50)) [MUL]
+  - title (varchar(255)) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - data (longtext) 
+  - sort_order (int(11)) 
+  - is_active (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+counseling_sessions:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - counselor_id (int(11)) 
+  - session_type (enum('individual','group','family','crisis')) 
+  - category (enum('academic','personal','social','career','family','health')) 
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - session_date (datetime) 
+  - duration_minutes (int(11)) 
+  - location (varchar(200)) 
+  - concerns_rw (text) 
+  - concerns_en (text) 
+  - interventions_rw (text) 
+  - interventions_en (text) 
+  - outcomes_rw (text) 
+  - outcomes_en (text) 
+  - follow_up_required (tinyint(1)) 
+  - follow_up_date (date) 
+  - parent_involved (tinyint(1)) 
+  - confidential (tinyint(1)) 
+  - status (enum('scheduled','completed','cancelled','no_show')) 
+  - created_at (timestamp) 
+
+course_materials:
+  - id (int(11)) [PRI]
+  - course_id (int(11)) [MUL]
+  - title (varchar(255)) 
+  - description (text) 
+  - file_path (varchar(500)) 
+  - file_type (varchar(50)) 
+  - file_size (int(11)) 
+  - uploaded_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+courses:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - description (text) 
+  - code (varchar(20)) [UNI]
+  - duration_months (int(11)) 
+  - fee_amount (decimal(10,2)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+curriculum:
+  - id (int(11)) [PRI]
+  - trade (varchar(100)) 
+  - class_level (varchar(50)) 
+  - subject (varchar(100)) 
+  - topics (text) 
+  - learning_outcomes (text) 
+  - assessment_methods (text) 
+  - resources (text) 
+  - status (enum('active','draft','archived')) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+custom_reports:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - description (text) 
+  - query_config (longtext) 
+  - created_by (int(11)) 
+  - created_at (timestamp) 
+
+daily_attendance_summary:
+  - id (int(11)) [PRI]
+  - summary_date (date) [UNI]
+  - total_students (int(11)) 
+  - present_count (int(11)) 
+  - absent_count (int(11)) 
+  - late_count (int(11)) 
+  - excused_count (int(11)) 
+  - on_leave_count (int(11)) 
+  - attendance_rate (decimal(5,2)) 
+  - generated_at (timestamp) 
+
+developer_team:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - name_rw (varchar(255)) 
+  - role (varchar(255)) 
+  - role_rw (varchar(255)) 
+  - description (text) 
+  - description_rw (text) 
+  - image_url (varchar(500)) 
+  - email (varchar(255)) 
+  - phone (varchar(20)) 
+  - github_url (varchar(500)) 
+  - linkedin_url (varchar(500)) 
+  - skills (longtext) 
+  - achievements (longtext) 
+  - sort_order (int(11)) [MUL]
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+developers:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - role (varchar(100)) 
+  - bio (text) 
+  - github (varchar(255)) 
+  - linkedin (varchar(255)) 
+  - twitter (varchar(255)) 
+  - image_url (varchar(500)) 
+  - sort_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+discipline_analytics:
+  - id (int(11)) [PRI]
+  - trade (varchar(100)) [MUL]
+  - class_level (varchar(50)) 
+  - total_incidents (int(11)) 
+  - warnings (int(11)) 
+  - suspensions (int(11)) 
+  - absences (int(11)) 
+  - last_updated (timestamp) 
+
+discipline_cases:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - case_type (enum('ikosa_gito','ikosa_gikomeye','ikosa_cyane','ikosa_kibabaje')) 
+  - description (text) 
+  - action_taken (text) 
+  - status (enum('gishya','girakurikiranwa','byakemuwe','byahagaritswe')) [MUL]
+  - severity (int(11)) 
+  - reported_by (int(11)) 
+  - handled_by (int(11)) 
+  - parent_notified (tinyint(1)) 
+  - created_at (timestamp) [MUL]
+  - resolved_at (timestamp) 
+
+discipline_conducts:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - incident_date (date) [MUL]
+  - incident_time (time) 
+  - incident_type (varchar(100)) 
+  - severity (enum('minor','moderate','serious','severe')) 
+  - location (varchar(100)) 
+  - description (text) 
+  - mistake_details (text) 
+  - witness_names (text) 
+  - reported_by (int(11)) [MUL]
+  - action_taken (text) 
+  - conduct_points (int(11)) 
+  - parent_notified (tinyint(1)) 
+  - parent_notified_at (datetime) 
+  - status (enum('active','resolved','removed')) [MUL]
+  - removed_by (int(11)) [MUL]
+  - removed_at (datetime) 
+  - removal_reason (text) 
+  - follow_up_required (tinyint(1)) 
+  - follow_up_date (date) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+discipline_incidents:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - incident_type (varchar(100)) 
+  - description (text) 
+  - severity (varchar(50)) 
+  - status (varchar(50)) [MUL]
+  - reported_by (int(11)) 
+  - resolved_by (int(11)) 
+  - resolved_at (datetime) 
+  - action_taken (text) 
+  - created_at (timestamp) 
+
+discipline_records:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - incident_date (date) [MUL]
+  - incident_type (varchar(100)) 
+  - description (text) 
+  - severity (enum('low','medium','high','critical')) 
+  - action_taken (text) 
+  - reported_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+discussion_forums:
+  - id (int(11)) [PRI]
+  - subject_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - forum_title (varchar(255)) 
+  - forum_description (text) 
+  - created_by (int(11)) [MUL]
+  - is_moderated (tinyint(1)) 
+  - post_count (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+dod_activity_log:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - action (varchar(100)) 
+  - module (varchar(50)) [MUL]
+  - details (longtext) 
+  - ip_address (varchar(45)) 
+  - created_at (timestamp) [MUL]
+
+dod_notifications:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - message (text) 
+  - notification_type (enum('ikosa','ibihano','ibizamini','sisiteme','amakuru')) [MUL]
+  - priority (enum('bihutirwa','byingenzi','bisanzwe')) 
+  - target_user (int(11)) [MUL]
+  - target_role (varchar(50)) 
+  - is_read (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+
+dos_classes:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - code (varchar(50)) [UNI]
+  - trade_id (int(11)) [MUL]
+  - level (int(11)) 
+  - capacity (int(11)) 
+  - current_students (int(11)) 
+  - academic_year (varchar(20)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+dos_courses:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - code (varchar(50)) [UNI]
+  - trade_id (int(11)) [MUL]
+  - level (int(11)) 
+  - credits (int(11)) 
+  - hours_per_week (int(11)) 
+  - description (text) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+dos_teachers:
+  - id (int(11)) [PRI]
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - email (varchar(255)) [UNI]
+  - phone (varchar(20)) 
+  - specialization (varchar(255)) 
+  - qualification (varchar(255)) 
+  - experience_years (int(11)) 
+  - employee_id (varchar(50)) [UNI]
+  - hire_date (date) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+dos_trades:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - code (varchar(50)) [UNI]
+  - description (text) 
+  - duration_years (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+dynamic_content:
+  - id (int(11)) [PRI]
+  - page (varchar(50)) [MUL]
+  - section (varchar(50)) 
+  - content_key (varchar(100)) 
+  - content_value (text) 
+  - content_type (enum('text','image','html','json')) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+email_messages:
+  - id (int(11)) [PRI]
+  - recipient (varchar(255)) 
+  - subject (varchar(255)) 
+  - body (text) 
+  - template_id (int(11)) 
+  - sender_id (int(11)) 
+  - scheduled_at (timestamp) [MUL]
+  - sent_at (timestamp) 
+  - attachments (longtext) 
+  - status (enum('pending','scheduled','sent','failed')) [MUL]
+  - error_message (text) 
+  - created_at (timestamp) 
+
+email_templates:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - subject (varchar(255)) 
+  - body (text) 
+  - variables (longtext) 
+  - active (tinyint(1)) 
+  - created_at (timestamp) 
+
+emergency_contacts:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - contact_name (varchar(100)) 
+  - relationship (varchar(50)) 
+  - phone_primary (varchar(20)) 
+  - phone_secondary (varchar(20)) 
+  - address (text) 
+  - priority_order (int(11)) 
+  - can_pickup (tinyint(1)) 
+  - medical_authority (tinyint(1)) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+engagement_metrics:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - date (date) 
+  - login_count (int(11)) 
+  - session_duration_minutes (int(11)) 
+  - assignments_completed (int(11)) 
+  - quizzes_attempted (int(11)) 
+  - engagement_score (decimal(5,2)) 
+
+enrollments:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - enrollment_date (date) 
+  - status (enum('active','completed','dropped','suspended')) 
+  - completion_date (date) 
+  - final_grade (varchar(5)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+event_images:
+  - id (int(11)) [PRI]
+  - event_id (int(11)) [MUL]
+  - image_url (varchar(255)) 
+  - is_primary (tinyint(1)) 
+  - created_at (timestamp) 
+
+event_participants:
+  - id (int(11)) [PRI]
+  - event_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - registration_date (timestamp) 
+  - attendance_status (enum('registered','attended','absent','cancelled')) 
+
+events:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - event_type (varchar(100)) 
+  - start_date (datetime) [MUL]
+  - end_date (datetime) 
+  - location (varchar(255)) 
+  - organizer_id (int(11)) [MUL]
+  - max_participants (int(11)) 
+  - status (enum('scheduled','ongoing','completed','cancelled')) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+exam_invigilators:
+  - id (int(11)) [PRI]
+  - session_id (int(11)) [MUL]
+  - teacher_id (int(11)) 
+  - assigned_at (timestamp) 
+
+exam_monitoring:
+  - id (int(11)) [PRI]
+  - exam_id (int(11)) 
+  - exam_name (varchar(255)) 
+  - exam_date (date) [MUL]
+  - location (varchar(255)) 
+  - supervisor_id (int(11)) 
+  - status (enum('biteguwe','biratangira','byarangiye','byahagaritswe')) [MUL]
+  - students_count (int(11)) 
+  - issues_reported (int(11)) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+exam_registrations:
+  - id (int(11)) [PRI]
+  - exam_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - registration_date (datetime) 
+  - status (enum('registered','appeared','absent','cancelled')) 
+
+exam_results:
+  - id (int(11)) [PRI]
+  - exam_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - obtained_marks (decimal(5,2)) 
+  - grade_letter (varchar(5)) 
+  - percentage (decimal(5,2)) 
+  - rank (int(11)) 
+  - remarks (text) 
+  - result_date (datetime) 
+
+exam_schedules:
+  - id (int(11)) [PRI]
+  - exam_name (varchar(200)) 
+  - exam_type (varchar(100)) 
+  - academic_year (varchar(20)) 
+  - term (varchar(50)) 
+  - start_date (date) 
+  - end_date (date) 
+  - status (enum('draft','published','completed')) 
+  - published_at (timestamp) 
+  - created_by (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+exam_sessions:
+  - id (int(11)) [PRI]
+  - session_name (varchar(100)) 
+  - academic_year_id (int(11)) [MUL]
+  - exam_type (enum('mid-term','end-term','final','quiz','mock')) [MUL]
+  - start_date (date) 
+  - end_date (date) 
+  - status (enum('scheduled','ongoing','completed','cancelled')) [MUL]
+  - description (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+examination_schedule:
+  - id (int(11)) [PRI]
+  - exam_name (varchar(255)) 
+  - exam_type (enum('quiz','midterm','final','practical')) 
+  - trade (varchar(100)) 
+  - class_level (varchar(50)) 
+  - subject (varchar(100)) 
+  - exam_date (date) 
+  - start_time (time) 
+  - end_time (time) 
+  - venue (varchar(255)) 
+  - invigilator_id (int(11)) [MUL]
+  - status (enum('scheduled','ongoing','completed','cancelled')) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+exams:
+  - id (int(11)) [PRI]
+  - code (varchar(50)) [UNI]
+  - title (varchar(255)) 
+  - title_rw (varchar(255)) 
+  - course_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - trade (enum('SOD','BDC','AUT','General')) 
+  - level (varchar(50)) 
+  - exam_type (enum('midterm','final','quiz','practical')) 
+  - exam_date (date) 
+  - start_time (time) 
+  - end_time (time) 
+  - duration_minutes (int(11)) 
+  - room (varchar(100)) 
+  - instructor_id (int(11)) [MUL]
+  - total_marks (int(11)) 
+  - passing_marks (int(11)) 
+  - description (text) 
+  - topics (longtext) 
+  - materials (longtext) 
+  - rules (longtext) 
+  - status (enum('upcoming','ongoing','completed','grading')) 
+  - created_at (timestamp) 
+
+expenses:
+  - id (int(11)) [PRI]
+  - category (varchar(100)) 
+  - description (text) 
+  - amount (decimal(15,2)) 
+  - expense_date (date) 
+  - payment_method (enum('cash','bank','mobile_money','card')) 
+  - reference_number (varchar(100)) 
+  - approved_by (int(11)) [MUL]
+  - processed_by (int(11)) [MUL]
+  - status (enum('pending','approved','rejected','paid')) 
+  - created_at (timestamp) 
+
+features:
+  - id (int(11)) [PRI]
+  - title (varchar(100)) 
+  - description (text) 
+  - icon (varchar(255)) 
+  - display_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+fee_payments:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - fee_structure_id (int(11)) [MUL]
+  - amount_paid (decimal(10,2)) 
+  - payment_date (date) 
+  - payment_method (enum('cash','bank_transfer','mobile_money','card')) 
+  - transaction_reference (varchar(100)) 
+  - receipt_number (varchar(100)) [UNI]
+  - status (enum('pending','completed','failed','refunded')) 
+  - received_by (int(11)) [MUL]
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+fee_structure:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - fee_type (enum('tuition','exam','library','hostel','transport','other')) 
+  - amount (decimal(10,2)) 
+  - academic_year (varchar(20)) 
+  - term (enum('1','2','3')) 
+  - description (text) 
+  - is_mandatory (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+fee_structures:
+  - id (int(11)) [PRI]
+  - course_id (int(11)) [MUL]
+  - fee_type_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - amount (decimal(10,2)) 
+  - due_date_offset_days (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+fee_types:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - description (text) 
+  - is_recurring (tinyint(1)) 
+  - recurrence_period (enum('monthly','quarterly','semester','annual')) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+fees:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - fee_type (varchar(100)) 
+  - amount (decimal(10,2)) 
+  - due_date (date) [MUL]
+  - paid_amount (decimal(10,2)) 
+  - status (enum('paid','pending','overdue','partial')) [MUL]
+  - payment_date (date) 
+  - payment_method (varchar(50)) 
+  - transaction_id (varchar(100)) 
+  - remarks (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+financial_analytics:
+  - id (int(11)) [PRI]
+  - analysis_date (date) [MUL]
+  - total_fees_due (decimal(12,2)) 
+  - total_fees_collected (decimal(12,2)) 
+  - total_fees_pending (decimal(12,2)) 
+  - total_fees_overdue (decimal(12,2)) 
+  - collection_rate (decimal(5,2)) 
+  - students_with_pending_fees (int(11)) 
+  - students_with_overdue_fees (int(11)) 
+  - cafeteria_revenue (decimal(12,2)) 
+  - transport_revenue (decimal(12,2)) 
+  - library_fines (decimal(12,2)) 
+  - created_at (timestamp) 
+
+financial_reports:
+  - id (int(11)) [PRI]
+  - report_type (enum('income','expense','balance','profit_loss','cash_flow')) 
+  - report_period (varchar(50)) 
+  - total_income (decimal(15,2)) 
+  - total_expense (decimal(15,2)) 
+  - net_balance (decimal(15,2)) 
+  - generated_by (int(11)) [MUL]
+  - generated_at (timestamp) 
+
+forum_posts:
+  - id (int(11)) [PRI]
+  - forum_id (int(11)) [MUL]
+  - parent_post_id (int(11)) [MUL]
+  - author_id (int(11)) [MUL]
+  - post_title (varchar(255)) 
+  - post_content (text) 
+  - upvotes (int(11)) 
+  - downvotes (int(11)) 
+  - is_pinned (tinyint(1)) 
+  - is_answered (tinyint(1)) 
+  - created_at (timestamp) 
+
+gallery:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - category (varchar(100)) [MUL]
+  - image_url (varchar(500)) 
+  - uploaded_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+gallery_images:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - title_rw (varchar(255)) 
+  - description (text) 
+  - description_rw (text) 
+  - image_url (varchar(500)) 
+  - sort_order (int(11)) [MUL]
+  - is_active (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+gamification_points:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) 
+  - points (int(11)) 
+  - activity_type (varchar(50)) 
+  - description (text) 
+  - earned_at (timestamp) 
+
+grades:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - assessment_type (enum('quiz','exam','assignment','project','final')) 
+  - assessment_name (varchar(200)) 
+  - max_marks (decimal(5,2)) 
+  - obtained_marks (decimal(5,2)) 
+  - grade_letter (varchar(5)) 
+  - assessment_date (date) 
+  - teacher_id (int(11)) [MUL]
+  - comments (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+group_members:
+  - id (int(11)) [PRI]
+  - group_id (int(11)) 
+  - user_id (int(11)) 
+  - role (varchar(20)) 
+  - joined_at (timestamp) 
+
+group_post_comments:
+  - id (int(11)) [PRI]
+  - post_id (int(11)) 
+  - user_id (int(11)) 
+  - comment (text) 
+  - created_at (timestamp) 
+
+group_post_likes:
+  - id (int(11)) [PRI]
+  - post_id (int(11)) 
+  - user_id (int(11)) 
+  - created_at (timestamp) 
+
+group_posts:
+  - id (int(11)) [PRI]
+  - group_id (int(11)) 
+  - user_id (int(11)) 
+  - content (text) 
+  - created_at (timestamp) 
+
+hero_slides:
+  - id (int(11)) [PRI]
+  - title (varchar(200)) 
+  - subtitle (text) 
+  - image_url (varchar(255)) 
+  - button_text (varchar(50)) 
+  - button_link (varchar(255)) 
+  - display_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+holiday_package_progress:
+  - id (int(11)) [PRI]
+  - package_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - activity_completed (int(11)) 
+  - total_activities (int(11)) 
+  - progress_percentage (decimal(5,2)) 
+  - submission_content (longtext) 
+  - submitted_at (timestamp) 
+  - teacher_feedback (text) 
+  - marks_obtained (decimal(5,2)) 
+  - status (enum('not_started','in_progress','completed','submitted','graded')) 
+  - graded_by (int(11)) [MUL]
+  - graded_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+holiday_packages:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - teacher_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - package_type (enum('revision','practice','project','reading','skill_building')) 
+  - subject_id (int(11)) [MUL]
+  - total_activities (int(11)) 
+  - estimated_duration_days (int(11)) 
+  - difficulty_level (enum('beginner','intermediate','advanced')) 
+  - learning_objectives (longtext) 
+  - resources (longtext) 
+  - instructions (text) 
+  - submission_required (tinyint(1)) 
+  - peer_collaboration (tinyint(1)) 
+  - parent_involvement (tinyint(1)) 
+  - start_date (date) 
+  - end_date (date) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_content:
+  - id (int(11)) [PRI]
+  - section_key (varchar(100)) [UNI]
+  - title (varchar(255)) 
+  - subtitle (text) 
+  - content (text) 
+  - additional_data (longtext) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_features:
+  - id (int(11)) [PRI]
+  - title_en (varchar(255)) 
+  - title_rw (varchar(255)) 
+  - description_en (text) 
+  - description_rw (text) 
+  - icon (varchar(100)) 
+  - color (varchar(50)) 
+  - display_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_sections:
+  - id (int(11)) [PRI]
+  - section_name (varchar(100)) 
+  - title (varchar(255)) 
+  - subtitle (varchar(255)) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - background_color (varchar(20)) 
+  - text_color (varchar(20)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_slides:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - subtitle (text) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - button_text (varchar(100)) 
+  - button_link (varchar(300)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_statistics:
+  - id (int(11)) [PRI]
+  - label (varchar(100)) 
+  - value (varchar(50)) 
+  - icon (varchar(50)) 
+  - description (text) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+home_visits:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - advisor_id (int(11)) 
+  - visit_date (datetime) 
+  - purpose_rw (text) 
+  - purpose_en (text) 
+  - family_members_present (text) 
+  - home_conditions_rw (text) 
+  - home_conditions_en (text) 
+  - observations_rw (text) 
+  - observations_en (text) 
+  - concerns_identified_rw (text) 
+  - concerns_identified_en (text) 
+  - recommendations_rw (text) 
+  - recommendations_en (text) 
+  - follow_up_actions (text) 
+  - parent_feedback_rw (text) 
+  - parent_feedback_en (text) 
+  - visit_status (enum('planned','completed','cancelled')) 
+  - created_at (timestamp) 
+
+homework:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - homework_type (enum('daily','weekly','monthly','revision','practice')) 
+  - total_marks (decimal(5,2)) 
+  - instructions (text) 
+  - resources (longtext) 
+  - due_date (date) 
+  - submission_required (tinyint(1)) 
+  - peer_review_required (tinyint(1)) 
+  - parent_notification (tinyint(1)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+homework_submissions:
+  - id (int(11)) [PRI]
+  - homework_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - submission_content (text) 
+  - attachments (longtext) 
+  - submitted_at (timestamp) 
+  - is_late (tinyint(1)) 
+  - status (enum('pending','submitted','reviewed','graded')) 
+  - marks_obtained (decimal(5,2)) 
+  - teacher_feedback (text) 
+  - peer_reviews (longtext) 
+  - graded_by (int(11)) [MUL]
+  - graded_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+hostel_allocations:
+  - id (int(11)) [PRI]
+  - room_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - check_in_date (date) 
+  - check_out_date (date) 
+  - status (enum('active','checked_out','terminated')) [MUL]
+  - bed_number (varchar(10)) 
+  - notes (text) 
+  - allocated_by (int(11)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+hostel_applications:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - room_id (int(11)) [MUL]
+  - application_date (date) 
+  - check_in_date (date) 
+  - status (enum('pending','approved','rejected')) 
+  - approved_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+hostel_rooms:
+  - id (int(11)) [PRI]
+  - room_number (varchar(20)) [UNI]
+  - hostel_name (varchar(100)) 
+  - floor (int(11)) 
+  - room_type (enum('single','double','dormitory')) 
+  - capacity (int(11)) 
+  - current_occupancy (int(11)) 
+  - gender (enum('male','female','mixed')) [MUL]
+  - amenities (longtext) 
+  - status (enum('available','occupied','maintenance','closed')) [MUL]
+  - monthly_fee (decimal(10,2)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+inventory:
+  - id (int(11)) [PRI]
+  - item_name (varchar(200)) 
+  - category (varchar(100)) [MUL]
+  - quantity (int(11)) 
+  - unit (varchar(50)) 
+  - unit_price (decimal(10,2)) 
+  - supplier (varchar(200)) 
+  - location (varchar(100)) 
+  - min_stock_level (int(11)) 
+  - status (enum('available','low_stock','out_of_stock')) [MUL]
+  - last_restocked (date) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+inventory_items:
+  - id (int(11)) [PRI]
+  - item_code (varchar(100)) [UNI]
+  - item_name (varchar(255)) 
+  - category (varchar(100)) [MUL]
+  - quantity (int(11)) [MUL]
+  - unit_price (decimal(10,2)) 
+  - reorder_level (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+invoices:
+  - id (int(11)) [PRI]
+  - invoice_number (varchar(50)) [UNI]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - student_name (varchar(255)) 
+  - total_amount (decimal(15,2)) 
+  - paid_amount (decimal(15,2)) 
+  - balance (decimal(15,2)) 
+  - due_date (date) 
+  - status (enum('draft','sent','paid','overdue','cancelled')) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+knowledge_articles:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - content (text) 
+  - category (varchar(100)) [MUL]
+  - tags (text) 
+  - attachment (varchar(255)) 
+  - author_id (int(11)) [MUL]
+  - views (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+knowledge_base:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) [MUL]
+  - content (text) 
+  - category (varchar(100)) [MUL]
+  - tags (varchar(500)) 
+  - status (enum('draft','published','archived')) [MUL]
+  - author_id (int(11)) [MUL]
+  - meta_description (text) 
+  - featured (tinyint(1)) 
+  - views (int(11)) 
+  - helpful_count (int(11)) 
+  - not_helpful_count (int(11)) 
+  - version (int(11)) 
+  - published_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+knowledge_graph:
+  - id (int(11)) [PRI]
+  - subject_id (int(11)) [MUL]
+  - concept_name (varchar(255)) 
+  - concept_description (text) 
+  - difficulty_level (int(11)) 
+  - prerequisites (longtext) 
+  - related_concepts (longtext) 
+  - mastery_threshold (decimal(5,2)) 
+  - created_at (timestamp) 
+
+leadership:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - role (varchar(255)) 
+  - department (varchar(255)) 
+  - biography_rw (text) 
+  - biography_en (text) 
+  - email (varchar(255)) 
+  - phone (varchar(50)) 
+  - office_location (varchar(255)) 
+  - image_url (varchar(500)) 
+  - qualifications (longtext) 
+  - experience_years (int(11)) 
+  - specialization (text) 
+  - achievements (longtext) 
+  - responsibilities (longtext) 
+  - social_media (longtext) 
+  - office_hours (varchar(255)) 
+  - status (enum('active','inactive')) 
+  - display_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+learning_analytics_events:
+  - id (bigint(20)) [PRI]
+  - user_id (int(11)) [MUL]
+  - event_type (varchar(100)) 
+  - event_category (enum('engagement','performance','behavior','social','technical')) 
+  - event_data (longtext) 
+  - timestamp (timestamp) 
+
+learning_materials:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - subject_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - material_type (enum('video','pdf','document','presentation','link','interactive')) 
+  - file_url (varchar(500)) 
+  - file_size_mb (decimal(10,2)) 
+  - thumbnail_url (varchar(500)) 
+  - duration_minutes (int(11)) 
+  - views_count (int(11)) 
+  - downloads_count (int(11)) 
+  - tags (longtext) 
+  - difficulty_level (enum('beginner','intermediate','advanced')) 
+  - is_featured (tinyint(1)) 
+  - status (enum('draft','published','archived')) [MUL]
+  - created_at (timestamp) 
+
+learning_notifications:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - notification_type (enum('assignment_due','quiz_scheduled','homework_reminder','grade_posted','peer_review','session_invite','deadline_warning')) 
+  - title (varchar(255)) 
+  - message (text) 
+  - related_id (int(11)) 
+  - related_type (varchar(50)) 
+  - priority (enum('low','normal','high','urgent')) 
+  - is_read (tinyint(1)) 
+  - read_at (timestamp) 
+  - action_url (varchar(500)) 
+  - expires_at (timestamp) 
+  - created_at (timestamp) 
+
+learning_paths:
+  - id (int(11)) [PRI]
+  - path_name (varchar(255)) 
+  - subject_id (int(11)) [MUL]
+  - difficulty_level (enum('beginner','intermediate','advanced','expert')) 
+  - prerequisites (longtext) 
+  - learning_objectives (longtext) 
+  - estimated_duration_hours (int(11)) 
+  - path_structure (longtext) 
+  - is_active (tinyint(1)) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+learning_resources:
+  - id (int(11)) [PRI]
+  - resource_title (varchar(255)) 
+  - resource_type (enum('video','document','interactive','audio','link','ebook','simulation')) 
+  - subject_id (int(11)) [MUL]
+  - difficulty_level (enum('beginner','intermediate','advanced')) 
+  - file_url (varchar(500)) 
+  - description (text) 
+  - uploaded_by (int(11)) [MUL]
+  - view_count (int(11)) 
+  - rating_avg (decimal(3,2)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+leave_requests:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - leave_type (varchar(100)) 
+  - start_date (date) 
+  - end_date (date) 
+  - reason (text) 
+  - status (enum('pending','approved','rejected')) [MUL]
+  - approved_by (int(11)) [MUL]
+  - approved_at (datetime) 
+  - created_at (timestamp) 
+
+levels:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - description (text) 
+  - created_at (timestamp) 
+
+library_books:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) [MUL]
+  - author (varchar(200)) 
+  - isbn (varchar(20)) [UNI]
+  - category (varchar(100)) [MUL]
+  - publisher (varchar(200)) 
+  - publication_year (int(11)) 
+  - quantity (int(11)) 
+  - available_quantity (int(11)) 
+  - location (varchar(100)) 
+  - description (text) 
+  - status (enum('available','unavailable','maintenance')) [MUL]
+  - cover_image (varchar(500)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+library_borrowings:
+  - id (int(11)) [PRI]
+  - book_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - borrow_date (date) 
+  - due_date (date) [MUL]
+  - return_date (date) 
+  - status (enum('borrowed','returned','overdue','lost')) [MUL]
+  - fine_amount (decimal(10,2)) 
+  - notes (text) 
+  - issued_by (int(11)) [MUL]
+  - returned_to (int(11)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+live_study_sessions:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - host_id (int(11)) [MUL]
+  - session_type (enum('class','study_group','office_hours','peer_tutoring','q_and_a')) 
+  - subject_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - max_participants (int(11)) 
+  - is_scheduled (tinyint(1)) 
+  - scheduled_start (datetime) 
+  - scheduled_end (datetime) 
+  - actual_start (timestamp) 
+  - actual_end (timestamp) 
+  - status (enum('scheduled','active','ended','cancelled')) 
+  - meeting_link (varchar(500)) 
+  - access_code (varchar(20)) 
+  - recording_enabled (tinyint(1)) 
+  - recording_url (varchar(500)) 
+  - participants (longtext) 
+  - session_notes (text) 
+  - created_at (timestamp) 
+
+matches:
+  - id (int(11)) [PRI]
+  - home_team_id (int(11)) [MUL]
+  - away_team_id (int(11)) [MUL]
+  - sport_type (varchar(50)) 
+  - match_date (date) 
+  - start_time (time) 
+  - venue (varchar(100)) 
+  - home_score (int(11)) 
+  - away_score (int(11)) 
+  - status (varchar(20)) 
+  - created_at (timestamp) 
+
+media_library:
+  - id (int(11)) [PRI]
+  - file_name (varchar(255)) 
+  - file_url (varchar(500)) 
+  - file_type (varchar(100)) 
+  - file_size (bigint(20)) 
+  - category (varchar(100)) 
+  - uploaded_by (int(11)) [MUL]
+  - uploaded_at (timestamp) 
+
+messages:
+  - id (int(11)) [PRI]
+  - sender_id (int(11)) [MUL]
+  - receiver_id (int(11)) [MUL]
+  - subject (varchar(200)) 
+  - content (text) 
+  - is_read (tinyint(1)) 
+  - read_at (timestamp) 
+  - message_type (enum('message','notice','alert')) 
+  - parent_message_id (int(11)) [MUL]
+  - attachments (longtext) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+new_comers:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - email (varchar(255)) 
+  - phone (varchar(20)) 
+  - trade (enum('SOD','AUT','BDC')) 
+  - level (varchar(20)) 
+  - section (varchar(10)) 
+  - registration_date (date) 
+  - status (enum('pending','approved','enrolled','rejected')) 
+  - documents_submitted (tinyint(1)) 
+  - approved_by (int(11)) [MUL]
+  - enrolled_as_student_id (int(11)) [MUL]
+  - notes (text) 
+  - created_at (timestamp) 
+
+news:
+  - id (int(11)) [PRI]
+  - title (varchar(200)) 
+  - content (text) 
+  - image_url (varchar(255)) 
+  - category (varchar(50)) 
+  - author_id (int(11)) 
+  - is_published (tinyint(1)) 
+  - published_at (timestamp) 
+  - views (int(11)) 
+  - created_at (timestamp) 
+
+news_articles:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - content (text) 
+  - image_url (varchar(500)) 
+  - author (varchar(100)) 
+  - category (varchar(50)) 
+  - date_published (date) 
+  - is_featured (tinyint(1)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+  - views (int(11)) 
+  - likes (int(11)) 
+  - shares (int(11)) 
+
+notification_preferences:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [UNI]
+  - email_enabled (tinyint(1)) 
+  - sms_enabled (tinyint(1)) 
+  - push_enabled (tinyint(1)) 
+  - notification_types (longtext) 
+  - updated_at (timestamp) 
+
+notifications:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - title (varchar(200)) 
+  - message (text) 
+  - type (enum('info','success','warning','error')) 
+  - is_public (tinyint(1)) 
+  - is_read (tinyint(1)) 
+  - read_at (timestamp) 
+  - action_url (varchar(500)) 
+  - expires_at (timestamp) 
+  - created_at (timestamp) 
+
+online_quizzes:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - subject_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - duration_minutes (int(11)) 
+  - total_marks (int(11)) 
+  - passing_marks (int(11)) 
+  - difficulty_level (enum('easy','medium','hard','expert')) 
+  - quiz_type (enum('multiple_choice','true_false','mixed')) 
+  - start_time (datetime) 
+  - end_time (datetime) 
+  - attempts_allowed (int(11)) 
+  - shuffle_questions (tinyint(1)) 
+  - show_results_immediately (tinyint(1)) 
+  - status (enum('draft','published','active','completed','archived')) [MUL]
+  - created_at (timestamp) 
+
+parent_child_links:
+  - id (int(11)) [PRI]
+  - parent_user_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - student_name (varchar(200)) 
+  - student_level (varchar(50)) 
+  - student_year (int(11)) 
+  - verification_code (varchar(50)) [UNI]
+  - request_date (date) 
+  - verification_date (date) 
+  - status (enum('pending','verified','rejected','expired')) [MUL]
+  - verified_by (int(11)) [MUL]
+  - rejection_reason (text) 
+  - expires_at (date) 
+  - created_at (timestamp) 
+
+parent_communications:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - advisor_id (int(11)) 
+  - communication_type (enum('call','sms','email','meeting','home_visit')) 
+  - subject_rw (varchar(200)) 
+  - subject_en (varchar(200)) 
+  - message_rw (text) 
+  - message_en (text) 
+  - priority (enum('low','medium','high','urgent')) 
+  - status (enum('pending','sent','delivered','read','replied')) 
+  - scheduled_date (datetime) 
+  - sent_date (datetime) 
+  - response_rw (text) 
+  - response_en (text) 
+  - response_date (datetime) 
+  - created_at (timestamp) 
+
+parent_details:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [UNI]
+  - occupation (varchar(100)) 
+  - relationship (enum('father','mother','guardian')) 
+  - created_at (timestamp) 
+
+parent_discipline_notifications:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - notification_type (enum('conduct_removed','leave_approved','discipline_warning')) 
+  - title (varchar(255)) 
+  - message (text) 
+  - record_id (int(11)) 
+  - is_read (tinyint(1)) 
+  - created_at (timestamp) 
+
+parent_feedback:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - feedback_type (enum('complaint','suggestion','compliment','inquiry','concern')) 
+  - category (enum('academic','discipline','facilities','staff','fees','transport','food','other')) 
+  - subject_rw (varchar(200)) 
+  - subject_en (varchar(200)) 
+  - message_rw (text) 
+  - message_en (text) 
+  - priority (enum('low','medium','high','urgent')) 
+  - status (enum('received','reviewing','investigating','resolved','closed')) 
+  - assigned_to (int(11)) 
+  - response_rw (text) 
+  - response_en (text) 
+  - resolution_rw (text) 
+  - resolution_en (text) 
+  - satisfaction_rating (int(11)) 
+  - resolved_date (datetime) 
+  - created_at (timestamp) 
+
+parent_meetings:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - advisor_id (int(11)) 
+  - meeting_type (enum('individual','group','emergency','routine')) 
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - location (varchar(200)) 
+  - meeting_date (datetime) 
+  - duration_minutes (int(11)) 
+  - status (enum('scheduled','confirmed','completed','cancelled','rescheduled')) 
+  - attendance_status (enum('present','absent','late')) 
+  - notes_rw (text) 
+  - notes_en (text) 
+  - action_items (text) 
+  - follow_up_required (tinyint(1)) 
+  - follow_up_date (date) 
+  - created_at (timestamp) 
+
+parent_notifications:
+  - id (int(11)) [PRI]
+  - parent_user_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - notification_type (varchar(100)) 
+  - title (varchar(255)) 
+  - message (text) 
+  - related_table (varchar(100)) 
+  - related_id (int(11)) 
+  - priority (enum('low','medium','high','urgent')) 
+  - is_read (tinyint(1)) [MUL]
+  - read_at (datetime) 
+  - created_at (timestamp) [MUL]
+
+parent_sheets:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - relationship (varchar(50)) 
+  - created_at (timestamp) 
+
+parent_student:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - relationship (enum('father','mother','guardian','other')) 
+  - is_primary (tinyint(1)) 
+  - created_at (timestamp) 
+
+parent_student_links:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - relationship (enum('father','mother','guardian','other')) 
+  - is_primary (tinyint(1)) 
+  - created_at (timestamp) 
+
+parents:
+  - id (int(11)) [PRI]
+  - parent_code (varchar(20)) [UNI]
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - phone (varchar(20)) 
+  - email (varchar(100)) 
+  - national_id (varchar(20)) [UNI]
+  - address (text) 
+  - occupation (varchar(100)) 
+  - relationship_type (enum('father','mother','guardian')) 
+  - emergency_contact (varchar(20)) 
+  - status (enum('active','inactive')) 
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+  - has_smartphone (tinyint(1)) 
+  - preferred_contact_method (enum('sms','app','dual')) 
+  - last_sms_received (timestamp) 
+  - sms_opt_out (tinyint(1)) 
+
+payment_reminders:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - reminder_date (datetime) [MUL]
+  - message (text) 
+  - sent_by (int(11)) [MUL]
+  - status (enum('pending','sent','failed')) [MUL]
+  - sent_at (datetime) 
+  - created_at (timestamp) 
+
+payments:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - amount (decimal(10,2)) 
+  - currency (varchar(10)) 
+  - payment_type (varchar(50)) 
+  - status (varchar(20)) 
+  - reference (varchar(100)) 
+  - description (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+peer_reviews:
+  - id (int(11)) [PRI]
+  - submission_id (int(11)) 
+  - submission_type (enum('assignment','homework','project')) 
+  - reviewer_id (int(11)) [MUL]
+  - review_content (text) 
+  - rating (decimal(3,2)) 
+  - criteria_ratings (longtext) 
+  - is_anonymous (tinyint(1)) 
+  - helpful_votes (int(11)) 
+  - created_at (timestamp) 
+
+permissions:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) [UNI]
+  - description (text) 
+  - module (varchar(50)) 
+  - created_at (timestamp) 
+
+player_stats:
+  - id (int(11)) [PRI]
+  - player_id (int(11)) [MUL]
+  - match_id (int(11)) [MUL]
+  - goals (int(11)) 
+  - assists (int(11)) 
+  - created_at (timestamp) 
+
+players:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - jersey_number (int(11)) 
+  - position (varchar(50)) 
+  - sport_type (varchar(50)) 
+  - status (varchar(20)) 
+  - created_at (timestamp) 
+
+predictive_alerts:
+  - id (int(11)) [PRI]
+  - alert_type (varchar(100)) [MUL]
+  - severity (enum('info','warning','critical','urgent')) [MUL]
+  - entity_type (enum('student','class','teacher','system')) [MUL]
+  - entity_id (int(11)) 
+  - alert_title (varchar(255)) 
+  - alert_message (text) 
+  - prediction_confidence (decimal(5,2)) 
+  - recommended_action (text) 
+  - status (enum('active','acknowledged','resolved','dismissed')) [MUL]
+  - acknowledged_by (int(11)) [MUL]
+  - acknowledged_at (datetime) 
+  - created_at (timestamp) 
+
+predictive_analytics:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - prediction_type (enum('performance','dropout_risk','success_probability','time_to_mastery')) 
+  - predicted_value (decimal(10,2)) 
+  - confidence_score (decimal(5,2)) 
+  - contributing_factors (longtext) 
+  - recommendations (longtext) 
+  - prediction_date (date) 
+  - created_at (timestamp) 
+
+punishments:
+  - id (int(11)) [PRI]
+  - case_id (int(11)) [MUL]
+  - punishment_type (enum('iburira','guhagarikwa_iminsi','guhagarikwa_byimazeyo','kwirukana')) 
+  - description (text) 
+  - start_date (date) 
+  - end_date (date) 
+  - status (enum('bitegerejwe','birakora','byarangiye')) [MUL]
+  - created_at (timestamp) 
+
+question_bank:
+  - id (int(11)) [PRI]
+  - subject_id (int(11)) [MUL]
+  - question_text (text) 
+  - question_type (enum('multiple_choice','true_false','short_answer','essay','coding')) 
+  - difficulty_level (int(11)) 
+  - options (longtext) 
+  - correct_answer (longtext) 
+  - explanation (text) 
+  - points (decimal(5,2)) 
+  - created_by (int(11)) [MUL]
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+quick_links:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - title (varchar(100)) 
+  - url (varchar(255)) 
+  - icon (varchar(50)) 
+  - display_order (int(11)) 
+  - created_at (timestamp) 
+
+quiz_answers:
+  - id (int(11)) [PRI]
+  - attempt_id (int(11)) [MUL]
+  - question_id (int(11)) [MUL]
+  - student_answer (text) 
+  - is_correct (tinyint(1)) 
+  - marks_awarded (decimal(5,2)) 
+  - time_spent_seconds (int(11)) 
+  - created_at (timestamp) 
+
+quiz_attempts:
+  - id (int(11)) [PRI]
+  - quiz_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - attempt_number (int(11)) 
+  - started_at (timestamp) 
+  - submitted_at (timestamp) 
+  - time_taken_minutes (int(11)) 
+  - answers (longtext) 
+  - score (decimal(5,2)) 
+  - percentage (decimal(5,2)) 
+  - grade_letter (varchar(2)) 
+  - is_passed (tinyint(1)) 
+  - status (enum('in_progress','completed','timed_out','abandoned')) 
+
+quiz_questions:
+  - id (int(11)) [PRI]
+  - quiz_id (int(11)) [MUL]
+  - question_text (text) 
+  - question_type (enum('multiple_choice','true_false','short_answer')) 
+  - options (longtext) 
+  - correct_answer (text) 
+  - marks (int(11)) 
+  - explanation (text) 
+  - difficulty (enum('easy','medium','hard')) 
+  - order_number (int(11)) 
+  - image_url (varchar(500)) 
+  - created_at (timestamp) 
+
+quizzes:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - quiz_type (enum('practice','assessment','exam','pop_quiz')) 
+  - total_marks (decimal(5,2)) 
+  - duration_minutes (int(11)) 
+  - instructions (text) 
+  - questions (longtext) 
+  - answer_key (longtext) 
+  - passing_score (decimal(5,2)) 
+  - allow_retake (tinyint(1)) 
+  - max_attempts (int(11)) 
+  - shuffle_questions (tinyint(1)) 
+  - shuffle_options (tinyint(1)) 
+  - show_results_immediately (tinyint(1)) 
+  - scheduled_date (datetime) 
+  - start_time (datetime) 
+  - end_time (datetime) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+real_time_dashboard_metrics:
+  - id (int(11)) [PRI]
+  - metric_type (varchar(100)) [UNI]
+  - metric_value (decimal(12,2)) 
+  - metric_label (varchar(200)) 
+  - metric_category (varchar(100)) 
+  - last_updated (timestamp) 
+
+realtime_messages:
+  - id (int(11)) [PRI]
+  - session_id (int(11)) [MUL]
+  - sender_id (int(11)) [MUL]
+  - message_type (enum('text','file','emoji','system')) 
+  - content (text) 
+  - attachments (longtext) 
+  - is_private (tinyint(1)) 
+  - recipient_id (int(11)) [MUL]
+  - sent_at (timestamp) 
+  - edited (tinyint(1)) 
+  - edited_at (timestamp) 
+
+realtime_notifications:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - title (varchar(255)) 
+  - message (text) 
+  - type (enum('info','success','warning','error','announcement')) 
+  - priority (enum('low','normal','high','urgent')) 
+  - action_url (varchar(255)) 
+  - metadata (longtext) 
+  - is_read (tinyint(1)) [MUL]
+  - read_at (timestamp) 
+  - created_at (timestamp) [MUL]
+
+refresh_tokens:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - token (varchar(500)) [MUL]
+  - expires_at (datetime) 
+  - created_at (timestamp) 
+
+registration_notifications:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - user_type (varchar(20)) 
+  - message (text) 
+  - is_read (tinyint(1)) 
+  - notified_roles (text) 
+  - created_at (timestamp) 
+
+reports:
+  - id (int(11)) [PRI]
+  - report_type (varchar(100)) [MUL]
+  - filters (longtext) 
+  - data (longtext) 
+  - format (varchar(50)) 
+  - created_by (int(11)) 
+  - created_at (timestamp) [MUL]
+
+role_credentials:
+  - id (int(11)) [PRI]
+  - role_name (varchar(50)) [UNI]
+  - email (varchar(255)) [MUL]
+  - password (varchar(255)) 
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - phone (varchar(20)) 
+  - avatar (varchar(500)) 
+  - preferences (longtext) 
+  - last_login (timestamp) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+role_permissions:
+  - id (int(11)) [PRI]
+  - role_id (int(11)) [MUL]
+  - permission_id (int(11)) [MUL]
+  - created_at (timestamp) 
+
+roles:
+  - id (int(11)) [PRI]
+  - name (varchar(50)) [UNI]
+  - description (text) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+rooms:
+  - id (int(11)) [PRI]
+  - room_name (varchar(100)) 
+  - building (varchar(100)) 
+  - capacity (int(11)) 
+  - room_type (varchar(50)) 
+  - is_active (tinyint(1)) 
+
+salaries:
+  - id (int(11)) [PRI]
+  - staff_id (int(11)) 
+  - amount (decimal(15,2)) 
+  - month (varchar(2)) 
+  - year (varchar(4)) 
+  - status (enum('pending','paid')) 
+  - payment_date (datetime) 
+  - processed_by (int(11)) 
+  - created_at (timestamp) 
+
+salary_payments:
+  - id (int(11)) [PRI]
+  - staff_id (int(11)) [MUL]
+  - staff_name (varchar(255)) 
+  - basic_salary (decimal(15,2)) 
+  - allowances (decimal(15,2)) 
+  - deductions (decimal(15,2)) 
+  - net_salary (decimal(15,2)) 
+  - payment_month (varchar(20)) 
+  - payment_date (date) 
+  - status (enum('pending','paid','cancelled')) 
+  - processed_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+scheduled_reports:
+  - id (int(11)) [PRI]
+  - report_type (varchar(100)) 
+  - filters (longtext) 
+  - frequency (enum('daily','weekly','monthly')) 
+  - recipients (longtext) 
+  - format (varchar(50)) 
+  - last_run (timestamp) 
+  - next_run (timestamp) 
+  - active (tinyint(1)) 
+  - created_at (timestamp) 
+
+school_leadership:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - role (varchar(255)) 
+  - department (varchar(255)) 
+  - bio (text) 
+  - image_url (varchar(500)) 
+  - email (varchar(255)) 
+  - phone (varchar(20)) 
+  - office_location (varchar(255)) 
+  - responsibilities (longtext) 
+  - qualifications (longtext) 
+  - sort_order (int(11)) [MUL]
+  - is_active (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+school_services:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - name_rw (varchar(255)) 
+  - category (enum('academic','health','transport','library','counseling','cafeteria','hostel','sports','technology','other')) [MUL]
+  - description (text) 
+  - description_rw (text) 
+  - full_details (longtext) 
+  - full_details_rw (longtext) 
+  - icon (varchar(100)) 
+  - image_url (varchar(500)) 
+  - price (decimal(10,2)) 
+  - duration (varchar(100)) 
+  - availability (enum('available','limited','unavailable')) 
+  - contact_person (varchar(255)) 
+  - contact_email (varchar(255)) 
+  - contact_phone (varchar(20)) 
+  - location (varchar(255)) 
+  - schedule (longtext) 
+  - features (longtext) 
+  - requirements (longtext) 
+  - benefits (longtext) 
+  - is_active (tinyint(1)) [MUL]
+  - created_by (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+school_stats:
+  - id (int(11)) [PRI]
+  - stat_key (varchar(50)) [UNI]
+  - value (varchar(20)) 
+  - label (varchar(100)) 
+  - icon (varchar(50)) 
+  - color (varchar(100)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+search_history:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - query (varchar(255)) 
+  - filters (longtext) 
+  - results_count (int(11)) 
+  - created_at (timestamp) [MUL]
+
+search_logs:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - search_query (varchar(500)) [MUL]
+  - search_type (enum('global','students','teachers','courses','news','gallery')) [MUL]
+  - results_count (int(11)) 
+  - ip_address (varchar(50)) 
+  - created_at (timestamp) 
+
+security_logs:
+  - id (int(11)) [PRI]
+  - action (varchar(100)) [MUL]
+  - user (varchar(255)) 
+  - ip_address (varchar(45)) 
+  - details (text) 
+  - created_at (timestamp) [MUL]
+
+service_items:
+  - id (int(11)) [PRI]
+  - service_id (int(11)) [MUL]
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - title_fr (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - description_fr (text) 
+  - display_order (int(11)) 
+  - created_at (timestamp) 
+
+service_requests:
+  - id (int(11)) [PRI]
+  - service_id (int(11)) [MUL]
+  - user_id (int(11)) 
+  - student_name (varchar(255)) 
+  - student_email (varchar(255)) 
+  - student_phone (varchar(20)) 
+  - parent_name (varchar(255)) 
+  - parent_phone (varchar(20)) 
+  - request_type (enum('inquiry','booking','complaint','feedback')) 
+  - message (text) 
+  - status (enum('pending','approved','rejected','completed')) [MUL]
+  - approved_by (int(11)) 
+  - approved_at (timestamp) 
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+services:
+  - id (int(11)) [PRI]
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - title_fr (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - description_fr (text) 
+  - category (varchar(50)) 
+  - icon (varchar(255)) 
+  - display_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+session_participants:
+  - id (int(11)) [PRI]
+  - session_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - role (enum('host','co_host','presenter','participant')) 
+  - joined_at (timestamp) 
+  - left_at (timestamp) 
+  - participation_score (decimal(5,2)) 
+  - notes (text) 
+
+slides:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - subtitle (text) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - button_text (varchar(100)) 
+  - button_link (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sms_campaigns:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - message (text) 
+  - target_audience (enum('all','class','grade','custom','smartphone','non-smartphone')) 
+  - target_filter (longtext) 
+  - total_recipients (int(11)) 
+  - sent_count (int(11)) 
+  - failed_count (int(11)) 
+  - created_by (int(11)) 
+  - created_by_role (varchar(50)) 
+  - status (enum('draft','scheduled','sending','completed','cancelled')) 
+  - scheduled_at (timestamp) 
+  - started_at (timestamp) 
+  - completed_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sms_messages:
+  - id (int(11)) [PRI]
+  - recipient (varchar(20)) [MUL]
+  - message (text) 
+  - sender_id (int(11)) [MUL]
+  - sender_role (varchar(50)) 
+  - status (enum('pending','sent','failed','delivered')) [MUL]
+  - provider (varchar(50)) 
+  - delivery_method (enum('sms','app','dual')) 
+  - metadata (longtext) 
+  - response (text) 
+  - error (text) 
+  - created_at (timestamp) [MUL]
+  - updated_at (timestamp) 
+  - read_at (timestamp) 
+  - starred (tinyint(1)) 
+
+sms_queue:
+  - id (int(11)) [PRI]
+  - parent_id (int(11)) 
+  - message (text) 
+  - sender_id (int(11)) 
+  - priority (enum('low','normal','high','urgent')) 
+  - scheduled_at (timestamp) [MUL]
+  - status (enum('pending','processing','sent','failed')) [MUL]
+  - attempts (int(11)) 
+  - max_attempts (int(11)) 
+  - created_at (timestamp) 
+
+sms_role_permissions:
+  - id (int(11)) [PRI]
+  - role (varchar(50)) [UNI]
+  - can_send_single (tinyint(1)) 
+  - can_send_bulk (tinyint(1)) 
+  - can_send_class (tinyint(1)) 
+  - can_send_all (tinyint(1)) 
+  - can_view_history (tinyint(1)) 
+  - can_view_stats (tinyint(1)) 
+  - can_create_templates (tinyint(1)) 
+  - can_create_campaigns (tinyint(1)) 
+  - daily_limit (int(11)) 
+  - created_at (timestamp) 
+
+sms_templates:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - template_category (varchar(50)) 
+  - message_template (text) 
+  - variables (longtext) 
+  - created_by (int(11)) 
+  - is_active (tinyint(1)) 
+  - usage_count (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sport_achievements:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - sport (varchar(50)) 
+  - date (date) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sport_coaches:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - sport (varchar(50)) 
+  - experience (varchar(100)) 
+  - phone (varchar(20)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sport_players:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - position (varchar(50)) 
+  - jersey_number (int(11)) 
+  - team (varchar(100)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sport_teams:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - sport_type (varchar(50)) 
+  - coach (varchar(100)) 
+  - players_count (int(11)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sports:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - description (text) 
+  - coach (varchar(100)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sports_achievements:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - title (varchar(200)) 
+  - title_rw (varchar(200)) 
+  - description (text) 
+  - description_rw (text) 
+  - achievement_date (date) 
+  - position (int(11)) 
+  - competition_name (varchar(200)) 
+  - competition_name_rw (varchar(200)) 
+  - icon (varchar(10)) 
+  - created_at (timestamp) 
+
+sports_categories:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - description (text) 
+  - icon (varchar(100)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+sports_coaches:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - name_rw (varchar(100)) 
+  - role (varchar(100)) 
+  - role_rw (varchar(100)) 
+  - image_url (varchar(500)) 
+  - email (varchar(100)) 
+  - phone (varchar(20)) 
+  - experience_years (int(11)) 
+  - bio (text) 
+  - bio_rw (text) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+sports_events:
+  - id (int(11)) [PRI]
+  - event_name (varchar(255)) 
+  - event_type (varchar(100)) 
+  - event_date (date) 
+  - location (varchar(255)) 
+  - description (text) 
+  - image_url (varchar(255)) 
+  - status (enum('upcoming','ongoing','completed','cancelled')) 
+  - created_at (timestamp) 
+
+sports_gallery:
+  - id (int(11)) [PRI]
+  - title (varchar(200)) 
+  - sport_type (varchar(50)) 
+  - image_url (varchar(255)) 
+  - event_date (date) 
+  - created_at (timestamp) 
+
+sports_matches:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - opponent (varchar(100)) 
+  - match_date (date) 
+  - match_time (time) 
+  - location (varchar(200)) 
+  - location_rw (varchar(200)) 
+  - our_score (int(11)) 
+  - opponent_score (int(11)) 
+  - result (enum('win','loss','draw','pending')) 
+  - match_type (varchar(50)) 
+  - season (varchar(50)) 
+  - created_at (timestamp) 
+
+sports_members:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - join_date (date) 
+  - position (varchar(100)) 
+  - status (enum('active','inactive')) 
+
+sports_players:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - name_rw (varchar(100)) 
+  - jersey_number (int(11)) 
+  - position (varchar(50)) 
+  - position_rw (varchar(50)) 
+  - image_url (varchar(500)) 
+  - date_of_birth (date) 
+  - height (int(11)) 
+  - weight (int(11)) 
+  - class (varchar(50)) 
+  - is_captain (tinyint(1)) 
+  - is_active (tinyint(1)) 
+  - joined_date (date) 
+  - created_at (timestamp) 
+
+sports_team_members:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - position (varchar(50)) 
+  - jersey_number (int(11)) 
+  - joined_date (date) 
+  - status (enum('active','inactive','suspended')) [MUL]
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sports_team_overview:
+  - id (int(11)) [PRI]
+  - team_id (int(11)) [MUL]
+  - content_type (enum('stat','highlight','milestone','quote','image','video','announcement')) 
+  - title (varchar(255)) 
+  - title_rw (varchar(255)) 
+  - description (text) 
+  - description_rw (text) 
+  - image_url (varchar(500)) 
+  - icon (varchar(50)) 
+  - value (varchar(100)) 
+  - color (varchar(50)) 
+  - sort_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+sports_teams:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - name_en (varchar(100)) 
+  - sport_type (enum('football','volleyball')) 
+  - description (text) 
+  - description_en (text) 
+  - icon (varchar(10)) 
+  - image_url (varchar(500)) 
+  - founded_year (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+staff:
+  - id (int(11)) [PRI]
+  - email (varchar(100)) [UNI]
+  - password_hash (varchar(255)) 
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - role (varchar(50)) 
+  - department (varchar(100)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+staff_management:
+  - id (int(11)) [PRI]
+  - title (varchar(100)) 
+  - title_rw (varchar(100)) 
+  - name (varchar(100)) 
+  - image (varchar(255)) 
+  - email (varchar(100)) 
+  - phone (varchar(20)) 
+  - description (text) 
+  - description_rw (text) 
+  - responsibilities (text) 
+  - responsibilities_rw (text) 
+  - display_order (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+stock_categories:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - description (text) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+stock_items:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - description (text) 
+  - category_id (int(11)) [MUL]
+  - sku (varchar(100)) [UNI]
+  - current_quantity (int(11)) 
+  - minimum_quantity (int(11)) 
+  - maximum_quantity (int(11)) 
+  - unit_price (decimal(10,2)) 
+  - unit_of_measurement (varchar(20)) 
+  - supplier (varchar(200)) 
+  - location (varchar(100)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+stock_movements:
+  - id (int(11)) [PRI]
+  - stock_item_id (int(11)) [MUL]
+  - movement_type (enum('in','out','adjustment','transfer')) 
+  - quantity (int(11)) 
+  - unit_price (decimal(10,2)) 
+  - total_value (decimal(10,2)) 
+  - reference_number (varchar(100)) 
+  - reason (varchar(200)) 
+  - moved_by (int(11)) [MUL]
+  - approved_by (int(11)) [MUL]
+  - movement_date (timestamp) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+stock_transactions:
+  - id (int(11)) [PRI]
+  - item_id (int(11)) [MUL]
+  - transaction_type (enum('purchase','issue','return','adjustment','damage','loss')) [MUL]
+  - quantity (int(11)) 
+  - unit_price (decimal(10,2)) 
+  - total_value (decimal(10,2)) 
+  - transaction_date (date) [MUL]
+  - reference_number (varchar(100)) 
+  - issued_to (int(11)) [MUL]
+  - issued_by (int(11)) [MUL]
+  - department (varchar(100)) 
+  - purpose (text) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+student_achievements:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - achievement_type (varchar(100)) 
+  - title (varchar(200)) 
+  - description (text) 
+  - category (enum('academic','sports','arts','leadership','other')) 
+  - achievement_date (date) 
+  - created_at (timestamp) 
+
+student_attendance:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - trade (varchar(100)) 
+  - class_level (varchar(50)) 
+  - attendance_date (date) 
+  - status (enum('present','absent','late','excused')) 
+  - subject (varchar(100)) 
+  - marked_by (int(11)) [MUL]
+  - remarks (text) 
+  - created_at (timestamp) 
+
+student_attendance_alerts:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - alert_type (enum('absent','late','left_early','excused')) 
+  - date (date) 
+  - reason (text) 
+  - parent_notified (tinyint(1)) 
+  - created_at (timestamp) 
+
+student_attendance_tracking:
+  - id (int(11)) [PRI]
+  - student_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - month (varchar(20)) 
+  - year (int(11)) 
+  - total_days (int(11)) 
+  - present_days (int(11)) 
+  - absent_days (int(11)) 
+  - late_days (int(11)) 
+  - excused_days (int(11)) 
+  - attendance_rate (decimal(5,2)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+student_badges:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - badge_id (int(11)) [MUL]
+  - earned_at (timestamp) 
+  - progress_percentage (decimal(5,2)) 
+  - is_displayed (tinyint(1)) 
+
+student_behavior:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - recorded_by (int(11)) 
+  - behavior_type (enum('positive','negative','neutral')) 
+  - category (enum('discipline','attendance','academic','social','health')) 
+  - title_rw (varchar(200)) 
+  - title_en (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - severity (enum('minor','moderate','major','critical')) 
+  - incident_date (datetime) 
+  - location (varchar(200)) 
+  - witnesses (text) 
+  - action_taken_rw (text) 
+  - action_taken_en (text) 
+  - parent_notified (tinyint(1)) 
+  - parent_notification_date (datetime) 
+  - parent_response_rw (text) 
+  - parent_response_en (text) 
+  - resolved (tinyint(1)) 
+  - resolution_date (datetime) 
+  - created_at (timestamp) 
+
+student_behavior_analytics:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - analysis_period_start (date) [MUL]
+  - analysis_period_end (date) 
+  - total_conducts (int(11)) 
+  - minor_incidents (int(11)) 
+  - moderate_incidents (int(11)) 
+  - serious_incidents (int(11)) 
+  - severe_incidents (int(11)) 
+  - total_conduct_points (int(11)) 
+  - positive_behaviors (int(11)) 
+  - improvement_trend (enum('improving','stable','declining','critical')) 
+  - risk_level (enum('low','medium','high','critical')) [MUL]
+  - intervention_required (tinyint(1)) 
+  - last_incident_date (date) 
+  - consecutive_good_days (int(11)) 
+  - created_at (timestamp) 
+
+student_behavior_log:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - behavior_type (enum('positive','negative')) 
+  - category (varchar(100)) 
+  - description (text) 
+  - points (int(11)) 
+  - recorded_by (int(11)) 
+  - parent_notified (tinyint(1)) 
+  - incident_date (date) 
+  - created_at (timestamp) 
+
+student_class_enrollment:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - class_structure_id (int(11)) [MUL]
+  - enrollment_date (date) 
+  - status (enum('active','transferred','graduated','dropped')) 
+  - academic_year (varchar(20)) 
+  - enrolled_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+student_comprehensive_sheets:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [UNI]
+  - student_code (varchar(50)) 
+  - student_name (varchar(255)) 
+  - class_sheet_id (int(11)) [MUL]
+  - trade (varchar(50)) 
+  - level (varchar(50)) 
+  - section (varchar(10)) 
+  - academic_year (varchar(20)) 
+  - total_subjects (int(11)) 
+  - total_marks (decimal(10,2)) 
+  - average_marks (decimal(5,2)) 
+  - overall_grade (varchar(5)) 
+  - class_position (int(11)) 
+  - gpa (decimal(3,2)) 
+  - total_days (int(11)) 
+  - days_present (int(11)) 
+  - days_absent (int(11)) 
+  - days_late (int(11)) 
+  - attendance_percentage (decimal(5,2)) 
+  - total_incidents (int(11)) 
+  - critical_incidents (int(11)) 
+  - high_incidents (int(11)) 
+  - medium_incidents (int(11)) 
+  - low_incidents (int(11)) 
+  - conduct_score (int(11)) 
+  - conduct_grade (varchar(5)) 
+  - total_fees (decimal(15,2)) 
+  - paid_amount (decimal(15,2)) 
+  - balance (decimal(15,2)) 
+  - payment_status (enum('paid','partial','unpaid')) 
+  - overall_status (enum('excellent','good','average','poor','critical')) 
+  - remarks (text) 
+  - last_updated (timestamp) 
+
+student_concept_mastery:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - concept_id (int(11)) [MUL]
+  - mastery_level (decimal(5,2)) 
+  - attempts_count (int(11)) 
+  - last_assessment_score (decimal(5,2)) 
+  - needs_review (tinyint(1)) 
+  - last_practiced (timestamp) 
+  - updated_at (timestamp) 
+
+student_conduct_tracking:
+  - id (int(11)) [PRI]
+  - student_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [UNI]
+  - warnings (int(11)) 
+  - suspensions (int(11)) 
+  - late_arrivals (int(11)) 
+  - absences (int(11)) 
+  - misbehaviors (int(11)) 
+  - uniform_violations (int(11)) 
+  - other_incidents (int(11)) 
+  - base_score (int(11)) 
+  - deductions (int(11)) 
+  - final_score (int(11)) 
+  - conduct_grade (varchar(5)) 
+  - conduct_status (enum('excellent','good','fair','poor')) 
+  - last_incident_date (date) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+student_fees:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - total_fees (decimal(10,2)) 
+  - academic_year (varchar(20)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+student_learning_analytics:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - period_start (date) 
+  - period_end (date) 
+  - assignments_completed (int(11)) 
+  - assignments_avg_score (decimal(5,2)) 
+  - quizzes_taken (int(11)) 
+  - quizzes_avg_score (decimal(5,2)) 
+  - homework_completed (int(11)) 
+  - homework_avg_score (decimal(5,2)) 
+  - study_sessions_attended (int(11)) 
+  - total_study_hours (decimal(5,2)) 
+  - peer_reviews_given (int(11)) 
+  - peer_reviews_received (int(11)) 
+  - collaboration_score (decimal(5,2)) 
+  - improvement_trend (decimal(5,2)) 
+  - strengths (longtext) 
+  - areas_for_improvement (longtext) 
+  - recommendations (longtext) 
+  - created_at (timestamp) 
+
+student_learning_paths:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - path_id (int(11)) [MUL]
+  - enrollment_date (timestamp) 
+  - current_milestone (int(11)) 
+  - completion_percentage (decimal(5,2)) 
+  - performance_score (decimal(5,2)) 
+  - status (enum('not_started','in_progress','completed','paused')) 
+  - completed_at (timestamp) 
+
+student_leave_requests:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - leave_type (enum('sick','home','hospital','emergency','other')) 
+  - reason (text) 
+  - start_date (date) 
+  - end_date (date) 
+  - status (enum('pending','approved','rejected')) 
+  - approved_by (int(11)) 
+  - parent_notified (tinyint(1)) 
+  - created_at (timestamp) 
+
+student_leaves:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - student_name (varchar(255)) 
+  - trade (varchar(100)) 
+  - class_level (varchar(50)) 
+  - leave_type (enum('sick','home','emergency','family','medical','other')) 
+  - reason (text) 
+  - lesson_missed (varchar(255)) 
+  - start_time (timestamp) 
+  - end_time (timestamp) 
+  - approved_by (int(11)) [MUL]
+  - approved_by_name (varchar(255)) 
+  - parent_notified (tinyint(1)) 
+  - status (enum('ongoing','returned','extended')) 
+  - created_at (timestamp) 
+
+student_lessons:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - lesson_date (date) [MUL]
+  - time_from (time) 
+  - time_to (time) 
+  - lesson_type (varchar(100)) 
+  - subject (varchar(100)) 
+  - teacher_id (int(11)) [MUL]
+  - location (varchar(100)) 
+  - reason (text) 
+  - approved_by (int(11)) [MUL]
+  - status (enum('scheduled','completed','cancelled')) 
+  - notes (text) 
+  - created_at (timestamp) 
+
+student_levels:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - current_level (int(11)) 
+  - current_xp (int(11)) 
+  - total_xp (int(11)) 
+  - next_level_xp (int(11)) 
+  - level_title (varchar(100)) 
+  - updated_at (timestamp) 
+
+student_location_tracking:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - tracking_date (date) [MUL]
+  - tracking_time (time) 
+  - location (varchar(200)) 
+  - location_type (enum('classroom','library','cafeteria','lab','sports_field','office','medical','outside')) [MUL]
+  - activity (varchar(200)) 
+  - checked_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+student_medical_records:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - record_type (enum('visit','medication','allergy','condition','emergency')) 
+  - description (text) 
+  - treatment (text) 
+  - prescribed_by (varchar(100)) 
+  - visit_date (date) 
+  - parent_notified (tinyint(1)) 
+  - created_at (timestamp) 
+
+student_movements:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - movement_date (date) [MUL]
+  - entry_time (time) 
+  - exit_time (time) 
+  - movement_type (enum('arrival','departure','leave','return','late_arrival','early_departure')) [MUL]
+  - destination (varchar(200)) 
+  - destination_type (enum('hospital','home','counseling','library','office','external','other')) [MUL]
+  - reason (text) 
+  - authorized_by (int(11)) [MUL]
+  - parent_contacted (tinyint(1)) 
+  - return_expected_time (time) 
+  - actual_return_time (time) 
+  - status (enum('pending','approved','in_progress','completed','cancelled')) [MUL]
+  - notes (text) 
+  - created_at (timestamp) 
+
+student_parents:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) 
+  - parent_id (int(11)) [MUL]
+  - is_primary (tinyint(1)) 
+  - can_pickup (tinyint(1)) 
+  - financial_responsible (tinyint(1)) 
+  - created_at (timestamp) 
+
+student_performance:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - class_id (int(11)) 
+  - course_id (int(11)) 
+  - total_assignments (int(11)) 
+  - completed_assignments (int(11)) 
+  - average_percentage (decimal(5,2)) 
+  - total_marks_obtained (decimal(10,2)) 
+  - total_marks_possible (decimal(10,2)) 
+  - rank_in_class (int(11)) 
+  - updated_at (timestamp) 
+
+student_performance_summary:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - trade_class_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - total_marks (decimal(10,2)) 
+  - average_percentage (decimal(5,2)) 
+  - rank (int(11)) 
+  - attendance_percentage (decimal(5,2)) 
+  - updated_at (timestamp) 
+
+student_performance_tracking:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - tracking_date (date) [MUL]
+  - academic_score (decimal(5,2)) 
+  - behavior_score (decimal(5,2)) 
+  - attendance_rate (decimal(5,2)) 
+  - participation_score (decimal(5,2)) 
+  - overall_grade (varchar(5)) 
+  - teacher_comments (text) 
+  - strengths (text) 
+  - areas_for_improvement (text) 
+  - parent_viewed (tinyint(1)) 
+  - parent_viewed_at (datetime) 
+  - created_at (timestamp) 
+
+student_points:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - points_type (enum('academic','participation','collaboration','bonus','penalty')) 
+  - points_value (int(11)) 
+  - source_type (varchar(50)) 
+  - source_id (int(11)) 
+  - description (text) 
+  - awarded_by (int(11)) [MUL]
+  - awarded_at (timestamp) 
+
+student_profiles:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [UNI]
+  - profile_image (varchar(500)) 
+  - cover_image (varchar(500)) 
+  - bio (text) 
+  - interests (text) 
+  - achievements_summary (text) 
+  - learning_style (varchar(100)) 
+  - preferred_subjects (text) 
+  - career_goals (text) 
+  - social_media_links (longtext) 
+  - last_updated (timestamp) 
+
+student_progress:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - total_lessons (int(11)) 
+  - completed_lessons (int(11)) 
+  - total_quizzes (int(11)) 
+  - completed_quizzes (int(11)) 
+  - average_quiz_score (decimal(5,2)) 
+  - total_assignments (int(11)) 
+  - completed_assignments (int(11)) 
+  - average_assignment_score (decimal(5,2)) 
+  - study_time_hours (decimal(10,2)) 
+  - last_activity_date (date) 
+  - progress_percentage (decimal(5,2)) 
+  - mastery_level (enum('beginner','developing','proficient','advanced','expert')) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+student_rankings:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - ranking_period (varchar(50)) 
+  - period_start (date) [MUL]
+  - period_end (date) 
+  - overall_rank (int(11)) [MUL]
+  - class_rank (int(11)) 
+  - subject_ranks (longtext) 
+  - total_points (decimal(10,2)) 
+  - average_grade (decimal(5,2)) 
+  - quiz_score (decimal(5,2)) 
+  - assignment_score (decimal(5,2)) 
+  - attendance_score (decimal(5,2)) 
+  - behavior_score (decimal(5,2)) 
+  - participation_score (decimal(5,2)) 
+  - improvement_rate (decimal(5,2)) 
+  - badges_earned (longtext) 
+  - achievements (longtext) 
+  - created_at (timestamp) 
+
+student_removals:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - student_code (varchar(50)) 
+  - student_name (varchar(255)) 
+  - trade (varchar(50)) 
+  - class_level (varchar(50)) 
+  - removal_type (enum('expelled','withdrawn','transferred_out','graduated')) 
+  - removal_date (date) 
+  - reason (text) 
+  - removed_by (int(11)) [MUL]
+  - approved_by (int(11)) [MUL]
+  - status (enum('pending','approved','completed')) 
+  - created_at (timestamp) 
+
+student_sheets:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - trade (varchar(50)) 
+  - level (varchar(10)) 
+  - class_name (varchar(100)) 
+  - academic_year (int(11)) 
+  - created_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+student_subject_performance:
+  - id (int(11)) [PRI]
+  - student_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - subject (varchar(100)) 
+  - term (varchar(20)) 
+  - quiz_marks (decimal(5,2)) 
+  - quiz_max (decimal(5,2)) 
+  - midterm_marks (decimal(5,2)) 
+  - midterm_max (decimal(5,2)) 
+  - final_marks (decimal(5,2)) 
+  - final_max (decimal(5,2)) 
+  - total_marks (decimal(5,2)) 
+  - total_max (decimal(5,2)) 
+  - percentage (decimal(5,2)) 
+  - grade (varchar(5)) 
+  - grade_points (decimal(3,2)) 
+  - subject_position (int(11)) 
+  - teacher_id (int(11)) [MUL]
+  - remarks (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+student_term_reports:
+  - id (int(11)) [PRI]
+  - student_sheet_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - term (varchar(20)) 
+  - academic_year (varchar(20)) 
+  - total_subjects (int(11)) 
+  - total_marks (decimal(10,2)) 
+  - average_marks (decimal(5,2)) 
+  - gpa (decimal(3,2)) 
+  - overall_grade (varchar(5)) 
+  - class_position (int(11)) 
+  - attendance_rate (decimal(5,2)) 
+  - days_present (int(11)) 
+  - days_absent (int(11)) 
+  - conduct_score (int(11)) 
+  - conduct_grade (varchar(5)) 
+  - total_incidents (int(11)) 
+  - class_teacher_remarks (text) 
+  - dos_remarks (text) 
+  - head_master_remarks (text) 
+  - report_generated_at (timestamp) 
+
+student_transfers:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - from_class_id (int(11)) [MUL]
+  - to_class_id (int(11)) [MUL]
+  - transfer_date (date) 
+  - reason (text) 
+  - approved_by (int(11)) [MUL]
+  - status (enum('pending','approved','rejected')) 
+  - created_at (timestamp) 
+
+students:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [UNI]
+  - student_id (varchar(50)) [UNI]
+  - class_id (int(11)) [MUL]
+  - parent_id (int(11)) 
+  - admission_date (date) 
+  - blood_group (varchar(10)) 
+  - emergency_contact (varchar(20)) 
+  - medical_conditions (text) 
+
+study_group_members:
+  - id (int(11)) [PRI]
+  - group_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - role (enum('admin','moderator','member')) 
+  - contribution_score (decimal(5,2)) 
+  - joined_at (timestamp) 
+  - is_active (tinyint(1)) 
+
+study_groups:
+  - id (int(11)) [PRI]
+  - group_name (varchar(255)) 
+  - subject_id (int(11)) [MUL]
+  - creator_id (int(11)) [MUL]
+  - group_type (enum('public','private','invite_only')) 
+  - max_members (int(11)) 
+  - current_members (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+subjects:
+  - id (int(11)) [PRI]
+  - name (varchar(200)) 
+  - code (varchar(20)) [UNI]
+  - description (text) 
+  - course_id (int(11)) [MUL]
+  - credits (int(11)) 
+  - is_practical (tinyint(1)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+submission_attachments:
+  - id (int(11)) [PRI]
+  - submission_id (int(11)) [MUL]
+  - file_path (varchar(500)) 
+  - file_name (varchar(255)) 
+  - created_at (timestamp) 
+
+submission_files:
+  - id (int(11)) [PRI]
+  - submission_id (int(11)) [MUL]
+  - file_name (varchar(500)) 
+  - file_path (varchar(1000)) 
+  - file_type (varchar(100)) 
+  - file_size (bigint(20)) 
+  - uploaded_at (timestamp) 
+
+support_articles:
+  - id (int(11)) [PRI]
+  - category_id (int(11)) [MUL]
+  - title_rw (varchar(500)) 
+  - title_en (varchar(500)) 
+  - content_rw (text) 
+  - content_en (text) 
+  - author_id (int(11)) 
+  - author_name (varchar(255)) 
+  - views (int(11)) 
+  - helpful_count (int(11)) 
+  - tags (longtext) 
+  - is_featured (tinyint(1)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+support_categories:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - name_rw (varchar(100)) 
+  - description (text) 
+  - description_rw (text) 
+  - icon (varchar(50)) 
+  - color (varchar(50)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+
+support_faqs:
+  - id (int(11)) [PRI]
+  - category_id (int(11)) [MUL]
+  - question (text) 
+  - question_rw (text) 
+  - answer (text) 
+  - answer_rw (text) 
+  - views (int(11)) 
+  - helpful_count (int(11)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+
+support_resources:
+  - id (int(11)) [PRI]
+  - category_id (int(11)) [MUL]
+  - title (varchar(200)) 
+  - title_rw (varchar(200)) 
+  - description (text) 
+  - description_rw (text) 
+  - resource_type (enum('guide','video','document','link')) 
+  - resource_url (varchar(500)) 
+  - file_url (varchar(500)) 
+  - downloads (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+support_responses:
+  - id (int(11)) [PRI]
+  - ticket_id (int(11)) [MUL]
+  - responder_id (int(11)) 
+  - responder_name (varchar(255)) 
+  - response_text (text) 
+  - is_internal (tinyint(1)) 
+  - attachments (longtext) 
+  - created_at (timestamp) 
+
+support_tickets:
+  - id (int(11)) [PRI]
+  - ticket_number (varchar(50)) [UNI]
+  - category_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - email (varchar(100)) 
+  - phone (varchar(20)) 
+  - subject (varchar(200)) 
+  - message (text) 
+  - priority (enum('low','medium','high','urgent')) 
+  - status (enum('open','in_progress','resolved','closed')) 
+  - assigned_to (varchar(100)) 
+  - response (text) 
+  - resolved_at (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+system_alerts:
+  - id (int(11)) [PRI]
+  - alert_type (enum('ikimenyetso','ikosa','amakuru','byihutirwa')) [MUL]
+  - title (varchar(255)) 
+  - message (text) 
+  - severity (enum('byo_hejuru','byo_hagati','byo_hasi')) 
+  - is_active (tinyint(1)) [MUL]
+  - created_at (timestamp) 
+  - expires_at (timestamp) 
+
+system_config:
+  - id (int(11)) [PRI]
+  - config_key (varchar(100)) [UNI]
+  - config_value (text) 
+  - updated_at (timestamp) 
+
+system_logs:
+  - id (int(11)) [PRI]
+  - level (enum('info','warning','error','critical')) [MUL]
+  - module (varchar(50)) [MUL]
+  - message (text) 
+  - details (longtext) 
+  - created_at (timestamp) [MUL]
+
+system_settings:
+  - id (int(11)) [PRI]
+  - setting_key (varchar(100)) [UNI]
+  - setting_value (text) 
+  - setting_type (enum('string','number','boolean','json')) 
+  - description (text) 
+  - is_public (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+teacher_assignments:
+  - id (int(11)) [PRI]
+  - teacher_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - course_id (int(11)) [MUL]
+  - academic_year (varchar(20)) 
+  - semester (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+teacher_classes:
+  - id (int(11)) [PRI]
+  - teacher_id (int(11)) [MUL]
+  - class_id (int(11)) [MUL]
+  - subject (varchar(255)) 
+  - is_class_teacher (tinyint(1)) 
+  - assigned_at (timestamp) 
+
+teacher_performance_metrics:
+  - id (int(11)) [PRI]
+  - teacher_id (int(11)) [MUL]
+  - metric_date (date) [MUL]
+  - classes_taught (int(11)) 
+  - total_students (int(11)) 
+  - average_class_grade (decimal(5,2)) 
+  - assignment_graded_count (int(11)) 
+  - average_grading_time_hours (decimal(5,2)) 
+  - student_satisfaction_score (decimal(5,2)) 
+  - attendance_marked_on_time (int(11)) 
+  - conduct_reports_filed (int(11)) 
+  - parent_communications (int(11)) 
+  - created_at (timestamp) 
+
+teachers:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - subject (varchar(100)) 
+  - qualification (varchar(200)) 
+  - experience_years (int(11)) 
+  - added_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+teams:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - role (varchar(255)) 
+  - head_name (varchar(255)) 
+  - team_size (int(11)) 
+  - description (text) 
+  - responsibilities (longtext) 
+  - image_url (varchar(255)) 
+  - avatar_emoji (varchar(10)) 
+  - color_gradient (varchar(100)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+
+testimonials:
+  - id (int(11)) [PRI]
+  - name (varchar(100)) 
+  - role (varchar(100)) 
+  - avatar (varchar(10)) 
+  - quote (text) 
+  - rating (int(11)) 
+  - is_active (tinyint(1)) 
+  - sort_order (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+ticket_attachments:
+  - id (int(11)) [PRI]
+  - ticket_id (int(11)) [MUL]
+  - file_path (varchar(500)) 
+  - file_name (varchar(255)) 
+  - file_size (int(11)) 
+  - uploaded_at (timestamp) 
+
+ticket_responses:
+  - id (int(11)) [PRI]
+  - ticket_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - message (text) 
+  - is_staff (tinyint(1)) 
+  - created_at (timestamp) [MUL]
+
+timetable:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - day_of_week (enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')) [MUL]
+  - start_time (time) 
+  - end_time (time) 
+  - room_number (varchar(20)) 
+  - academic_year (varchar(20)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+timetable_entries:
+  - id (int(11)) [PRI]
+  - class_id (int(11)) [MUL]
+  - subject_id (int(11)) [MUL]
+  - teacher_id (int(11)) [MUL]
+  - day_of_week (enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')) 
+  - start_time (time) 
+  - end_time (time) 
+  - room (varchar(50)) 
+  - academic_year_id (int(11)) [MUL]
+
+timetable_slots:
+  - id (int(11)) [PRI]
+  - assignment_id (int(11)) [MUL]
+  - day_of_week (enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')) 
+  - start_time (time) 
+  - end_time (time) 
+  - room (varchar(100)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+trade_classes:
+  - id (int(11)) [PRI]
+  - name (varchar(255)) 
+  - class_name (varchar(100)) 
+  - level (varchar(50)) 
+  - created_at (timestamp) 
+
+trade_courses:
+  - id (int(11)) [PRI]
+  - trade_id (int(11)) [MUL]
+  - code (varchar(20)) 
+  - name (varchar(200)) 
+  - name_rw (varchar(200)) 
+  - description (text) 
+  - description_rw (text) 
+  - level (int(11)) 
+  - credits (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+trade_facilities:
+  - id (int(11)) [PRI]
+  - trade_code (varchar(10)) 
+  - name_rw (varchar(200)) 
+  - name_en (varchar(200)) 
+  - name_fr (varchar(200)) 
+  - description_rw (text) 
+  - description_en (text) 
+  - description_fr (text) 
+  - image (varchar(255)) 
+  - created_at (timestamp) 
+
+trade_instructors:
+  - id (int(11)) [PRI]
+  - trade_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - name_rw (varchar(100)) 
+  - role (varchar(100)) 
+  - role_rw (varchar(100)) 
+  - image_url (varchar(500)) 
+  - email (varchar(100)) 
+  - phone (varchar(20)) 
+  - specialization (text) 
+  - specialization_rw (text) 
+  - experience_years (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+trade_levels:
+  - id (int(11)) [PRI]
+  - trade_code (varchar(10)) 
+  - trade_name (varchar(100)) 
+  - level_number (int(11)) 
+  - level_suffix (varchar(10)) 
+  - full_name (varchar(200)) 
+  - description (text) 
+  - capacity (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - image_url (varchar(500)) 
+
+trade_programs:
+  - id (int(11)) [PRI]
+  - code (varchar(10)) [UNI]
+  - title (varchar(255)) 
+  - description (text) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - total_students (int(11)) 
+  - graduation_rate (decimal(5,2)) 
+  - employment_rate (decimal(5,2)) 
+  - average_salary (varchar(50)) 
+  - industry_partners (int(11)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+trade_students:
+  - id (int(11)) [PRI]
+  - trade_id (int(11)) [MUL]
+  - name (varchar(100)) 
+  - student_code (varchar(50)) 
+  - level (int(11)) 
+  - image_url (varchar(500)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+
+trades:
+  - id (int(11)) [PRI]
+  - code (varchar(10)) [UNI]
+  - name (varchar(200)) 
+  - name_rw (varchar(200)) 
+  - description (text) 
+  - description_rw (text) 
+  - icon (varchar(10)) 
+  - image_url (varchar(500)) 
+  - duration_years (int(11)) 
+  - total_students (int(11)) 
+  - total_instructors (int(11)) 
+  - is_active (tinyint(1)) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+transactions:
+  - id (int(11)) [PRI]
+  - type (enum('income','expense')) 
+  - category (varchar(100)) 
+  - amount (decimal(15,2)) 
+  - description (text) 
+  - transaction_date (datetime) 
+  - created_by (int(11)) 
+  - status (varchar(50)) 
+  - created_at (timestamp) 
+
+transport_bookings:
+  - id (int(11)) [PRI]
+  - student_id (int(11)) [MUL]
+  - route_id (int(11)) [MUL]
+  - booking_date (date) 
+  - pickup_point (varchar(255)) 
+  - status (enum('active','cancelled')) 
+  - created_at (timestamp) 
+
+transport_route_assignments:
+  - id (int(11)) [PRI]
+  - route_id (int(11)) [MUL]
+  - vehicle_id (int(11)) [MUL]
+  - student_id (int(11)) [MUL]
+  - academic_year_id (int(11)) [MUL]
+  - pickup_point (varchar(200)) 
+  - dropoff_point (varchar(200)) 
+  - status (enum('active','suspended','cancelled')) [MUL]
+  - assigned_date (date) 
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+transport_routes:
+  - id (int(11)) [PRI]
+  - route_name (varchar(100)) 
+  - route_code (varchar(20)) [UNI]
+  - start_point (varchar(200)) 
+  - end_point (varchar(200)) 
+  - distance_km (decimal(8,2)) 
+  - pickup_points (longtext) 
+  - dropoff_points (longtext) 
+  - schedule_time (time) 
+  - monthly_fee (decimal(10,2)) 
+  - status (enum('active','inactive')) [MUL]
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+transport_vehicles:
+  - id (int(11)) [PRI]
+  - vehicle_number (varchar(20)) [UNI]
+  - vehicle_type (enum('bus','van','car')) 
+  - capacity (int(11)) 
+  - driver_name (varchar(100)) 
+  - driver_phone (varchar(20)) 
+  - driver_license (varchar(50)) 
+  - status (enum('active','maintenance','inactive')) [MUL]
+  - registration_number (varchar(50)) 
+  - insurance_expiry (date) 
+  - last_service_date (date) 
+  - notes (text) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+
+trending_searches:
+  - id (int(11)) [PRI]
+  - query (varchar(255)) [UNI]
+  - search_count (int(11)) [MUL]
+  - last_searched (timestamp) [MUL]
+
+trophies:
+  - id (int(11)) [PRI]
+  - title (varchar(100)) 
+  - sport_type (varchar(50)) 
+  - year (int(11)) 
+  - date_won (date) 
+  - description (text) 
+  - image (varchar(255)) 
+  - created_at (timestamp) 
+
+uploaded_files:
+  - id (int(11)) [PRI]
+  - original_name (varchar(255)) 
+  - filename (varchar(255)) 
+  - file_path (varchar(500)) 
+  - file_size (int(11)) 
+  - mime_type (varchar(100)) 
+  - uploaded_by (int(11)) [MUL]
+  - created_at (timestamp) 
+
+user_activities:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - action (varchar(100)) 
+  - module (varchar(50)) [MUL]
+  - details (longtext) 
+  - ip_address (varchar(45)) 
+  - created_at (timestamp) [MUL]
+
+user_activity_logs:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - action (varchar(100)) [MUL]
+  - module (varchar(50)) 
+  - description (text) 
+  - ip_address (varchar(45)) 
+  - user_agent (text) 
+  - created_at (timestamp) [MUL]
+
+user_badges:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) 
+  - badge_id (int(11)) 
+  - earned_at (timestamp) 
+
+user_permissions:
+  - id (int(11)) [PRI]
+  - user_id (int(11)) [MUL]
+  - permission_id (int(11)) [MUL]
+  - granted (tinyint(1)) 
+  - created_at (timestamp) 
+
+users:
+  - id (int(11)) [PRI]
+  - username (varchar(100)) [UNI]
+  - email (varchar(255)) [UNI]
+  - password_hash (varchar(255)) 
+  - first_name (varchar(100)) 
+  - last_name (varchar(100)) 
+  - phone (varchar(20)) 
+  - address (text) 
+  - date_of_birth (date) 
+  - gender (enum('male','female','other')) 
+  - profile_picture (varchar(500)) 
+  - role_id (int(11)) [MUL]
+  - student_id (varchar(50)) [UNI]
+  - parent_id (int(11)) [MUL]
+  - is_active (tinyint(1)) [MUL]
+  - email_verified (tinyint(1)) 
+  - last_login (timestamp) 
+  - password_reset_token (varchar(255)) 
+  - password_reset_expires (timestamp) 
+  - created_at (timestamp) 
+  - updated_at (timestamp) 
+  - profile_image (varchar(500)) 
+  - trade_id (int(11)) [MUL]
+  - level (int(11)) 
+  - class (varchar(10)) 
+  - employee_id (varchar(50)) [UNI]
+  - bio (text) 
+  - photo (varchar(255)) 
+  - password (varchar(255)) 
+  - preferences (longtext) 
+  - status (varchar(50)) 
+
+workshop_images:
+  - id (int(11)) [PRI]
+  - workshop_id (int(11)) [MUL]
+  - image_url (varchar(500)) 
+  - caption (text) 
+  - uploaded_at (timestamp) 
+
+workshop_participants:
+  - id (int(11)) [PRI]
+  - workshop_id (int(11)) [MUL]
+  - user_id (int(11)) [MUL]
+  - registration_date (timestamp) 
+  - attendance_status (enum('registered','attended','absent','cancelled')) 
+
+workshops:
+  - id (int(11)) [PRI]
+  - title (varchar(255)) 
+  - description (text) 
+  - facilitator (varchar(255)) 
+  - start_date (datetime) 
+  - end_date (datetime) 
+  - venue (varchar(255)) 
+  - target_audience (varchar(255)) 
+  - max_participants (int(11)) 
+  - status (enum('scheduled','ongoing','completed','cancelled')) 
+  - created_at (timestamp) 

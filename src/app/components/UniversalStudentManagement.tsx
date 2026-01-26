@@ -229,30 +229,30 @@ const UniversalStudentManagement: React.FC<UniversalStudentManagementProps> = ({
               className="pl-10"
             />
           </div>
-          <Select value={filters.trade} onValueChange={(v) => setFilters({ ...filters, trade: v, level: '', class: '' })}>
+          <Select value={filters.trade || "all"} onValueChange={(v) => setFilters({ ...filters, trade: v === "all" ? "" : v, level: '', class: '' })}>
             <SelectTrigger><SelectValue placeholder="Umwuga" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Byose</SelectItem>
+              <SelectItem value="all">Byose</SelectItem>
               {uniqueTrades.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filters.level} onValueChange={(v) => setFilters({ ...filters, level: v })} disabled={!filters.trade}>
+          <Select value={filters.level || "all"} onValueChange={(v) => setFilters({ ...filters, level: v === "all" ? "" : v })} disabled={!filters.trade}>
             <SelectTrigger><SelectValue placeholder="Urwego" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Byose</SelectItem>
+              <SelectItem value="all">Byose</SelectItem>
               {availableLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={filters.class} onValueChange={(v) => setFilters({ ...filters, class: v })}>
+          <Select value={filters.class || "all"} onValueChange={(v) => setFilters({ ...filters, class: v === "all" ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Ikilas" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Byose</SelectItem>
+              <SelectItem value="all">Byose</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+          <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Byose</SelectItem>
+              <SelectItem value="all">Byose</SelectItem>
               <SelectItem value="active">Bakora</SelectItem>
               <SelectItem value="inactive">Ntibakora</SelectItem>
             </SelectContent>

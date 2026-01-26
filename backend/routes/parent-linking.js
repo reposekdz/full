@@ -66,7 +66,7 @@ router.post('/approve/:id', authenticateToken, requireRole('dos', 'dod', 'headma
     }
     
     const request = linkRequest[0];
-    const [students] = await pool.execute(`SELECT id FROM users WHERE student_id = ?`, [request.student_code]);
+    const [students] = await pool.execute(`SELECT id FROM users WHERE student_id = ? OR serial_code = ?`, [request.student_code, request.student_code]);
     
     if (students.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found' });

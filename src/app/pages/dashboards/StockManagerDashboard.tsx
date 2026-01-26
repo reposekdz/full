@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   Package, 
@@ -42,6 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import apiService from '@/app/services/apiService';
 
 interface StockManagerDashboardProps {
   onNavigate: (page: string) => void;
@@ -50,319 +51,103 @@ interface StockManagerDashboardProps {
 
 const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [procurementOrders, setProcurementOrders] = useState<any[]>([]);
+  const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = [
-    {
-      title: 'Ibintu Byose',
-      value: '2,458',
-      change: '+8.2%',
-      trend: 'up',
-      icon: Package,
-      color: 'from-blue-500 to-indigo-500',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Ibicye',
-      value: '47',
-      change: '+12%',
-      trend: 'up',
-      icon: AlertTriangle,
-      color: 'from-red-500 to-orange-500',
-      bgColor: 'bg-red-50'
-    },
-    {
-      title: 'Ibisabwa',
-      value: '23',
-      change: '-5.3%',
-      trend: 'down',
-      icon: ShoppingCart,
-      color: 'from-yellow-500 to-amber-500',
-      bgColor: 'bg-yellow-50'
-    },
-    {
-      title: 'Byakoreshejwe',
-      value: 'RWF 8.5M',
-      change: '+15.8%',
-      trend: 'up',
-      icon: TrendingUp,
-      color: 'from-green-500 to-teal-500',
-      bgColor: 'bg-green-50'
-    },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const recentActivities = [
-    {
-      action: 'Ibitabo 50 byinjiye',
-      category: 'Academics',
-      user: 'Jean Mugisha',
-      time: '1 isaha ishize',
-      type: 'stock_in',
-      priority: 'normal'
-    },
-    {
-      action: 'Ibikoresho by\'Ubwizerezi byasabwe',
-      category: 'IT',
-      user: 'Marie Uwase',
-      time: '2 amasaha ashize',
-      type: 'requisition',
-      priority: 'high'
-    },
-    {
-      action: 'Ibikoresho bya Siporo byasohotse',
-      category: 'Sports',
-      user: 'Patrick Nkusi',
-      time: '4 amasaha ashize',
-      type: 'stock_out',
-      priority: 'normal'
-    },
-    {
-      action: 'Gutanga ibintu bishya',
-      category: 'Maintenance',
-      user: 'Alice Uwera',
-      time: '1 umunsi ushize',
-      type: 'order',
-      priority: 'medium'
-    },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [itemsData, transData, ordersData, reqData, suppData] = await Promise.all([
+        apiService.getStockItems(),
+        apiService.getStockTransactions({ limit: 10 }),
+        apiService.getStockProcurementOrders(),
+        apiService.getStockRequisitions(),
+        apiService.getStockSuppliers()
+      ]);
+      setItems(itemsData.items || []);
+      setTransactions(transData.transactions || []);
+      setProcurementOrders(ordersData.orders || []);
+      setRequisitions(reqData.requisitions || []);
+      setSuppliers(suppData.suppliers || []);
+    } catch (error) {
+      console.error('Error fetching stock data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const stockAlerts = [
-    { item: 'A4 Paper', quantity: 45, threshold: 100, status: 'low', category: 'Office Supplies' },
-    { item: 'Whiteboard Markers', quantity: 12, threshold: 50, status: 'critical', category: 'Teaching Materials' },
-    { item: 'Lab Chemicals', quantity: 78, threshold: 100, status: 'low', category: 'Science' },
-    { item: 'Sports Equipment', quantity: 5, threshold: 20, status: 'critical', category: 'Sports' },
-  ];
+  const getStats = () => {
+    const totalItems = items.length;
+    const lowStock = items.filter(i => i.status === 'low_stock').length;
+    const outOfStock = items.filter(i => i.status === 'out_of_stock').length;
+    const totalValue = items.reduce((acc, item) => acc + (item.quantity * (item.unit_price || 0)), 0);
 
-  const inventoryItems = [
-    {
-      id: 'ITM001',
-      name: 'A4 Paper (Ream)',
-      category: 'Office Supplies',
-      quantity: 450,
-      unit: 'reams',
-      location: 'Storage Room A',
-      value: 'RWF 225,000',
-      status: 'in_stock',
-      lastUpdated: '2025-01-15'
-    },
-    {
-      id: 'ITM002',
-      name: 'Whiteboard Markers',
-      category: 'Teaching Materials',
-      quantity: 12,
-      unit: 'boxes',
-      location: 'Storage Room B',
-      value: 'RWF 36,000',
-      status: 'low_stock',
-      lastUpdated: '2025-01-18'
-    },
-    {
-      id: 'ITM003',
-      name: 'Lab Chemicals Set',
-      category: 'Science',
-      quantity: 78,
-      unit: 'sets',
-      location: 'Science Lab',
-      value: 'RWF 1,950,000',
-      status: 'low_stock',
-      lastUpdated: '2025-01-16'
-    },
-    {
-      id: 'ITM004',
-      name: 'Textbooks - Math S3',
-      category: 'Academics',
-      quantity: 250,
-      unit: 'books',
-      location: 'Library',
-      value: 'RWF 5,000,000',
-      status: 'in_stock',
-      lastUpdated: '2025-01-10'
-    },
-    {
-      id: 'ITM005',
-      name: 'Sports Equipment',
-      category: 'Sports',
-      quantity: 5,
-      unit: 'sets',
-      location: 'Sports Room',
-      value: 'RWF 750,000',
-      status: 'critical',
-      lastUpdated: '2025-01-19'
-    },
-  ];
+    return [
+      {
+        title: 'Ibintu Byose',
+        value: totalItems.toLocaleString(),
+        change: '+8.2%',
+        trend: 'up',
+        icon: Package,
+        color: 'from-blue-500 to-indigo-500',
+        bgColor: 'bg-blue-50'
+      },
+      {
+        title: 'Ibicye / Nibishize',
+        value: (lowStock + outOfStock).toString(),
+        change: '+12%',
+        trend: 'up',
+        icon: AlertTriangle,
+        color: 'from-red-500 to-orange-500',
+        bgColor: 'bg-red-50'
+      },
+      {
+        title: 'Ibisabwa',
+        value: '23',
+        change: '-5.3%',
+        trend: 'down',
+        icon: ShoppingCart,
+        color: 'from-yellow-500 to-amber-500',
+        bgColor: 'bg-yellow-50'
+      },
+      {
+        title: 'Agaciro k\'Ibikoresho',
+        value: `RWF ${Math.round(totalValue/1000000)}M`,
+        change: '+15.8%',
+        trend: 'up',
+        icon: TrendingUp,
+        color: 'from-green-500 to-teal-500',
+        bgColor: 'bg-green-50'
+      },
+    ];
+  };
 
-  const procurementOrders = [
-    {
-      id: 'PO001',
-      supplier: 'ABC Supplies Ltd',
-      items: 'Office Supplies Package',
-      quantity: 500,
-      amount: 'RWF 2,500,000',
-      orderDate: '2025-01-15',
-      expectedDate: '2025-01-25',
-      status: 'pending',
-      priority: 'high'
-    },
-    {
-      id: 'PO002',
-      supplier: 'Tech Solutions',
-      items: 'IT Equipment',
-      quantity: 25,
-      amount: 'RWF 5,000,000',
-      orderDate: '2025-01-12',
-      expectedDate: '2025-01-22',
-      status: 'in_transit',
-      priority: 'high'
-    },
-    {
-      id: 'PO003',
-      supplier: 'Sports World',
-      items: 'Sports Equipment',
-      quantity: 15,
-      amount: 'RWF 1,200,000',
-      orderDate: '2025-01-18',
-      expectedDate: '2025-01-28',
-      status: 'approved',
-      priority: 'medium'
-    },
-    {
-      id: 'PO004',
-      supplier: 'Book Center',
-      items: 'Textbooks',
-      quantity: 300,
-      amount: 'RWF 6,000,000',
-      orderDate: '2025-01-10',
-      expectedDate: '2025-01-20',
-      status: 'delivered',
-      priority: 'normal'
-    },
-    {
-      id: 'PO005',
-      supplier: 'Lab Supplies Co',
-      items: 'Science Lab Equipment',
-      quantity: 50,
-      amount: 'RWF 3,500,000',
-      orderDate: '2025-01-16',
-      expectedDate: '2025-01-26',
-      status: 'pending',
-      priority: 'high'
-    },
-  ];
+  const stats = getStats();
 
-  const requisitions = [
-    {
-      id: 'REQ001',
-      requestedBy: 'Dr. Jean Mugabo',
-      department: 'Mathematics',
-      items: 'Graph Paper, Rulers',
-      quantity: 50,
-      date: '2025-01-19',
-      status: 'pending',
-      priority: 'medium',
-      estimatedCost: 'RWF 45,000'
-    },
-    {
-      id: 'REQ002',
-      requestedBy: 'Prof. Marie Uwase',
-      department: 'Sciences',
-      items: 'Lab Chemicals',
-      quantity: 20,
-      date: '2025-01-18',
-      status: 'approved',
-      priority: 'high',
-      estimatedCost: 'RWF 500,000'
-    },
-    {
-      id: 'REQ003',
-      requestedBy: 'Mr. Patrick Nkusi',
-      department: 'Languages',
-      items: 'Dictionaries',
-      quantity: 30,
-      date: '2025-01-17',
-      status: 'approved',
-      priority: 'low',
-      estimatedCost: 'RWF 150,000'
-    },
-    {
-      id: 'REQ004',
-      requestedBy: 'Coach David',
-      department: 'Sports',
-      items: 'Basketballs, Nets',
-      quantity: 10,
-      date: '2025-01-16',
-      status: 'completed',
-      priority: 'medium',
-      estimatedCost: 'RWF 200,000'
-    },
-    {
-      id: 'REQ005',
-      requestedBy: 'IT Manager',
-      department: 'IT',
-      items: 'Network Cables',
-      quantity: 100,
-      date: '2025-01-20',
-      status: 'pending',
-      priority: 'high',
-      estimatedCost: 'RWF 180,000'
-    },
-  ];
+  const recentActivities = transactions.map(t => ({
+    action: t.action_details || `${t.quantity} ${t.unit || ''} ${t.item_name} ${t.type === 'in' ? 'byinjiye' : 'byasohotse'}`,
+    category: t.category || 'General',
+    user: t.user_name || 'System',
+    time: new Date(t.transaction_date || t.created_at).toLocaleDateString(),
+    type: t.type === 'in' ? 'stock_in' : 'stock_out',
+    priority: t.priority || 'normal'
+  }));
 
-  const suppliers = [
-    {
-      name: 'ABC Supplies Ltd',
-      contact: 'John Doe',
-      phone: '+250 788 123 456',
-      email: 'info@abcsupplies.rw',
-      category: 'Office Supplies',
-      performance: 95,
-      orders: 45,
-      totalValue: 'RWF 25M',
-      status: 'active'
-    },
-    {
-      name: 'Tech Solutions',
-      contact: 'Jane Smith',
-      phone: '+250 788 234 567',
-      email: 'sales@techsolutions.rw',
-      category: 'IT Equipment',
-      performance: 88,
-      orders: 28,
-      totalValue: 'RWF 35M',
-      status: 'active'
-    },
-    {
-      name: 'Book Center',
-      contact: 'Peter Mugabo',
-      phone: '+250 788 345 678',
-      email: 'contact@bookcenter.rw',
-      category: 'Books & Educational',
-      performance: 92,
-      orders: 67,
-      totalValue: 'RWF 45M',
-      status: 'active'
-    },
-    {
-      name: 'Sports World',
-      contact: 'Alice Uwera',
-      phone: '+250 788 456 789',
-      email: 'info@sportsworld.rw',
-      category: 'Sports Equipment',
-      performance: 85,
-      orders: 23,
-      totalValue: 'RWF 15M',
-      status: 'active'
-    },
-    {
-      name: 'Lab Supplies Co',
-      contact: 'David Nkusi',
-      phone: '+250 788 567 890',
-      email: 'sales@labsupplies.rw',
-      category: 'Science Equipment',
-      performance: 90,
-      orders: 34,
-      totalValue: 'RWF 28M',
-      status: 'active'
-    },
-  ];
+  const stockAlerts = items.filter(i => (i.quantity <= (i.min_quantity || 10))).map(i => ({
+    item: i.name,
+    quantity: i.quantity,
+    threshold: i.min_quantity || 10,
+    status: i.quantity === 0 ? 'critical' : 'low',
+    category: i.category
+  }));
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-white overflow-hidden">
@@ -578,7 +363,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
                         </tr>
                       </thead>
                       <tbody>
-                        {inventoryItems.map((item, index) => (
+                        {items.map((item, index) => (
                           <tr key={index} className="border-b border-yellow-100 hover:bg-yellow-50 transition-colors">
                             <td className="p-4">
                               <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
@@ -592,7 +377,9 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
                               <span className="text-xs text-gray-600 ml-1">{item.unit}</span>
                             </td>
                             <td className="p-4 text-gray-700">{item.location}</td>
-                            <td className="p-4 font-medium text-gray-900">{item.value}</td>
+                            <td className="p-4 font-medium text-gray-900">
+                              {new Intl.NumberFormat('rw-RW', { style: 'currency', currency: 'RWF', minimumFractionDigits: 0 }).format(item.quantity * (item.unit_price || 0))}
+                            </td>
                             <td className="p-4">
                               <Badge className={
                                 item.status === 'in_stock' ? 'bg-green-100 text-green-700' :
@@ -603,7 +390,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
                                  item.status === 'low_stock' ? 'Bicyeho' : 'Byarenzwe'}
                               </Badge>
                             </td>
-                            <td className="p-4 text-gray-700">{item.lastUpdated}</td>
+                            <td className="p-4 text-gray-700">{new Date(item.updated_at || item.lastUpdated).toLocaleDateString()}</td>
                             <td className="p-4">
                               <div className="flex items-center space-x-2">
                                 <Button size="sm" variant="outline" className="border-yellow-200">

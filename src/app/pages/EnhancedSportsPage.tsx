@@ -73,7 +73,7 @@ const EnhancedSportsPage: React.FC<EnhancedSportsPageProps> = ({ onNavigate }) =
       {/* Teams Cards */}
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex flex-col-reverse lg:flex-row gap-8">
             {/* Main Article Content - Left Side */}
             <div className="lg:w-2/3">
               <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-2xl p-12">

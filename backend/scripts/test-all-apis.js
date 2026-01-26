@@ -1,122 +1,170 @@
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:5000/api';
-let authToken = '';
+const BASE = 'http://localhost:5000/api';
 
-async function testAPIs() {
-  console.log('\n🧪 Testing All New APIs...\n');
+const tests = {
+  passed: 0,
+  failed: 0,
+  errors: []
+};
 
+async function test(name, url, method = 'GET', data = null) {
   try {
-    // 1. Test Authentication
-    console.log('1️⃣ Testing Authentication...');
-    const loginRes = await axios.post(`${API_BASE}/auth/login`, {
-      username: 'admin',
-      password: 'admin123'
-    });
-    authToken = loginRes.data.token;
-    console.log('✅ Login successful\n');
-
-    const headers = { Authorization: `Bearer ${authToken}` };
-
-    // 2. Test Courses API
-    console.log('2️⃣ Testing Courses API...');
-    const coursesRes = await axios.get(`${API_BASE}/courses`, { headers });
-    console.log(`✅ Courses: ${coursesRes.data.courses.length} found\n`);
-
-    // 3. Test Exams API
-    console.log('3️⃣ Testing Exams API...');
-    const examsRes = await axios.get(`${API_BASE}/exams`, { headers });
-    console.log(`✅ Exams: ${examsRes.data.exams.length} found\n`);
-
-    // 4. Test Attendance API
-    console.log('4️⃣ Testing Attendance API...');
-    const attendanceRes = await axios.get(`${API_BASE}/attendance`, { headers });
-    console.log(`✅ Attendance: ${attendanceRes.data.attendance.length} records\n`);
-
-    // 5. Test Grades API
-    console.log('5️⃣ Testing Grades API...');
-    const gradesRes = await axios.get(`${API_BASE}/grades`, { headers });
-    console.log(`✅ Grades: ${gradesRes.data.grades.length} records\n`);
-
-    // 6. Test Timetable API
-    console.log('6️⃣ Testing Timetable API...');
-    const timetableRes = await axios.get(`${API_BASE}/timetable`, { headers });
-    console.log(`✅ Timetable: ${timetableRes.data.timetable.length} entries\n`);
-
-    // 7. Test Notifications API
-    console.log('7️⃣ Testing Notifications API...');
-    const notificationsRes = await axios.get(`${API_BASE}/notifications`, { headers });
-    console.log(`✅ Notifications: ${notificationsRes.data.notifications.length} found\n`);
-
-    // 8. Test Messages API
-    console.log('8️⃣ Testing Messages API...');
-    const messagesRes = await axios.get(`${API_BASE}/messages`, { headers });
-    console.log(`✅ Messages: ${messagesRes.data.messages.length} found\n`);
-
-    // 9. Test Sports API
-    console.log('9️⃣ Testing Sports API...');
-    const sportsTeamsRes = await axios.get(`${API_BASE}/sports/teams`, { headers });
-    console.log(`✅ Sports Teams: ${sportsTeamsRes.data.teams.length} found\n`);
-
-    // 10. Test Teams API
-    console.log('🔟 Testing Teams API...');
-    const teamsRes = await axios.get(`${API_BASE}/teams`, { headers });
-    console.log(`✅ Teams: ${teamsRes.data.teams.length} found\n`);
-
-    // 11. Create Test Exam
-    console.log('1️⃣1️⃣ Creating Test Exam...');
-    const examData = {
-      code: 'TEST001',
-      title: 'Test Exam',
-      title_rw: 'Ikizamini cyo Kugerageza',
-      trade: 'SOD',
-      level: 'Level 4',
-      exam_type: 'quiz',
-      exam_date: '2024-12-31',
-      start_time: '09:00:00',
-      end_time: '10:00:00',
-      duration_minutes: 60,
-      room: 'Lab A1',
-      total_marks: 50,
-      passing_marks: 25,
-      description: 'Test exam for API verification',
-      topics: ['Testing', 'API'],
-      materials: ['Pen', 'Paper'],
-      rules: ['No cheating']
-    };
-    const createExamRes = await axios.post(`${API_BASE}/exams`, examData, { headers });
-    console.log(`✅ Exam created with ID: ${createExamRes.data.examId}\n`);
-
-    // 12. Test Grade Analytics
-    console.log('1️⃣2️⃣ Testing Grade Analytics...');
-    const analyticsRes = await axios.get(`${API_BASE}/grades/analytics`, { headers });
-    console.log(`✅ Analytics retrieved\n`);
-
-    // 13. Test Attendance Statistics
-    console.log('1️⃣3️⃣ Testing Attendance Statistics...');
-    const statsRes = await axios.get(`${API_BASE}/attendance/statistics`, { headers });
-    console.log(`✅ Statistics retrieved\n`);
-
-    console.log('\n🎉 All API Tests Completed Successfully!\n');
-    console.log('📊 Summary:');
-    console.log('   ✅ Authentication: Working');
-    console.log('   ✅ Courses API: Working');
-    console.log('   ✅ Exams API: Working');
-    console.log('   ✅ Attendance API: Working');
-    console.log('   ✅ Grades API: Working');
-    console.log('   ✅ Timetable API: Working');
-    console.log('   ✅ Notifications API: Working');
-    console.log('   ✅ Messages API: Working');
-    console.log('   ✅ Sports API: Working');
-    console.log('   ✅ Teams API: Working');
-    console.log('   ✅ CRUD Operations: Working');
-    console.log('   ✅ Analytics: Working');
-    console.log('\n✨ All systems operational!\n');
-
+    const config = { method, url: `${BASE}${url}` };
+    if (data) config.data = data;
+    const res = await axios(config);
+    console.log(`✅ ${name}`);
+    tests.passed++;
+    return res.data;
   } catch (error) {
-    console.error('\n❌ Test failed:', error.response?.data || error.message);
-    process.exit(1);
+    console.log(`❌ ${name}: ${error.response?.data?.error || error.message}`);
+    tests.failed++;
+    tests.errors.push({ name, error: error.response?.data?.error || error.message });
+    return null;
   }
 }
 
-testAPIs();
+async function runAllTests() {
+  console.log('🧪 COMPREHENSIVE API TEST SUITE\n');
+  console.log('='.repeat(60));
+
+  // STAFF MANAGEMENT
+  console.log('\n📋 STAFF MANAGEMENT APIs');
+  console.log('-'.repeat(60));
+  await test('Get Trades', '/staff-management/trades');
+  await test('Get Levels', '/staff-management/levels');
+  await test('Get Classes', '/staff-management/classes');
+  await test('Get Roles', '/staff-management/roles');
+  await test('Get All Staff', '/staff-management/staff');
+  await test('Get AUTO Staff', '/staff-management/staff/by-credential/AUTO');
+  await test('Get BDC Staff', '/staff-management/staff/by-credential/BDC');
+  await test('Get SOD Staff', '/staff-management/staff/by-credential/SOD');
+  await test('Get Staff Stats', '/staff-management/staff/stats/by-trade');
+
+  // DOD SYSTEM
+  console.log('\n🎯 DOD COMPREHENSIVE APIs');
+  console.log('-'.repeat(60));
+  await test('DOD Dashboard Stats', '/dod-comprehensive/dashboard/stats');
+  await test('DOD Recent Activities', '/dod-comprehensive/activities/recent');
+  await test('DOD Notifications', '/dod-comprehensive/notifications');
+  await test('DOD Discipline Cases', '/dod-comprehensive/discipline/cases');
+  await test('DOD Behavior Points', '/dod-comprehensive/behavior/points');
+  await test('DOD Exam Monitoring', '/dod-comprehensive/exams/monitoring');
+  await test('DOD Punishments', '/dod-comprehensive/punishments');
+  await test('DOD Parent Notifications', '/dod-comprehensive/parent-notifications');
+  await test('DOD Students', '/dod-comprehensive/students');
+  await test('DOD Student Sheets', '/dod-comprehensive/students/sheets');
+  await test('DOD Analytics', '/dod-comprehensive/analytics/dashboard');
+  await test('DOD System Health', '/dod-comprehensive/system/health');
+  await test('DOD System Alerts', '/dod-comprehensive/system/alerts');
+
+  // DOD PROFILE
+  console.log('\n👤 DOD PROFILE APIs');
+  console.log('-'.repeat(60));
+  await test('Get DOD Profile', '/dod-profile/1');
+  await test('Get DOD Activities', '/dod-profile/1/activities');
+
+  // AUTHENTICATION
+  console.log('\n🔐 AUTHENTICATION APIs');
+  console.log('-'.repeat(60));
+  await test('Auth Health Check', '/auth/health');
+
+  // USERS & ROLES
+  console.log('\n👥 USER MANAGEMENT APIs');
+  console.log('-'.repeat(60));
+  await test('Get All Users', '/users');
+  await test('Get All Roles', '/roles');
+
+  // TRADES & SERVICES
+  console.log('\n🏗️ TRADES & SERVICES APIs');
+  console.log('-'.repeat(60));
+  await test('Get All Trades', '/trades');
+  await test('Get Services', '/services');
+
+  // SPORTS
+  console.log('\n⚽ SPORTS APIs');
+  console.log('-'.repeat(60));
+  await test('Get All Sports', '/sports');
+  await test('Get Sports Players', '/sports-players');
+
+  // NEWS & CONTENT
+  console.log('\n📰 NEWS & CONTENT APIs');
+  console.log('-'.repeat(60));
+  await test('Get News Articles', '/news');
+  await test('Get Gallery', '/gallery');
+  await test('Get Leadership', '/leadership');
+  await test('Get Developers', '/developers');
+
+  // ACADEMIC
+  console.log('\n📚 ACADEMIC APIs');
+  console.log('-'.repeat(60));
+  await test('Get Courses', '/courses');
+  await test('Get Classes', '/classes');
+  await test('Get Exams', '/exams');
+  await test('Get Assignments', '/assignments');
+
+  // FINANCE
+  console.log('\n💰 FINANCE APIs');
+  console.log('-'.repeat(60));
+  await test('Get Finance Overview', '/finance');
+
+  // LIBRARY & FACILITIES
+  console.log('\n📖 FACILITIES APIs');
+  console.log('-'.repeat(60));
+  await test('Get Library', '/library');
+  await test('Get Hostel', '/hostel');
+  await test('Get Transport', '/transport');
+
+  // SEARCH
+  console.log('\n🔍 SEARCH APIs');
+  console.log('-'.repeat(60));
+  await test('Global Search', '/search?q=test');
+  await test('Advanced Search', '/advanced-search?q=test');
+
+  // ADMIN
+  console.log('\n⚙️ ADMIN APIs');
+  console.log('-'.repeat(60));
+  await test('Admin Dashboard', '/admin/dashboard');
+  await test('Admin Analytics', '/admin/analytics');
+
+  // UNIFIED INTEGRATION
+  console.log('\n🌟 UNIFIED INTEGRATION APIs');
+  console.log('-'.repeat(60));
+  await test('Global Search Integration', '/unified-integration/search?q=test');
+  await test('Analytics Integration', '/unified-integration/analytics');
+  await test('Notifications Integration', '/unified-integration/notifications');
+
+  // COMPREHENSIVE APIS
+  console.log('\n🚀 COMPREHENSIVE APIs');
+  console.log('-'.repeat(60));
+  await test('Comprehensive Users', '/v1/users');
+  await test('Comprehensive Academic', '/v1/academic');
+  await test('Comprehensive Finance', '/v1/finance');
+  await test('Comprehensive Stock', '/v1/stock');
+
+  // SUMMARY
+  console.log('\n' + '='.repeat(60));
+  console.log('📊 TEST SUMMARY');
+  console.log('='.repeat(60));
+  console.log(`✅ Passed: ${tests.passed}`);
+  console.log(`❌ Failed: ${tests.failed}`);
+  console.log(`📈 Success Rate: ${((tests.passed / (tests.passed + tests.failed)) * 100).toFixed(1)}%`);
+  
+  if (tests.errors.length > 0) {
+    console.log('\n❌ FAILED TESTS:');
+    tests.errors.forEach((e, i) => {
+      console.log(`   ${i + 1}. ${e.name}: ${e.error}`);
+    });
+  }
+
+  console.log('\n' + '='.repeat(60));
+}
+
+runAllTests().catch(error => {
+  if (error.code === 'ECONNREFUSED') {
+    console.log('\n❌ Backend server is not running!');
+    console.log('   Start server: npm run dev or START-BACKEND.bat\n');
+  } else {
+    console.log('\n❌ Test suite error:', error.message);
+  }
+});

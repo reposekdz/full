@@ -4,8 +4,27 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
 
 const router = express.Router();
+
+// Configure multer for profile image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/profiles/'),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+});
+const upload = multer({ storage });
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    status: 'ok', 
+    message: 'Authentication service is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Login for both admin_users and users tables
 router.post('/login', [
@@ -722,13 +741,10 @@ router.get('/me', authenticateToken, async (req, res) => {
 // Update profile with password change capability
 router.put('/profile', [
   authenticateToken,
+  upload.single('profile_image'),
   body('email').optional().isEmail().withMessage('Valid email is required'),
-  body('first_name').optional().notEmpty().withMessage('First name cannot be empty'),
-  body('last_name').optional().notEmpty().withMessage('Last name cannot be empty'),
-  body('phone').optional(),
-  body('address').optional(),
-  body('current_password').optional(),
-  body('new_password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+  body('phone').optional()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -740,84 +756,40 @@ router.put('/profile', [
       });
     }
 
-    const { email, first_name, last_name, phone, address, current_password, new_password } = req.body;
-    const userId = req.user.id;
+    const { email, name, phone } = req.body;
+    const userId = req.user.userId;
     const updateFields = [];
     const updateValues = [];
 
     // Check if user is admin or regular user
     const [adminUsers] = await pool.execute(
-      'SELECT id, password FROM admin_users WHERE id = ?',
+      'SELECT id FROM admin_users WHERE id = ?',
       [userId]
     );
 
-    let updateTable = '';
-    let passwordField = '';
-    let currentHashedPassword = null;
+    let updateTable = adminUsers.length > 0 ? 'admin_users' : 'users';
 
-    if (adminUsers.length > 0) {
-      updateTable = 'admin_users';
-      passwordField = 'password';
-      currentHashedPassword = adminUsers[0].password;
-    } else {
-      const [users] = await pool.execute(
-        'SELECT id, password_hash FROM users WHERE id = ?',
-        [userId]
-      );
-      
-      if (users.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-      updateTable = 'users';
-      passwordField = 'password_hash';
-      currentHashedPassword = users[0].password_hash;
-    }
-
-    // If changing password, verify current password first
-    if (new_password) {
-      if (!current_password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is required to change password'
-        });
-      }
-
-      const isValidPassword = await bcrypt.compare(current_password, currentHashedPassword);
-      if (!isValidPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is incorrect'
-        });
-      }
-
-      const hashedPassword = await bcrypt.hash(new_password, 10);
-      updateFields.push(`${passwordField} = ?`);
-      updateValues.push(hashedPassword);
-    }
-
-    // Build update query for other fields
+    // Build update query
     if (email) {
       updateFields.push('email = ?');
       updateValues.push(email);
     }
-    if (first_name) {
-      updateFields.push('first_name = ?');
-      updateValues.push(first_name);
+    if (name) {
+      if (updateTable === 'admin_users') {
+        updateFields.push('username = ?');
+      } else {
+        updateFields.push('first_name = ?');
+      }
+      updateValues.push(name);
     }
-    if (last_name) {
-      updateFields.push('last_name = ?');
-      updateValues.push(last_name);
-    }
-    if (phone && updateTable === 'users') {
+    if (phone !== undefined) {
       updateFields.push('phone = ?');
-      updateValues.push(phone);
+      updateValues.push(phone || null);
     }
-    if (address && updateTable === 'users') {
-      updateFields.push('address = ?');
-      updateValues.push(address);
+    if (req.file) {
+      const profile_image = `/uploads/profiles/${req.file.filename}`;
+      updateFields.push('profile_image = ?');
+      updateValues.push(profile_image);
     }
 
     if (updateFields.length === 0) {
@@ -831,36 +803,9 @@ router.put('/profile', [
     const query = `UPDATE ${updateTable} SET ${updateFields.join(', ')} WHERE id = ?`;
     await pool.execute(query, updateValues);
 
-    // Fetch updated user
-    let user = null;
-    if (updateTable === 'admin_users') {
-      const [updatedAdmin] = await pool.execute(
-        'SELECT id, username, email, role, first_name, last_name FROM admin_users WHERE id = ?',
-        [userId]
-      );
-      user = {
-        ...updatedAdmin[0],
-        user_type: 'admin'
-      };
-    } else {
-      const [updatedUser] = await pool.execute(`
-        SELECT u.*, COALESCE(r.name, u.role) as role_name 
-        FROM users u 
-        LEFT JOIN roles r ON u.role_id = r.id 
-        WHERE u.id = ?
-      `, [userId]);
-      user = {
-        ...updatedUser[0],
-        role: updatedUser[0].role_name,
-        user_type: 'user'
-      };
-      delete user.password_hash;
-    }
-
     res.json({
       success: true,
-      message: 'Profile updated successfully',
-      user
+      message: 'Profile updated successfully'
     });
 
   } catch (error) {
@@ -978,8 +923,8 @@ router.post('/login/student', [
       SELECT u.*, r.name as role_name 
       FROM users u 
       JOIN roles r ON u.role_id = r.id 
-      WHERE u.student_id = ? AND r.name = 'student' AND u.is_active = true
-    `, [serial_code]);
+      WHERE (u.student_id = ? OR u.serial_code = ?) AND r.name = 'student' AND u.is_active = true
+    `, [serial_code, serial_code]);
 
     if (users.length === 0) {
       return res.status(401).json({
@@ -1181,9 +1126,9 @@ router.post('/register/parent-phone', [
 
     const [result] = await pool.execute(`
       INSERT INTO users (
-        name, email, password, phone, role, is_active
-      ) VALUES (?, ?, ?, ?, 'parent', true)
-    `, [`${first_name} ${last_name}`, parentEmail, hashedPassword, phone]);
+        username, email, password_hash, first_name, last_name, phone, role_id, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, true)
+    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, parentRole[0].id]);
 
     const token = jwt.sign(
       { userId: result.insertId, username, role: 'parent' },

@@ -7,6 +7,8 @@ import { BottomNav } from '@/app/components/BottomNav';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
 import EnhancedSportsPage from '@/app/pages/EnhancedSportsPage';
+import EnhancedSportsPageNew from '@/app/pages/EnhancedSportsPageNew';
+import BeautifulSportsPage from '@/app/pages/BeautifulSportsPage';
 import ServicesPage from '@/app/pages/ServicesPage';
 import TradesPage from '@/app/pages/TradesPage';
 import ContactPage from '@/app/pages/ContactPage';
@@ -25,6 +27,7 @@ import LeaderDetailPage from '@/app/pages/LeaderDetailPage';
 import ModernLoginPage from '@/app/pages/ModernLoginPage';
 import ModernRegisterPage from '@/app/pages/ModernRegisterPage';
 import SearchPage from '@/app/pages/SearchPage';
+import AdvancedSearchPage from '@/app/pages/AdvancedSearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import RoleLoginPage from '@/app/pages/RoleLoginPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
@@ -39,6 +42,7 @@ import BasketballPage from '@/app/pages/sports/BasketballPage';
 import FootballDetailPage from '@/app/pages/FootballDetailPage';
 import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
 import TeamDetailPage from '@/app/pages/TeamDetailPage';
+import ModernTeamDetailPage from '@/app/pages/ModernTeamDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
@@ -46,6 +50,15 @@ import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DirectorDisciplineDashboard from '@/app/pages/dashboards/DirectorDisciplineDashboard';
+import DODDashboard from '@/app/pages/dashboards/DODDashboard';
+import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';
+import DODExamsPage from '@/app/pages/dod/DODExamsPage';
+import DODStudentsPage from '@/app/pages/dod/DODStudentsPage';
+import DODProfilePage from '@/app/pages/dod/DODProfilePage';
+import DODReportsPage from '@/app/pages/dod/DODReportsPage';
+import DODPunishmentsPage from '@/app/pages/dod/DODPunishmentsPage';
+import DODParentNotificationsPage from '@/app/pages/dod/DODParentNotificationsPage';
+import DODStudentSheetsPage from '@/app/pages/dod/DODStudentSheetsPage';
 import HeadMasterDashboard from '@/app/pages/dashboards/HeadMasterDashboard';
 import TeacherDashboard from '@/app/pages/dashboards/TeacherDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
@@ -60,6 +73,9 @@ import SalariesManagement from '@/app/pages/accountant/SalariesManagementPage';
 import TransactionsManagement from '@/app/pages/accountant/TransactionsManagementPage';
 import FinancialReports from '@/app/pages/accountant/FinancialReportsPage';
 import TimetableView from '@/app/pages/accountant/TimetableView';
+import TeamOverviewManagement from '@/app/pages/admin/TeamOverviewManagement';
+import NYTArticleViewPage from '@/app/pages/NYTArticleViewPage';
+import AdminArticleManagementPage from '@/app/pages/AdminArticleManagementPage';
 import Footer from '@/app/components/Footer';
 
 const AppContent: React.FC = () => {
@@ -128,7 +144,16 @@ const AppContent: React.FC = () => {
       case 'director_study':
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_discipline':
-        return <DirectorDisciplineDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        if (currentPage === 'dod-discipline') return <DODDisciplinePage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-exams') return <DODExamsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-students') return <DODStudentsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-profile') return <DODProfilePage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-reports') return <DODReportsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-punishments') return <DODPunishmentsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-parent-notifications') return <DODParentNotificationsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-student-sheets') return <DODStudentSheetsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-notifications') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'headmaster':
         return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
@@ -159,9 +184,56 @@ const AppContent: React.FC = () => {
   };
 
   const renderPage = () => {
-    // If user is logged in, always show their dashboard (never redirect to public pages)
+    // Check for dynamic routes first (works for all users)
+    if (currentPage.startsWith('article/')) {
+      const articleId = currentPage.split('/')[1];
+      return <NYTArticleViewPage articleId={articleId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('trade-detail/')) {
+      const detailTradeId = currentPage.split('/')[1];
+      return <TradeDetailPage tradeId={detailTradeId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('trade/')) {
+      const tradeId = currentPage.split('/')[1];
+      return <TradeDetailPage tradeId={tradeId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('sport-team/')) {
+      const teamId = currentPage.split('/')[1];
+      return <ModernTeamDetailPage teamId={teamId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('news/')) {
+      const newsId = currentPage.split('/')[1];
+      return <NewsDetailPage newsId={newsId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('developer/')) {
+      const devId = currentPage.split('/')[1];
+      if (devId === '1') return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
+      if (devId === '2') return <MusoniDetailPage onNavigate={handleNavigate} />;
+      if (devId === '3') return <ZamiruDetailPage onNavigate={handleNavigate} />;
+      if (devId === '4') return <NiyonsengaDetailPage onNavigate={handleNavigate} />;
+      return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
+    }
+    if (currentPage.startsWith('leader/')) {
+      const leaderId = currentPage.split('/')[1];
+      return <LeaderDetailPage leaderId={leaderId} onNavigate={handleNavigate} />;
+    }
+
+    // If user is logged in, check for special pages
     if (user) {
-      // Only allow logout, role selection, or role login for authenticated users
+      // Accountant management pages
+      if (currentPage === 'students-management') return <StudentsManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'student-payments-management') return <EnhancedStudentPayments onNavigate={handleNavigate} />;
+      if (currentPage === 'admin-articles') return <AdminArticleManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'payments-management') return <PaymentsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'expenses-management') return <ExpensesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'invoices-management') return <InvoicesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'budgets-management') return <BudgetsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'salaries-management') return <SalariesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'transactions-management') return <TransactionsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'financial-reports') return <FinancialReports onNavigate={handleNavigate} />;
+      if (currentPage === 'timetable-view') return <TimetableView onNavigate={handleNavigate} />;
+      
+      // Role selection pages
       if (currentPage === 'role-selection') {
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       }
@@ -177,19 +249,13 @@ const AppContent: React.FC = () => {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       case 'sports':
-        return <EnhancedSportsPage onNavigate={handleNavigate} />;
+        return <BeautifulSportsPage onNavigate={handleNavigate} />;
       case 'services':
         return <ServicesPage onNavigate={handleNavigate} />;
       case 'trades':
         return <TradesPage onNavigate={handleNavigate} />;
       case 'trades-showcase':
         return <TradesShowcasePage onNavigate={handleNavigate} />;
-      case currentPage.startsWith('trade-detail/') ? currentPage : '':
-        const detailTradeId = currentPage.split('/')[1];
-        return <TradeDetailPage tradeId={detailTradeId} onNavigate={handleNavigate} />;
-      case currentPage.startsWith('trade/') ? currentPage : '':
-        const tradeId = currentPage.split('/')[1];
-        return <TradeDetailPage tradeId={tradeId} onNavigate={handleNavigate} />;
       case 'trade-sod':
         return <SODTradePage onNavigate={handleNavigate} />;
       case 'trade-bdc':
@@ -200,16 +266,10 @@ const AppContent: React.FC = () => {
         return <FootballDetailPage onNavigate={handleNavigate} />;
       case 'sport-volleyball':
         return <VolleyballDetailPage onNavigate={handleNavigate} />;
-      case currentPage.startsWith('sport-team/') ? currentPage : '':
-        const teamId = currentPage.split('/')[1];
-        return <TeamDetailPage teamId={teamId} onNavigate={handleNavigate} />;
       case 'sport-basketball':
         return <BasketballPage onNavigate={handleNavigate} />;
       case 'news':
         return <NewsPage onNavigate={handleNavigate} />;
-      case currentPage.startsWith('news/') ? currentPage : '':
-        const newsId = currentPage.split('/')[1];
-        return <NewsDetailPage newsId={newsId} onNavigate={handleNavigate} />;
       case 'sport-athletics':
         return <SportsPage onNavigate={handleNavigate} />;
       case 'sport-handball':
@@ -222,18 +282,8 @@ const AppContent: React.FC = () => {
         return <AdvancedSupportPage />;
       case 'developers':
         return <DeveloperTeamPage onNavigate={handleNavigate} />;
-      case currentPage.startsWith('developer/') ? currentPage : '':
-        const devId = currentPage.split('/')[1];
-        if (devId === '1') return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
-        if (devId === '2') return <MusoniDetailPage onNavigate={handleNavigate} />;
-        if (devId === '3') return <ZamiruDetailPage onNavigate={handleNavigate} />;
-        if (devId === '4') return <NiyonsengaDetailPage onNavigate={handleNavigate} />;
-        return <DeveloperDetailPage developerId={devId} onNavigate={handleNavigate} />;
       case 'leadership':
         return <LeadershipPage onNavigate={handleNavigate} />;
-      case currentPage.startsWith('leader/') ? currentPage : '':
-        const leaderId = currentPage.split('/')[1];
-        return <LeaderDetailPage leaderId={leaderId} onNavigate={handleNavigate} />;
       case 'teams':
         return <TeamsPage onNavigate={handleNavigate} />;
       case 'login':
@@ -245,7 +295,7 @@ const AppContent: React.FC = () => {
       case 'role-login':
         return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
       case 'search':
-        return <SearchPage onNavigate={handleNavigate} />;
+        return <AdvancedSearchPage onNavigate={handleNavigate} />;
       case 'admin-panel':
         return <AdminPage />;
       case 'admin-developers':
@@ -272,6 +322,10 @@ const AppContent: React.FC = () => {
         return <FinancialReports onNavigate={handleNavigate} />;
       case 'timetable-view':
         return <TimetableView onNavigate={handleNavigate} />;
+      case 'admin/team-overview':
+        return <TeamOverviewManagement />;
+      case 'admin-articles':
+        return <AdminArticleManagementPage onNavigate={handleNavigate} />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }

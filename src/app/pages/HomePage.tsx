@@ -33,17 +33,17 @@ interface HomePageProps {
 const trades = [
   {
     titleKey: 'softwareDevelopment',
-    image: 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2Z0d2FyZSUyMGRldmVsb3BtZW50JTIwY29kaW5nfGVufDF8fHx8MTc2ODcxODI3MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    image: '/src/assets/image slides/SOD slides.png',
     code: 'SOD',
   },
   {
     titleKey: 'buildingConstruction',
-    image: 'https://images.unsplash.com/photo-1672072830247-85ac23671e96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBidWlsZGluZyUyMHNpdGV8ZW58MXx8fHwxNzY4NzMwNzQ0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    image: '/src/assets/image slides/BDC slides.jpg',
     code: 'BDC',
   },
   {
     titleKey: 'automobileTechnology',
-    image: 'https://images.unsplash.com/photo-1636761358757-0a616eb9e17e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdXRvbW9iaWxlJTIwbWVjaGFuaWMlMjB3b3Jrc2hvcHxlbnwxfHx8fDE3Njg4MDYyMTl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    image: '/src/assets/image slides/AUT slides.png',
     code: 'AUTO',
   },
 ];
@@ -665,7 +665,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all h-full overflow-hidden group cursor-pointer">
+                <Card className="border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all h-full overflow-hidden group cursor-pointer" onClick={() => onNavigate(`article/${article.id}`)}>
                   <div className="aspect-video relative overflow-hidden">
                     <img 
                       src={article.image_url?.startsWith('/uploads') ? `http://localhost:5000${article.image_url}` : article.image_url || article.image} 
@@ -689,7 +689,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     </p>
                     <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-200">
                       <span className="text-xs sm:text-sm text-gray-600 truncate">{article.author}</span>
-                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#ADFF2F] group-hover:translate-x-2 transition-transform flex-shrink-0" />
+                      <button onClick={(e) => { e.stopPropagation(); onNavigate(`article/${article.id}`); }} className="flex items-center gap-1 text-[#ADFF2F] hover:text-green-600 transition-colors">
+                        <span className="text-xs font-bold">Read More</span>
+                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-2 transition-transform flex-shrink-0" />
+                      </button>
                     </div>
                   </CardContent>
                 </Card>

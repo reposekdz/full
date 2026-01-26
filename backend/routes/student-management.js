@@ -24,7 +24,7 @@ async function generateSerialCode(tradeCode, classId) {
 router.get('/students', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
   try {
     const [students] = await db.query(`
-      SELECT u.id, u.serial_code, u.parent_phone, u.address, u.is_active, u.created_at,
+      SELECT u.id, u.serial_code, u.student_id, u.parent_phone, u.address, u.is_active, u.created_at,
              c.name as class_name, co.name as course_name, co.code as trade_code
       FROM users u
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'

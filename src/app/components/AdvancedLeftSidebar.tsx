@@ -94,8 +94,9 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       ],
       admin: [
         { key: 'users', icon: Users, label: 'Abakoresha', color: 'from-blue-500 to-indigo-500' },
+        { key: 'comprehensive-content', icon: FileText, label: 'Gucunga Ibikubiyemo', color: 'from-yellow-500 to-green-500' },
         { key: 'student-management', icon: GraduationCap, label: 'Abanyeshuri & Abarimu', color: 'from-green-500 to-emerald-500' },
-        { key: 'content-management', icon: FileText, label: 'Gucunga Ibikubiyemo', color: 'from-purple-500 to-pink-500' },
+        { key: 'content-management', icon: Briefcase, label: 'Content (Old)', color: 'from-purple-500 to-pink-500' },
         { key: 'homework-management', icon: BookOpen, label: 'Homework', color: 'from-orange-500 to-red-500' },
         { key: 'assignments-management', icon: ClipboardList, label: 'Assignments', color: 'from-teal-500 to-cyan-500' },
         { key: 'quiz-system', icon: Brain, label: 'Quiz System', color: 'from-purple-500 to-pink-500' },

@@ -6,9 +6,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Progress } from '@/app/components/ui/progress';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
 
 export default function ParentDashboardPage() {
   const [children, setChildren] = useState<any[]>([]);
@@ -30,43 +28,29 @@ export default function ParentDashboardPage() {
 
   const fetchChildren = async () => {
     try {
-      const res = await axios.get(`${API_URL}/parent-dashboard/my-children`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setChildren(res.data);
-      if (res.data.length > 0) setSelectedChild(res.data[0]);
+      const data = await apiService.getMyChildren();
+      setChildren(data);
+      if (data.length > 0) setSelectedChild(data[0]);
     } catch (err) { console.error(err); }
   };
 
   const fetchChildData = async () => {
     try {
-      const [dashRes, acadRes, attRes, discRes, feeRes, compRes] = await Promise.all([
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/dashboard`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/academics`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/attendance`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/discipline`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/fees`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${API_URL}/parent-dashboard/child/${selectedChild.user_id}/competitions`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
+      const [dashData, acadData, attData, discData, feeData, compData] = await Promise.all([
+        apiService.getChildDashboard(selectedChild.user_id),
+        apiService.getChildAcademics(selectedChild.user_id),
+        apiService.getChildAttendance(selectedChild.user_id),
+        apiService.getChildDiscipline(selectedChild.user_id),
+        apiService.getChildFees(selectedChild.user_id),
+        apiService.getChildCompetitions(selectedChild.user_id)
       ]);
 
-      setDashboard(dashRes.data);
-      setAcademics(acadRes.data);
-      setAttendance(attRes.data);
-      setDiscipline(discRes.data);
-      setFees(feeRes.data);
-      setCompetitions(compRes.data);
+      setDashboard(dashData);
+      setAcademics(acadData);
+      setAttendance(attData);
+      setDiscipline(discData);
+      setFees(feeData);
+      setCompetitions(compData);
     } catch (err) { console.error(err); }
   };
 

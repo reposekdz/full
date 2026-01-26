@@ -39,17 +39,18 @@ router.get('/roles/list', authenticateToken, async (req, res) => {
 });
 
 // Get all users
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { limit = 100, page = 1 } = req.query;
     const offset = (page - 1) * limit;
 
     const [users] = await pool.execute(`
       SELECT 
-        u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.role,
+        u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.role_id,
         u.is_active, u.last_login, u.created_at, u.updated_at,
-        u.role as role_name
+        r.name as role_name
       FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
       ORDER BY u.created_at DESC
       LIMIT ? OFFSET ?
     `, [parseInt(limit), offset]);

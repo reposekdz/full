@@ -3,10 +3,17 @@ const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const socketIO = require('socket.io');
 require('dotenv').config();
+
+// Initialize Cron Jobs
+require('./services/cronJobs');
 
 const app = express();
 const server = http.createServer(app);
+const io = socketIO(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] }
+});
 
 // Middleware
 app.use(cors());
@@ -42,6 +49,7 @@ const loadRoute = (routePath, routeName) => {
 const routes = {
   // Authentication & Authorization
   auth: loadRoute('./routes/auth', 'Auth'),
+  comprehensiveAuth: loadRoute('./routes/comprehensive-auth', 'Comprehensive Auth'),
   roleAuth: loadRoute('./routes/role-auth', 'Role Auth'),
   staffAuth: loadRoute('./routes/staff-auth', 'Staff Auth'),
   userAuth: loadRoute('./routes/user-auth', 'User Auth'),
@@ -70,6 +78,19 @@ const routes = {
   advancedAssignments: loadRoute('./routes/advanced-assignments', 'Advanced Assignments'),
   aiGrading: loadRoute('./routes/aiGrading', 'AI Grading'),
   adaptiveLearning: loadRoute('./routes/adaptiveLearning', 'Adaptive Learning'),
+  
+  // NEW COMPREHENSIVE SYSTEMS
+  academicSystem: loadRoute('./routes/academic-system', 'Academic System'),
+  admissionSystem: loadRoute('./routes/admission-system', 'Admission System'),
+  alumniSystem: loadRoute('./routes/alumni-system', 'Alumni System'),
+  cafeteriaSystem: loadRoute('./routes/cafeteria-system', 'Cafeteria System'),
+  certificateSystem: loadRoute('./routes/certificate-system', 'Certificate System'),
+  counselingSystem: loadRoute('./routes/counseling-system', 'Counseling System'),
+  medicalSystem: loadRoute('./routes/medical-system', 'Medical System'),
+  hostelSystem: loadRoute('./routes/hostel-system', 'Hostel System'),
+  librarySystem: loadRoute('./routes/library-system', 'Library System'),
+  workshopSystem: loadRoute('./routes/workshop-system', 'Workshop System'),
+  financialSystem: loadRoute('./routes/financial-system', 'Financial System'),
   
   // Finance & Stock
   finance: loadRoute('./routes/finance', 'Finance'),
@@ -103,15 +124,19 @@ const routes = {
   messages: loadRoute('./routes/messages', 'Messages'),
   notifications: loadRoute('./routes/notifications', 'Notifications'),
   liveChat: loadRoute('./routes/live-chat', 'Live Chat'),
+  comprehensiveMessaging: loadRoute('./routes/comprehensive-messaging', 'Comprehensive Messaging'),
+  automatedNotifications: loadRoute('./routes/automated-notifications', 'Automated Notifications'),
   
   // Content & Dynamic
   content: loadRoute('./routes/content', 'Content'),
   dynamic: loadRoute('./routes/dynamic', 'Dynamic'),
   dynamicContent: loadRoute('./routes/dynamicContent', 'Dynamic Content'),
   homepage: loadRoute('./routes/homepage', 'Homepage'),
+  news: loadRoute('./routes/news', 'News'),
   homeContent: loadRoute('./routes/home-content', 'Home Content'),
   hero: loadRoute('./routes/hero', 'Hero'),
   gallery: loadRoute('./routes/gallery', 'Gallery'),
+  articleInteractions: loadRoute('./routes/article-interactions', 'Article Interactions'),
   
   // Sports & Teams
   sports: loadRoute('./routes/sports', 'Sports'),
@@ -122,6 +147,7 @@ const routes = {
   
   // Trades & Services
   trades: loadRoute('./routes/unified-trades-api', 'Unified Trades API'),
+  tradesCourses: loadRoute('./routes/trades-courses', 'Trades Courses'),
   tradeImages: loadRoute('./routes/trade-images', 'Trade Images'),
   services: loadRoute('./routes/services', 'Services'),
   servicesAdvanced: loadRoute('./routes/services-advanced', 'Services Advanced'),
@@ -147,6 +173,7 @@ const routes = {
   systemUpdates: loadRoute('./routes/system-updates', 'System Updates'),
   leadership: loadRoute('./routes/leadership', 'Leadership'),
   developers: loadRoute('./routes/developers', 'Developers'),
+  developersApi: loadRoute('./routes/developers-api', 'Developers API'),
   advisor: loadRoute('./routes/advisor', 'Advisor'),
   search: loadRoute('./routes/search', 'Search'),
   advancedSearch: loadRoute('./routes/advanced-search', 'Advanced Search'),
@@ -192,6 +219,17 @@ const routes = {
   messaging: loadRoute('./routes/messaging', 'Messaging'),
   reporting: loadRoute('./routes/reporting', 'Reporting'),
   cms: loadRoute('./routes/cms-unified', 'CMS'),
+  sms: loadRoute('./routes/sms', 'SMS'),
+  parentMessages: loadRoute('./routes/parent-messages', 'Parent Messages'),
+  parentPortal: loadRoute('./routes/parent-portal', 'Parent Portal'),
+  
+  // Admin Management
+  adminComprehensive: loadRoute('./routes/admin-comprehensive', 'Admin Comprehensive'),
+  contentManagement: loadRoute('./routes/content-management', 'Content Management'),
+  reports: loadRoute('./routes/reports', 'Reports'),
+  sportsHeroManagement: loadRoute('./routes/sports-hero-management', 'Sports & Hero Management'),
+  unifiedContent: loadRoute('./routes/unified-content', 'Unified Content'),
+  comprehensiveStaff: loadRoute('./routes/comprehensive-staff', 'Comprehensive Staff'),
   
   // Comprehensive Full-Stack APIs (Production-Ready)
   comprehensiveUsers: loadRoute('./routes/comprehensive-users-api', 'Comprehensive Users API'),
@@ -201,6 +239,30 @@ const routes = {
   comprehensiveKnowledgeNotifications: loadRoute('./routes/comprehensive-knowledge-notifications-admissions-exams-api', 'Comprehensive Knowledge & Notifications API'),
   comprehensiveAttendanceGrades: loadRoute('./routes/comprehensive-attendance-grades-assignments-api', 'Comprehensive Attendance & Grades API'),
   comprehensiveLibraryServices: loadRoute('./routes/comprehensive-library-hostel-transport-sports-communication-api', 'Comprehensive Library & Services API'),
+  
+  // Unified Integration API (Master Integration)
+  unifiedIntegration: loadRoute('./routes/unified-integration-api', 'Unified Integration API'),
+  
+  // DOD Comprehensive System
+  dodComprehensive: loadRoute('./routes/dod-comprehensive', 'DOD Comprehensive'),
+  dodProfile: loadRoute('./routes/dod-profile', 'DOD Profile'),
+  dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
+  staffManagement: loadRoute('./routes/staff-management', 'Staff Management'),
+  
+  // NEW MISSING ROUTES - Full Feature Set
+  curriculum: loadRoute('./routes/curriculum', 'Curriculum'),
+  budgets: loadRoute('./routes/budgets', 'Budgets'),
+  announcements: loadRoute('./routes/announcements', 'Announcements'),
+  clubs: loadRoute('./routes/clubs', 'Clubs'),
+  backups: loadRoute('./routes/backups', 'Backups'),
+  systemSettings: loadRoute('./routes/system-settings', 'System Settings'),
+  testimonials: loadRoute('./routes/testimonials', 'Testimonials'),
+  expenses: loadRoute('./routes/expenses', 'Expenses'),
+  salaries: loadRoute('./routes/salaries', 'Salaries'),
+  emergencyContacts: loadRoute('./routes/emergency-contacts', 'Emergency Contacts'),
+  invoices: loadRoute('./routes/invoices', 'Invoices'),
+  events: loadRoute('./routes/events', 'Events'),
+  forums: loadRoute('./routes/forums', 'Forums'),
 };
 
 // Mount routes
@@ -208,6 +270,7 @@ let mountedRoutes = 0;
 
 // Authentication & Authorization
 if (routes.auth) { app.use('/api/auth', routes.auth); mountedRoutes++; }
+if (routes.comprehensiveAuth) { app.use('/api/comprehensive-auth', routes.comprehensiveAuth); mountedRoutes++; }
 if (routes.roleAuth) { app.use('/api/role-auth', routes.roleAuth); mountedRoutes++; }
 if (routes.staffAuth) { app.use('/api/staff-auth', routes.staffAuth); mountedRoutes++; }
 if (routes.userAuth) { app.use('/api/user-auth', routes.userAuth); mountedRoutes++; }
@@ -236,6 +299,19 @@ if (routes.advancedAcademics) { app.use('/api/advanced-academics', routes.advanc
 if (routes.advancedAssignments) { app.use('/api/advanced-assignments', routes.advancedAssignments); mountedRoutes++; }
 if (routes.aiGrading) { app.use('/api/ai-grading', routes.aiGrading); mountedRoutes++; }
 if (routes.adaptiveLearning) { app.use('/api/adaptive-learning', routes.adaptiveLearning); mountedRoutes++; }
+
+// NEW COMPREHENSIVE SYSTEMS
+if (routes.academicSystem) { app.use('/api/academic-system', routes.academicSystem); mountedRoutes++; }
+if (routes.admissionSystem) { app.use('/api/admission-system', routes.admissionSystem); mountedRoutes++; }
+if (routes.alumniSystem) { app.use('/api/alumni-system', routes.alumniSystem); mountedRoutes++; }
+if (routes.cafeteriaSystem) { app.use('/api/cafeteria-system', routes.cafeteriaSystem); mountedRoutes++; }
+if (routes.certificateSystem) { app.use('/api/certificate-system', routes.certificateSystem); mountedRoutes++; }
+if (routes.counselingSystem) { app.use('/api/counseling-system', routes.counselingSystem); mountedRoutes++; }
+if (routes.medicalSystem) { app.use('/api/medical-system', routes.medicalSystem); mountedRoutes++; }
+if (routes.hostelSystem) { app.use('/api/hostel-system', routes.hostelSystem); mountedRoutes++; }
+if (routes.librarySystem) { app.use('/api/library-system', routes.librarySystem); mountedRoutes++; }
+if (routes.workshopSystem) { app.use('/api/workshop-system', routes.workshopSystem); mountedRoutes++; }
+if (routes.financialSystem) { app.use('/api/financial-system', routes.financialSystem); mountedRoutes++; }
 
 // Finance & Stock
 if (routes.finance) { app.use('/api/finance', routes.finance); mountedRoutes++; }
@@ -269,15 +345,19 @@ if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal)
 if (routes.messages) { app.use('/api/messages', routes.messages); mountedRoutes++; }
 if (routes.notifications) { app.use('/api/notifications', routes.notifications); mountedRoutes++; }
 if (routes.liveChat) { app.use('/api/live-chat', routes.liveChat); mountedRoutes++; }
+if (routes.comprehensiveMessaging) { app.use('/api/comprehensive-messaging', routes.comprehensiveMessaging); mountedRoutes++; }
+if (routes.automatedNotifications) { app.use('/api/automated-notifications', routes.automatedNotifications); mountedRoutes++; }
 
 // Content & Dynamic
 if (routes.content) { app.use('/api/content', routes.content); mountedRoutes++; }
 if (routes.dynamic) { app.use('/api/dynamic', routes.dynamic); mountedRoutes++; }
 if (routes.dynamicContent) { app.use('/api/dynamic-content', routes.dynamicContent); mountedRoutes++; }
 if (routes.homepage) { app.use('/api/homepage', routes.homepage); mountedRoutes++; }
+if (routes.news) { app.use('/api/news', routes.news); mountedRoutes++; }
 if (routes.homeContent) { app.use('/api/home-content', routes.homeContent); mountedRoutes++; }
 if (routes.hero) { app.use('/api/hero', routes.hero); mountedRoutes++; }
 if (routes.gallery) { app.use('/api/gallery', routes.gallery); mountedRoutes++; }
+if (routes.articleInteractions) { app.use('/api/article-interactions', routes.articleInteractions); mountedRoutes++; }
 
 // Sports & Teams
 if (routes.sports) { app.use('/api/sports', routes.sports); mountedRoutes++; }
@@ -288,6 +368,7 @@ if (routes.teams) { app.use('/api/teams', routes.teams); mountedRoutes++; }
 
 // Trades & Services (Unified: trades + courses + classes)
 if (routes.trades) { app.use('/api/trades', routes.trades); mountedRoutes++; }
+if (routes.tradesCourses) { app.use('/api/trades-courses', routes.tradesCourses); mountedRoutes++; }
 if (routes.tradeImages) { app.use('/api/trade-images', routes.tradeImages); mountedRoutes++; }
 if (routes.services) { app.use('/api/services', routes.services); mountedRoutes++; }
 if (routes.servicesAdvanced) { app.use('/api/services-advanced', routes.servicesAdvanced); mountedRoutes++; }
@@ -313,6 +394,7 @@ if (routes.gamification) { app.use('/api/gamification', routes.gamification); mo
 if (routes.systemUpdates) { app.use('/api/system-updates', routes.systemUpdates); mountedRoutes++; }
 if (routes.leadership) { app.use('/api/leadership', routes.leadership); mountedRoutes++; }
 if (routes.developers) { app.use('/api/developers', routes.developers); mountedRoutes++; }
+if (routes.developersApi) { app.use('/api/developers-api', routes.developersApi); mountedRoutes++; }
 if (routes.advisor) { app.use('/api/advisor', routes.advisor); mountedRoutes++; }
 if (routes.search) { app.use('/api/search', routes.search); mountedRoutes++; }
 if (routes.advancedSearch) { app.use('/api/advanced-search', routes.advancedSearch); mountedRoutes++; }
@@ -358,6 +440,17 @@ if (routes.alumni) { app.use('/api/alumni', routes.alumni); mountedRoutes++; }
 if (routes.messaging) { app.use('/api/messaging', routes.messaging); mountedRoutes++; }
 if (routes.reporting) { app.use('/api/reporting', routes.reporting); mountedRoutes++; }
 if (routes.cms) { app.use('/api/cms', routes.cms); mountedRoutes++; }
+if (routes.sms) { app.use('/api/sms', routes.sms(io)); mountedRoutes++; }
+if (routes.parentMessages) { app.use('/api/parents', routes.parentMessages); mountedRoutes++; }
+if (routes.parentPortal) { app.use('/api/parent-dashboard', routes.parentPortal); mountedRoutes++; }
+
+// Admin Management
+if (routes.adminComprehensive) { app.use('/api/admin', routes.adminComprehensive); mountedRoutes++; }
+if (routes.contentManagement) { app.use('/api/content-management', routes.contentManagement); mountedRoutes++; }
+if (routes.reports) { app.use('/api/reports', routes.reports); mountedRoutes++; }
+if (routes.sportsHeroManagement) { app.use('/api/sports-hero', routes.sportsHeroManagement); mountedRoutes++; }
+if (routes.unifiedContent) { app.use('/api/unified-content', routes.unifiedContent); mountedRoutes++; }
+if (routes.comprehensiveStaff) { app.use('/api/comprehensive-staff', routes.comprehensiveStaff); mountedRoutes++; }
 
 // Comprehensive Full-Stack APIs (Production-Ready)
 if (routes.comprehensiveUsers) { app.use('/api/v1/users', routes.comprehensiveUsers); mountedRoutes++; }
@@ -367,6 +460,30 @@ if (routes.comprehensiveStock) { app.use('/api/v1/stock', routes.comprehensiveSt
 if (routes.comprehensiveKnowledgeNotifications) { app.use('/api/v1/knowledge', routes.comprehensiveKnowledgeNotifications); mountedRoutes++; }
 if (routes.comprehensiveAttendanceGrades) { app.use('/api/v1/academics-tracking', routes.comprehensiveAttendanceGrades); mountedRoutes++; }
 if (routes.comprehensiveLibraryServices) { app.use('/api/v1/services', routes.comprehensiveLibraryServices); mountedRoutes++; }
+
+// Unified Integration API (Master Integration)
+if (routes.unifiedIntegration) { app.use('/api/unified-integration', routes.unifiedIntegration); mountedRoutes++; }
+
+// DOD Comprehensive System
+if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodComprehensive); mountedRoutes++; }
+if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
+if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
+if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManagement); mountedRoutes++; }
+
+// NEW MISSING ROUTES - Full Feature Set
+if (routes.curriculum) { app.use('/api/curriculum', routes.curriculum); mountedRoutes++; }
+if (routes.budgets) { app.use('/api/budgets', routes.budgets); mountedRoutes++; }
+if (routes.announcements) { app.use('/api/announcements', routes.announcements); mountedRoutes++; }
+if (routes.clubs) { app.use('/api/clubs', routes.clubs); mountedRoutes++; }
+if (routes.backups) { app.use('/api/backups', routes.backups); mountedRoutes++; }
+if (routes.systemSettings) { app.use('/api/system-settings', routes.systemSettings); mountedRoutes++; }
+if (routes.testimonials) { app.use('/api/testimonials', routes.testimonials); mountedRoutes++; }
+if (routes.expenses) { app.use('/api/expenses', routes.expenses); mountedRoutes++; }
+if (routes.salaries) { app.use('/api/salaries', routes.salaries); mountedRoutes++; }
+if (routes.emergencyContacts) { app.use('/api/emergency-contacts', routes.emergencyContacts); mountedRoutes++; }
+if (routes.invoices) { app.use('/api/invoices', routes.invoices); mountedRoutes++; }
+if (routes.events) { app.use('/api/events', routes.events); mountedRoutes++; }
+if (routes.forums) { app.use('/api/forums', routes.forums); mountedRoutes++; }
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -398,7 +515,7 @@ app.use((req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log('\n' + '='.repeat(80));
   console.log('🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM');
@@ -408,17 +525,21 @@ server.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ Mounted ${mountedRoutes} route modules`);
   console.log('\n📡 API Endpoints:');
-  console.log('   /api/auth              - Authentication');
-  console.log('   /api/developers        - Developers Team');
-  console.log('   /api/leadership        - School Leadership');
-  console.log('   /api/trades            - School Trades');
-  console.log('   /api/services          - School Services');
-  console.log('   /api/services-advanced - Advanced Services & Coaches');
-  console.log('   /api/sports            - Sports & Teams');
-  console.log('   /api/sports-players    - Players & Goals');
-  console.log('   /api/system-updates    - System Management');
-  console.log('   /api/advisor           - Advisor Dashboard');
-  console.log('\n✅ All systems operational');
+  console.log('   /api/auth                    - Authentication');
+  console.log('   /api/unified-integration     - 🌟 Master Integration API');
+  console.log('   /api/developers              - Developers Team');
+  console.log('   /api/leadership              - School Leadership');
+  console.log('   /api/trades                  - School Trades');
+  console.log('   /api/services                - School Services');
+  console.log('   /api/services-advanced       - Advanced Services & Coaches');
+  console.log('   /api/sports                  - Sports & Teams');
+  console.log('   /api/sports-players          - Players & Goals');
+  console.log('   /api/news                    - News Articles');
+  console.log('   /api/search                  - Global Search');
+  console.log('   /api/comprehensive-staff     - Staff Management');
+  console.log('   /api/system-updates          - System Management');
+  console.log('   /api/advisor                 - Advisor Dashboard');
+  console.log('\n✅ All systems operational - Unified Integration Active');
   console.log('='.repeat(80) + '\n');
 });
 

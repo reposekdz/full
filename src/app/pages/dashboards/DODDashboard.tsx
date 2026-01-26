@@ -1,480 +1,322 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Shield, AlertTriangle, Users, TrendingDown, Plus, Search, Filter, Download, Eye, Edit, Trash2, Calendar, Clock, FileText, BarChart3, Bell, CheckCircle, XCircle, UserCheck, UserX, Activity, Target, Award, Send } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Label } from '@/app/components/ui/label';
-import { Textarea } from '@/app/components/ui/textarea';
-import LeftSidebar from '@/app/components/LeftSidebar';
-import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import { Bell, Calendar, AlertTriangle, Activity, Users, FileText, TrendingUp, Shield, Home, User, Scale, Mail, FileSpreadsheet, BarChart3, Menu, X } from 'lucide-react';
+import { apiService } from '@/app/services/apiService';
 
-interface DODDashboardProps {
-  onNavigate: (page: string) => void;
+interface Stats {
+  ubutumwa_bushya: number;
+  ibizamini_bitegerejwe: number;
+  ibimenyetso_bya_sisiteme: number;
+  amakosa_mashya: number;
+  abanyeshuri_bose: number;
 }
 
-const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
-  const [students, setStudents] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [showIncidentModal, setShowIncidentModal] = useState(false);
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [showPatronShareModal, setShowPatronShareModal] = useState(false);
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [filters, setFilters] = useState({ trade: '', level: '', search: '' });
+interface Activity {
+  id: number;
+  action: string;
+  module: string;
+  created_at: string;
+}
+
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: string;
+  priority: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+interface SystemHealth {
+  status: string;
+  total_students: number;
+  active_cases: number;
+  upcoming_exams: number;
+}
+
+const DODDashboard: React.FC<{ onNavigate: (page: string) => void; onLogout: () => void }> = ({ onNavigate, onLogout }) => {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
-  const [incidentForm, setIncidentForm] = useState({
-    conduct_type: 'warning',
-    severity: 'low',
-    description: '',
-    action_taken: '',
-    lesson_missed: ''
-  });
-  const [leaveForm, setLeaveForm] = useState({
-    leave_type: 'sick',
-    reason: '',
-    lesson_missed: '',
-    start_time: '',
-    end_time: ''
-  });
-  const [messageForm, setMessageForm] = useState({
-    subject: '',
-    message: '',
-    priority: 'normal',
-    recipient_type: 'student'
-  });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [filters]);
+    loadDashboardData();
+  }, []);
 
-  const loadData = async () => {
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const [studentsRes, analyticsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/discipline/students', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/discipline/analytics', { headers: { Authorization: `Bearer ${token}` } })
+      
+      const [statsRes, activitiesRes, notificationsRes, healthRes] = await Promise.all([
+        apiService.getDODStats(),
+        apiService.getDODRecentActivities(),
+        apiService.getDODNotifications({ is_read: 'false' }),
+        apiService.getDODSystemHealth()
       ]);
-      const studentsData = await studentsRes.json();
-      const analyticsData = await analyticsRes.json();
-      if (studentsData.success) setStudents(studentsData.students);
-      if (analyticsData.success) setAnalytics(analyticsData.analytics);
+
+      setStats(statsRes.stats);
+      setActivities(activitiesRes.activities);
+      setNotifications(notificationsRes.notifications);
+      setSystemHealth(healthRes.health);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Ikosa mu gufata amakuru:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const submitIncident = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/discipline/conduct/remove', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student_id: selectedStudent.id, ...incidentForm })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('Incident recorded and parents notified!');
-      setShowIncidentModal(false);
-      loadData();
+  const markAsRead = async (id: number) => {
+    try {
+      await apiService.markDODNotificationRead(id);
+      loadDashboardData();
+    } catch (error) {
+      console.error('Ikosa mu gusoma ubutumwa:', error);
     }
   };
 
-  const submitLeave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/discipline/leave/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student_id: selectedStudent.id, ...leaveForm })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('Leave recorded and parents notified!');
-      setShowLeaveModal(false);
-      loadData();
-    }
-  };
+  const getTimeAgo = (date: string) => {
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/messaging/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ recipient_ids: [selectedStudent.id], ...messageForm })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('Message sent successfully!');
-      setShowMessageModal(false);
-    }
+    if (diffMins < 60) return `${diffMins} iminota ishize`;
+    if (diffHours < 24) return `${diffHours} amasaha ashize`;
+    return `${diffDays} iminsi ishize`;
   };
-
-  const filteredStudents = students.filter(s => {
-    const matchSearch = !filters.search || s.name?.toLowerCase().includes(filters.search.toLowerCase()) || s.student_code?.toLowerCase().includes(filters.search.toLowerCase());
-    const matchTrade = !filters.trade || s.trade === filters.trade;
-    const matchLevel = !filters.level || s.class_level === filters.level;
-    return matchSearch && matchTrade && matchLevel;
-  });
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
-        <LeftSidebar currentPage="dashboard-dod" onNavigate={onNavigate} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Gukuramo amakuru...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
-      <UniversalMessagingWidget />
-      <LeftSidebar currentPage="dashboard-dod" onNavigate={onNavigate} />
-      <div className="flex-1 overflow-auto p-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-black bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-2">
-                DOD Dashboard - Imyitwarire n'Uruhushya
-              </h1>
-              <p className="text-gray-600">Gucunga imyitwarire y'abanyeshuri n'uruhushya</p>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => setShowPatronShareModal(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                <Send className="w-4 h-4 mr-2" />
-                Sangiza Patron
-              </Button>
-              <Button className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
-                <Download className="w-4 h-4 mr-2" />
-                Pakurura Raporo
-              </Button>
-            </div>
-          </div>
+    <div className="flex min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-green-100">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-20 left-4 z-50 p-2 bg-green-600 text-white rounded-lg shadow-lg"
+      >
+        {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Ibyaha Byose</p>
-                    <p className="text-3xl font-black text-red-600">{analytics?.overall?.total_incidents || 0}</p>
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out mt-16`}>
+        <div className="h-full bg-gradient-to-b from-green-600 via-yellow-500 to-green-600 overflow-y-auto shadow-2xl">
+          <nav className="flex-1 px-3 py-4 space-y-2">
+            {[
+              { id: 'director-discipline-dashboard', label: 'Dashboard', Icon: Home, active: true },
+              { id: 'dod-profile', label: 'Profil', Icon: User },
+              { id: 'dod-discipline', label: 'Amakosa', Icon: FileText },
+              { id: 'dod-exams', label: 'Ibizamini', Icon: Calendar },
+              { id: 'dod-students', label: 'Abanyeshuri', Icon: Users },
+              { id: 'dod-reports', label: 'Raporo', Icon: BarChart3 },
+              { id: 'dod-punishments', label: 'Ibihano', Icon: Scale },
+              { id: 'dod-parent-notifications', label: 'Ababyeyi', Icon: Mail },
+              { id: 'dod-student-sheets', label: 'Imbonerahamwe', Icon: FileSpreadsheet }
+            ].map(item => (
+              <button key={item.id} onClick={() => onNavigate(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${item.active ? 'bg-white text-green-700 shadow-lg scale-105 font-bold' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <item.Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+      <div className="lg:pl-64 flex-1 pt-16">
+        <div className="p-4 md:p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold text-gray-900">Ubuyobozi</h1>
+          <button
+            onClick={onLogout}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Gusohoka
+          </button>
+        </div>
+        <p className="text-gray-600">Umuyobozi w'Indero - Dashboard</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <Bell className="w-8 h-8" />
+            <span className="text-3xl font-bold">{stats?.ubutumwa_bushya || 0}</span>
+          </div>
+          <p className="text-blue-100">Ubutumwa bushya</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <Calendar className="w-8 h-8" />
+            <span className="text-3xl font-bold">{stats?.ibizamini_bitegerejwe || 0}</span>
+          </div>
+          <p className="text-purple-100">Ibizamini bitegerejwe</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <AlertTriangle className="w-8 h-8" />
+            <span className="text-3xl font-bold">{stats?.ibimenyetso_bya_sisiteme || 0}</span>
+          </div>
+          <p className="text-orange-100">Ibimenyetso bya sisiteme</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <Users className="w-8 h-8" />
+            <span className="text-3xl font-bold">{stats?.abanyeshuri_bose || 0}</span>
+          </div>
+          <p className="text-green-100">Abanyeshuri bose</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Notifications */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Bell className="w-6 h-6 text-blue-600" />
+              Amamenyo
+            </h2>
+            <button
+              onClick={() => onNavigate('dod-notifications')}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              Reba byose
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            {notifications.slice(0, 5).map((notif) => (
+              <div
+                key={notif.id}
+                className={`p-4 rounded-lg border-l-4 cursor-pointer transition ${
+                  notif.priority === 'bihutirwa'
+                    ? 'border-red-500 bg-red-50 hover:bg-red-100'
+                    : notif.priority === 'byingenzi'
+                    ? 'border-orange-500 bg-orange-50 hover:bg-orange-100'
+                    : 'border-blue-500 bg-blue-50 hover:bg-blue-100'
+                }`}
+                onClick={() => markAsRead(notif.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">{notif.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
+                    <p className="text-xs text-gray-500 mt-2">{getTimeAgo(notif.created_at)}</p>
                   </div>
-                  <Shield className="w-12 h-12 text-red-600 opacity-20" />
+                  {!notif.is_read && (
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Bikomeye</p>
-                    <p className="text-3xl font-black text-orange-600">{analytics?.overall?.critical_severity || 0}</p>
-                  </div>
-                  <AlertTriangle className="w-12 h-12 text-orange-600 opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Uruhushya</p>
-                    <p className="text-3xl font-black text-yellow-600">{analytics?.leaveStats?.total_leaves || 0}</p>
-                  </div>
-                  <UserCheck className="w-12 h-12 text-yellow-600 opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Abanyeshuri</p>
-                    <p className="text-3xl font-black text-green-600">{students.length}</p>
-                  </div>
-                  <Users className="w-12 h-12 text-green-600 opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
           </div>
         </div>
 
-        <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white border-2 border-red-200">
-            <TabsTrigger value="students">Abanyeshuri</TabsTrigger>
-            <TabsTrigger value="incidents">Ibyaha</TabsTrigger>
-            <TabsTrigger value="leaves">Uruhushya</TabsTrigger>
-            <TabsTrigger value="messages">Ubutumwa</TabsTrigger>
-            <TabsTrigger value="history">Amateka</TabsTrigger>
-          </TabsList>
-            <TabsTrigger value="students">Abanyeshuri</TabsTrigger>
-            <TabsTrigger value="incidents">Ibyaha</TabsTrigger>
-            <TabsTrigger value="leaves">Uruhushya</TabsTrigger>
-            <TabsTrigger value="analytics">Imibare</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="students">
-            <Card className="border-2 border-red-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Abanyeshuri n'Imyitwarire</CardTitle>
-                  <div className="flex gap-3">
-                    <Input placeholder="Shakisha..." value={filters.search} onChange={(e) => setFilters({...filters, search: e.target.value})} className="w-64" />
-                    <Select value={filters.trade} onValueChange={(v) => setFilters({...filters, trade: v})}>
-                      <SelectTrigger className="w-32"><SelectValue placeholder="Umwuga" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Byose</SelectItem>
-                        <SelectItem value="SOD">SOD</SelectItem>
-                        <SelectItem value="BDC">BDC</SelectItem>
-                        <SelectItem value="AUT">AUT</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {filteredStudents.map((student) => (
-                    <Card key={student.id} className="border-2 border-red-100 hover:border-red-300 transition-all">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-bold text-gray-900">{student.name}</h4>
-                            <p className="text-sm text-gray-600">{student.student_code} - {student.trade} {student.class_level}</p>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant="outline">{student.total_incidents || 0} Ibyaha</Badge>
-                              <Badge variant="outline">{student.total_leaves || 0} Uruhushya</Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => { setSelectedStudent(student); setShowIncidentModal(true); }} className="bg-red-600 text-white">
-                              <AlertTriangle className="w-4 h-4 mr-1" />
-                              Ibyaha
-                            </Button>
-                            <Button size="sm" onClick={() => { setSelectedStudent(student); setShowLeaveModal(true); }} className="bg-yellow-600 text-white">
-                              <UserCheck className="w-4 h-4 mr-1" />
-                              Uruhushya
-                            </Button>
-                            <Button size="sm" onClick={() => { setSelectedStudent(student); setShowMessageModal(true); }} className="bg-blue-600 text-white">
-                              <Send className="w-4 h-4 mr-1" />
-                              Tuma
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="incidents">
-            <Card className="border-2 border-red-200">
-              <CardHeader><CardTitle>Ibyaha Byose</CardTitle></CardHeader>
-              <CardContent><p className="text-gray-600">Ibyaha byanditswe bizagaragara hano...</p></CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="leaves">
-            <Card className="border-2 border-red-200">
-              <CardHeader><CardTitle>Uruhushya Rwose</CardTitle></CardHeader>
-              <CardContent><p className="text-gray-600">Uruhushya rwanditswe ruzagaragara hano...</p></CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="messages">
-            <Card className="border-2 border-red-200">
-              <CardHeader><CardTitle>Ubutumwa Bwoherejwe</CardTitle></CardHeader>
-              <CardContent><p className="text-gray-600">Ubutumwa bwoherejwe buzagaragara hano...</p></CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card className="border-2 border-red-200">
-              <CardHeader><CardTitle>Amateka y'Ibyakozwe</CardTitle></CardHeader>
-              <CardContent><p className="text-gray-600">Amateka yose azagaragara hano...</p></CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Ohereza Ubutumwa</DialogTitle>
-              <DialogDescription>Ohereza ubutumwa kuri {selectedStudent?.name}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={sendMessage} className="space-y-4">
-              <div>
-                <Label>Kuri</Label>
-                <Select value={messageForm.recipient_type} onValueChange={(v) => setMessageForm({...messageForm, recipient_type: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="student">Umunyeshuri</SelectItem>
-                    <SelectItem value="parent">Umubyeyi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Ingingo</Label>
-                <Input value={messageForm.subject} onChange={(e) => setMessageForm({...messageForm, subject: e.target.value})} required />
-              </div>
-              <div>
-                <Label>Ubutumwa</Label>
-                <Textarea value={messageForm.message} onChange={(e) => setMessageForm({...messageForm, message: e.target.value})} rows={5} required />
-              </div>
-              <div>
-                <Label>Ingenzi</Label>
-                <Select value={messageForm.priority} onValueChange={(v) => setMessageForm({...messageForm, priority: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Bike</SelectItem>
-                    <SelectItem value="normal">Bisanzwe</SelectItem>
-                    <SelectItem value="high">Byinshi</SelectItem>
-                    <SelectItem value="urgent">Byihutirwa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowMessageModal(false)}>Hagarika</Button>
-                <Button type="submit" className="bg-blue-600 text-white">Ohereza</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showIncidentModal} onOpenChange={setShowIncidentModal}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Ongeraho Icyaha</DialogTitle>
-              <DialogDescription>Andika icyaha cy'umunyeshuri {selectedStudent?.name}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={submitIncident} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Ubwoko</Label>
-                  <Select value={incidentForm.conduct_type} onValueChange={(v) => setIncidentForm({...incidentForm, conduct_type: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="warning">Iburira</SelectItem>
-                      <SelectItem value="suspension">Guhagarikwa</SelectItem>
-                      <SelectItem value="late">Gutinda</SelectItem>
-                      <SelectItem value="absence">Kutaza</SelectItem>
-                      <SelectItem value="misbehavior">Imyitwarire Mibi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Ukomeye</Label>
-                  <Select value={incidentForm.severity} onValueChange={(v) => setIncidentForm({...incidentForm, severity: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Bike</SelectItem>
-                      <SelectItem value="medium">Hagati</SelectItem>
-                      <SelectItem value="high">Byinshi</SelectItem>
-                      <SelectItem value="critical">Bikomeye</SelectItem>
-                    </SelectContent>
-                  </Select>
+        {/* Recent Activities */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Activity className="w-6 h-6 text-green-600" />
+            Ibikorwa Bya Vuba
+          </h2>
+          
+          <div className="space-y-3">
+            {activities.slice(0, 5).map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                  <p className="text-xs text-gray-500">{getTimeAgo(activity.created_at)}</p>
                 </div>
               </div>
-              <div>
-                <Label>Ibisobanuro</Label>
-                <Textarea value={incidentForm.description} onChange={(e) => setIncidentForm({...incidentForm, description: e.target.value})} required />
-              </div>
-              <div>
-                <Label>Icyakozwe</Label>
-                <Textarea value={incidentForm.action_taken} onChange={(e) => setIncidentForm({...incidentForm, action_taken: e.target.value})} />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowIncidentModal(false)}>Hagarika</Button>
-                <Button type="submit" className="bg-red-600 text-white">Bika & Menyesha Ababyeyi</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+            ))}
+          </div>
+        </div>
+      </div>
 
-        <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Ongeraho Uruhushya</DialogTitle>
-              <DialogDescription>Andika uruhushya rw'umunyeshuri {selectedStudent?.name}</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={submitLeave} className="space-y-4">
-              <div>
-                <Label>Ubwoko</Label>
-                <Select value={leaveForm.leave_type} onValueChange={(v) => setLeaveForm({...leaveForm, leave_type: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sick">Kurwara</SelectItem>
-                    <SelectItem value="home">Kuja Murugo</SelectItem>
-                    <SelectItem value="emergency">Ihutirwa</SelectItem>
-                    <SelectItem value="other">Ikindi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Impamvu</Label>
-                <Textarea value={leaveForm.reason} onChange={(e) => setLeaveForm({...leaveForm, reason: e.target.value})} required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Igihe cyo Gutangira</Label>
-                  <Input type="datetime-local" value={leaveForm.start_time} onChange={(e) => setLeaveForm({...leaveForm, start_time: e.target.value})} required />
-                </div>
-                <div>
-                  <Label>Igihe cyo Kurangira</Label>
-                  <Input type="datetime-local" value={leaveForm.end_time} onChange={(e) => setLeaveForm({...leaveForm, end_time: e.target.value})} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowLeaveModal(false)}>Hagarika</Button>
-                <Button type="submit" className="bg-yellow-600 text-white">Bika & Menyesha Ababyeyi</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showPatronShareModal} onOpenChange={setShowPatronShareModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Sangiza Patron Akazi</DialogTitle>
-              <DialogDescription>Hitamo akazi wifuza gusangiza na Patron</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Button className="w-full justify-start" variant="outline">
-                <Shield className="w-4 h-4 mr-2" />
-                Sangiza Raporo y'Imyitwarire
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Users className="w-4 h-4 mr-2" />
-                Sangiza Lisiti y'Abanyeshuri
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <FileText className="w-4 h-4 mr-2" />
-                Sangiza Ibyaha Bikomeye
-              </Button>
+      {/* System Health */}
+      <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Shield className="w-6 h-6 text-green-600" />
+          Uko Sisiteme Imeze
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div>
+              <p className="text-sm text-gray-600">Imiterere</p>
+              <p className="font-bold text-green-700">{systemHealth?.status || 'Birakora'}</p>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPatronShareModal(false)}>Siga</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          
+          <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+            <Users className="w-5 h-5 text-blue-600" />
+            <div>
+              <p className="text-sm text-gray-600">Abanyeshuri</p>
+              <p className="font-bold text-blue-700">{systemHealth?.total_students || 0}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
+            <Calendar className="w-5 h-5 text-purple-600" />
+            <div>
+              <p className="text-sm text-gray-600">Ibizamini bitegerejwe</p>
+              <p className="font-bold text-purple-700">{systemHealth?.upcoming_exams || 0}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <button onClick={() => onNavigate('dod-profile')} className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Users className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Profil</p>
+        </button>
+        <button onClick={() => onNavigate('dod-discipline')} className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <FileText className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Amakosa</p>
+        </button>
+        <button onClick={() => onNavigate('dod-exams')} className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Calendar className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Ibizamini</p>
+        </button>
+        <button onClick={() => onNavigate('dod-students')} className="p-4 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Users className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Abanyeshuri</p>
+        </button>
+        <button onClick={() => onNavigate('dod-reports')} className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <TrendingUp className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Raporo</p>
+        </button>
+        <button onClick={() => onNavigate('dod-punishments')} className="p-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Shield className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Ibihano</p>
+        </button>
+        <button onClick={() => onNavigate('dod-parent-notifications')} className="p-4 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Bell className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Ababyeyi</p>
+        </button>
+        <button onClick={() => onNavigate('dod-student-sheets')} className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <FileText className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Imbonerahamwe</p>
+        </button>
+      </div>
+        </div>
       </div>
     </div>
   );

@@ -96,18 +96,18 @@ const PaymentsManagement: React.FC<{ onNavigate: (page: string) => void }> = ({ 
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input placeholder="Shakisha..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="pl-10" />
               </div>
-              <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+              <Select value={filters.status || "all"} onValueChange={(v) => setFilters({ ...filters, status: v === "all" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Byose</SelectItem>
+                  <SelectItem value="all">Byose</SelectItem>
                   <SelectItem value="pending">Bitegerejwe</SelectItem>
                   <SelectItem value="approved">Byemejwe</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={filters.payment_type} onValueChange={(v) => setFilters({ ...filters, payment_type: v })}>
+              <Select value={filters.payment_type || "all"} onValueChange={(v) => setFilters({ ...filters, payment_type: v === "all" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Ubwoko" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Byose</SelectItem>
+                  <SelectItem value="all">Byose</SelectItem>
                   <SelectItem value="tuition">Amafaranga y'Ishuri</SelectItem>
                   <SelectItem value="transport">Transport</SelectItem>
                   <SelectItem value="hostel">Hostel</SelectItem>

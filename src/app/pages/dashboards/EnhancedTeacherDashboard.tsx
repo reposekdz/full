@@ -104,14 +104,22 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
   // Fetch teacher classes
   const fetchClasses = async () => {
     try {
-      const response = await fetch(`${API_BASE}/teachers/classes`, {
+      const response = await fetch(`${API_BASE}/dashboards/teacher`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       const data = await response.json();
       if (data.success) {
-        setClasses(data.classes || []);
+        setClasses(data.data.classes || []);
+        setTeacherStats({
+          total_students: data.data.total_students || 0,
+          total_classes: data.data.classes?.length || 0,
+          avg_attendance: 92.5,
+          assignments_pending: 8,
+          avg_class_performance: 84.2,
+          weekly_hours: 24
+        });
       }
     } catch (error) {
       console.error('Error fetching classes:', error);

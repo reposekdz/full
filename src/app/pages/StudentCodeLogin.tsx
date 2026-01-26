@@ -1,21 +1,38 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { GraduationCap, Lock, AlertCircle } from 'lucide-react';
+import { GraduationCap, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
+import { useLanguage } from '@/app/contexts/LanguageContext';
 
 interface StudentCodeLoginProps {
   onNavigate: (page: string) => void;
 }
 
 const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
+  const { language } = useLanguage();
+  const isKinyarwanda = language === 'rw';
   const [studentCode, setStudentCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const translations = {
+    title: isKinyarwanda ? 'Kwinjira kw\'Umunyeshuri' : 'Student Login',
+    subtitle: isKinyarwanda ? 'Injira ukoresheje code yawe' : 'Enter using your code',
+    studentCode: isKinyarwanda ? 'Code y\'Umunyeshuri' : 'Student Code',
+    password: isKinyarwanda ? 'Ijambo ry\'ibanga' : 'Password',
+    example: isKinyarwanda ? 'Urugero' : 'Example',
+    login: isKinyarwanda ? 'Injira' : 'Login',
+    loggingIn: isKinyarwanda ? 'Urinjira...' : 'Logging in...',
+    noCode: isKinyarwanda ? 'Nta code ufite? Baza umuyobozi w\'amasomo' : 'No code? Ask the Director of Studies',
+    goBack: isKinyarwanda ? 'Subira Ahabanza' : 'Go Back Home',
+    connError: isKinyarwanda ? 'Ikibazo cy\'itumanaho. Ongera ugerageze.' : 'Connection error. Please try again.',
+    loginFailed: isKinyarwanda ? 'Kwinjira ntibyagenze neza' : 'Login failed'
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +53,10 @@ const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
         localStorage.setItem('user', JSON.stringify(data.user));
         window.location.reload();
       } else {
-        setError(data.message || 'Login failed');
+        setError(data.message || translations.loginFailed);
       }
     } catch (error) {
-      setError('Connection error. Please try again.');
+      setError(translations.connError);
     } finally {
       setLoading(false);
     }
@@ -59,8 +76,8 @@ const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
                 <GraduationCap className="w-12 h-12" />
               </div>
             </div>
-            <CardTitle className="text-center text-2xl">Student Login</CardTitle>
-            <p className="text-center text-white/90 text-sm">Injira ukoresheje code yawe</p>
+            <CardTitle className="text-center text-2xl">{translations.title}</CardTitle>
+            <p className="text-center text-white/90 text-sm">{translations.subtitle}</p>
           </CardHeader>
           <CardContent className="p-6">
             {error && (
@@ -72,7 +89,7 @@ const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <Label htmlFor="code">Student Code / Code y'Umunyeshuri</Label>
+                <Label htmlFor="code">{translations.studentCode}</Label>
                 <Input
                   id="code"
                   placeholder="SOD0012026"
@@ -81,11 +98,11 @@ const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
                   className="mt-1"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Example: SOD0012026, BDC0012026, AUT0012026</p>
+                <p className="text-xs text-gray-500 mt-1">{translations.example}: SOD0012026, BDC0012026, AUT0012026</p>
               </div>
 
               <div>
-                <Label htmlFor="password">Password / Ijambo Ryibanga</Label>
+                <Label htmlFor="password">{translations.password}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
@@ -105,20 +122,27 @@ const StudentCodeLogin: React.FC<StudentCodeLoginProps> = ({ onNavigate }) => {
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                 disabled={loading}
               >
-                {loading ? 'Injira...' : 'Injira / Login'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {translations.loggingIn}
+                  </>
+                ) : (
+                  translations.login
+                )}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Nta code ufite? Baza umuyobozi w'amasomo
+                {translations.noCode}
               </p>
               <Button
                 variant="link"
                 onClick={() => onNavigate('home')}
                 className="text-blue-600"
               >
-                Subira Ahabanza
+                {translations.goBack}
               </Button>
             </div>
           </CardContent>

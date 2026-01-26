@@ -1,32 +1,64 @@
-const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+const { pool } = require('./config/database');
 
 async function runMigration() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'school_management',
-    multipleStatements: true
-  });
-
   try {
-    console.log('📊 Running student payments migration...');
+    const migrationFile = path.join(__dirname, 'migrations', 'create_messaging_and_notification_tables.sql');
+    const sql = fs.readFileSync(migrationFile, 'utf8');
     
-    const sqlFile = fs.readFileSync(path.join(__dirname, 'migrations', 'student_payments.sql'), 'utf8');
+    const lines = sql.split('\n').filter(line => {
+      const trimmed = line.trim();
+      return trimmed.length > 0 && !trimmed.startsWith('--');
+    });
     
-    await connection.query(sqlFile);
+    const cleanedSQL = lines.join('\n');
+    const statements = cleanedSQL
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 10);
     
-    console.log('✅ Migration completed successfully!');
-    console.log('✅ Created tables: student_fees, payments, student_parents, payment_reminders');
-    console.log('✅ Inserted default fees for existing students');
+    console.log(`Running ${statements.length} SQL statements...`);
     
+    const connection = await pool.getConnection();
+    
+    try {
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        console.log(`\n[${i + 1}/${statements.length}] Executing statement (${statement.substring(0, 50)}...)...`);
+        try {
+          await connection.query(statement);
+          console.log(`✓ Success`);
+        } catch (err) {
+          if (err.code === 'ER_TABLE_EXISTS_ERROR') {
+            console.log(`⚠ Table already exists - skipping`);
+          } else {
+            throw err;
+          }
+        }
+      }
+      
+      console.log('\n✅ Migration completed successfully!');
+      console.log('\nCreated tables:');
+      console.log('  - messages');
+      console.log('  - message_reads');
+      console.log('  - notifications');
+      console.log('  - notification_templates');
+      console.log('  - notification_logs');
+      console.log('  - activity_logs');
+      console.log('  - sms_logs');
+      console.log('  - parent_student_links');
+      console.log('\n✅ Inserted default notification templates');
+      
+    } finally {
+      connection.release();
+    }
+    
+    process.exit(0);
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
-  } finally {
-    await connection.end();
+    console.error(error);
+    process.exit(1);
   }
 }
 

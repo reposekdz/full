@@ -1,343 +1,334 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Users, Image, FileText, Upload, Edit, Trash2, Plus, Search, Filter, Download } from 'lucide-react';
+import { Layout, Plus, Edit2, Trash2, Save, X, Upload, Users, Trophy, Briefcase, Code } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
-import { Badge } from '@/app/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
-import { Textarea } from '@/app/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+
+interface ContentItem {
+  id: number;
+  type: string;
+  title: string;
+  description: string;
+  image_url: string;
+  data: any;
+  is_active: boolean;
+}
 
 const ContentManagementPage: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [images, setImages] = useState<any[]>([]);
-  const [content, setContent] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
+  const [activeTab, setActiveTab] = useState('sports');
+  const [items, setItems] = useState<ContentItem[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    data: {} as any
+  });
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    fetchItems();
+  }, [activeTab]);
 
-  const fetchAllData = async () => {
-    setLoading(true);
+  const fetchItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      const [usersRes, imagesRes, contentRes] = await Promise.all([
-        fetch('http://localhost:5000/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/admin/images', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/admin/content', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const usersData = await usersRes.json();
-      const imagesData = await imagesRes.json();
-      const contentData = await contentRes.json();
-      
-      if (usersData.success) setUsers(usersData.users);
-      if (imagesData.success) setImages(imagesData.images);
-      if (contentData.success) setContent(contentData.content);
+      const res = await fetch(`http://localhost:5000/api/admin/content/${activeTab}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setItems(data.items);
     } catch (error) {
       console.error('Fetch error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (!confirm('Delete this user?')) return;
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = new FormData();
+    data.append('type', activeTab);
+    data.append('title', formData.title);
+    data.append('description', formData.description);
+    data.append('data', JSON.stringify(formData.data));
+    if (imageFile) data.append('image', imageFile);
+
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+      const url = editingId 
+        ? `http://localhost:5000/api/admin/content/${editingId}`
+        : 'http://localhost:5000/api/admin/content';
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: data
+      });
+      
+      const result = await res.json();
+      if (result.success) {
+        fetchItems();
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
+  };
+
+  const handleEdit = (item: ContentItem) => {
+    setFormData({
+      title: item.title,
+      description: item.description,
+      data: item.data || {}
+    });
+    setImagePreview(item.image_url ? `http://localhost:5000${item.image_url}` : '');
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:5000/api/admin/content/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchAllData();
+      fetchItems();
     } catch (error) {
       console.error('Delete error:', error);
     }
   };
 
-  const handleImageUpload = async (file: File, category: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('category', category);
-      
-      await fetch('http://localhost:5000/api/admin/images', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-      fetchAllData();
-    } catch (error) {
-      console.error('Upload error:', error);
+  const resetForm = () => {
+    setFormData({ title: '', description: '', data: {} });
+    setImagePreview('');
+    setImageFile(null);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const renderFormFields = () => {
+    switch (activeTab) {
+      case 'sports':
+        return (
+          <>
+            <div>
+              <Label>Sport Name / Izina ry'Imikino</Label>
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Description / Ibisobanuro</Label>
+              <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Coach Name / Umutoza</Label>
+              <Input value={formData.data.coach || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, coach: e.target.value } })} />
+            </div>
+            <div>
+              <Label>Players Count / Abakinnyi</Label>
+              <Input type="number" value={formData.data.players || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, players: e.target.value } })} />
+            </div>
+          </>
+        );
+      case 'leadership':
+        return (
+          <>
+            <div>
+              <Label>Name / Izina</Label>
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Position / Umwanya</Label>
+              <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={formData.data.email || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, email: e.target.value } })} />
+            </div>
+            <div>
+              <Label>Phone / Telefone</Label>
+              <Input value={formData.data.phone || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, phone: e.target.value } })} />
+            </div>
+          </>
+        );
+      case 'trades':
+        return (
+          <>
+            <div>
+              <Label>Trade Name / Izina ry'Umwuga</Label>
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Description / Ibisobanuro</Label>
+              <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Duration / Igihe</Label>
+              <Input value={formData.data.duration || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, duration: e.target.value } })} />
+            </div>
+            <div>
+              <Label>Capacity / Umubare</Label>
+              <Input type="number" value={formData.data.capacity || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, capacity: e.target.value } })} />
+            </div>
+          </>
+        );
+      case 'developers':
+        return (
+          <>
+            <div>
+              <Label>Developer Name / Izina</Label>
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Role / Umwanya</Label>
+              <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+            </div>
+            <div>
+              <Label>GitHub</Label>
+              <Input value={formData.data.github || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, github: e.target.value } })} />
+            </div>
+            <div>
+              <Label>LinkedIn</Label>
+              <Input value={formData.data.linkedin || ''} onChange={(e) => setFormData({ ...formData, data: { ...formData.data, linkedin: e.target.value } })} />
+            </div>
+          </>
+        );
+      default:
+        return null;
     }
   };
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         u.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || u.role === filterRole;
-    return matchesSearch && matchesRole;
-  });
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'sports': return <Trophy className="w-6 h-6" />;
+      case 'leadership': return <Users className="w-6 h-6" />;
+      case 'trades': return <Briefcase className="w-6 h-6" />;
+      case 'developers': return <Code className="w-6 h-6" />;
+      default: return <Layout className="w-6 h-6" />;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Content Management System</h1>
-          <p className="text-gray-600">Manage all users, images, and content</p>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-3 rounded-xl">
+            <Layout className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Gucunga Ibikubiyemo / Content Management
+            </h1>
+            <p className="text-gray-600">Hindura amakuru y'urubuga / Manage website content</p>
+          </div>
         </div>
-
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="images">Images</TabsTrigger>
-            <TabsTrigger value="content">Content</TabsTrigger>
-            <TabsTrigger value="pages">Pages</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>All Users Management</CardTitle>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button><Plus className="w-4 h-4 mr-2" />Add User</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New User</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Name</Label>
-                          <Input placeholder="Full name" />
-                        </div>
-                        <div>
-                          <Label>Email</Label>
-                          <Input type="email" placeholder="email@example.com" />
-                        </div>
-                        <div>
-                          <Label>Role</Label>
-                          <Select>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="student">Student</SelectItem>
-                              <SelectItem value="teacher">Teacher</SelectItem>
-                              <SelectItem value="parent">Parent</SelectItem>
-                              <SelectItem value="director_of_study">Director of Study</SelectItem>
-                              <SelectItem value="director_of_discipline">Director of Discipline</SelectItem>
-                              <SelectItem value="head_master">Head Master</SelectItem>
-                              <SelectItem value="accountant">Accountant</SelectItem>
-                              <SelectItem value="stock_manager">Stock Manager</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button className="w-full">Create User</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Search users..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={filterRole} onValueChange={setFilterRole}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="student">Students</SelectItem>
-                      <SelectItem value="teacher">Teachers</SelectItem>
-                      <SelectItem value="parent">Parents</SelectItem>
-                      <SelectItem value="director_of_study">DOS</SelectItem>
-                      <SelectItem value="director_of_discipline">DOD</SelectItem>
-                      <SelectItem value="head_master">Head Master</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge>{user.role}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                            {user.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(user.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="images">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Image Management</CardTitle>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button><Upload className="w-4 h-4 mr-2" />Upload Image</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Upload New Image</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Category</Label>
-                          <Select>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="hero">Hero Section</SelectItem>
-                              <SelectItem value="gallery">Gallery</SelectItem>
-                              <SelectItem value="news">News</SelectItem>
-                              <SelectItem value="sports">Sports</SelectItem>
-                              <SelectItem value="trades">Trades</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Image File</Label>
-                          <Input type="file" accept="image/*" />
-                        </div>
-                        <Button className="w-full">Upload</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {images.map((img) => (
-                    <div key={img.id} className="relative group">
-                      <img src={img.url} alt={img.title} className="w-full h-40 object-cover rounded-lg" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                        <Button size="sm" variant="secondary">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="content">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Content Management</CardTitle>
-                  <Button><Plus className="w-4 h-4 mr-2" />Add Content</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Page</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {content.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.title}</TableCell>
-                        <TableCell><Badge>{item.type}</Badge></TableCell>
-                        <TableCell>{item.page}</TableCell>
-                        <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="pages">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {['Home', 'Sports', 'Trades', 'Services', 'News', 'Contact'].map((page) => (
-                <Card key={page} className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold">{page} Page</h3>
-                      <FileText className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">Manage {page.toLowerCase()} page content and images</p>
-                    <Button className="w-full">Edit Page</Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+        <Button onClick={() => setShowForm(!showForm)} className="bg-gradient-to-r from-purple-600 to-pink-600">
+          {showForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+          {showForm ? 'Funga / Close' : 'Ongeraho / Add New'}
+        </Button>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="sports" className="flex items-center gap-2">
+            <Trophy className="w-4 h-4" />
+            Imikino / Sports
+          </TabsTrigger>
+          <TabsTrigger value="leadership" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Ubuyobozi / Leadership
+          </TabsTrigger>
+          <TabsTrigger value="trades" className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Imyuga / Trades
+          </TabsTrigger>
+          <TabsTrigger value="developers" className="flex items-center gap-2">
+            <Code className="w-4 h-4" />
+            Abateje / Developers
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="space-y-6">
+          {showForm && (
+            <Card className="border-2 border-purple-100">
+              <CardHeader>
+                <CardTitle>{editingId ? 'Hindura / Edit' : 'Ongeraho / Add New'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {renderFormFields()}
+                  </div>
+                  <div>
+                    <Label>Image / Ifoto</Label>
+                    <Input type="file" accept="image/*" onChange={handleImageChange} />
+                    {imagePreview && <img src={imagePreview} alt="Preview" className="mt-2 w-32 h-32 object-cover rounded-lg" />}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="bg-gradient-to-r from-purple-600 to-pink-600">
+                      <Save className="w-4 h-4 mr-2" />
+                      {editingId ? 'Bika / Update' : 'Ongeraho / Create'}
+                    </Button>
+                    <Button type="button" onClick={resetForm} variant="outline">
+                      <X className="w-4 h-4 mr-2" />
+                      Hagarika / Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-4">
+            {items.map((item) => (
+              <Card key={item.id} className="border-2 border-purple-100 hover:shadow-lg transition">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    {item.image_url && (
+                      <img src={`http://localhost:5000${item.image_url}`} alt={item.title} className="w-24 h-24 object-cover rounded-lg" />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getIcon(item.type)}
+                        <h3 className="text-xl font-bold">{item.title}</h3>
+                      </div>
+                      <p className="text-gray-600 mb-2">{item.description}</p>
+                      {item.data && Object.keys(item.data).length > 0 && (
+                        <div className="flex gap-4 text-sm text-gray-500">
+                          {Object.entries(item.data).map(([key, value]) => (
+                            <span key={key}>{key}: {value as string}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDelete(item.id)} className="text-red-600">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

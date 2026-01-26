@@ -18,7 +18,17 @@ const upload = multer({ storage });
 // GET all developers
 router.get('/', async (req, res) => {
   try {
-    const [developers] = await pool.query('SELECT * FROM developers ORDER BY display_order ASC, id DESC');
+    const [developers] = await pool.query('SELECT * FROM developers ORDER BY sort_order ASC, id DESC');
+    res.json({ success: true, developers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET team developers (alias for main endpoint)
+router.get('/team', async (req, res) => {
+  try {
+    const [developers] = await pool.query('SELECT * FROM developers WHERE is_active = true ORDER BY sort_order ASC');
     res.json({ success: true, developers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -41,13 +51,13 @@ router.get('/:id', async (req, res) => {
 // POST new developer
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { name, role, specialization, bio, email, phone, github, linkedin, portfolio, skills, experience_years, display_order } = req.body;
+    const { name, role, specialization, bio, email, phone, github_url, linkedin_url, portfolio_url, skills, experience_years, sort_order } = req.body;
     const image_url = req.file ? `/uploads/developers/${req.file.filename}` : null;
 
     const [result] = await pool.query(
       `INSERT INTO developers (name, role, specialization, bio, email, phone, github, linkedin, portfolio, image_url, skills, experience_years, display_order) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, role, specialization, bio, email, phone, github, linkedin, portfolio, image_url, skills, experience_years || 0, display_order || 0]
+      [name, role, specialization, bio, email, phone, github_url, linkedin_url, portfolio_url, image_url, skills, experience_years || 0, sort_order || 0]
     );
 
     res.json({ success: true, id: result.insertId, message: 'Developer added successfully' });
@@ -59,10 +69,10 @@ router.post('/', upload.single('image'), async (req, res) => {
 // PUT update developer
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
-    const { name, role, specialization, bio, email, phone, github, linkedin, portfolio, skills, experience_years, display_order, status } = req.body;
+    const { name, role, specialization, bio, email, phone, github_url, linkedin_url, portfolio_url, skills, experience_years, sort_order, is_active } = req.body;
     
-    let updateQuery = `UPDATE developers SET name=?, role=?, specialization=?, bio=?, email=?, phone=?, github=?, linkedin=?, portfolio=?, skills=?, experience_years=?, display_order=?, status=?`;
-    let params = [name, role, specialization, bio, email, phone, github, linkedin, portfolio, skills, experience_years, display_order, status || 'active'];
+    let updateQuery = `UPDATE developers SET name=?, role=?, specialization=?, bio=?, email=?, phone=?, github_url=?, linkedin_url=?, portfolio_url=?, skills=?, experience_years=?, sort_order=?, is_active=?`;
+    let params = [name, role, specialization, bio, email, phone, github_url, linkedin_url, portfolio_url, skills, experience_years, sort_order, is_active !== undefined ? is_active : true];
 
     if (req.file) {
       updateQuery += ', image_url=?';
@@ -92,7 +102,7 @@ router.delete('/:id', async (req, res) => {
 // GET developers by role
 router.get('/role/:role', async (req, res) => {
   try {
-    const [developers] = await pool.query('SELECT * FROM developers WHERE role = ? AND status = "active" ORDER BY display_order ASC', [req.params.role]);
+    const [developers] = await pool.query('SELECT * FROM developers WHERE role = ? AND is_active = true ORDER BY sort_order ASC', [req.params.role]);
     res.json({ success: true, developers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

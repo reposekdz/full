@@ -22,7 +22,7 @@ All protected routes require: `Authorization: Bearer <token>`
 - `PUT /api/admin/trades/:id` - Update trade
 - `DELETE /api/admin/trades/:id` - Delete trade
 
-### Gallery Management
+### Gallery Management 
 - `GET /api/admin/gallery?category=<category>` - Get gallery images
 - `POST /api/admin/gallery` - Upload multiple images (max 10)
 - `DELETE /api/admin/gallery/:id` - Delete image

@@ -3,6 +3,8 @@ import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, PieChart, U
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 import AccountantSidebar from '@/app/components/AccountantSidebar';
 
+import apiService from '@/app/services/apiService';
+
 interface AccountantDashboardProps {
   onNavigate: (page: string) => void;
   onLogout: () => void;
@@ -22,12 +24,8 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   }, []);
 
   const fetchDashboard = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/accountant/dashboard', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await apiService.getAccountantDashboard();
       if (data.success) setStats(data.stats);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -36,12 +34,8 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   };
 
   const fetchNotifications = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await apiService.getNotifications();
       if (data.success) setNotifications(data.notifications.slice(0, 5));
     } catch (error) {
       console.error('Fetch notifications error:', error);
@@ -49,18 +43,11 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   };
 
   const fetchRecentTransactions = async () => {
-    const token = localStorage.getItem('token');
     try {
-      const [paymentsRes, expensesRes] = await Promise.all([
-        fetch('http://localhost:5000/api/accountant/payments?limit=5', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch('http://localhost:5000/api/accountant/expenses?limit=5', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const [paymentsData, expensesData] = await Promise.all([
+        apiService.getAccountantPayments({ limit: 5 }),
+        apiService.getAccountantExpenses({ limit: 5 })
       ]);
-      const paymentsData = await paymentsRes.json();
-      const expensesData = await expensesRes.json();
       if (paymentsData.success) setRecentPayments(paymentsData.payments);
       if (expensesData.success) setRecentExpenses(expensesData.expenses);
     } catch (error) {

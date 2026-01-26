@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Send, Trash2, Eye, Users, MessageSquare } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Bell, Check, Trash2, Filter, Search, AlertCircle, Info, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { Textarea } from '@/app/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Badge } from '@/app/components/ui/badge';
-import { Alert, AlertDescription } from '@/app/components/ui/alert';
+
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  is_read: boolean;
+  created_at: string;
+}
 
 const NotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [form, setForm] = useState({ title: '', message: '', target: 'all' });
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchNotifications();
@@ -20,119 +28,178 @@ const NotificationsPage: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/notifications', {
+      const res = await fetch('http://localhost:5000/api/notifications', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      setNotifications(data.notifications || []);
+      if (data.success) setNotifications(data.notifications);
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('Fetch notifications error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSend = async () => {
+  const markAsRead = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/admin/notifications', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await res.json();
-      setMessage({ type: data.success ? 'success' : 'error', text: data.message });
-      if (data.success) {
-        setForm({ title: '', message: '', target: 'all' });
-        fetchNotifications();
-      }
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch (error) {
-      setMessage({ type: 'error', text: 'Send failed' });
+      console.error('Mark as read error:', error);
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const deleteNotification = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:5000/api/admin/notifications/${id}`, {
+      await fetch(`http://localhost:5000/api/notifications/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchNotifications();
+      setNotifications(notifications.filter(n => n.id !== id));
     } catch (error) {
-      console.error('Delete error:', error);
+      console.error('Delete notification error:', error);
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:5000/api/notifications/read-all', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Mark all as read error:', error);
+    }
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'success': return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'error': return <XCircle className="w-5 h-5 text-red-600" />;
+      case 'warning': return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+      default: return <Info className="w-5 h-5 text-blue-600" />;
+    }
+  };
+
+  const getColor = (type: string) => {
+    switch (type) {
+      case 'success': return 'bg-green-50 border-green-200';
+      case 'error': return 'bg-red-50 border-red-200';
+      case 'warning': return 'bg-yellow-50 border-yellow-200';
+      default: return 'bg-blue-50 border-blue-200';
+    }
+  };
+
+  const filteredNotifications = notifications
+    .filter(n => {
+      if (filter === 'unread') return !n.is_read;
+      if (filter === 'read') return n.is_read;
+      return true;
+    })
+    .filter(n => n.title.toLowerCase().includes(search.toLowerCase()) || n.message.toLowerCase().includes(search.toLowerCase()));
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4 mb-8">
-        <Bell className="w-10 h-10 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-black">Amamenyo / Notifications</h1>
-          <p className="text-gray-600">Ohereza kandi ukurikirana amamenyo / Send and manage notifications</p>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-xl">
+            <Bell className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Amamenyo / Notifications
+            </h1>
+            <p className="text-gray-600">{unreadCount} amamenyo mashya / {unreadCount} new notifications</p>
+          </div>
         </div>
+        <Button onClick={markAllAsRead} disabled={unreadCount === 0} className="bg-gradient-to-r from-blue-600 to-indigo-600">
+          <Check className="w-4 h-4 mr-2" />
+          Soma Byose / Mark All Read
+        </Button>
       </div>
 
-      {message && (
-        <Alert className={message.type === 'success' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}>
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ohereza Ubutumwa / Send Notification</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Input placeholder="Umutwe / Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          </div>
-          <div>
-            <Textarea placeholder="Ubutumwa / Message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={4} />
-          </div>
-          <div className="flex gap-4">
-            <Select value={form.target} onValueChange={(v) => setForm({ ...form, target: v })}>
-              <SelectTrigger className="flex-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Abantu Bose / Everyone</SelectItem>
-                <SelectItem value="students">Abanyeshuri / Students</SelectItem>
-                <SelectItem value="teachers">Abarimu / Teachers</SelectItem>
-                <SelectItem value="parents">Ababyeyi / Parents</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleSend}>
-              <Send className="w-4 h-4 mr-2" />
-              Ohereza / Send
-            </Button>
+      <Card className="border-2 border-blue-100">
+        <CardContent className="pt-6">
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                placeholder="Shakisha amamenyo / Search notifications..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>
+                Byose / All
+              </Button>
+              <Button variant={filter === 'unread' ? 'default' : 'outline'} onClick={() => setFilter('unread')}>
+                Ntabisomwe / Unread ({unreadCount})
+              </Button>
+              <Button variant={filter === 'read' ? 'default' : 'outline'} onClick={() => setFilter('read')}>
+                Byasomwe / Read
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Amamenyo Yoherejwe / Sent Notifications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {notifications.map((notif) => (
-              <div key={notif.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex-1">
-                  <h3 className="font-bold">{notif.title}</h3>
-                  <p className="text-gray-600 text-sm">{notif.message}</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge>{notif.target}</Badge>
-                    <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleString()}</span>
+      <div className="space-y-3">
+        {loading ? (
+          <Card><CardContent className="p-8 text-center text-gray-500">Loading...</CardContent></Card>
+        ) : filteredNotifications.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-gray-500">Nta menyo / No notifications</CardContent></Card>
+        ) : (
+          filteredNotifications.map((notification) => (
+            <motion.div key={notification.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <Card className={`border-2 ${getColor(notification.type)} ${!notification.is_read ? 'shadow-lg' : ''}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1">{getIcon(notification.type)}</div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-bold text-gray-900">{notification.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                        </div>
+                        {!notification.is_read && (
+                          <Badge className="bg-blue-600">Gishya / New</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-xs text-gray-500">
+                          {new Date(notification.created_at).toLocaleString('rw-RW')}
+                        </span>
+                        <div className="flex gap-2">
+                          {!notification.is_read && (
+                            <Button size="sm" variant="outline" onClick={() => markAsRead(notification.id)}>
+                              <Check className="w-4 h-4 mr-1" />
+                              Soma / Read
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => deleteNotification(notification.id)} className="text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(notif.id)}>
-                  <Trash2 className="w-4 h-4 text-red-600" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
+      </div>
     </div>
   );
 };

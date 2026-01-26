@@ -96,13 +96,13 @@ router.post('/student/login', async (req, res) => {
       });
     }
 
-    // Find user by serial code
+    // Find user by serial code or student_id
     const [users] = await db.query(
       `SELECT u.*, r.name as role_name 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
-       WHERE u.serial_code = ? AND u.is_active = true`,
-      [serial_code]
+       WHERE (u.serial_code = ? OR u.student_id = ?) AND u.is_active = true`,
+      [serial_code, serial_code]
     );
 
     if (users.length === 0) {

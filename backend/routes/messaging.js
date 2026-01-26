@@ -25,9 +25,11 @@ router.get('/allowed-recipients', authenticateToken, async (req, res) => {
     const allowedRoles = MESSAGING_PERMISSIONS[userRole] || [];
     
     const [users] = await pool.execute(`
-      SELECT id, name, email, role FROM users 
-      WHERE role IN (${allowedRoles.map(() => '?').join(',')}) AND is_active = true
-      ORDER BY role, name
+      SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) as name, u.email, r.name as role 
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE r.name IN (${allowedRoles.map(() => '?').join(',')}) AND u.is_active = true
+      ORDER BY r.name, u.first_name
     `, allowedRoles);
     
     res.json({ success: true, recipients: users, allowedRoles });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '@/app/services/apiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { LayoutDashboard, Users, BookOpen, LogOut, Settings, Bell, Activity, Shield, Database, FileText, BarChart3, Award, Target, Clock, DollarSign, Package } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, LogOut, Settings, Bell, Activity, Shield, Database, FileText, BarChart3, Award, Target, Clock, DollarSign, Package, Newspaper, RefreshCw } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -22,6 +23,8 @@ import LogsPage from '../admin/LogsPage';
 import StaffManagementPage from '../StaffManagementPage';
 import AdminStaffManagement from '../admin/AdminStaffManagement';
 import ContentManagementPage from '../admin/ContentManagementPage';
+import ComprehensiveContentManagement from '../admin/ComprehensiveContentManagement';
+import ComprehensiveStaffManagement from '../admin/ComprehensiveStaffManagement';
 import StudentManagementPage from '../admin/StudentManagementPage';
 import DisciplineManagementPage from '../admin/DisciplineManagementPage';
 import AdminStudentSheetsPage from '../admin/AdminStudentSheetsPage';
@@ -32,6 +35,7 @@ import GamificationSystemPage from '../admin/GamificationSystemPage';
 import LiveStudySessionsPage from '../admin/LiveStudySessionsPage';
 import CollaborationStudyGroupsPage from '../admin/CollaborationStudyGroupsPage';
 import QuizSystemPage from '../admin/QuizSystemPage';
+import SportsManagementPage from '../admin/SportsManagementPage';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface AdminDashboardProps {
@@ -73,6 +77,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
         return user?.role === 'admin' ? <AdminStaffManagement /> : <StaffManagementPage />;
       case 'content-management':
         return <ContentManagementPage />;
+      case 'comprehensive-content':
+        return <ComprehensiveContentManagement />;
+      case 'comprehensive-staff':
+        return <ComprehensiveStaffManagement />;
       case 'student-management':
         return <StudentManagementPage />;
       case 'discipline-management':
@@ -93,48 +101,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
         return <CollaborationStudyGroupsPage />;
       case 'quiz-system':
         return <QuizSystemPage />;
+      case 'sports-management':
+        return <SportsManagementPage />;
+      case 'articles':
+        onNavigate('admin-articles');
+        return null;
       default:
         return <DashboardHome onNavigate={handleNavigation} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-lime-50 overflow-hidden">
       <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage={currentView} onNavigate={handleNavigation} onLogout={onLogout} />
       
       <div className="flex-1 overflow-auto">
-        <div className="bg-white/80 backdrop-blur-md border-b border-blue-200 sticky top-0 z-10 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-md border-b border-green-200 sticky top-0 z-10 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-xl shadow-lg">
+                <div className="bg-gradient-to-br from-yellow-500 to-green-600 p-3 rounded-xl shadow-lg">
                   <LayoutDashboard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">ADMIN DASHBOARD</h1>
+                  <h1 className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">ADMIN DASHBOARD</h1>
                   <p className="text-gray-600 text-sm">Welcome back, {user?.name}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <Button variant="outline" size="icon" className="relative border-blue-200 hover:bg-blue-50" onClick={() => handleNavigation('notifications')}>
-                  <Bell className="w-5 h-5 text-blue-600" />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="border-green-200 hover:bg-green-50"
+                  onClick={() => {
+                    const dashboardHome = document.querySelector('[data-dashboard-home]');
+                    if (dashboardHome) {
+                      // Trigger refresh via custom event or just let it re-mount if we had a key
+                      // For now, I'll just call the fetchData in DashboardHome if I can
+                    }
+                    window.location.reload(); // Simple way for now if no shared state
+                  }}
+                >
+                  <RefreshCw className="w-5 h-5 text-green-600" />
+                </Button>
+                <Button variant="outline" size="icon" className="relative border-green-200 hover:bg-green-50" onClick={() => handleNavigation('notifications')}>
+                  <Bell className="w-5 h-5 text-green-600" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="rounded-full hover:bg-blue-50">
-                      <Avatar className="h-8 w-8 border-2 border-blue-200">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
+                    <Button variant="ghost" className="rounded-full hover:bg-green-50">
+                      <Avatar className="h-8 w-8 border-2 border-green-200">
+                        <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-600 text-white font-bold">{user?.name?.charAt(0) || 'A'}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem onClick={() => handleNavigation('profile')}>
-                      <Settings className="w-4 h-4 mr-2 text-blue-600" />
+                      <Settings className="w-4 h-4 mr-2 text-green-600" />
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNavigation('settings')}>
-                      <Settings className="w-4 h-4 mr-2 text-indigo-600" />
+                      <Settings className="w-4 h-4 mr-2 text-yellow-600" />
                       Settings
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -178,21 +206,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
       const [analyticsRes, logsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/admin/analytics', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:5000/api/admin/security/logs?limit=4', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+        apiService.getAdminAnalytics(),
+        apiService.getSecurityLogs({ limit: 4 })
       ]);
       
-      const analyticsData = await analyticsRes.json();
-      const logsData = await logsRes.json();
-      
-      if (analyticsData.success) setStats(analyticsData.analytics);
-      if (logsData.success) setActivities(logsData.logs);
+      if (analyticsRes.success) setStats(analyticsRes.analytics);
+      if (logsRes.success) setActivities(logsRes.logs);
     } catch (error) {
       console.error('Fetch error:', error);
     }
@@ -207,22 +227,26 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
   };
 
   const statCards = [
-    { title: 'Total Students', value: stats.students, icon: Users, bgColor: 'bg-blue-50', iconBg: 'bg-blue-100', textColor: 'text-blue-600' },
+    { title: 'Total Students', value: stats.students, icon: Users, bgColor: 'bg-yellow-50', iconBg: 'bg-yellow-100', textColor: 'text-yellow-600' },
     { title: 'Total Teachers', value: stats.teachers, icon: Award, bgColor: 'bg-green-50', iconBg: 'bg-green-100', textColor: 'text-green-600' },
-    { title: 'Total Parents', value: stats.parents, icon: Users, bgColor: 'bg-purple-50', iconBg: 'bg-purple-100', textColor: 'text-purple-600' },
-    { title: 'Total Staff', value: stats.staff, icon: Users, bgColor: 'bg-teal-50', iconBg: 'bg-teal-100', textColor: 'text-teal-600' },
-    { title: 'Active Courses', value: stats.courses, icon: BookOpen, bgColor: 'bg-indigo-50', iconBg: 'bg-indigo-100', textColor: 'text-indigo-600' },
+    { title: 'Total Parents', value: stats.parents, icon: Users, bgColor: 'bg-lime-50', iconBg: 'bg-lime-100', textColor: 'text-lime-600' },
+    { title: 'Total Staff', value: stats.staff, icon: Users, bgColor: 'bg-amber-50', iconBg: 'bg-amber-100', textColor: 'text-amber-600' },
+    { title: 'Active Courses', value: stats.courses, icon: BookOpen, bgColor: 'bg-emerald-50', iconBg: 'bg-emerald-100', textColor: 'text-emerald-600' },
     { title: 'Revenue (RWF)', value: formatCurrency(stats.revenue), icon: DollarSign, bgColor: 'bg-yellow-50', iconBg: 'bg-yellow-100', textColor: 'text-yellow-600' },
-    { title: 'Stock Items', value: stats.stock, icon: Package, bgColor: 'bg-pink-50', iconBg: 'bg-pink-100', textColor: 'text-pink-600' },
+    { title: 'Stock Items', value: stats.stock, icon: Package, bgColor: 'bg-green-50', iconBg: 'bg-green-100', textColor: 'text-green-600' },
   ];
 
   const quickActions = [
-    { title: 'User Management', desc: 'Manage all users', icon: Users, color: 'from-blue-500 to-cyan-500', link: 'users' },
-    { title: 'Analytics', desc: 'View statistics', icon: BarChart3, color: 'from-green-500 to-emerald-500', link: 'analytics' },
-    { title: 'Reports', desc: 'Generate reports', icon: FileText, color: 'from-purple-500 to-violet-500', link: 'reports' },
-    { title: 'Security', desc: 'Security logs', icon: Shield, color: 'from-orange-500 to-red-500', link: 'security' },
-    { title: 'Backup', desc: 'Database backup', icon: Database, color: 'from-indigo-500 to-blue-500', link: 'backup' },
-    { title: 'Settings', desc: 'System settings', icon: Settings, color: 'from-teal-500 to-cyan-500', link: 'settings' },
+    { title: 'Gucunga Ibikubiyemo', desc: 'All Content', icon: LayoutDashboard, color: 'from-yellow-500 to-green-500', link: 'comprehensive-content' },
+    { title: 'Gucunga Abakozi', desc: 'Staff & Trades', icon: Users, color: 'from-green-500 to-yellow-500', link: 'comprehensive-staff' },
+    { title: 'User Management', desc: 'Manage all users', icon: Users, color: 'from-yellow-600 to-green-600', link: 'users' },
+    { title: 'Sports Management', desc: 'Manage sports', icon: Award, color: 'from-green-600 to-yellow-600', link: 'sports-management' },
+    { title: 'News Articles', desc: 'Manage articles', icon: Newspaper, color: 'from-yellow-500 to-green-500', link: 'articles' },
+    { title: 'Analytics', desc: 'View statistics', icon: BarChart3, color: 'from-green-500 to-yellow-500', link: 'analytics' },
+    { title: 'Reports', desc: 'Generate reports', icon: FileText, color: 'from-yellow-600 to-green-600', link: 'reports' },
+    { title: 'Security', desc: 'Security logs', icon: Shield, color: 'from-green-600 to-yellow-600', link: 'security' },
+    { title: 'Backup', desc: 'Database backup', icon: Database, color: 'from-yellow-500 to-green-500', link: 'backup' },
+    { title: 'Settings', desc: 'System settings', icon: Settings, color: 'from-green-500 to-yellow-500', link: 'settings' },
   ];
 
   const getActivityIcon = (action: string) => {

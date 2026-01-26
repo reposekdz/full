@@ -36,7 +36,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
-import dosService from '@/app/services/dosService';
+import { apiService } from '@/app/services/apiService';
 import {
   Dialog,
   DialogContent,
@@ -66,12 +66,24 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
   const [selectedTrade, setSelectedTrade] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [newStudent, setNewStudent] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    trade_id: '',
+    level: '',
+    parent_phone: ''
+  });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>(null);
   const [trades, setTrades] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
+  const [curriculum, setCurriculum] = useState<any[]>([]);
+  const [statsData, setStatsData] = useState<any>(null);
   const [pagination, setPagination] = useState({
     current_page: 1,
     per_page: 20,
@@ -92,13 +104,21 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [analyticsData, tradesData] = await Promise.all([
-        dosService.getAnalyticsOverview(),
-        dosService.getTrades()
+      const [analyticsData, tradesData, teachersData, examsData, curriculumData, statsResponse] = await Promise.all([
+        apiService.getDOSAnalytics(),
+        apiService.getDOSTrades(),
+        apiService.getDOSTeachers(),
+        apiService.getDOSExams(),
+        apiService.getDOSCurriculum(),
+        apiService.getDOSDashboardStats()
       ]);
       
-      setAnalytics(analyticsData.data);
-      setTrades(tradesData.data);
+      setAnalytics(analyticsData.analytics || analyticsData.data);
+      setTrades(Array.isArray(tradesData) ? tradesData : tradesData.data || []);
+      setTeachers(Array.isArray(teachersData) ? teachersData : teachersData.teachers || teachersData.data || []);
+      setExams(examsData.exams || examsData.data || []);
+      setCurriculum(curriculumData.curriculum || curriculumData.data || []);
+      setStatsData(statsResponse.stats || statsResponse.data || null);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -117,7 +137,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       if (selectedTrade !== 'all') params.trade = selectedTrade;
       if (selectedLevel !== 'all') params.level = selectedLevel;
       
-      const response = await dosService.getStudents(params);
+      const response = await apiService.getDOSStudents(params);
       setStudents(response.data.students);
       setPagination(response.data.pagination);
     } catch (error) {
@@ -127,7 +147,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
   const handleCreateStudent = async (studentData: any) => {
     try {
-      await dosService.createStudent(studentData);
+      await apiService.dosCreateStudent(studentData);
       setIsAddDialogOpen(false);
       loadStudents();
       loadDashboardData(); // Refresh analytics
@@ -139,7 +159,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
   const handleDeleteStudent = async (studentId: number) => {
     if (confirm('Are you sure you want to remove this student?')) {
       try {
-        await dosService.deleteStudent(studentId);
+        await apiService.dosDeleteStudent(studentId);
         loadStudents();
         loadDashboardData(); // Refresh analytics
       } catch (error) {
@@ -150,7 +170,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
   const handleViewStudent = async (student: any) => {
     try {
-      const response = await dosService.getStudentDetails(student.id);
+      const response = await apiService.getDOSStudentDetails(student.id);
       setSelectedStudent(response.data);
       setIsViewDialogOpen(true);
     } catch (error) {
@@ -158,11 +178,11 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     }
   };
 
-  // Generate stats from analytics data
-  const stats = analytics ? [
+  // Generate stats from fetched data
+  const stats = statsData ? [
     {
       title: 'Abanyeshuri Bose',
-      value: analytics.overall_statistics?.total_students?.toString() || '0',
+      value: statsData.total_students?.toString() || '0',
       change: '+12%',
       trend: 'up',
       icon: Users,
@@ -171,7 +191,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
     {
       title: 'Abarimu',
-      value: analytics.overall_statistics?.total_teachers?.toString() || '0',
+      value: statsData.total_teachers?.toString() || '0',
       change: '+3%',
       trend: 'up',
       icon: GraduationCap,
@@ -180,7 +200,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
     {
       title: 'Amaklasi',
-      value: analytics.overall_statistics?.total_classes?.toString() || '0',
+      value: statsData.total_classes?.toString() || '0',
       change: '+5%',
       trend: 'up',
       icon: BookOpen,
@@ -189,7 +209,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
     {
       title: 'Impera Rusange',
-      value: `${Math.round(analytics.overall_statistics?.overall_average_grade || 0)}%`,
+      value: `${analytics?.performanceByTrade?.[0]?.avg_performance ? Math.round(analytics.performanceByTrade[0].avg_performance) : 0}%`,
       change: '+2.3%',
       trend: 'up',
       icon: TrendingUp,
@@ -198,67 +218,44 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     },
   ] : [];
 
-  const recentActivities = [
-    {
-      title: 'Ikizamini cya Mathematics yanditswe',
-      teacher: 'Dr. Jean Mugabo',
-      time: '2 amasaha ashize',
-      type: 'exam',
-      status: 'completed'
-    },
-    {
-      title: 'Gahunda y\'Amasomo yahinduwe',
-      teacher: 'Prof. Marie Uwase',
-      time: '5 amasaha ashize',
-      type: 'curriculum',
-      status: 'pending'
-    },
-    {
-      title: 'Raporo y\'Igice yasohotse',
-      teacher: 'Mr. Patrick Nkusi',
-      time: '1 umunsi ushize',
-      type: 'report',
-      status: 'completed'
-    },
-    {
-      title: 'Inama y\'Abarimu',
-      teacher: 'Admin Team',
-      time: 'Ejo',
-      type: 'meeting',
-      status: 'upcoming'
-    },
-  ];
+  const recentActivities = exams.slice(0, 4).map(exam => ({
+    title: `${exam.subject} - ${exam.exam_name || 'Ikizamini'}`,
+    teacher: exam.venue || 'Ishuri',
+    time: new Date(exam.exam_date).toLocaleDateString(),
+    type: 'exam',
+    status: exam.status === 'scheduled' ? 'upcoming' : 'completed'
+  }));
 
-  const classPerformance = [
-    { className: 'S1 A', students: 45, avgScore: 89, attendance: 96, rank: 1, trend: 'up' },
-    { className: 'S2 B', students: 42, avgScore: 85, attendance: 94, rank: 2, trend: 'up' },
-    { className: 'S3 A', students: 38, avgScore: 87, attendance: 92, rank: 3, trend: 'down' },
-    { className: 'S4 C', students: 40, avgScore: 82, attendance: 90, rank: 4, trend: 'up' },
-    { className: 'S5 A', students: 35, avgScore: 91, attendance: 97, rank: 5, trend: 'up' },
-  ];
+  const classPerformance = analytics?.performanceByTrade?.map((item: any, index: number) => ({
+    className: item.trade,
+    students: 0, // Need students per trade if available
+    avgScore: Math.round(item.avg_performance),
+    attendance: analytics?.attendanceByTrade?.find((a: any) => a.trade === item.trade)?.attendance_rate || 0,
+    rank: index + 1,
+    trend: 'up'
+  })) || [];
 
-  const teachers = [
-    { name: 'Dr. Jean Mugabo', subject: 'Mathematics', classes: 6, students: 240, rating: 4.8 },
-    { name: 'Prof. Marie Uwase', subject: 'Physics', classes: 5, students: 200, rating: 4.9 },
-    { name: 'Mr. Patrick Nkusi', subject: 'Chemistry', classes: 4, students: 160, rating: 4.6 },
-    { name: 'Ms. Grace Uwera', subject: 'Biology', classes: 5, students: 210, rating: 4.7 },
-    { name: 'Mr. Eric Habimana', subject: 'English', classes: 7, students: 280, rating: 4.5 },
-  ];
+  const teachersList = teachers.map(t => ({
+    name: `${t.first_name} ${t.last_name}`,
+    subject: t.specialization || 'N/A',
+    classes: t.active_assignments || 0,
+    students: 0,
+    rating: 4.5
+  }));
 
-  const upcomingExams = [
-    { subject: 'Mathematics', class: 'S3 A', date: '2026-01-25', time: '08:00', duration: '2h' },
-    { subject: 'Physics', class: 'S4 B', date: '2026-01-26', time: '10:00', duration: '2h' },
-    { subject: 'Chemistry', class: 'S5 A', date: '2026-01-27', time: '08:00', duration: '3h' },
-    { subject: 'Biology', class: 'S2 C', date: '2026-01-28', time: '14:00', duration: '2h' },
-  ];
+  const upcomingExams = exams.filter(e => new Date(e.exam_date) >= new Date()).map(e => ({
+    subject: e.subject,
+    class: e.class_level || 'N/A',
+    date: e.exam_date,
+    time: e.start_time,
+    duration: '2h'
+  }));
 
-  const curricullumProgress = [
-    { subject: 'Mathematics', progress: 78, status: 'on-track' },
-    { subject: 'Physics', progress: 82, status: 'ahead' },
-    { subject: 'Chemistry', progress: 65, status: 'behind' },
-    { subject: 'Biology', progress: 75, status: 'on-track' },
-    { subject: 'English', progress: 88, status: 'ahead' },
-  ];
+  const curriculumProgress = curriculum.map(c => ({
+    subject: c.subject,
+    progress: 75,
+    status: 'on-track'
+  }));
 
   const filteredStudents = students;
 
@@ -487,52 +484,88 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="name">Izina</Label>
-                              <Input id="name" placeholder="Izina ryuzuye" />
+                              <Label htmlFor="first_name">Izina rya mbere</Label>
+                              <Input 
+                                id="first_name" 
+                                placeholder="Izina rya mbere" 
+                                value={newStudent.first_name}
+                                onChange={(e) => setNewStudent({...newStudent, first_name: e.target.value})}
+                              />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="email">Email</Label>
-                              <Input id="email" type="email" placeholder="email@example.com" />
+                              <Label htmlFor="last_name">Izina rya kabiri</Label>
+                              <Input 
+                                id="last_name" 
+                                placeholder="Izina rya kabiri" 
+                                value={newStudent.last_name}
+                                onChange={(e) => setNewStudent({...newStudent, last_name: e.target.value})}
+                              />
                             </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input 
+                              id="email" 
+                              type="email" 
+                              placeholder="email@example.com" 
+                              value={newStudent.email}
+                              onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                            />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="trade">Umwuga</Label>
-                              <Select>
+                              <Select 
+                                value={newStudent.trade_id} 
+                                onValueChange={(value) => setNewStudent({...newStudent, trade_id: value})}
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo umwuga" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="SOD">Software Development (SOD)</SelectItem>
-                                  <SelectItem value="BDC">Building & Construction (BDC)</SelectItem>
-                                  <SelectItem value="AUT">Automobile Technology (AUT)</SelectItem>
+                                  {trades.map((trade) => (
+                                    <SelectItem key={trade.id} value={trade.id.toString()}>
+                                      {trade.name} ({trade.code})
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="level">Urwego</Label>
-                              <Select>
+                              <Select 
+                                value={newStudent.level} 
+                                onValueChange={(value) => setNewStudent({...newStudent, level: value})}
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo urwego" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Level 3 SOD">Level 3</SelectItem>
-                                  <SelectItem value="Level 4 SOD">Level 4</SelectItem>
-                                  <SelectItem value="Level 5 SOD">Level 5</SelectItem>
+                                  {[3, 4, 5].map((l) => (
+                                    <SelectItem key={l} value={l.toString()}>Level {l}</SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="parent-phone">Telefoni y\'Umubyeyi</Label>
-                            <Input id="parent-phone" placeholder="+250..." />
+                            <Label htmlFor="parent-phone">Telefoni y'Umubyeyi</Label>
+                            <Input 
+                              id="parent-phone" 
+                              placeholder="+250..." 
+                              value={newStudent.parent_phone}
+                              onChange={(e) => setNewStudent({...newStudent, parent_phone: e.target.value})}
+                            />
                           </div>
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                             Hagarika
                           </Button>
-                          <Button className="bg-gradient-to-r from-yellow-500 to-green-500 text-white">
+                          <Button 
+                            className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                            onClick={() => handleCreateStudent(newStudent)}
+                          >
                             Bika
                           </Button>
                         </DialogFooter>
@@ -854,7 +887,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teachers.map((teacher, index) => (
+                    {teachersList.map((teacher, index) => (
                       <Card key={index} className="border-2 border-yellow-100 hover:border-yellow-300 hover:shadow-lg transition-all">
                         <CardContent className="p-4">
                           <div className="flex items-center space-x-3 mb-3">
@@ -905,7 +938,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {curricullumProgress.map((item, index) => (
+                    {curriculumProgress.map((item, index) => (
                       <div key={index} className="p-4 rounded-lg border-2 border-yellow-100">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-bold text-gray-900">{item.subject}</h4>
@@ -945,7 +978,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Ibizamini Bizaza</p>
-                        <p className="text-3xl font-black text-gray-900">12</p>
+                        <p className="text-3xl font-black text-gray-900">{exams.filter(e => e.status === 'scheduled').length}</p>
                       </div>
                       <Calendar className="h-12 w-12 text-yellow-600" />
                     </div>
@@ -955,8 +988,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">Bisubizwa</p>
-                        <p className="text-3xl font-black text-gray-900">8</p>
+                        <p className="text-sm text-gray-600 mb-1">Byarangiye</p>
+                        <p className="text-3xl font-black text-gray-900">{exams.filter(e => e.status === 'completed').length}</p>
                       </div>
                       <CheckCircle2 className="h-12 w-12 text-green-600" />
                     </div>
@@ -966,8 +999,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">Birategerejwe</p>
-                        <p className="text-3xl font-black text-gray-900">4</p>
+                        <p className="text-sm text-gray-600 mb-1">Bitegerejwe</p>
+                        <p className="text-3xl font-black text-gray-900">{exams.filter(e => e.status === 'pending').length}</p>
                       </div>
                       <AlertCircle className="h-12 w-12 text-orange-600" />
                     </div>

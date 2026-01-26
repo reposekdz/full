@@ -1,52 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../config/database');
-
-// Get all teams with stats
-router.get('/teams', async (req, res) => {
-  try {
-    const [teams] = await pool.query(`
+const express=require('express');const router=express.Router();const db=require('../config/database');router.get('/',(req,res)=>{res.json({success:true,data:[],message:'sports endpoint'})});router.get('/teams',async(req,res)=>{try{const[teams]=await db.pool.query(`
       SELECT 
-        t.*,
-        COUNT(DISTINCT p.id) as total_players,
-        COUNT(DISTINCT a.id) as total_achievements,
-        COUNT(DISTINCT CASE WHEN m.result = 'win' THEN m.id END) as total_wins
-      FROM sports_teams t
-      LEFT JOIN sports_players p ON t.id = p.team_id AND p.is_active = true
-      LEFT JOIN sports_achievements a ON t.id = a.team_id
-      LEFT JOIN sports_matches m ON t.id = m.team_id
-      WHERE t.is_active = true
-      GROUP BY t.id
-      ORDER BY t.id
-    `);
-    res.json({ success: true, teams });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get single team with full details
-router.get('/teams/:id', async (req, res) => {
-  try {
-    const [teams] = await pool.query('SELECT * FROM sports_teams WHERE id = ? AND is_active = true', [req.params.id]);
-    if (teams.length === 0) return res.status(404).json({ success: false, message: 'Team not found' });
-
-    const [coaches] = await pool.query('SELECT * FROM sports_coaches WHERE team_id = ? AND is_active = true', [req.params.id]);
-    const [players] = await pool.query('SELECT * FROM sports_players WHERE team_id = ? AND is_active = true ORDER BY is_captain DESC, jersey_number', [req.params.id]);
-    const [achievements] = await pool.query('SELECT * FROM sports_achievements WHERE team_id = ? ORDER BY achievement_date DESC', [req.params.id]);
-    const [matches] = await pool.query('SELECT * FROM sports_matches WHERE team_id = ? ORDER BY match_date DESC LIMIT 10', [req.params.id]);
-
-    res.json({
-      success: true,
-      team: teams[0],
-      coach: coaches[0] || null,
-      players,
-      achievements,
-      recentMatches: matches
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-module.exports = router;
+        st.*,
+        COUNT(DISTINCT sp.id) as total_players,
+        COUNT(DISTINCT sa.id) as total_achievements,
+        (SELECT COUNT(*) FROM sports_matches WHERE team_id = st.id AND result = 'win') as total_wins,
+        (SELECT COUNT(*) FROM sports_matches WHERE team_id = st.id) as total_matches,
+        (SELECT SUM(our_score) FROM sports_matches WHERE team_id = st.id) as total_goals
+      FROM sports_teams st
+      LEFT JOIN sports_players sp ON st.id = sp.team_id
+      LEFT JOIN sports_achievements sa ON st.id = sa.team_id
+      WHERE st.is_active = 1
+      GROUP BY st.id
+      ORDER BY st.id ASC
+    `);res.json({success:true,teams})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/teams/:id',async(req,res)=>{try{const[teams]=await db.pool.query('SELECT * FROM sports_teams WHERE id = ?',[req.params.id]);if(teams.length===0)return res.status(404).json({success:false,message:'Team not found'});const[coaches]=await db.pool.query('SELECT * FROM sports_coaches WHERE team_id = ?',[req.params.id]);const[players]=await db.pool.query('SELECT * FROM sports_players WHERE team_id = ? ORDER BY is_captain DESC, jersey_number ASC',[req.params.id]);const[achievements]=await db.pool.query('SELECT * FROM sports_achievements WHERE team_id = ? ORDER BY achievement_date DESC',[req.params.id]);const[matches]=await db.pool.query('SELECT * FROM sports_matches WHERE team_id = ? ORDER BY match_date DESC LIMIT 20',[req.params.id]);const[stats]=await db.pool.query(`SELECT COUNT(*) as total_matches,SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) as wins,SUM(CASE WHEN result='draw' THEN 1 ELSE 0 END) as draws,SUM(CASE WHEN result='loss' THEN 1 ELSE 0 END) as losses,SUM(our_score) as goals_for,SUM(opponent_score) as goals_against FROM sports_matches WHERE team_id=?`,[req.params.id]);res.json({success:true,team:teams[0],coaches,players,achievements,recentMatches:matches,stats:stats[0]})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/teams/:id/overview',async(req,res)=>{try{const[content]=await db.pool.query('SELECT * FROM sports_team_overview WHERE team_id = ? ORDER BY sort_order ASC',[req.params.id]);res.json({success:true,content})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/teams/:id/players/:playerId',async(req,res)=>{try{const[players]=await db.pool.query('SELECT * FROM sports_players WHERE id = ? AND team_id = ?',[req.params.playerId,req.params.id]);if(players.length===0)return res.status(404).json({success:false,message:'Player not found'});const[stats]=await db.pool.query('SELECT * FROM player_match_stats WHERE player_id = ?',[req.params.playerId]);res.json({success:true,player:players[0],stats})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/leaderboard',async(req,res)=>{try{const[teams]=await db.pool.query(`SELECT st.*,COUNT(DISTINCT sp.id) as players,(SELECT COUNT(*) FROM sports_matches WHERE team_id=st.id AND result='win') as wins,(SELECT COUNT(*) FROM sports_matches WHERE team_id=st.id) as matches FROM sports_teams st LEFT JOIN sports_players sp ON st.id=sp.team_id WHERE st.is_active=1 GROUP BY st.id ORDER BY wins DESC,matches ASC LIMIT 10`);res.json({success:true,leaderboard:teams})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/upcoming-matches',async(req,res)=>{try{const[matches]=await db.pool.query(`SELECT sm.*,st.name as team_name,st.icon FROM sports_matches sm JOIN sports_teams st ON sm.team_id=st.id WHERE sm.match_date >= CURDATE() ORDER BY sm.match_date ASC,sm.match_time ASC LIMIT 10`);res.json({success:true,matches})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/top-players',async(req,res)=>{try{const[players]=await db.pool.query(`SELECT sp.*,st.name as team_name,st.icon as team_icon,(SELECT COUNT(*) FROM player_match_stats WHERE player_id=sp.id) as matches_played FROM sports_players sp JOIN sports_teams st ON sp.team_id=st.id WHERE sp.is_active=1 ORDER BY sp.is_captain DESC,matches_played DESC LIMIT 20`);res.json({success:true,players})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/dashboard',(req,res)=>{res.json({success:true,data:{},message:'Dashboard'})});router.get('/analytics',async(req,res)=>{try{const[teamCount]=await db.pool.query('SELECT COUNT(*) as count FROM sports_teams WHERE is_active=1');const[playerCount]=await db.pool.query('SELECT COUNT(*) as count FROM sports_players WHERE is_active=1');const[matchCount]=await db.pool.query('SELECT COUNT(*) as count FROM sports_matches');const[achievementCount]=await db.pool.query('SELECT COUNT(*) as count FROM sports_achievements');res.json({success:true,analytics:{teams:teamCount[0].count,players:playerCount[0].count,matches:matchCount[0].count,achievements:achievementCount[0].count}})}catch(error){res.status(500).json({success:false,message:error.message})}});router.get('/notifications',(req,res)=>{res.json({success:true,data:[],message:'Notifications'})});module.exports=router;

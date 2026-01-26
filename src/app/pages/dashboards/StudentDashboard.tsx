@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '@/app/services/apiService';
 import { motion } from 'motion/react';
 import { 
   BookOpen, 
@@ -56,6 +57,40 @@ interface StudentDashboardProps {
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [assignmentsData, setAssignmentsData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentView === 'dashboard') fetchDashboardData();
+  }, [currentView]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      const [dashRes, assignmentsRes] = await Promise.all([
+        apiService.getStudentDashboard(),
+        user ? apiService.getStudentAssignments(user.id) : Promise.resolve([])
+      ]);
+      
+      if (dashRes.success) {
+        setDashboardData(dashRes.data);
+      }
+      
+      if (Array.isArray(assignmentsRes)) {
+        setAssignmentsData(assignmentsRes);
+      } else if (assignmentsRes && assignmentsRes.success && Array.isArray(assignmentsRes.data)) {
+        setAssignmentsData(assignmentsRes.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNavigation = (page: string) => {
     if (page === 'staff-management') {
@@ -132,7 +167,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
   const stats = [
     {
       title: 'Amaklasi Yanjye',
-      value: '8',
+      value: dashboardData?.enrollments?.length || '0',
       change: 'Iri giciro',
       trend: 'up',
       icon: BookOpen,
@@ -141,7 +176,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     },
     {
       title: 'Ibizamini',
-      value: '5',
+      value: dashboardData?.recent_grades?.length || '0',
       change: 'Bitegerejwe',
       trend: 'up',
       icon: ClipboardList,
@@ -150,7 +185,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     },
     {
       title: 'Impera',
-      value: '88.5%',
+      value: `${dashboardData?.average_grade?.toFixed(1) || 0}%`,
       change: '+4.2%',
       trend: 'up',
       icon: TrendingUp,
@@ -159,7 +194,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     },
     {
       title: 'Kwitabira',
-      value: '96.2%',
+      value: `${((dashboardData?.attendance?.present / dashboardData?.attendance?.total * 100) || 0).toFixed(1)}%`,
       change: '+1.5%',
       trend: 'up',
       icon: Calendar,
@@ -168,316 +203,74 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     },
   ];
 
-  const myClasses = [
-    {
-      name: 'Mathematics',
-      teacher: 'Mr. John Mugisha',
-      schedule: 'Mon, Wed, Fri - 8:00 AM',
-      grade: 92,
-      attendance: 98,
-      assignments: 2,
-      color: 'from-yellow-500 to-amber-500',
-      room: 'A-201'
-    },
-    {
-      name: 'Physics',
-      teacher: 'Dr. Sarah Uwase',
-      schedule: 'Tue, Thu - 10:00 AM',
-      grade: 85,
-      attendance: 95,
-      assignments: 1,
-      color: 'from-blue-500 to-indigo-500',
-      room: 'B-105'
-    },
-    {
-      name: 'Chemistry',
-      teacher: 'Mrs. Grace Ingabire',
-      schedule: 'Mon, Wed - 1:00 PM',
-      grade: 88,
-      attendance: 97,
-      assignments: 3,
-      color: 'from-green-500 to-teal-500',
-      room: 'B-107'
-    },
-    {
-      name: 'English',
-      teacher: 'Mr. Peter Karenzi',
-      schedule: 'Tue, Thu, Fri - 2:00 PM',
-      grade: 90,
-      attendance: 96,
-      assignments: 1,
-      color: 'from-orange-500 to-red-500',
-      room: 'A-103'
-    },
-    {
-      name: 'Kinyarwanda',
-      teacher: 'Mrs. Alice Mukandori',
-      schedule: 'Mon, Wed - 11:00 AM',
-      grade: 94,
-      attendance: 99,
-      assignments: 0,
-      color: 'from-pink-500 to-rose-500',
-      room: 'A-104'
-    },
-  ];
+  const myClasses = dashboardData?.enrollments?.map((enrollment: any) => ({
+    name: enrollment.course_name || 'N/A',
+    teacher: enrollment.teacher_name || 'N/A',
+    schedule: 'Mon, Wed, Fri - 8:00 AM', // This could be improved if backend provides timetable
+    grade: 0, 
+    attendance: 0,
+    assignments: 0,
+    color: 'from-yellow-500 to-amber-500',
+    room: 'A-201'
+  })) || [];
 
-  const assignments = [
-    {
-      title: 'Imbaraga za Mathematique',
-      subject: 'Mathematics',
-      dueDate: 'Jan 28, 2026',
-      status: 'pending',
-      priority: 'high',
-      points: 100,
-      submitted: false,
-      description: 'Gukora ibiganiro bya 1-20'
-    },
-    {
-      title: 'Raporo ya Lab ya Physics',
-      subject: 'Physics',
-      dueDate: 'Jan 30, 2026',
-      status: 'pending',
-      priority: 'medium',
-      points: 50,
-      submitted: false,
-      description: 'Kwandika raporo y\'ibizamini bya lab'
-    },
-    {
-      title: 'Ibiganiro bya Chemistry',
-      subject: 'Chemistry',
-      dueDate: 'Feb 2, 2026',
-      status: 'pending',
-      priority: 'high',
-      points: 75,
-      submitted: false,
-      description: 'Gukora ibiganiro 5-10'
-    },
-    {
-      title: 'Inyandiko ya English',
-      subject: 'English',
-      dueDate: 'Jan 25, 2026',
-      status: 'completed',
-      priority: 'medium',
-      points: 100,
-      submitted: true,
-      grade: 92,
-      description: 'Kwandika inyandiko y\'amagambo 500'
-    },
-    {
-      title: 'Ubushakashatsi bwa Kinyarwanda',
-      subject: 'Kinyarwanda',
-      dueDate: 'Jan 22, 2026',
-      status: 'completed',
-      priority: 'low',
-      points: 50,
-      submitted: true,
-      grade: 95,
-      description: 'Gukora ubushakashatsi ku by\'umuco'
-    },
-  ];
+  const assignments = assignmentsData.map((assign: any) => ({
+    title: assign.title,
+    subject: assign.course_name,
+    dueDate: new Date(assign.due_date).toLocaleDateString(),
+    status: assign.submission_status || 'pending',
+    priority: new Date(assign.due_date) < new Date(Date.now() + 86400000 * 2) ? 'high' : 'medium',
+    points: assign.total_marks,
+    submitted: !!assign.submission_id,
+    grade: assign.marks_obtained,
+    description: assign.description
+  }));
 
-  const grades = [
-    {
-      subject: 'Mathematics',
-      term1: 92,
-      term2: 90,
-      term3: 94,
-      average: 92,
-      grade: 'A',
-      rank: 5,
-      totalStudents: 42,
-      teacher: 'Mr. John Mugisha',
-      comment: 'Byiza cyane! Komeza gutyo.'
-    },
-    {
-      subject: 'Physics',
-      term1: 85,
-      term2: 83,
-      term3: 87,
-      average: 85,
-      grade: 'B+',
-      rank: 12,
-      totalStudents: 42,
-      teacher: 'Dr. Sarah Uwase',
-      comment: 'Ushobora kuzamura amanota.'
-    },
-    {
-      subject: 'Chemistry',
-      term1: 88,
-      term2: 87,
-      term3: 89,
-      average: 88,
-      grade: 'A-',
-      rank: 8,
-      totalStudents: 42,
-      teacher: 'Mrs. Grace Ingabire',
-      comment: 'Imikorere myiza. Komeza!'
-    },
-    {
-      subject: 'English',
-      term1: 90,
-      term2: 89,
-      term3: 91,
-      average: 90,
-      grade: 'A',
-      rank: 6,
-      totalStudents: 42,
-      teacher: 'Mr. Peter Karenzi',
-      comment: 'Excellent progress!'
-    },
-    {
-      subject: 'Kinyarwanda',
-      term1: 94,
-      term2: 93,
-      term3: 95,
-      average: 94,
-      grade: 'A',
-      rank: 3,
-      totalStudents: 42,
-      teacher: 'Mrs. Alice Mukandori',
-      comment: 'Byiza cyane! Urabikora neza.'
-    },
-  ];
+  const grades = dashboardData?.recent_grades?.map((grade: any) => ({
+    subject: grade.subject_name || 'N/A',
+    term1: 0, // Backend doesn't provide per-term breakdown yet in dashboard
+    term2: 0,
+    term3: 0,
+    average: ((grade.obtained_marks / grade.max_marks) * 100).toFixed(1),
+    grade: grade.grade_letter || 'N/A',
+    rank: 0,
+    totalStudents: 0,
+    teacher: grade.teacher_name || 'N/A',
+    comment: grade.comments || ''
+  })) || [];
 
   const attendance = [
     {
-      month: 'Mutarama 2026',
-      present: 18,
-      absent: 0,
-      late: 1,
-      total: 19,
-      percentage: 98.4
-    },
-    {
-      month: 'Ukuboza 2025',
-      present: 20,
-      absent: 1,
-      late: 0,
-      total: 21,
-      percentage: 95.2
-    },
-    {
-      month: 'Ugushyingo 2025',
-      present: 19,
-      absent: 0,
-      late: 2,
-      total: 21,
-      percentage: 96.8
-    },
-    {
-      month: 'Ukwakira 2025',
-      present: 21,
-      absent: 1,
-      late: 0,
-      total: 22,
-      percentage: 95.5
-    },
+      month: 'Current Term',
+      present: dashboardData?.attendance?.present || 0,
+      absent: dashboardData?.attendance?.absent || 0,
+      late: dashboardData?.attendance?.late || 0,
+      total: dashboardData?.attendance?.total || 0,
+      percentage: ((dashboardData?.attendance?.present / dashboardData?.attendance?.total * 100) || 0).toFixed(1)
+    }
   ];
 
-  const activities = [
-    {
-      name: 'Basketball Team',
-      role: 'Umukinnyi',
-      schedule: 'Tue, Thu - 4:00 PM',
-      status: 'active',
-      achievements: 3,
-      color: 'from-orange-500 to-red-500',
-      coach: 'Coach Mike'
-    },
-    {
-      name: 'Science Club',
-      role: 'Umunyamuryango',
-      schedule: 'Wed - 3:00 PM',
-      status: 'active',
-      achievements: 2,
-      color: 'from-green-500 to-teal-500',
-      coach: 'Dr. Sarah Uwase'
-    },
-    {
-      name: 'Debate Team',
-      role: 'Umuvugizi',
-      schedule: 'Fri - 3:30 PM',
-      status: 'active',
-      achievements: 5,
-      color: 'from-blue-500 to-indigo-500',
-      coach: 'Mr. Peter Karenzi'
-    },
-    {
-      name: 'Music Band',
-      role: 'Umunyamuryango',
-      schedule: 'Mon - 4:00 PM',
-      status: 'active',
-      achievements: 1,
-      color: 'from-pink-500 to-rose-500',
-      coach: 'Mrs. Grace Umutoni'
-    },
-  ];
+  const activities = []; // Fetch from activities API if needed
 
-  const recentActivities = [
-    {
-      title: 'Ikizamini cya Mathematics',
-      description: 'Waronse amanota 92/100',
-      time: '2 amasaha ashize',
-      type: 'exam',
-      icon: Award,
-      color: 'text-yellow-600'
-    },
-    {
-      title: 'Umukino wa Basketball',
-      description: 'Twatsinze 45-32',
-      time: '1 umunsi ushize',
-      type: 'sports',
-      icon: Trophy,
-      color: 'text-orange-600'
-    },
-    {
-      title: 'Ibizamini bya Chemistry',
-      description: 'Byashyizweho',
-      time: '2 iminsi ishize',
-      type: 'assignment',
-      icon: ClipboardList,
-      color: 'text-green-600'
-    },
-    {
-      title: 'Inama ya Debate',
-      description: 'Twaganiriye ku bibazo by\'ibidukikije',
-      time: '3 iminsi ishize',
-      type: 'activity',
-      icon: MessageSquare,
-      color: 'text-blue-600'
-    },
-  ];
+  const recentActivities = dashboardData?.recent_grades?.slice(0, 5).map((grade: any) => ({
+    title: `Ikizamini cya ${grade.subject_name}`,
+    description: `Waronse amanota ${grade.obtained_marks}/${grade.max_marks}`,
+    time: new Date(grade.assessment_date).toLocaleDateString(),
+    type: 'exam',
+    icon: Award,
+    color: 'text-yellow-600'
+  })) || [];
 
-  const upcomingDeadlines = [
-    {
-      title: 'Imbaraga za Math',
-      date: 'Jan 28',
-      subject: 'Mathematics',
+  const upcomingDeadlines = assignmentsData
+    .filter(a => !a.submission_id && new Date(a.due_date) > new Date())
+    .slice(0, 5)
+    .map(a => ({
+      title: a.title,
+      date: new Date(a.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      subject: a.course_name,
       type: 'assignment',
-      priority: 'high'
-    },
-    {
-      title: 'Ikizamini cya Physics',
-      date: 'Jan 29',
-      subject: 'Physics',
-      type: 'exam',
-      priority: 'high'
-    },
-    {
-      title: 'Raporo ya Lab',
-      date: 'Jan 30',
-      subject: 'Physics',
-      type: 'assignment',
-      priority: 'medium'
-    },
-    {
-      title: 'Ibiganiro bya Chemistry',
-      date: 'Feb 2',
-      subject: 'Chemistry',
-      type: 'assignment',
-      priority: 'high'
-    },
-  ];
+      priority: new Date(a.due_date) < new Date(Date.now() + 86400000 * 2) ? 'high' : 'medium'
+    }));
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-yellow-50/30 to-green-50/30 overflow-hidden">
@@ -490,7 +283,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-black">DASHBORD Y'UMUNYESHURI</h1>
-                <p className="text-white/90 mt-1">Murakaza neza, Jean Claude Mugisha - S3 A</p>
+                <p className="text-white/90 mt-1">Murakaza neza</p>
               </div>
               <Button 
                 onClick={onLogout}
@@ -503,6 +296,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
           </div>
         </div>
 
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading dashboard...</p>
+            </div>
+          </div>
+        ) : (
         <ScrollArea className="flex-1">
           <div className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -1092,6 +893,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
             </Card>
           </div>
         </ScrollArea>
+        )}
       </div>
     </div>
   );

@@ -1,19 +1,23 @@
 const API_BASE = 'http://localhost:5000/api';
 
 class ApiService {
-  private getAuthHeaders() {
+  private getAuthHeaders(isFormData: boolean = false) {
     const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
+    const headers: any = {
       'Authorization': `Bearer ${token}`
     };
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
   }
 
   private async request(endpoint: string, options: any = {}) {
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers: {
-        ...this.getAuthHeaders(),
+        ...this.getAuthHeaders(isFormData),
         ...options.headers
       }
     });
@@ -46,6 +50,10 @@ class ApiService {
 
   async getRoles() {
     return this.request('/users/roles/list');
+  }
+
+  async getNotifications() {
+    return this.request('/notifications');
   }
 
   // Academic Management
@@ -184,7 +192,43 @@ class ApiService {
     });
   }
 
-  // Parent Management
+  // Parent Management - Dashboard & Children
+  async getMyChildren() {
+    return this.request('/parent-dashboard/my-children');
+  }
+
+  async getChildDashboard(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/dashboard`);
+  }
+
+  async getChildAcademics(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/academics`);
+  }
+
+  async getChildAttendance(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/attendance`);
+  }
+
+  async getChildDiscipline(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/discipline`);
+  }
+
+  async getChildFees(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/fees`);
+  }
+
+  async getChildCompetitions(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/competitions`);
+  }
+
+  async getChildAssignments(studentId: number) {
+    return this.request(`/parent-dashboard/child/${studentId}/assignments`);
+  }
+
+  async getParentNotifications() {
+    return this.request('/parent-dashboard/notifications');
+  }
+
   async registerParent(parentData: any) {
     const response = await fetch(`${API_BASE}/auth/register/parent`, {
       method: 'POST',
@@ -283,6 +327,20 @@ class ApiService {
     return this.request('/teachers/statistics');
   }
 
+  async getAssignmentsByTeacher(teacherId: number) {
+    return this.request(`/advanced-assignments/assignments/teacher/${teacherId}`);
+  }
+
+  // Admin Management
+  async getAdminAnalytics() {
+    return this.request('/admin/analytics');
+  }
+
+  async getSecurityLogs(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/admin/security/logs?${query}`);
+  }
+
   // Student Management
   async getStudentDashboard() {
     return this.request('/students/dashboard');
@@ -306,16 +364,45 @@ class ApiService {
     return this.request('/students/performance');
   }
 
+  async getStudentAssignments(studentId: number) {
+    return this.request(`/advanced-assignments/assignments/student/${studentId}`);
+  }
+
+  async submitAssignment(submissionData: FormData) {
+    return this.request('/advanced-assignments/submissions', {
+      method: 'POST',
+      body: submissionData
+    });
+  }
+
   // DOS Management - Full Operations
   async getDOSStudents(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/dos/students?${query}`);
   }
 
-  async dosAssignTeacherToClass(teacherId: number, classId: number) {
-    return this.request('/dos/assign-teacher', {
+  async getDOSTeachers() {
+    return this.request('/dos-advanced/teachers');
+  }
+
+  async getDOSExams(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dos/exams?${query}`);
+  }
+
+  async getDOSCurriculum(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dos/curriculum?${query}`);
+  }
+
+  async getDOSTeacherAssignments() {
+    return this.request('/dos-management/teacher-assignments');
+  }
+
+  async dosAssignTeacherToClass(teacherId: number, classId: number, subjectId?: number) {
+    return this.request('/dos-management/assign-teacher', {
       method: 'POST',
-      body: JSON.stringify({ teacher_id: teacherId, class_id: classId })
+      body: JSON.stringify({ teacher_id: teacherId, class_id: classId, subject_id: subjectId })
     });
   }
 
@@ -328,15 +415,228 @@ class ApiService {
 
   async getDOSAnalytics(params = {}) {
     const query = new URLSearchParams(params).toString();
-    return this.request(`/dos/analytics/performance?${query}`);
+    return this.request(`/dos/analytics?${query}`);
   }
 
   async getDOSTrades() {
-    return this.request('/dos/trades');
+    return this.request('/dos-advanced/trades');
   }
 
   async getDOSDashboardStats() {
-    return this.request('/dos/dashboard-stats');
+    return this.request('/dos-management/dashboard-stats');
+  }
+
+  // DOD Management (Director of Discipline)
+  async getDODStats() {
+    return this.request('/dod-comprehensive/dashboard/stats');
+  }
+
+  async getDODRecentActivities() {
+    return this.request('/dod-comprehensive/activities/recent');
+  }
+
+  async getDODNotifications(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dod-comprehensive/notifications?${query}`);
+  }
+
+  async markDODNotificationRead(id: number) {
+    return this.request(`/dod-comprehensive/notifications/${id}/read`, { method: 'POST' });
+  }
+
+  async getDODSystemHealth() {
+    return this.request('/dod-comprehensive/system/health');
+  }
+
+  async getDODDisciplineCases(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dod-comprehensive/discipline/cases?${query}`);
+  }
+
+  async createDODDisciplineCase(caseData: any) {
+    return this.request('/dod-comprehensive/discipline/cases', {
+      method: 'POST',
+      body: JSON.stringify(caseData)
+    });
+  }
+
+  async updateDODDisciplineCase(id: number, caseData: any) {
+    return this.request(`/dod-comprehensive/discipline/cases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(caseData)
+    });
+  }
+
+  async getDODBehaviorPoints(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dod-comprehensive/behavior/points?${query}`);
+  }
+
+  async awardDODBehaviorPoints(pointData: any) {
+    return this.request('/dod-comprehensive/behavior/points', {
+      method: 'POST',
+      body: JSON.stringify(pointData)
+    });
+  }
+
+  async getDODExamMonitoring(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dod-comprehensive/exams/monitoring?${query}`);
+  }
+
+  async getDODPunishments(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/dod-comprehensive/punishments?${query}`);
+  }
+
+  async getDODParentNotifications() {
+    return this.request('/dod-comprehensive/parent-notifications');
+  }
+
+  async getDODAnalytics() {
+    return this.request('/dod-comprehensive/analytics/dashboard');
+  }
+
+  // Accountant Management
+  async getAccountantDashboard() {
+    return this.request('/accountant/dashboard');
+  }
+
+  async getAccountantPayments(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/payments?${query}`);
+  }
+
+  async createAccountantPayment(paymentData: any) {
+    return this.request('/accountant/payments', {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+  }
+
+  async getAccountantExpenses(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/expenses?${query}`);
+  }
+
+  async createAccountantExpense(expenseData: any) {
+    return this.request('/accountant/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expenseData)
+    });
+  }
+
+  async getAccountantInvoices(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/invoices?${query}`);
+  }
+
+  async getAccountantBudgets() {
+    return this.request('/accountant/budgets');
+  }
+
+  async getAccountantSalaries() {
+    return this.request('/accountant/salaries');
+  }
+
+  async getAccountantReports(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/reports?${query}`);
+  }
+
+  async getAccountantAnalytics() {
+    return this.request('/accountant/analytics');
+  }
+
+  // Stock Management
+  async getStockItems(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/items?${query}`);
+  }
+
+  async createStockItem(itemData: any) {
+    return this.request('/stock/items', {
+      method: 'POST',
+      body: JSON.stringify(itemData)
+    });
+  }
+
+  async updateStockItem(id: number, itemData: any) {
+    return this.request(`/stock/items/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(itemData)
+    });
+  }
+
+  async deleteStockItem(id: number) {
+    return this.request(`/stock/items/${id}`, { method: 'DELETE' });
+  }
+
+  async getStockTransactions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/transactions?${query}`);
+  }
+
+  async createStockTransaction(transactionData: any) {
+    return this.request('/stock/transactions', {
+      method: 'POST',
+      body: JSON.stringify(transactionData)
+    });
+  }
+
+  async getStockMovements(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/movements?${query}`);
+  }
+
+  async createStockMovement(movementData: any) {
+    return this.request('/stock/movements', {
+      method: 'POST',
+      body: JSON.stringify(movementData)
+    });
+  }
+
+  async getStockCategories() {
+    return this.request('/stock/categories');
+  }
+
+  async getStockProcurementOrders(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/procurement?${query}`);
+  }
+
+  async getStockRequisitions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/requisitions?${query}`);
+  }
+
+  async getStockSuppliers(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/stock/suppliers?${query}`);
+  }
+
+  async getDOSStudentDetails(studentId: number) {
+    return this.request(`/dos/students/${studentId}`);
+  }
+
+  async dosCreateStudent(studentData: any) {
+    return this.request('/dos/students', {
+      method: 'POST',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async dosUpdateStudent(studentId: number, studentData: any) {
+    return this.request(`/dos/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async dosDeleteStudent(studentId: number) {
+    return this.request(`/dos/students/${studentId}`, {
+      method: 'DELETE'
+    });
   }
 
   async getCourseByCode(code: string) {
@@ -402,31 +702,6 @@ class ApiService {
 
   async getStudentFeeSummary(studentId: number) {
     return this.request(`/finance/students/${studentId}/fee-summary`);
-  }
-
-  // Stock Management
-  async getStockItems(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/stock/items?${query}`);
-  }
-
-  async createStockItem(itemData: any) {
-    return this.request('/stock/items', {
-      method: 'POST',
-      body: JSON.stringify(itemData)
-    });
-  }
-
-  async getStockMovements(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/stock/movements?${query}`);
-  }
-
-  async createStockMovement(movementData: any) {
-    return this.request('/stock/movements', {
-      method: 'POST',
-      body: JSON.stringify(movementData)
-    });
   }
 
   // Dashboard Statistics
@@ -678,17 +953,7 @@ class ApiService {
     }
     return data;
   }
-
-  async request(endpoint: string, options: any = {}) {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options.headers
-      }
-    });
-    return response.json();
-  }
 }
 
 export const apiService = new ApiService();
+export default apiService;

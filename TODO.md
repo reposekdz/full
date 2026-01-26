@@ -1,4 +1,4 @@
-# Header Enhancement Tasks
+ # Header Enhancement Tasks
 
 ## Logo and Text Updates ✅
 - [x] Increase logo size from current h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 to h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24

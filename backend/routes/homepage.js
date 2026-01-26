@@ -100,6 +100,48 @@ router.get('/news', async (req, res) => {
   }
 });
 
+// Get single news article
+router.get('/news/:id', async (req, res) => {
+  try {
+    const [articles] = await db.query(
+      'SELECT * FROM news_articles WHERE id = ? AND is_active = true',
+      [req.params.id]
+    );
+    if (articles.length === 0) {
+      return res.status(404).json({ success: false, message: 'Article not found' });
+    }
+    res.json({ success: true, article: articles[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Track article view
+router.post('/news/:id/view', async (req, res) => {
+  try {
+    await db.query(
+      'UPDATE news_articles SET views = COALESCE(views, 0) + 1 WHERE id = ?',
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Like article
+router.post('/news/:id/like', async (req, res) => {
+  try {
+    await db.query(
+      'UPDATE news_articles SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get upcoming events
 router.get('/events', async (req, res) => {
   try {

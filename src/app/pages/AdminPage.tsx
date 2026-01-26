@@ -25,7 +25,8 @@ import {
   Star,
   Target,
   Award,
-  Calendar
+  Calendar,
+  Trophy
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -369,6 +370,7 @@ const AdminPage: React.FC = () => {
     { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
     { id: 'achievements', label: 'Achievements', icon: Award },
     { id: 'stats', label: 'School Statistics', icon: Target },
+    { id: 'sports', label: 'Sports Management', icon: Trophy },
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -1129,6 +1131,17 @@ const AdminPage: React.FC = () => {
                 </Card>
               ))}
             </div>
+          </div>
+        );
+
+      case 'sports':
+        return (
+          <div className="space-y-6">
+            <iframe 
+              src="/admin/sports-management" 
+              className="w-full h-screen border-0 rounded-lg"
+              title="Sports Management"
+            />
           </div>
         );
 

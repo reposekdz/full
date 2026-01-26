@@ -17,7 +17,7 @@ router.get('/all', async (req, res) => {
       GROUP BY t.id
       ORDER BY t.level, t.code
     `);
-    
+np    
     const enhancedTrades = trades.map(trade => ({
       ...trade,
       id: trade.code.toLowerCase(),

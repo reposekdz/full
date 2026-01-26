@@ -55,7 +55,6 @@ const CampusGallerySection: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-
   const displayImages = campusImages.slice(0, 4);
   const remainingCount = Math.max(0, campusImages.length - 4);
 
