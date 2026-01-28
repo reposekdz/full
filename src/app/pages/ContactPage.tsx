@@ -4,7 +4,8 @@ import {
   Mail, Phone, MapPin, Send, Clock, MessageCircle, FileText, User, 
   Building2, Facebook, Twitter, Instagram, Linkedin, Youtube, 
   CheckCircle2, AlertCircle, Upload, X, Calendar, Globe, MessageSquare,
-  Headphones, HelpCircle, FileQuestion, Zap, ArrowRight, MapPinned
+  Headphones, HelpCircle, FileQuestion, Zap, ArrowRight, MapPinned,
+  Navigation, ExternalLink, Maximize2
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -16,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { Badge } from '@/app/components/ui/badge';
 import { Separator } from '@/app/components/ui/separator';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { apiService } from '@/app/services/apiService';
 
 interface ContactFormData {
@@ -71,6 +73,7 @@ const ContactPage: React.FC = () => {
   const [liveChatOpen, setLiveChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Array<{sender: string, message: string, time: string}>>([]);
   const [chatInput, setChatInput] = useState('');
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const departments = [
     { value: 'admissions', label: 'Ibiro by\'Injira', icon: Building2 },
@@ -84,46 +87,46 @@ const ContactPage: React.FC = () => {
   const faqs: FAQ[] = [
     { 
       id: 1, 
-      question: 'What are the admission requirements?', 
-      answer: 'To apply for admission, you need a completed O-Level certificate, national ID, passport photos, and birth certificate. Visit our Admissions Office for detailed requirements.',
-      category: 'Admissions'
+      question: 'Ni ibihe bisabwa kugirango winjire?', 
+      answer: 'Kugirango usabe kwinjira, ukeneye impamyabumenyi ya O-Level yuzuye, indangamuntu, amafoto ya pasiporo, n\'ibyangombwa by\'amavuko. Sura ibiro by\'injira kugirango ubone ibisobanuro birambuye.',
+      category: 'Injira'
     },
     { 
       id: 2, 
-      question: 'How can I pay school fees?', 
-      answer: 'School fees can be paid through Mobile Money (MTN Mobile Money, Airtel Money), bank transfer, or at our Finance Office. You can also set up installment plans.',
-      category: 'Finance'
+      question: 'Nishyura nte amafaranga y\'ishuri?', 
+      answer: 'Amafaranga y\'ishuri ashobora kwishyurwa binyuze kuri Mobile Money (MTN Mobile Money, Airtel Money), kwimurika kuri banki, cyangwa mu biro by\'amafaranga. Urashobora kandi gushyiraho gahunda yo kwishyura buhoro buhoro.',
+      category: 'Amafaranga'
     },
     { 
       id: 3, 
-      question: 'What programs do you offer?', 
-      answer: 'We offer technical programs in Software Development, Building Construction, and Automobile Technology. Each program is 3 years with both theoretical and practical training.',
-      category: 'Academics'
+      question: 'Ni ibihe byigisho mutanga?', 
+      answer: 'Dutanga amahugurwa ya tekiniki mu iterambere rya software, kubaka, n\'ikoranabuhanga ry\'imodoka. Buri gahunda imara imyaka 3 hamwe n\'amahugurwa y\'ibitekerezo n\'ibyabugororangingo.',
+      category: 'Amasomo'
     },
     { 
       id: 4, 
-      question: 'What are the office hours?', 
-      answer: 'Our offices are open Monday to Friday, 8:00 AM to 5:00 PM, and Saturday 9:00 AM to 1:00 PM. We are closed on Sundays and public holidays.',
-      category: 'General'
+      question: 'Ni ayahe masaha ibiro bifungura?', 
+      answer: 'Ibiro byacu bifungura kuwa mbere kugeza kuwa gatanu, 8:00 AM - 5:00 PM, na kuwa gatandatu 9:00 AM - 1:00 PM. Turafunga ku cyumweru n\'iminsi mikuru.',
+      category: 'Rusange'
     },
     { 
       id: 5, 
-      question: 'How do I access my student portal?', 
-      answer: 'Visit our website and click on "Student Portal" in the header. Use your student ID and password provided during registration. Contact IT support if you face login issues.',
-      category: 'Technical'
+      question: 'Njya gute kuri portal y\'abanyeshuri?', 
+      answer: 'Sura urubuga rwacu kandi ukande kuri "Portal y\'Abanyeshuri" mu mutwe. Koresha ID yawe y\'umunyeshuri n\'ijambo ry\'ibanga wahawe mu gihe cyo kwiyandikisha. Hamagara ubufasha bwa IT niba ugize ikibazo cyo kwinjira.',
+      category: 'Tekiniki'
     },
     { 
       id: 6, 
-      question: 'Is there accommodation available?', 
-      answer: 'Yes, we have on-campus dormitories for both male and female students. Accommodation fees are separate from tuition. Contact Student Services for availability and booking.',
-      category: 'Student Services'
+      question: 'Hari aho batuye?', 
+      answer: 'Yego, dufite inzu z\'abanyeshuri ku ishuri ku bagabo n\'abakobwa. Amafaranga yo gutura atandukanye n\'amafaranga y\'ishuri. Hamagara serivisi z\'abanyeshuri kugirango umenye aho habonetse no gutumiza.',
+      category: 'Serivisi z\'Abanyeshuri'
     }
   ];
 
   const officeHours = [
-    { day: 'Monday - Friday', hours: '8:00 AM - 5:00 PM', status: 'open' },
-    { day: 'Saturday', hours: '9:00 AM - 1:00 PM', status: 'open' },
-    { day: 'Sunday', hours: 'Closed', status: 'closed' }
+    { day: 'Kuwa mbere - Kuwa gatanu', hours: '8:00 AM - 5:00 PM', status: 'open' },
+    { day: 'Kuwa gatandatu', hours: '9:00 AM - 1:00 PM', status: 'open' },
+    { day: 'Ku cyumweru', hours: 'Bifunze', status: 'closed' }
   ];
 
   const contactMethods = [
@@ -147,7 +150,7 @@ const ContactPage: React.FC = () => {
       icon: MessageCircle,
       title: 'Ikiganiro',
       description: 'Ganira n\'itsinda ryacu',
-      value: 'Start Chat',
+      value: 'Tangira Ikiganiro',
       action: 'chat',
       color: 'from-purple-500 to-purple-600'
     },
@@ -272,6 +275,10 @@ const ContactPage: React.FC = () => {
     }
   };
 
+  const openInGoogleMaps = () => {
+    window.open('https://www.google.com/maps/place/school/@-2.147160782320079,30.56593116685559,20z', '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-24 px-4">
       <div className="max-w-7xl mx-auto">
@@ -282,7 +289,7 @@ const ContactPage: React.FC = () => {
         >
           <Badge className="mb-4 bg-gradient-to-r from-yellow-500 to-green-500 text-white">
             <Zap className="w-3 h-3 mr-1" />
-            24/7 Support Available
+            Ubufasha 24/7 Burahari
           </Badge>
           <h1 className="text-6xl font-black mb-6 bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
             TWANDIKIRE
@@ -322,15 +329,15 @@ const ContactPage: React.FC = () => {
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="contact-form" className="text-lg">
               <MessageSquare className="w-5 h-5 mr-2" />
-              Contact Form
+              Ifishi y'Itumanaho
             </TabsTrigger>
             <TabsTrigger value="callback" className="text-lg">
               <Phone className="w-5 h-5 mr-2" />
-              Request Callback
+              Saba Guhamagara
             </TabsTrigger>
             <TabsTrigger value="faq" className="text-lg">
               <HelpCircle className="w-5 h-5 mr-2" />
-              FAQ
+              Ibibazo Bikunze Kubazwa
             </TabsTrigger>
           </TabsList>
 
@@ -339,17 +346,17 @@ const ContactPage: React.FC = () => {
               <div className="lg:col-span-2">
                 <Card className="shadow-2xl">
                   <CardHeader>
-                    <CardTitle className="text-3xl">Send us a Message</CardTitle>
-                    <CardDescription>Fill out the form below and we'll get back to you within 24 hours</CardDescription>
+                    <CardTitle className="text-3xl">Duhe Ubutumwa</CardTitle>
+                    <CardDescription>Uzuza ifishi hepfo kandi tuzakusubiza mu masaha 24</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="name">Full Name *</Label>
+                          <Label htmlFor="name">Amazina Yuzuye *</Label>
                           <Input
                             id="name"
-                            placeholder="John Doe"
+                            placeholder="Izina Ryawe"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
@@ -357,11 +364,11 @@ const ContactPage: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="email">Email Address *</Label>
+                          <Label htmlFor="email">Aderesi ya Imeri *</Label>
                           <Input
                             id="email"
                             type="email"
-                            placeholder="john@example.com"
+                            placeholder="imeri@urugero.com"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
@@ -372,7 +379,7 @@ const ContactPage: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="phone">Phone Number *</Label>
+                          <Label htmlFor="phone">Nimero ya Telefone *</Label>
                           <Input
                             id="phone"
                             type="tel"
@@ -384,13 +391,13 @@ const ContactPage: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="department">Department *</Label>
+                          <Label htmlFor="department">Ishami *</Label>
                           <Select
                             value={formData.department}
                             onValueChange={(value) => setFormData({ ...formData, department: value })}
                           >
                             <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select department" />
+                              <SelectValue placeholder="Hitamo ishami" />
                             </SelectTrigger>
                             <SelectContent>
                               {departments.map(dept => (
@@ -405,10 +412,10 @@ const ContactPage: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="subject">Subject *</Label>
+                          <Label htmlFor="subject">Ingingo *</Label>
                           <Input
                             id="subject"
-                            placeholder="How can we help you?"
+                            placeholder="Twakugufasha gute?"
                             value={formData.subject}
                             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                             required
@@ -416,7 +423,7 @@ const ContactPage: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="priority">Priority Level</Label>
+                          <Label htmlFor="priority">Urwego rw'Ibanze</Label>
                           <Select
                             value={formData.priority}
                             onValueChange={(value) => setFormData({ ...formData, priority: value })}
@@ -425,21 +432,21 @@ const ContactPage: React.FC = () => {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
+                              <SelectItem value="low">Hasi</SelectItem>
+                              <SelectItem value="normal">Bisanzwe</SelectItem>
+                              <SelectItem value="high">Hejuru</SelectItem>
+                              <SelectItem value="urgent">Byihutirwa</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="message">Message *</Label>
+                        <Label htmlFor="message">Ubutumwa *</Label>
                         <Textarea
                           id="message"
                           rows={6}
-                          placeholder="Please provide details about your inquiry..."
+                          placeholder="Tanga amakuru arambuye ku kibazo cyawe..."
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           required
@@ -448,14 +455,14 @@ const ContactPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <Label htmlFor="attachment">Attachment (Optional)</Label>
+                        <Label htmlFor="attachment">Inyandiko Yometse (Ntabwo Bisabwa)</Label>
                         <div className="mt-1">
                           {!formData.attachment ? (
                             <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-yellow-500 transition-colors">
                               <div className="text-center">
                                 <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                                <p className="text-sm text-gray-600">Click to upload file</p>
-                                <p className="text-xs text-gray-400">Max size: 5MB</p>
+                                <p className="text-sm text-gray-600">Kanda kugirango ushyire dosiye</p>
+                                <p className="text-xs text-gray-400">Ingano ntarengwa: 5MB</p>
                               </div>
                               <input
                                 id="attachment"
@@ -503,11 +510,11 @@ const ContactPage: React.FC = () => {
                         className="w-full bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white h-12 text-lg"
                       >
                         {isSubmitting ? (
-                          <>Processing...</>
+                          <>Iratunganywa...</>
                         ) : (
                           <>
                             <Send className="w-5 h-5 mr-2" />
-                            Send Message
+                            Ohereza Ubutumwa
                           </>
                         )}
                       </Button>
@@ -521,7 +528,7 @@ const ContactPage: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="text-white flex items-center">
                       <Clock className="w-6 h-6 mr-2" />
-                      Office Hours
+                      Amasaha y'Akazi
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -557,7 +564,7 @@ const ContactPage: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <Globe className="w-6 h-6 mr-2 text-blue-600" />
-                      Follow Us
+                      Dukurikire
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -588,16 +595,16 @@ const ContactPage: React.FC = () => {
           <TabsContent value="callback">
             <Card className="max-w-2xl mx-auto shadow-2xl">
               <CardHeader>
-                <CardTitle className="text-3xl">Request a Callback</CardTitle>
+                <CardTitle className="text-3xl">Saba Guhamagara</CardTitle>
                 <CardDescription>
-                  Can't reach us right now? Request a callback and we'll call you at your preferred time.
+                  Ntushobora kutugeraho ubu? Saba guhamagara kandi tuzakuhamagara mu gihe ukunda.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCallbackRequest} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="cb-name">Full Name *</Label>
+                      <Label htmlFor="cb-name">Amazina Yuzuye *</Label>
                       <Input
                         id="cb-name"
                         value={callbackData.name}
@@ -607,7 +614,7 @@ const ContactPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="cb-phone">Phone Number *</Label>
+                      <Label htmlFor="cb-phone">Nimero ya Telefone *</Label>
                       <Input
                         id="cb-phone"
                         type="tel"
@@ -621,7 +628,7 @@ const ContactPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="cb-date">Preferred Date *</Label>
+                      <Label htmlFor="cb-date">Itariki Ukunda *</Label>
                       <Input
                         id="cb-date"
                         type="date"
@@ -633,13 +640,13 @@ const ContactPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="cb-time">Preferred Time *</Label>
+                      <Label htmlFor="cb-time">Igihe Ukunda *</Label>
                       <Select
                         value={callbackData.preferredTime}
                         onValueChange={(value) => setCallbackData({ ...callbackData, preferredTime: value })}
                       >
                         <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select time" />
+                          <SelectValue placeholder="Hitamo igihe" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="08:00-10:00">8:00 AM - 10:00 AM</SelectItem>
@@ -653,11 +660,11 @@ const ContactPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="cb-reason">Reason for Callback *</Label>
+                    <Label htmlFor="cb-reason">Impamvu yo Guhamagara *</Label>
                     <Textarea
                       id="cb-reason"
                       rows={4}
-                      placeholder="Please tell us why you need a callback..."
+                      placeholder="Tubwire impamvu ukeneye guhamagara..."
                       value={callbackData.reason}
                       onChange={(e) => setCallbackData({ ...callbackData, reason: e.target.value })}
                       required
@@ -683,7 +690,7 @@ const ContactPage: React.FC = () => {
                     disabled={isSubmitting}
                     className="w-full bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white h-12 text-lg"
                   >
-                    {isSubmitting ? 'Submitting...' : 'Request Callback'}
+                    {isSubmitting ? 'Iratunganywa...' : 'Saba Guhamagara'}
                   </Button>
                 </form>
               </CardContent>
@@ -694,8 +701,8 @@ const ContactPage: React.FC = () => {
             <div className="max-w-4xl mx-auto">
               <Card className="shadow-2xl">
                 <CardHeader>
-                  <CardTitle className="text-3xl">Frequently Asked Questions</CardTitle>
-                  <CardDescription>Find quick answers to common questions</CardDescription>
+                  <CardTitle className="text-3xl">Ibibazo Bikunze Kubazwa</CardTitle>
+                  <CardDescription>Shakisha ibisubizo byihuse ku bibazo bisanzwe</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -741,13 +748,13 @@ const ContactPage: React.FC = () => {
                     ))}
                   </div>
                   <div className="mt-8 p-6 bg-gradient-to-r from-yellow-50 to-green-50 rounded-lg">
-                    <h4 className="font-semibold text-lg mb-2">Still have questions?</h4>
+                    <h4 className="font-semibold text-lg mb-2">Ufite ibibazo?</h4>
                     <p className="text-gray-600 mb-4">
-                      Can't find what you're looking for? Contact us directly and we'll be happy to help.
+                      Ntushobora kubona icyo ushaka? Twandikire kandi tuzishimira kukugufasha.
                     </p>
                     <Button className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600">
                       <MessageCircle className="w-4 h-4 mr-2" />
-                      Contact Support
+                      Hamagara Ubufasha
                     </Button>
                   </div>
                 </CardContent>
@@ -755,6 +762,144 @@ const ContactPage: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Modern Interactive Map Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-16"
+        >
+          <Card className="border-2 border-yellow-200 shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-yellow-500 to-green-500 px-8 py-6 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <MapPin className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-white">
+                  <h3 className="text-3xl font-black drop-shadow-lg">Sura Kaminuza Yacu</h3>
+                  <p className="text-white/90 text-lg">Kigali, Rwanda - Dusange ku ikarita</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button
+                  onClick={openInGoogleMaps}
+                  variant="outline"
+                  className="border-white/50 bg-white/10 text-white hover:bg-white hover:text-yellow-600 backdrop-blur-sm h-12 px-6"
+                >
+                  <Navigation className="w-5 h-5 mr-2" />
+                  Bona Inzira
+                </Button>
+                <Button
+                  onClick={() => setIsMapExpanded(true)}
+                  variant="outline"
+                  className="border-white/50 bg-white/10 text-white hover:bg-white hover:text-yellow-600 backdrop-blur-sm h-12 px-6"
+                >
+                  <Maximize2 className="w-5 h-5 mr-2" />
+                  Kwagura Ikarita
+                </Button>
+              </div>
+            </div>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" />
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d647.7129128267301!2d30.56593116685559!3d-2.147160782320079!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x19c4cb37e426c625%3A0x7221b435a93126ba!2sschool!5e1!3m2!1sen!2srw!4v1769014643169!5m2!1sen!2srw"
+                width="100%"
+                height="500"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="transition-all duration-300 group-hover:brightness-110"
+              />
+            </div>
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-8 py-5 flex items-center justify-between border-t-2 border-yellow-200">
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-green-500 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Duhamagare</p>
+                    <p className="text-sm font-bold text-gray-800">+250 788 987 830</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-green-500 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Duhe Imeri</p>
+                    <p className="text-sm font-bold text-gray-800">info@gardentvet.rw</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-green-500 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Aho Duherereyeho</p>
+                    <p className="text-sm font-bold text-gray-800">Kigali, Rwanda</p>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={openInGoogleMaps}
+                className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white h-12 px-6 shadow-lg"
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Fungura muri Google Maps
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+
+        <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+          <DialogContent className="max-w-6xl h-[90vh] p-0">
+            <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-yellow-50 to-green-50">
+              <DialogTitle className="flex items-center space-x-3 text-2xl">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-green-500 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <span>Garden TVET School Location</span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 relative">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d647.7129128267301!2d30.56593116685559!3d-2.147160782320079!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x19c4cb37e426c625%3A0x7221b435a93126ba!2sschool!5e1!3m2!1sen!2srw!4v1769014643169!5m2!1sen!2srw"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="absolute inset-0"
+              />
+            </div>
+            <div className="px-6 py-4 border-t bg-gradient-to-r from-yellow-50 to-green-50 flex items-center justify-between">
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-5 h-5 text-yellow-600" />
+                  <span className="font-semibold text-gray-800">Kigali, Rwanda</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Phone className="w-5 h-5 text-green-600" />
+                  <span className="font-semibold text-gray-800">+250 788 987 830</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-gray-800">info@gardentvet.rw</span>
+                </div>
+              </div>
+              <Button
+                onClick={openInGoogleMaps}
+                className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white h-12 px-6"
+              >
+                <Navigation className="w-5 h-5 mr-2" />
+                Get Directions
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Card className="shadow-2xl bg-gradient-to-r from-gray-900 to-gray-800 text-white">
           <CardContent className="p-8">

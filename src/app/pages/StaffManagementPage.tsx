@@ -34,7 +34,7 @@ const StaffManagementPage: React.FC = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/staff', {
+      const response = await fetch('http://localhost:5000/api/staff', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
@@ -53,7 +53,7 @@ const StaffManagementPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/api/staff/${editingId}`, {
+      const response = await fetch(`http://localhost:5000/api/staff/${editingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

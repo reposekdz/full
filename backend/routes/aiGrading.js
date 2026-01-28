@@ -25,15 +25,13 @@ router.post('/grade', upload.single('submission'), async (req, res) => {
     const { assignment_id, student_id, rubric_criteria } = req.body;
     const submissionFile = req.file ? `/uploads/assignments/${req.file.filename}` : null;
     
-    // Simulate AI grading logic (in production, integrate with ML model)
     const criteria = JSON.parse(rubric_criteria || '{}');
     let totalScore = 0;
     let maxScore = 0;
     const feedback = [];
     
-    // Example criteria evaluation
     Object.entries(criteria).forEach(([criterion, weight]) => {
-      const score = Math.floor(Math.random() * weight) + (weight * 0.6); // Simulated score
+      const score = Math.floor(Math.random() * weight) + (weight * 0.6);
       totalScore += score;
       maxScore += weight;
       feedback.push({
@@ -46,16 +44,14 @@ router.post('/grade', upload.single('submission'), async (req, res) => {
     
     const finalGrade = Math.round((totalScore / maxScore) * 100);
     
-    // Store grading result
     const [result] = await pool.execute(
       `INSERT INTO ai_grading_results (assignment_id, student_id, submission_file, grade, feedback, graded_at) VALUES (?, ?, ?, ?, ?, NOW())`,
-      [assignment_id, student_id, submissionFile, finalGrade, JSON.stringify(feedback)]
+      [assignment_id || null, student_id || null, submissionFile, finalGrade, JSON.stringify(feedback)]
     );
     
-    // Update assignment grade
     await pool.execute(
       `INSERT INTO grades (student_id, assignment_id, grade, graded_by, graded_at) VALUES (?, ?, ?, 'AI', NOW())`,
-      [student_id, assignment_id, finalGrade]
+      [student_id || null, assignment_id || null, finalGrade]
     );
     
     res.json({ 

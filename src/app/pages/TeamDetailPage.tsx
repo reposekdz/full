@@ -344,71 +344,48 @@ const TeamDetailPage: React.FC<TeamDetailPageProps> = ({ teamId, onNavigate }) =
                 Urutonde rw'Abakinnyi ({players.length})
               </h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">#</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Ifoto</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Izina</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Umwanya</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Ikilas</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Uburebure</th>
-                    <th className="px-6 py-4 text-left text-sm font-black text-gray-700">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {players.map((player: any, index: number) => (
-                    <motion.tr
-                      key={player.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="hover:bg-yellow-50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-green-400 flex items-center justify-center text-white font-black shadow-lg">
-                          {player.jersey_number}
+            <div className="p-6">
+              <ul className="divide-y divide-gray-200">
+                {players.map((player: any, index: number) => (
+                  <motion.li
+                    key={player.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-green-400 flex items-center justify-center text-white font-black text-sm">
+                      {player.jersey_number}
+                    </div>
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                      {player.image_url ? (
+                        <img src={`http://localhost:5000${player.image_url}`} alt={player.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Users className="w-6 h-6 text-gray-400" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-100 to-green-100 flex items-center justify-center overflow-hidden shadow-md">
-                          {player.image_url ? (
-                            <img src={`http://localhost:5000${player.image_url}`} alt={player.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <Users className="w-8 h-8 text-gray-400" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <p className="font-black text-gray-900">{player.name_rw || player.name}</p>
-                            <p className="text-sm text-gray-500">{player.name}</p>
-                          </div>
-                          {player.is_captain && (
-                            <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                              <Crown className="w-3 h-3" /> C
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-                          {player.position_rw || player.position}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-700 font-bold">{player.class}</td>
-                      <td className="px-6 py-4 text-gray-700 font-bold">{player.height} cm</td>
-                      <td className="px-6 py-4">
-                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">
-                          Active
-                        </span>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-900 truncate">{player.name_rw || player.name}</h3>
+                        {player.is_captain && (
+                          <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                            <Crown className="w-3 h-3" /> C
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                        <span>{player.position_rw || player.position}</span>
+                        <span>•</span>
+                        <span>Class {player.class}</span>
+                        <span>•</span>
+                        <span>{player.height} cm</span>
+                      </div>
+                    </div>
+                  </motion.li>
+                ))}
+              </ul>
             </div>
           </div>
         )}

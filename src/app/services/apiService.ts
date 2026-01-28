@@ -229,6 +229,44 @@ class ApiService {
     return this.request('/parent-dashboard/notifications');
   }
 
+  async requestLinkingCodeHelp(requestData: { student_name: string; message: string; preferred_contact?: string }) {
+    return this.request('/parent-linking/request-code-help', {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
+  }
+
+  async getMyHelpRequests() {
+    return this.request('/parent-linking/my-help-requests');
+  }
+
+  async generateSerialCodes(codeData: { trade_code: string; level_number: number; level_suffix?: string; quantity: number; academic_year?: string; expires_at?: string; notes?: string }) {
+    return this.request('/serial-codes/generate', {
+      method: 'POST',
+      body: JSON.stringify(codeData)
+    });
+  }
+
+  async getSerialCodes(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/serial-codes/list?${query}`);
+  }
+
+  async revokeSerialCode(id: number) {
+    return this.request(`/serial-codes/revoke/${id}`, { method: 'PUT' });
+  }
+
+  async deleteSerialCode(id: number) {
+    return this.request(`/serial-codes/delete/${id}`, { method: 'DELETE' });
+  }
+
+  async validateSerialCode(serial_code: string) {
+    return this.request('/serial-codes/validate', {
+      method: 'POST',
+      body: JSON.stringify({ serial_code })
+    });
+  }
+
   async registerParent(parentData: any) {
     const response = await fetch(`${API_BASE}/auth/register/parent`, {
       method: 'POST',
@@ -292,14 +330,6 @@ class ApiService {
     return this.request(`/parents/children/${childId}/grades`);
   }
 
-  async getChildAttendance(childId: number) {
-    return this.request(`/parents/children/${childId}/attendance`);
-  }
-
-  async getChildFees(childId: number) {
-    return this.request(`/parents/children/${childId}/fees`);
-  }
-
   // Teacher Management
   async getTeacherClasses() {
     return this.request('/teachers/classes');
@@ -327,8 +357,44 @@ class ApiService {
     return this.request('/teachers/statistics');
   }
 
+  async getTeacherUpcomingLessons() {
+    return this.request('/teachers/upcoming-lessons');
+  }
+
+  async getTeacherRecentGrades(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teachers/recent-grades?${query}`);
+  }
+
+  async getTeacherAttendanceSummary(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teachers/attendance-summary?${query}`);
+  }
+
   async getAssignmentsByTeacher(teacherId: number) {
-    return this.request(`/advanced-assignments/assignments/teacher/${teacherId}`);
+    return this.request(`/assignments/assignments/teacher/${teacherId}`);
+  }
+
+  async getAssignmentSubmissions(assignmentId: number) {
+    return this.request(`/assignments/assignments/${assignmentId}/submissions`);
+  }
+
+  async getAssignmentAnalytics(assignmentId: number) {
+    return this.request(`/assignments/analytics/assignment/${assignmentId}`);
+  }
+
+  async submitGrade(gradeData: any) {
+    return this.request('/assignments/grades', {
+      method: 'POST',
+      body: JSON.stringify(gradeData)
+    });
+  }
+
+  async createAssignment(assignmentData: FormData) {
+    return this.request('/assignments/assignments', {
+      method: 'POST',
+      body: assignmentData
+    });
   }
 
   // Admin Management
@@ -395,6 +461,14 @@ class ApiService {
     return this.request(`/dos/curriculum?${query}`);
   }
 
+  async getDOSClasses() {
+    return this.request('/dos/classes');
+  }
+
+  async getDOSCourses() {
+    return this.request('/dos/courses');
+  }
+
   async getDOSTeacherAssignments() {
     return this.request('/dos-management/teacher-assignments');
   }
@@ -420,6 +494,22 @@ class ApiService {
 
   async getDOSTrades() {
     return this.request('/dos-advanced/trades');
+  }
+
+  async getAllTrades() {
+    return this.request('/content/trades');
+  }
+
+  async getAllLevels() {
+    return this.request('/levels/levels');
+  }
+
+  async getTradesByLevel(tradeCode: string) {
+    return this.request(`/levels/trades/${tradeCode}/levels`);
+  }
+
+  async getTradesWithLevels() {
+    return this.request('/levels/trades-with-levels');
   }
 
   async getDOSDashboardStats() {
@@ -451,6 +541,17 @@ class ApiService {
   async getDODDisciplineCases(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/dod-comprehensive/discipline/cases?${query}`);
+  }
+
+  async deleteDODDisciplineCase(id: number) {
+    return this.request(`/dod-comprehensive/discipline/cases/${id}`, { method: 'DELETE' });
+  }
+
+  async notifyParentMarkLoss(studentId: number, marksLost: number, reason: string) {
+    return this.request('/dod-comprehensive/notify-parent-mark-loss', {
+      method: 'POST',
+      body: JSON.stringify({ student_id: studentId, marks_lost: marksLost, reason })
+    });
   }
 
   async createDODDisciplineCase(caseData: any) {
@@ -546,6 +647,73 @@ class ApiService {
 
   async getAccountantAnalytics() {
     return this.request('/accountant/analytics');
+  }
+
+  async getAccountantStudentPayments(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/student-payments?${query}`);
+  }
+
+  async recordAccountantPayment(paymentData: any) {
+    return this.request('/accountant/record-payment', {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+  }
+
+  async updateAccountantFees(feeData: any) {
+    return this.request('/accountant/update-fees', {
+      method: 'POST',
+      body: JSON.stringify(feeData)
+    });
+  }
+
+  // Patron / Discipline Management
+  async getDisciplineStudents(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/discipline/students?${query}`);
+  }
+
+  async getDisciplineAnalytics() {
+    return this.request('/discipline/analytics');
+  }
+
+  async submitIncident(incidentData: any) {
+    return this.request('/discipline/conduct/remove', {
+      method: 'POST',
+      body: JSON.stringify(incidentData)
+    });
+  }
+
+  async submitLeave(leaveData: any) {
+    return this.request('/discipline/leave/add', {
+      method: 'POST',
+      body: JSON.stringify(leaveData)
+    });
+  }
+
+  async getLeaveHistory(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/discipline/leave/history?${query}`);
+  }
+
+  async updateLeaveStatus(id: number, status: string) {
+    return this.request(`/discipline/leave/status/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  async sendMessage(messageData: any) {
+    return this.request('/messaging/send', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  // HeadMaster Management
+  async getHeadMasterDashboard() {
+    return this.request('/headmaster/dashboard');
   }
 
   // Stock Management
@@ -748,6 +916,11 @@ class ApiService {
             this.request('/stock/movements?limit=1')
           );
           break;
+        case 'headmaster':
+          promises.push(
+            this.request('/headmaster/dashboard')
+          );
+          break;
       }
 
       const results = await Promise.all(promises);
@@ -797,6 +970,13 @@ class ApiService {
         return {
           totalItems: results[0]?.pagination?.total || 0,
           totalMovements: results[1]?.pagination?.total || 0
+        };
+      case 'headmaster':
+        return {
+          totalStudents: results[0]?.stats?.total_students || 0,
+          totalTeachers: results[0]?.stats?.total_teachers || 0,
+          totalRevenue: results[0]?.stats?.total_revenue || 0,
+          overallPerformance: results[0]?.stats?.overall_performance || 0
         };
       default:
         return {};
@@ -952,6 +1132,212 @@ class ApiService {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
+  }
+
+  // Library Management
+  async getLibraryBooks(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/library-system/books?${query}`);
+  }
+
+  async getLibraryStats() {
+    return this.request('/library-system/analytics');
+  }
+
+  async getLibraryBorrowings(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/library-system/borrowings?${query}`);
+  }
+
+  async createLibraryBook(bookData: any) {
+    return this.request('/library-system/books', {
+      method: 'POST',
+      body: JSON.stringify(bookData)
+    });
+  }
+
+  async updateLibraryBook(id: number, bookData: any) {
+    return this.request(`/library-system/books/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(bookData)
+    });
+  }
+
+  async deleteLibraryBook(id: number) {
+    return this.request(`/library-system/books/${id}`, { method: 'DELETE' });
+  }
+
+  async borrowLibraryBook(borrowData: { user_id: number; book_id: number; due_date: string; notes?: string }) {
+    return this.request('/library-system/borrowings', {
+      method: 'POST',
+      body: JSON.stringify(borrowData)
+    });
+  }
+
+  async returnLibraryBook(borrowingId: number, returnData: any) {
+    return this.request(`/library-system/borrowings/${borrowingId}/return`, {
+      method: 'PUT',
+      body: JSON.stringify(returnData)
+    });
+  }
+
+  // Hostel Management
+  async getHostelRooms(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/hostel-system/rooms?${query}`);
+  }
+
+  async getMyHostelApplications() {
+    return this.request('/hostel-system/allocations'); // Convention: admins see all, students see theirs
+  }
+
+  async getHostelAllocations(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/hostel-system/allocations?${query}`);
+  }
+
+  async allocateHostelRoom(studentId: number, roomId: number, allocationData: any) {
+    return this.request('/hostel-system/allocations', {
+      method: 'POST',
+      body: JSON.stringify({ student_id: studentId, room_id: roomId, ...allocationData })
+    });
+  }
+
+  async checkoutHostelRoom(allocationId: number) {
+    return this.request(`/hostel-system/allocations/${allocationId}/checkout`, {
+      method: 'PUT'
+    });
+  }
+
+  async applyForHostel(roomId: number, reason: string) {
+    return this.request('/hostel-system/allocations', {
+      method: 'POST',
+      body: JSON.stringify({ room_id: roomId, notes: reason, status: 'pending' })
+    });
+  }
+
+  // Financial Management
+  async getFinancialStats() {
+    return this.request('/financial-system/stats');
+  }
+
+  async getBudgets(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/financial-system/budgets?${query}`);
+  }
+
+  async createBudget(budgetData: any) {
+    return this.request('/financial-system/budgets', {
+      method: 'POST',
+      body: JSON.stringify(budgetData)
+    });
+  }
+
+  async getExpenses(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/financial-system/expenses?${query}`);
+  }
+
+  async createExpense(expenseData: any) {
+    return this.request('/financial-system/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expenseData)
+    });
+  }
+
+  async approveExpense(expenseId: number) {
+    return this.request(`/financial-system/expenses/${expenseId}/approve`, {
+      method: 'PUT'
+    });
+  }
+
+  async getIncome(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/financial-system/income?${query}`);
+  }
+
+  async createIncome(incomeData: any) {
+    return this.request('/financial-system/income', {
+      method: 'POST',
+      body: JSON.stringify(incomeData)
+    });
+  }
+
+  async getInvoices(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/invoices?${query}`);
+  }
+
+  async createInvoice(invoiceData: any) {
+    return this.request('/invoices', {
+      method: 'POST',
+      body: JSON.stringify(invoiceData)
+    });
+  }
+
+  // Medical Management
+  async getMedicalRecords(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/medical-system/records?${query}`);
+  }
+
+  async createMedicalRecord(recordData: any) {
+    return this.request('/medical-system/records', {
+      method: 'POST',
+      body: JSON.stringify(recordData)
+    });
+  }
+
+  async updateMedicalRecord(id: number, recordData: any) {
+    return this.request(`/medical-system/records/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(recordData)
+    });
+  }
+
+  async getMedicalAnalytics(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/medical-system/analytics?${query}`);
+  }
+
+  async getStudentMedicalSummary(studentId: number) {
+    return this.request(`/medical-system/student/${studentId}/summary`);
+  }
+
+  // Exam Management
+  async getExams(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/exams?${query}`);
+  }
+
+  async getExamDetails(id: number) {
+    return this.request(`/exams/${id}`);
+  }
+
+  async createExam(examData: any) {
+    return this.request('/exams', {
+      method: 'POST',
+      body: JSON.stringify(examData)
+    });
+  }
+
+  async submitExamResult(examId: number, resultData: any) {
+    return this.request(`/exams/${examId}/results`, {
+      method: 'POST',
+      body: JSON.stringify(resultData)
+    });
+  }
+
+  async getExamResults(examId: number) {
+    return this.request(`/exams/${examId}/results`);
+  }
+
+  // Announcements & Broadcast
+  async broadcastAnnouncement(broadcastData: any) {
+    return this.request('/announcements/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(broadcastData)
+    });
   }
 }
 

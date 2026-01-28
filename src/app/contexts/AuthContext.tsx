@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export type UserRole = 
   | 'student' 
   | 'parent' 
+  | 'advisor'
   | 'director_study' 
   | 'director_discipline' 
   | 'headmaster' 
@@ -59,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const dashboardMap: Record<string, string> = {
       student: 'dashboard-student',
       parent: 'dashboard-parent',
+      advisor: 'dashboard-advisor',
       director_study: 'dashboard-director-study',
       director_discipline: 'dashboard-director-discipline',
       headmaster: 'dashboard-headmaster',
@@ -125,6 +127,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', data.token);
         
         const dashboardPage = getRoleDashboard(data.user.role);
+        
+        // Auto-redirect for students and parents
+        if (data.user.role === 'student' || data.user.role === 'parent') {
+          setTimeout(() => {
+            window.location.href = `/${dashboardPage}`;
+          }, 100);
+        }
+        
         return { success: true, dashboardPage };
       } else {
         console.error('Login failed:', data.message);
@@ -160,6 +170,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('token', data.token);
           
           const dashboardPage = getRoleDashboard(data.user.role);
+          
+          // Auto-redirect for students and parents
+          if (data.user.role === 'student' || data.user.role === 'parent') {
+            setTimeout(() => {
+              window.location.href = `/${dashboardPage}`;
+            }, 100);
+          }
+          
           return { success: true, dashboardPage };
         } else {
           console.error('Role login failed:', data.message);

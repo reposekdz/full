@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 
 // Parent requests to link with student
 router.post('/link-request', authenticateToken, requireRole('parent'), async (req, res) => {
@@ -80,6 +81,27 @@ router.post('/approve/:id', authenticateToken, requireRole('dos', 'dod', 'headma
     
     await pool.execute(`UPDATE users SET parent_id = ? WHERE id = ?`, [request.parent_id, students[0].id]);
     
+    // Add to parent_student table for unified notifications
+    await pool.execute(`
+      INSERT INTO parent_student (parent_id, student_id, relationship) 
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE relationship = VALUES(relationship)
+    `, [request.parent_id, students[0].id, 'guardian']);
+
+    // Send WhatsApp notification
+    const [parent] = await pool.execute('SELECT phone, first_name FROM users WHERE id = ?', [request.parent_id]);
+    const studentName = request.student_name || 'umwana wanyu';
+    
+    if (parent.length > 0 && parent[0].phone) {
+      const message = `Muraho ${parent[0].first_name}! Ubwasabe bwanyu bwo guhuza konti n'umunyeshuri ${studentName} muri Garden TVET School bwemejwe. Noneho mushobora gukurikirana imyigire ye.`;
+      smsService.sendUniversalMessage(parent[0].phone, message, 0, {
+        type: 'parent_link_approval',
+        parentId: request.parent_id,
+        studentId: students[0].id,
+        preferredMethod: 'whatsapp'
+      }).catch(err => console.error('Failed to send approval notification:', err));
+    }
+
     res.json({ success: true, message: 'Link approved successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -91,6 +113,127 @@ router.post('/reject/:id', authenticateToken, requireRole('dos', 'dod', 'headmas
   try {
     await pool.execute(`UPDATE parent_student_links SET status = 'rejected' WHERE id = ?`, [req.params.id]);
     res.json({ success: true, message: 'Link rejected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Parent requests admin help to get linking code (Contact Admin feature)
+router.post('/request-code-help', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const { student_name, message, preferred_contact } = req.body;
+    const parentId = req.user.id;
+    
+    // Create help request
+    await pool.execute(`
+      INSERT INTO parent_help_requests (parent_id, student_name, message, preferred_contact, status, created_at)
+      VALUES (?, ?, ?, ?, 'pending', NOW())
+    `, [parentId, student_name, message, preferred_contact || 'email']);
+    
+    // Send notification to admin, headmaster, DOS
+    const admins = await pool.execute(`
+      SELECT u.id, u.first_name, u.email, u.phone 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE r.name IN ('admin', 'headmaster', 'dos', 'super_admin')
+    `);
+    
+    // Get parent info
+    const [parent] = await pool.execute('SELECT first_name, last_name, email, phone FROM users WHERE id = ?', [parentId]);
+    const parentInfo = parent[0];
+    
+    // Create notification for each admin
+    for (const admin of admins[0]) {
+      await pool.execute(`
+        INSERT INTO notifications (user_id, title, message, type, created_at)
+        VALUES (?, ?, ?, 'parent_help_request', NOW())
+      `, [
+        admin.id,
+        'Parent Needs Linking Code',
+        `${parentInfo.first_name} ${parentInfo.last_name} needs a linking code for student: ${student_name}. Contact: ${parentInfo.phone || parentInfo.email}`
+      ]);
+      
+      // Send SMS notification
+      if (admin.phone) {
+        const smsMessage = `Muraho ${admin.first_name}! Umubyeyi ${parentInfo.first_name} ${parentInfo.last_name} arasaba kode yo guhuza n'umwana witwa ${student_name}. Amakuru: ${parentInfo.phone || parentInfo.email}`;
+        smsService.sendUniversalMessage(admin.phone, smsMessage, 0, {
+          type: 'parent_code_request',
+          parentId: parentId,
+          adminId: admin.id,
+          preferredMethod: 'sms'
+        }).catch(err => console.error('SMS failed:', err));
+      }
+    }
+    
+    res.json({ success: true, message: 'Your request has been sent to school administration.' });
+  } catch (error) {
+    console.error('Request code help error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get parent's help requests
+router.get('/my-help-requests', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const [requests] = await pool.execute(`
+      SELECT * FROM parent_help_requests 
+      WHERE parent_id = ? 
+      ORDER BY created_at DESC
+    `, [req.user.id]);
+    
+    res.json({ success: true, requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Admin/Headmaster/DOS: Get all help requests
+router.get('/help-requests', authenticateToken, requireRole('admin', 'headmaster', 'dos', 'super_admin'), async (req, res) => {
+  try {
+    const [requests] = await pool.execute(`
+      SELECT phr.*, u.first_name, u.last_name, u.email, u.phone
+      FROM parent_help_requests phr
+      JOIN users u ON phr.parent_id = u.id
+      WHERE phr.status = 'pending'
+      ORDER BY phr.created_at DESC
+    `);
+    
+    res.json({ success: true, requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Admin/Headmaster/DOS: Respond to help request
+router.post('/help-requests/:id/respond', authenticateToken, requireRole('admin', 'headmaster', 'dos', 'super_admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { student_code, response_message } = req.body;
+    
+    // Update help request
+    await pool.execute(`
+      UPDATE parent_help_requests 
+      SET status = 'resolved', response_message = ?, responded_by = ?, responded_at = NOW()
+      WHERE id = ?
+    `, [response_message, req.user.id, id]);
+    
+    // Get request details
+    const [request] = await pool.execute('SELECT parent_id FROM parent_help_requests WHERE id = ?', [id]);
+    if (request.length === 0) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+    
+    // Send notification to parent
+    await pool.execute(`
+      INSERT INTO notifications (user_id, title, message, type, created_at)
+      VALUES (?, ?, ?, 'help_request_response', NOW())
+    `, [
+      request[0].parent_id,
+      'Response to Your Request',
+      `${response_message}${student_code ? ` Student Code: ${student_code}` : ''}`
+    ]);
+    
+    res.json({ success: true, message: 'Response sent to parent' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

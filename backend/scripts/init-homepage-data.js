@@ -7,8 +7,19 @@ async function initializeHomepageData() {
     // Create tables if they don't exist
     console.log('📋 Creating tables...');
     
+    // Drop existing tables to ensure schema matches
+    await db.pool.query('SET FOREIGN_KEY_CHECKS = 0');
+    await db.pool.query('DROP TABLE IF EXISTS slides');
+    await db.pool.query('DROP TABLE IF EXISTS news_articles');
+    await db.pool.query('DROP TABLE IF EXISTS testimonials');
+    await db.pool.query('DROP TABLE IF EXISTS school_stats');
+    await db.pool.query('DROP TABLE IF EXISTS achievements');
+    await db.pool.query('DROP TABLE IF EXISTS events');
+    await db.pool.query('DROP TABLE IF EXISTS home_features');
+    await db.pool.query('SET FOREIGN_KEY_CHECKS = 1');
+    
     // Slides table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS slides (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -25,7 +36,7 @@ async function initializeHomepageData() {
     `);
 
     // News articles table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS news_articles (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -44,7 +55,7 @@ async function initializeHomepageData() {
     `);
 
     // Testimonials table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS testimonials (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
@@ -60,7 +71,7 @@ async function initializeHomepageData() {
     `);
 
     // School stats table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS school_stats (
         id INT AUTO_INCREMENT PRIMARY KEY,
         stat_key VARCHAR(50) NOT NULL UNIQUE,
@@ -76,7 +87,7 @@ async function initializeHomepageData() {
     `);
 
     // Achievements table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS achievements (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -91,7 +102,7 @@ async function initializeHomepageData() {
     `);
 
     // Events table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS events (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -117,7 +128,7 @@ async function initializeHomepageData() {
     `);
 
     // Home features table
-    await db.query(`
+    await db.pool.query(`
       CREATE TABLE IF NOT EXISTS home_features (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
@@ -137,18 +148,18 @@ async function initializeHomepageData() {
 
     // Clear existing data
     console.log('🗑️  Clearing existing data...');
-    await db.query('DELETE FROM slides');
-    await db.query('DELETE FROM news_articles');
-    await db.query('DELETE FROM testimonials');
-    await db.query('DELETE FROM school_stats');
-    await db.query('DELETE FROM achievements');
-    await db.query('DELETE FROM events');
-    await db.query('DELETE FROM home_features');
+    await db.pool.query('DELETE FROM slides');
+    await db.pool.query('DELETE FROM news_articles');
+    await db.pool.query('DELETE FROM testimonials');
+    await db.pool.query('DELETE FROM school_stats');
+    await db.pool.query('DELETE FROM achievements');
+    await db.pool.query('DELETE FROM events');
+    await db.pool.query('DELETE FROM home_features');
     console.log('✅ Data cleared\n');
 
     // Insert slides
     console.log('📸 Inserting slides...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO slides (title, subtitle, description, image_url, button_text, button_link, sort_order) VALUES
       ('EMPOWERING FUTURE SKILLS', 'Building Tomorrow\\'s Professionals Today', 'Join thousands of students who have transformed their careers through our comprehensive technical programs.', 'https://images.unsplash.com/photo-1758270704524-596810e891b5?w=1080', 'Get Started', '/register', 1),
       ('SOFTWARE DEVELOPMENT', 'Master Coding & Technology', 'Master practical skills with our modern facilities and expert instructors in Software Development, Construction, and Automotive Technology.', 'https://images.unsplash.com/photo-1531498860502-7c67cf02f657?w=1080', 'Learn More', '/trades', 2),
@@ -159,7 +170,7 @@ async function initializeHomepageData() {
 
     // Insert news articles
     console.log('📰 Inserting news articles...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO news_articles (title, description, content, image_url, author, category, date_published, sort_order) VALUES
       ('Abanyeshuri bacu batsinze amahugurwa y\\'ubuhanga', 'Ikipe y\\'abanyeshuri muri Software Development yatsindiye igihembo cya mbere mu mahugurwa y\\'igihugu.', 'Ikipe y\\'abanyeshuri muri Software Development yatsindiye igihembo cya mbere mu mahugurwa y\\'igihugu. Ibi ni bimwe mu bintu byiza tutanga abanyeshuri bacu.', 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800', 'Jean Mugisha', 'Ibihembo', '2026-01-15', 1),
       ('Ishuri ryacu ryitabiriye ibirori bya siporo', 'Abanyeshuri bacu batsinze imikino 5 mu birori bya siporo by\\'ishuri ry\\'igihugu.', 'Abanyeshuri bacu batsinze imikino 5 mu birori bya siporo by\\'ishuri ry\\'igihugu. Ni ishuri ryiza cyane.', 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800', 'Sarah Uwase', 'Siporo', '2026-01-12', 2),
@@ -170,7 +181,7 @@ async function initializeHomepageData() {
 
     // Insert testimonials
     console.log('💬 Inserting testimonials...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO testimonials (name, role, avatar, quote, rating, sort_order) VALUES
       ('Jean Claude Mugisha', 'Umunyeshuri - Software Development', 'JM', 'Ishuri ryacu ryampaye amahirwe menshi yo kwiga ubuhanga bw\\'ikoranabuhanga. Abarimu bacu barahebuje kandi bagashoboye.', 5, 1),
       ('Marie Uwase', 'Umubyeyi', 'MU', 'Umwana wanjye yarahindutse cyane kuva atangiye kwiga muri iri shuri. Amasomo ni meza kandi abanyeshuri bagenzurwa neza.', 5, 2),
@@ -181,7 +192,7 @@ async function initializeHomepageData() {
 
     // Insert school stats
     console.log('📊 Inserting school stats...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO school_stats (stat_key, value, label, icon, color, sort_order) VALUES
       ('students', '1,248', 'Abanyeshuri', 'Users', 'from-blue-500 to-indigo-500', 1),
       ('teachers', '84', 'Abarimu', 'GraduationCap', 'from-green-500 to-teal-500', 2),
@@ -192,7 +203,7 @@ async function initializeHomepageData() {
 
     // Insert achievements
     console.log('🏆 Inserting achievements...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO achievements (title, description, year, sort_order) VALUES
       ('Ishuri ry\\'Umwaka', 'Twatoranijwe nk\\'ishuri ry\\'umwaka mu mahugurwa y\\'ubuhanga', '2025', 1),
       ('Igihembo cya Mbere - Siporo', 'Abanyeshuri bacu batsinze igihembo cya mbere mu mikino y\\'ishuri', '2025', 2),
@@ -203,7 +214,7 @@ async function initializeHomepageData() {
 
     // Insert events
     console.log('📅 Inserting events...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO events (title, title_rw, description, description_rw, event_date, event_time, location, event_type, priority, organizer, organizer_rw, contact_info, max_attendees, status, sort_order) VALUES
       ('Parent-Teacher Meeting', 'Inama y\\'Ababyeyi n\\'Abarimu', 'Monthly meeting between parents and teachers', 'Inama y\\'ukwezi ihuza ababyeyi n\\'abarimu', '2026-01-25', '14:00:00', 'Main Hall', 'academic', 'high', 'School Administration', 'Abayobozi b\\'Ishuri', 'admin@school.rw', 200, 'upcoming', 1),
       ('Mid-term Exams', 'Imirimo y\\'Icyiciro cya Kabiri', 'Mid-term examinations for all classes', 'Imirimo y\\'icyiciro cya kabiri ku mashuri yose', '2026-01-28', '08:00:00', 'All Classrooms', 'academic', 'high', 'Academic Department', 'Ishami ry\\'Amashuri', 'academic@school.rw', NULL, 'upcoming', 2),
@@ -214,7 +225,7 @@ async function initializeHomepageData() {
 
     // Insert home features
     console.log('⭐ Inserting home features...');
-    await db.query(`
+    await db.pool.query(`
       INSERT INTO home_features (title, title_rw, description, description_rw, icon, color, sort_order) VALUES
       ('Experienced Teachers', 'Abarimu Babizi', 'Our teachers have extensive experience and expertise', 'Abarimu bacu bafite uburambe bwinshi n\\'ubuhanga', 'GraduationCap', 'from-blue-500 to-indigo-600', 1),
       ('Modern Facilities', 'Ibikoresho By\\'Igihe', 'State-of-the-art facilities and equipment', 'Ibikoresho bigezweho by\\'igihe', 'Building', 'from-green-500 to-teal-500', 2),

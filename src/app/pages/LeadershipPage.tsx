@@ -31,21 +31,24 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
     try {
       const response = await fetch('http://localhost:5000/api/leadership');
       const data = await response.json();
+      const leadersData = data.leaders || data || [];
       const roleOrder = {
         'Umwene Ishuri': 1,
         'School Owner': 1,
         'Umujyanama': 2,
         'Advisor': 2,
+        'advisor': 2,
         'DOS': 3,
         'Umubitsi': 4,
         'Accountant': 4,
         'Umuyobozi Mukuru': 5,
         'Head Teacher': 5,
+        'Headmaster': 5,
         'Patron': 6,
         'DOD': 7,
         'Matron': 8
       };
-      const sortedData = Array.isArray(data) ? data.sort((a, b) => {
+      const sortedData = Array.isArray(leadersData) ? leadersData.sort((a, b) => {
         const aOrder = roleOrder[a.role] || 999;
         const bOrder = roleOrder[b.role] || 999;
         return aOrder - bOrder;
@@ -176,7 +179,7 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <p className="text-gray-700 text-sm line-clamp-3 mb-4 leading-relaxed">{leader.biography_rw.substring(0, 150)}...</p>
+                <p className="text-gray-700 text-sm line-clamp-3 mb-4 leading-relaxed">{leader.biography_rw ? leader.biography_rw.substring(0, 150) : leader.biography_en?.substring(0, 150) || 'No biography available'}...</p>
                 
                 <motion.div
                   whileHover={{ x: 5 }}

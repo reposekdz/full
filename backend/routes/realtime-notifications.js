@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool } = require('../config/database');
 
 // Get user notifications
 router.get('/:userId', async (req, res) => {
@@ -13,8 +13,8 @@ router.get('/:userId', async (req, res) => {
     query += ' ORDER BY created_at DESC LIMIT ?';
     params.push(parseInt(limit));
     
-    const [notifications] = await db.query(query, params);
-    const [unreadCount] = await db.query('SELECT COUNT(*) as count FROM realtime_notifications WHERE user_id = ? AND is_read = 0', [req.params.userId]);
+    const [notifications] = await pool.execute(query, params);
+    const [unreadCount] = await pool.execute('SELECT COUNT(*) as count FROM realtime_notifications WHERE user_id = ? AND is_read = 0', [req.params.userId]);
     
     res.json({ success: true, notifications, unreadCount: unreadCount[0].count });
   } catch (error) {
@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
   try {
     const { user_id, title, message, type, priority, action_url, metadata } = req.body;
     
-    const [result] = await db.query(
+    const [result] = await pool.execute(
       'INSERT INTO realtime_notifications (user_id, title, message, type, priority, action_url, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [user_id, title, message, type, priority || 'normal', action_url, JSON.stringify(metadata)]
     );
@@ -51,7 +51,7 @@ router.post('/broadcast', async (req, res) => {
     const { user_ids, title, message, type, priority, action_url } = req.body;
     
     const values = user_ids.map(uid => [uid, title, message, type, priority || 'normal', action_url]);
-    await db.query(
+    await pool.execute(
       'INSERT INTO realtime_notifications (user_id, title, message, type, priority, action_url) VALUES ?',
       [values]
     );
@@ -71,7 +71,7 @@ router.post('/broadcast', async (req, res) => {
 // Mark as read
 router.put('/:id/read', async (req, res) => {
   try {
-    await db.query('UPDATE realtime_notifications SET is_read = 1, read_at = NOW() WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE realtime_notifications SET is_read = 1, read_at = NOW() WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -81,7 +81,7 @@ router.put('/:id/read', async (req, res) => {
 // Mark all as read
 router.put('/user/:userId/read-all', async (req, res) => {
   try {
-    await db.query('UPDATE realtime_notifications SET is_read = 1, read_at = NOW() WHERE user_id = ? AND is_read = 0', [req.params.userId]);
+    await pool.execute('UPDATE realtime_notifications SET is_read = 1, read_at = NOW() WHERE user_id = ? AND is_read = 0', [req.params.userId]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -91,7 +91,7 @@ router.put('/user/:userId/read-all', async (req, res) => {
 // Delete notification
 router.delete('/:id', async (req, res) => {
   try {
-    await db.query('DELETE FROM realtime_notifications WHERE id = ?', [req.params.id]);
+    await pool.execute('DELETE FROM realtime_notifications WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -101,7 +101,7 @@ router.delete('/:id', async (req, res) => {
 // Get notification preferences
 router.get('/preferences/:userId', async (req, res) => {
   try {
-    const [prefs] = await db.query('SELECT * FROM notification_preferences WHERE user_id = ?', [req.params.userId]);
+    const [prefs] = await pool.execute('SELECT * FROM notification_preferences WHERE user_id = ?', [req.params.userId]);
     res.json({ success: true, preferences: prefs[0] || {} });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -113,7 +113,7 @@ router.put('/preferences/:userId', async (req, res) => {
   try {
     const { email_enabled, sms_enabled, push_enabled, notification_types } = req.body;
     
-    await db.query(
+    await pool.execute(
       'INSERT INTO notification_preferences (user_id, email_enabled, sms_enabled, push_enabled, notification_types) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email_enabled = ?, sms_enabled = ?, push_enabled = ?, notification_types = ?',
       [req.params.userId, email_enabled, sms_enabled, push_enabled, JSON.stringify(notification_types), email_enabled, sms_enabled, push_enabled, JSON.stringify(notification_types)]
     );

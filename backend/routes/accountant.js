@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { notifyFeePayment } = require('../utils/parentNotifications');
 
 const router = express.Router();
 
@@ -62,6 +63,12 @@ router.post('/payments', authenticateToken, async (req, res) => {
       'INSERT INTO fee_payments (student_id, student_code, student_name, amount, payment_type, payment_method, reference_number, status, processed_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, "completed", ?, ?)',
       [student_id, student[0]?.student_code, student[0]?.name, amount, payment_type, payment_method, reference_number, req.user.userId, notes]
     );
+
+    // Notify parents
+    notifyFeePayment(student_id, { amount, payment_type }).catch(err => 
+      console.error('Failed to notify parent of fee payment:', err)
+    );
+
     res.json({ success: true, message: 'Payment recorded', paymentId: result.insertId });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to record payment' });

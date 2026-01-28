@@ -11,7 +11,8 @@ import {
   Settings,
   User,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  UserCog
 } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -46,6 +47,26 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
       color: 'from-pink-500 to-rose-600',
       bgGradient: 'from-pink-50 to-rose-50',
       features: ['Student Progress', 'Communication', 'Payments', 'Reports']
+    },
+    {
+      role: 'advisor' as UserRole,
+      title: 'Umujyanama',
+      subtitle: 'School Advisor',
+      description: 'Gucunga itumanaho ryose, ubujyanama, iterambere ry\'ishuri n\'imibare ngenderwaho',
+      icon: UserCog,
+      color: 'from-blue-600 to-purple-700',
+      bgGradient: 'from-blue-50 to-purple-50',
+      features: [
+        'Full Student Database Access',
+        'Advanced Analytics Dashboard',
+        'Contact Management',
+        'Performance Monitoring',
+        'Communication Oversight',
+        'School Development Insights',
+        'Student Sheets Access',
+        'Parent Coordination',
+        'Comprehensive Reports'
+      ]
     },
     {
       role: 'teacher' as UserRole,

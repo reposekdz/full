@@ -21,7 +21,7 @@ const auth = require('../middleware/auth');
 // ==================================================
 
 // 21. API ya Advanced Authentication Monitoring
-router.get('/security/auth-logs', auth, async (req, res) => {
+router.get('/security/auth-logs', auth.authenticate, async (req, res) => {
   try {
     const { 
       start_date = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -84,7 +84,7 @@ router.get('/security/auth-logs', auth, async (req, res) => {
 });
 
 // 22. API ya Security Risk Assessment
-router.get('/security/risk-assessment/:userId', auth, async (req, res) => {
+router.get('/security/risk-assessment/:userId', auth.authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -137,7 +137,7 @@ router.get('/security/risk-assessment/:userId', auth, async (req, res) => {
 });
 
 // 23. API ya Security Incidents Management
-router.get('/security/incidents', auth, async (req, res) => {
+router.get('/security/incidents', auth.authenticate, async (req, res) => {
   try {
     const { 
       status = 'all',
@@ -207,7 +207,7 @@ router.get('/security/incidents', auth, async (req, res) => {
 });
 
 // 24. API yo Gukemura Amakuru y'Akaga - Resolve Security Incident
-router.put('/security/incidents/:id/resolve', auth, async (req, res) => {
+router.put('/security/incidents/:id/resolve', auth.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { resolution_notes } = req.body;
@@ -228,7 +228,7 @@ router.put('/security/incidents/:id/resolve', auth, async (req, res) => {
 });
 
 // 25. API ya System Security Health Check
-router.get('/security/health-check', auth, async (req, res) => {
+router.get('/security/health-check', auth.authenticate, async (req, res) => {
   try {
     // Gusuzuma ubwoba bwa sisitemu - System security assessment
     const [recentThreats] = await db.execute(`
@@ -280,7 +280,7 @@ router.get('/security/health-check', auth, async (req, res) => {
 // ==================================================
 
 // 26. API ya Comprehensive Audit Trail
-router.get('/audit/trail', auth, async (req, res) => {
+router.get('/audit/trail', auth.authenticate, async (req, res) => {
   try {
     const { 
       user_id = null,
@@ -362,7 +362,7 @@ router.get('/audit/trail', auth, async (req, res) => {
 });
 
 // 27. API ya User Activity Analytics
-router.get('/audit/user-activity/:userId', auth, async (req, res) => {
+router.get('/audit/user-activity/:userId', auth.authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
     const { days = 30 } = req.query;
@@ -410,7 +410,7 @@ router.get('/audit/user-activity/:userId', auth, async (req, res) => {
 });
 
 // 28. API ya Compliance Reporting
-router.get('/audit/compliance-report', auth, async (req, res) => {
+router.get('/audit/compliance-report', auth.authenticate, async (req, res) => {
   try {
     const { 
       start_date = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

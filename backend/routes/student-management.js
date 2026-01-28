@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 
 // Generate unique serial code based on trade and class
 async function generateSerialCode(tradeCode, classId) {
@@ -140,6 +141,15 @@ router.post('/students', authenticateToken, requireRole(['admin', 'headmaster', 
       'UPDATE classes SET current_enrollment = current_enrollment + 1 WHERE id = ?',
       [class_id]
     );
+
+    // Send WhatsApp notification to parent
+    const welcomeMessage = `Muraho! Umwana wanyu ${first_name} ${last_name} yanditswe neza muri Garden TVET School, mu ishuri rya ${classInfo.name}. Serial Code ye ni: ${serialCode}. Mushobora kuyikoresha nka 'password' mwinjira bwa mbere.`;
+    
+    smsService.sendUniversalMessage(parent_phone, welcomeMessage, 0, {
+      type: 'student_registration_admin',
+      studentId: studentId,
+      preferredMethod: 'whatsapp'
+    }).catch(err => console.error('Failed to send welcome message:', err));
 
     res.json({ 
       success: true, 
@@ -321,7 +331,7 @@ router.post('/students/bulk', authenticateToken, requireRole(['admin', 'headmast
     const addedStudents = [];
 
     for (const student of students) {
-      const { parent_phone, location } = student;
+      const { parent_phone, location, first_name, last_name } = student;
       
       if (!parent_phone || !location) continue;
 
@@ -329,25 +339,37 @@ router.post('/students/bulk', authenticateToken, requireRole(['admin', 'headmast
       const hashedPassword = await bcrypt.hash(serialCode, 10);
 
       const [userResult] = await db.query(
-        `INSERT INTO users (serial_code, password_hash, parent_phone, address, role_id, is_active) 
-         VALUES (?, ?, ?, ?, ?, true)`,
-        [serialCode, hashedPassword, parent_phone, location, roleId]
+        `INSERT INTO users (serial_code, first_name, last_name, password_hash, parent_phone, address, role_id, is_active) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, true)`,
+        [serialCode, first_name || '', last_name || '', hashedPassword, parent_phone, location, roleId]
       );
+
+      const studentId = userResult.insertId;
 
       if (academicYearId) {
         await db.query(
           `INSERT INTO enrollments (student_id, class_id, academic_year_id, enrollment_date, status) 
            VALUES (?, ?, ?, CURDATE(), 'active')`,
-          [userResult.insertId, class_id, academicYearId]
+          [studentId, class_id, academicYearId]
         );
       }
 
+      // Send WhatsApp notification
+      const welcomeMessage = `Muraho! Umwana wanyu ${first_name || ''} ${last_name || ''} yanditswe neza muri Garden TVET School. Serial Code ye ni: ${serialCode}.`;
+      smsService.sendUniversalMessage(parent_phone, welcomeMessage, 0, {
+        type: 'student_registration_bulk',
+        studentId: studentId,
+        preferredMethod: 'whatsapp'
+      }).catch(err => console.error('Failed to send bulk welcome message:', err));
+
       addedStudents.push({
-        id: userResult.insertId,
+        id: studentId,
         serial_code: serialCode,
         default_password: serialCode,
         parent_phone,
-        location
+        location,
+        first_name,
+        last_name
       });
     }
 

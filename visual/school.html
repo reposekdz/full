@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sisitemu Yuzuye y'Ubuyobozi bw'Ishuri</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo { font-size: 1.5em; font-weight: bold; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: 0.3s; }
+        .nav-links a:hover { background: rgba(255,255,255,0.2); }
+        .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 80px 20px; text-align: center; }
+        .hero h1 { font-size: 3em; margin-bottom: 20px; }
+        .hero p { font-size: 1.3em; margin-bottom: 30px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin: 40px 0; }
+        .feature-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); transition: 0.3s; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .feature-icon { font-size: 3em; margin-bottom: 15px; }
+        .feature-title { font-size: 1.5em; color: #333; margin-bottom: 10px; font-weight: bold; }
+        .feature-desc { color: #666; line-height: 1.6; margin-bottom: 15px; }
+        .feature-list { list-style: none; }
+        .feature-list li { padding: 5px 0; color: #555; }
+        .feature-list li:before { content: '✓'; color: #667eea; font-weight: bold; margin-right: 8px; }
+        .section-title { font-size: 2.5em; color: #333; text-align: center; margin: 60px 0 30px; }
+        .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .module-card { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .module-card:hover { transform: scale(1.05); }
+        .stats-section { background: white; padding: 40px; border-radius: 15px; margin: 40px 0; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; text-align: center; }
+        .stat-item { padding: 20px; }
+        .stat-number { font-size: 3em; color: #667eea; font-weight: bold; }
+        .stat-label { color: #666; margin-top: 10px; font-size: 1.1em; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px 30px; border-radius: 25px; text-decoration: none; display: inline-block; margin: 10px; transition: 0.3s; font-weight: bold; }
+        .btn-primary:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        footer { background: #2c3e50; color: white; text-align: center; padding: 30px; margin-top: 60px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 SISITEMU Y'ISHURI</div>
+        <div class="nav-links">
+            <a href="home.html">Ahabanza</a>
+            <a href="#features">Ibikorwa</a>
+            <a href="#modules">Ibice</a>
+            <a href="#stats">Imibare</a>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>Sisitemu Yuzuye y'Ubuyobozi bw'Ishuri</h1>
+        <p>Ikoranabuhanga rigezweho mu micungire y'amashuri - Byose mu gice kimwe</p>
+        <a href="#features" class="btn-primary">Menya Byinshi</a>
+        <a href="home.html" class="btn-primary">Tangira Ubu</a>
+    </div>
+
+    <div class="container">
+        <h2 class="section-title" id="features">Ibikorwa Nyamukuru</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">👨🎓</div>
+                <div class="feature-title">Gucunga Abanyeshuri</div>
+                <div class="feature-desc">Sisitemu yuzuye yo gucunga amakuru y'abanyeshuri</div>
+                <ul class="feature-list">
+                    <li>Kwandikisha abanyeshuri</li>
+                    <li>Profil z'abanyeshuri</li>
+                    <li>Amanota n'ibitabo</li>
+                    <li>Kwitabira amasomo</li>
+                    <li>Imyitwarire n'indangagaciro</li>
+                    <li>Raporo z'iterambere</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">👨🏫</div>
+                <div class="feature-title">Gucunga Abarimu</div>
+                <div class="feature-desc">Gucunga abarimu n'amasomo babo</div>
+                <ul class="feature-list">
+                    <li>Profil z'abarimu</li>
+                    <li>Gahunda y'amasomo</li>
+                    <li>Gutanga amanota</li>
+                    <li>Kwitabira amasomo</li>
+                    <li>Raporo z'abarimu</li>
+                    <li>Gusuzuma imikorere</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <div class="feature-title">Gucunga Amafaranga</div>
+                <div class="feature-desc">Sisitemu yuzuye y'ibaruramari</div>
+                <ul class="feature-list">
+                    <li>Kwishyura kw'abanyeshuri</li>
+                    <li>Imyenda n'inguzanyo</li>
+                    <li>Ibyinjijwe n'ibyasohowe</li>
+                    <li>Raporo z'amafaranga</li>
+                    <li>Imishahara y'abakozi</li>
+                    <li>Bije n'ibyasohowe</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <div class="feature-title">Isomero ry'Ibitabo</div>
+                <div class="feature-desc">Gucunga ibitabo n'ibikoresho</div>
+                <ul class="feature-list">
+                    <li>Ububiko bw'ibitabo</li>
+                    <li>Guhagarika ibitabo</li>
+                    <li>Kugarura ibitabo</li>
+                    <li>Amande y'ibitabo</li>
+                    <li>Raporo z'isomero</li>
+                    <li>Gushakisha ibitabo</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏥</div>
+                <div class="feature-title">Ubuzima bw'Abanyeshuri</div>
+                <div class="feature-desc">Gukurikirana ubuzima bw'abanyeshuri</div>
+                <ul class="feature-list">
+                    <li>Amateka y'ubuzima</li>
+                    <li>Imiti n'ubuvuzi</li>
+                    <li>Gukurikirana indwara</li>
+                    <li>Raporo z'ubuzima</li>
+                    <li>Kumenyesha ababyeyi</li>
+                    <li>Kliniki y'ishuri</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏠</div>
+                <div class="feature-title">Gucunga Amacumbi</div>
+                <div class="feature-desc">Gucunga amacumbi n'ibyumba</div>
+                <ul class="feature-list">
+                    <li>Gutanga ibyumba</li>
+                    <li>Gukurikirana abanyeshuri</li>
+                    <li>Kwishyura amacumbi</li>
+                    <li>Raporo z'amacumbi</li>
+                    <li>Gucunga ibikoresho</li>
+                    <li>Umutekano w'amacumbi</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <div class="feature-title">Ibizamini n'Amanota</div>
+                <div class="feature-desc">Gucunga ibizamini n'amanota</div>
+                <ul class="feature-list">
+                    <li>Gutegura ibizamini</li>
+                    <li>Gutanga amanota</li>
+                    <li>Raporo z'amanota</li>
+                    <li>Ibitabo by'amanota</li>
+                    <li>Gusuzuma iterambere</li>
+                    <li>Kumenyesha ababyeyi</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <div class="feature-title">Itumanaho</div>
+                <div class="feature-desc">Sisitemu y'itumanaho</div>
+                <ul class="feature-list">
+                    <li>SMS n'ubutumwa</li>
+                    <li>WhatsApp</li>
+                    <li>Email</li>
+                    <li>Itangazo</li>
+                    <li>Kumenyesha ababyeyi</li>
+                    <li>Raporo z'itumanaho</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏆</div>
+                <div class="feature-title">Siporo n'Imikino</div>
+                <div class="feature-desc">Gucunga ibikorwa bya siporo</div>
+                <ul class="feature-list">
+                    <li>Amakipe y'ishuri</li>
+                    <li>Amarushanwa</li>
+                    <li>Gukurikirana ibikorwa</li>
+                    <li>Raporo za siporo</li>
+                    <li>Ibihembo n'indangamuntu</li>
+                    <li>Amahugurwa</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📦</div>
+                <div class="feature-title">Gucunga Ibikoresho</div>
+                <div class="feature-desc">Ububiko bw'ibikoresho by'ishuri</div>
+                <ul class="feature-list">
+                    <li>Ububiko bw'ibikoresho</li>
+                    <li>Ibyinjijwe n'ibyasohowe</li>
+                    <li>Gusaba ibikoresho</li>
+                    <li>Raporo z'ibikoresho</li>
+                    <li>Gukurikirana ibikoresho</li>
+                    <li>Gucunga ibicuruzwa</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔔</div>
+                <div class="feature-title">Kumenyesha</div>
+                <div class="feature-desc">Sisitemu yo kumenyesha mu gihe nyacyo</div>
+                <ul class="feature-list">
+                    <li>Kumenyesha mu gihe nyacyo</li>
+                    <li>Itangazo</li>
+                    <li>Ubutumwa bwihariye</li>
+                    <li>Kumenyesha ababyeyi</li>
+                    <li>Kumenyesha abarimu</li>
+                    <li>Kumenyesha abanyeshuri</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Raporo n'Imibare</div>
+                <div class="feature-desc">Raporo n'imibare y'ishuri</div>
+                <ul class="feature-list">
+                    <li>Raporo z'abanyeshuri</li>
+                    <li>Raporo z'amafaranga</li>
+                    <li>Raporo z'amasomo</li>
+                    <li>Imibare y'ishuri</li>
+                    <li>Gusuzuma imikorere</li>
+                    <li>Raporo z'umwaka</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="stats-section" id="stats">
+            <h2 class="section-title">Imibare y'Ibikorwa</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">10</div>
+                    <div class="stat-label">Inshingano Zitandukanye</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label">Ibikorwa Byihariye</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Raporo Zitandukanye</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Serivisi Zihoraho</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Umutekano w'Amakuru</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Abanyeshuri Bashobora</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title" id="modules">Ibice by'Inshingano</h2>
+        <div class="modules-grid">
+            <div class="module-card" onclick="location.href='student.html'">
+                <h3>👨🎓 UMUNYESHURI</h3>
+                <p>Kugenzura amasomo n'amanota</p>
+            </div>
+            <div class="module-card" onclick="location.href='parent.html'">
+                <h3>👨👩👧 UMUBYEYI</h3>
+                <p>Gukurikirana umwana</p>
+            </div>
+            <div class="module-card" onclick="location.href='teacher.html'">
+                <h3>👨🏫 UMWARIMU</h3>
+                <p>Gucunga amasomo</p>
+            </div>
+            <div class="module-card" onclick="location.href='accountant.html'">
+                <h3>💰 UMUBARE</h3>
+                <p>Gucunga amafaranga</p>
+            </div>
+            <div class="module-card" onclick="location.href='stockmanager.html'">
+                <h3>📦 UMUCUNGA IBIKORESHO</h3>
+                <p>Gucunga ibikoresho</p>
+            </div>
+            <div class="module-card" onclick="location.href='admin.html'">
+                <h3>⚙️ UMUYOBOZI</h3>
+                <p>Gucunga sisitemu</p>
+            </div>
+            <div class="module-card" onclick="location.href='dod.html'">
+                <h3>🎯 DOD</h3>
+                <p>Gucunga amasomo</p>
+            </div>
+            <div class="module-card" onclick="location.href='dos.html'">
+                <h3>👥 DOS</h3>
+                <p>Gucunga abanyeshuri</p>
+            </div>
+            <div class="module-card" onclick="location.href='advisor.html'">
+                <h3>💡 UMUJYANAMA</h3>
+                <p>Gutanga inama</p>
+            </div>
+            <div class="module-card" onclick="location.href='patron.html'">
+                <h3>🏆 UMUKORESHA</h3>
+                <p>Gucunga ibikorwa</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Sisitemu y'Ubuyobozi bw'Ishuri - Ikoranabuhanga rigezweho</p>
+        <p>Byakozwe n'urukundo mu Rwanda 🇷🇼</p>
+    </footer>
+</body>
+</html>

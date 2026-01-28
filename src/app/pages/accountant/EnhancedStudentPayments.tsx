@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, CheckCircle, XCircle, Clock, DollarSign, Users, AlertCircle, Download, Bell, Eye, Plus, RefreshCw, BarChart3, PieChart, Award, TrendingDown } from 'lucide-react';
 import AccountantSidebar from '@/app/components/AccountantSidebar';
+import apiService from '@/app/services/apiService';
 
 const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate }) => {
   const [students, setStudents] = useState<any[]>([]);
@@ -9,6 +10,7 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedTrade, setSelectedTrade] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -26,28 +28,18 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, selectedClass, selectedTrade, selectedStatus]);
+  }, [students, searchTerm, selectedClass, selectedLevel, selectedTrade, selectedStatus]);
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const [studentsRes, analyticsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/accountant/student-payments', { headers }),
-        fetch('http://localhost:5000/api/accountant/analytics', { headers })
+      setLoading(true);
+      const [studentsData, analyticsData] = await Promise.all([
+        apiService.getAccountantStudentPayments(),
+        apiService.getAccountantAnalytics()
       ]);
       
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json();
-        setStudents(Array.isArray(studentsData) ? studentsData : []);
-      }
-      
-      if (analyticsRes.ok) {
-        const analyticsData = await analyticsRes.json();
-        setAnalytics(analyticsData.analytics || null);
-      }
-      
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setAnalytics(analyticsData.analytics || null);
       setLoading(false);
     } catch (error) {
       console.error('Error:', error);
@@ -67,6 +59,7 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
       );
     }
     if (selectedClass !== 'all') filtered = filtered.filter(s => s.class_name === selectedClass);
+    if (selectedLevel !== 'all') filtered = filtered.filter(s => s.level === selectedLevel);
     if (selectedTrade !== 'all') filtered = filtered.filter(s => s.trade_code === selectedTrade);
     if (selectedStatus !== 'all') filtered = filtered.filter(s => s.payment_status === selectedStatus);
     setFilteredStudents(filtered);
@@ -75,21 +68,13 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
   const handleRecordPayment = async () => {
     if (!selectedStudent || !paymentAmount) return;
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/accountant/record-payment', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({
-          student_id: selectedStudent.id,
-          amount: parseFloat(paymentAmount),
-          payment_method: paymentMethod,
-          reference_number: referenceNumber
-        })
+      const res = await apiService.recordAccountantPayment({
+        student_id: selectedStudent.id,
+        amount: parseFloat(paymentAmount),
+        payment_method: paymentMethod,
+        reference_number: referenceNumber
       });
-      if (res.ok) {
+      if (res.success) {
         alert('Kwishyura byanditswe neza!');
         setShowPaymentModal(false);
         setPaymentAmount('');
@@ -104,20 +89,12 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
   const handleUpdateFees = async () => {
     if (!selectedStudent || !feesAmount) return;
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/accountant/update-fees', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({
-          student_id: selectedStudent.id,
-          total_fees: parseFloat(feesAmount),
-          academic_year: '2024-2025'
-        })
+      const res = await apiService.updateAccountantFees({
+        student_id: selectedStudent.id,
+        total_fees: parseFloat(feesAmount),
+        academic_year: '2024-2025'
       });
-      if (res.ok) {
+      if (res.success) {
         alert('Amafaranga yavuguruwe!');
         setShowFeesModal(false);
         setFeesAmount('');
@@ -314,11 +291,15 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
           )}
 
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input type="text" placeholder="Shakisha..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
               </div>
+              <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                <option value="all">Icyiciro Bose</option>
+                {[...new Set(students.map(s => s.level).filter(Boolean))].sort().map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
               <select value={selectedTrade} onChange={(e) => setSelectedTrade(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
                 <option value="all">Amahugurwa Yose</option>
                 {[...new Set(students.map(s => s.trade_code))].map(t => <option key={t} value={t}>{t}</option>)}

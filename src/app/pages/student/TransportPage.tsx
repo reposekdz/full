@@ -7,9 +7,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
 
 export default function TransportPage() {
   const [routes, setRoutes] = useState<any[]>([]);
@@ -24,31 +22,26 @@ export default function TransportPage() {
 
   const fetchRoutes = async () => {
     try {
-      const res = await axios.get(`${API_URL}/transport/routes`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setRoutes(res.data);
+      const data = await apiService.getTransportRoutes();
+      setRoutes(data);
     } catch (err) { console.error(err); }
   };
 
   const fetchBookings = async () => {
     try {
-      const res = await axios.get(`${API_URL}/transport/my-bookings`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setBookings(res.data);
+      const data = await apiService.getMyTransportBookings();
+      setBookings(data);
     } catch (err) { console.error(err); }
   };
 
   const bookTransport = async () => {
     try {
-      await axios.post(`${API_URL}/transport/book`, { route_id: selectedRoute.id, booking_date: bookingDate }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await apiService.bookTransport(selectedRoute.id, bookingDate);
+      if (res.error) throw new Error(res.error);
       fetchBookings();
       setSelectedRoute(null);
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Booking failed');
+      alert(err.message || 'Booking failed');
     }
   };
 

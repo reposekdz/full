@@ -48,10 +48,11 @@ import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
+import ComprehensiveParentDashboard from '@/app/pages/parent/ComprehensiveParentDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
-import DirectorDisciplineDashboard from '@/app/pages/dashboards/DirectorDisciplineDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
 import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';
+import DODLeavePage from '@/app/pages/dod/DODLeavePage';
 import DODExamsPage from '@/app/pages/dod/DODExamsPage';
 import DODStudentsPage from '@/app/pages/dod/DODStudentsPage';
 import DODProfilePage from '@/app/pages/dod/DODProfilePage';
@@ -60,7 +61,19 @@ import DODPunishmentsPage from '@/app/pages/dod/DODPunishmentsPage';
 import DODParentNotificationsPage from '@/app/pages/dod/DODParentNotificationsPage';
 import DODStudentSheetsPage from '@/app/pages/dod/DODStudentSheetsPage';
 import HeadMasterDashboard from '@/app/pages/dashboards/HeadMasterDashboard';
-import TeacherDashboard from '@/app/pages/dashboards/TeacherDashboard';
+import TeacherDashboard from '@/app/pages/teacher/TeacherDashboard';
+import TeacherGradingPage from '@/app/pages/teacher/TeacherGradingPage';
+import TeacherCreateAssignmentPage from '@/app/pages/teacher/TeacherCreateAssignmentPage';
+import TeacherAttendancePage from '@/app/pages/teacher/TeacherAttendancePage';
+import TeacherProfilePage from '@/app/pages/teacher/TeacherProfilePage';
+import TeacherSearchPage from '@/app/pages/teacher/TeacherSearchPage';
+import TeacherNotificationsPage from '@/app/pages/teacher/TeacherNotificationsPage';
+import TeacherClassesPage from '@/app/pages/teacher/TeacherClassesPage';
+import TeacherStudentsPage from '@/app/pages/teacher/TeacherStudentsPage';
+import TeacherGradesPage from '@/app/pages/teacher/TeacherGradesPage';
+import TeacherAssignmentsPage from '@/app/pages/teacher/TeacherAssignmentsPage';
+import TeacherResourcesPage from '@/app/pages/teacher/TeacherResourcesPage';
+import TeacherSchedulePage from '@/app/pages/teacher/TeacherSchedulePage';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
 import StockManagerDashboard from '@/app/pages/dashboards/StockManagerDashboard';
 import ResponsesPage from '@/app/pages/ResponsesPage';
@@ -74,18 +87,40 @@ import TransactionsManagement from '@/app/pages/accountant/TransactionsManagemen
 import FinancialReports from '@/app/pages/accountant/FinancialReportsPage';
 import TimetableView from '@/app/pages/accountant/TimetableView';
 import TeamOverviewManagement from '@/app/pages/admin/TeamOverviewManagement';
+import MedicalManagementSystem from '@/app/pages/systems/MedicalManagementSystem';
+import { Toaster } from 'sonner';
+import LibraryManagementSystem from '@/app/pages/systems/LibraryManagementSystem';
+import ExamManagementSystem from '@/app/pages/systems/ExamManagementSystem';
+import HostelManagementSystem from '@/app/pages/systems/HostelManagementSystem';
 import NYTArticleViewPage from '@/app/pages/NYTArticleViewPage';
 import AdminArticleManagementPage from '@/app/pages/AdminArticleManagementPage';
 import Footer from '@/app/components/Footer';
+import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(() => {
-    // Restore page from localStorage on mount
-    const saved = localStorage.getItem('app_current_page');
-    return saved || 'home';
+    // Get page from URL path first, then localStorage
+    const path = window.location.pathname.slice(1) || 'home';
+    return path;
   });
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const { user, logout, getRoleDashboard } = useAuth();
+
+  // Sync URL with currentPage
+  useEffect(() => {
+    const path = window.location.pathname.slice(1) || 'home';
+    if (path !== currentPage) {
+      setCurrentPage(path);
+    }
+  }, []);
+
+  // Update URL when currentPage changes
+  useEffect(() => {
+    const path = window.location.pathname.slice(1) || 'home';
+    if (path !== currentPage) {
+      window.history.pushState({}, '', `/${currentPage}`);
+    }
+  }, [currentPage]);
 
   // Save current page to localStorage whenever it changes
   useEffect(() => {
@@ -140,11 +175,14 @@ const AppContent: React.FC = () => {
       case 'student':
         return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
-        return <ParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <ComprehensiveParentDashboard />;
+      case 'advisor':
+        return <ComprehensiveAdvisorPortal onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_discipline':
         if (currentPage === 'dod-discipline') return <DODDisciplinePage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-leave') return <DODLeavePage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-exams') return <DODExamsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-students') return <DODStudentsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-profile') return <DODProfilePage onNavigate={handleNavigate} />;
@@ -157,6 +195,18 @@ const AppContent: React.FC = () => {
       case 'headmaster':
         return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
+        if (currentPage === 'profile') return <TeacherProfilePage onNavigate={handleNavigate} />;
+        if (currentPage === 'search') return <TeacherSearchPage onNavigate={handleNavigate} />;
+        if (currentPage === 'notifications') return <TeacherNotificationsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'classes') return <TeacherClassesPage onNavigate={handleNavigate} />;
+        if (currentPage === 'students') return <TeacherStudentsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'gradebook') return <TeacherGradesPage onNavigate={handleNavigate} />;
+        if (currentPage === 'attendance') return <TeacherAttendancePage onNavigate={handleNavigate} />;
+        if (currentPage === 'assignments') return <TeacherAssignmentsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'resources') return <TeacherResourcesPage onNavigate={handleNavigate} />;
+        if (currentPage === 'schedule') return <TeacherSchedulePage onNavigate={handleNavigate} />;
+        if (currentPage === 'teacher-grading') return <TeacherGradingPage teacherId={user.id} onNavigate={handleNavigate} />;
+        if (currentPage === 'teacher-create-assignment') return <TeacherCreateAssignmentPage teacherId={user.id} onNavigate={handleNavigate} />;
         return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'accountant':
         if (currentPage.startsWith('payments-') || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
@@ -184,6 +234,18 @@ const AppContent: React.FC = () => {
   };
 
   const renderPage = () => {
+    // Check for dashboard routes first
+    if (currentPage === 'admin' && user?.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-student' && user?.role === 'student') return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ComprehensiveParentDashboard />;
+    if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <ComprehensiveAdvisorPortal onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-director-discipline' && user?.role === 'director_discipline') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <StockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
+
     // Check for dynamic routes first (works for all users)
     if (currentPage.startsWith('article/')) {
       const articleId = currentPage.split('/')[1];
@@ -232,6 +294,10 @@ const AppContent: React.FC = () => {
       if (currentPage === 'transactions-management') return <TransactionsManagement onNavigate={handleNavigate} />;
       if (currentPage === 'financial-reports') return <FinancialReports onNavigate={handleNavigate} />;
       if (currentPage === 'timetable-view') return <TimetableView onNavigate={handleNavigate} />;
+      if (currentPage === 'medical-system') return <MedicalManagementSystem />;
+      if (currentPage === 'library-system') return <LibraryManagementSystem />;
+      if (currentPage === 'exam-management') return <ExamManagementSystem />;
+      if (currentPage === 'hostel-management') return <HostelManagementSystem />;
       
       // Role selection pages
       if (currentPage === 'role-selection') {
@@ -357,6 +423,7 @@ const App: React.FC = () => {
       <AuthProvider>
         <ContentProvider>
           <AppContent />
+          <Toaster position="top-right" richColors />
         </ContentProvider>
       </AuthProvider>
     </LanguageProvider>

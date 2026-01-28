@@ -203,4 +203,56 @@ router.post('/performance', authenticateToken, requireRole('admin', 'dos', 'teac
   }
 });
 
+// Get grades for parent
+router.get('/grades', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const [grades] = await pool.execute(`
+      SELECT g.*, c.course_name, u.first_name, u.last_name, u.student_id as student_code
+      FROM grades g
+      JOIN courses c ON g.course_id = c.id
+      JOIN users u ON g.student_id = u.id
+      WHERE u.parent_id = ?
+      ORDER BY g.created_at DESC
+      LIMIT 100
+    `, [req.user.id]);
+    res.json({ success: true, grades });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get attendance for parent
+router.get('/attendance', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const [attendance] = await pool.execute(`
+      SELECT a.*, u.first_name, u.last_name, u.student_id as student_code
+      FROM attendance a
+      JOIN users u ON a.student_id = u.id
+      WHERE u.parent_id = ?
+      ORDER BY a.date DESC
+      LIMIT 100
+    `, [req.user.id]);
+    res.json({ success: true, attendance });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get behavior for parent
+router.get('/behavior', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const [behavior] = await pool.execute(`
+      SELECT b.*, u.first_name, u.last_name, u.student_id as student_code
+      FROM student_behavior_log b
+      JOIN users u ON b.student_id = u.id
+      WHERE u.parent_id = ?
+      ORDER BY b.incident_date DESC
+      LIMIT 50
+    `, [req.user.id]);
+    res.json({ success: true, behavior });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

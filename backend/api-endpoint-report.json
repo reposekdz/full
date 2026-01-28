@@ -1,0 +1,918 @@
+{
+  "timestamp": "2026-01-27T15:49:42.699Z",
+  "totalFiles": 180,
+  "filesWithEndpoints": 180,
+  "totalEndpoints": 1847,
+  "fileDetails": [
+    {
+      "file": "comprehensive-database.js",
+      "endpoints": 164
+    },
+    {
+      "file": "advisor.js",
+      "endpoints": 39
+    },
+    {
+      "file": "homepage.js",
+      "endpoints": 37
+    },
+    {
+      "file": "comprehensiveApi.js",
+      "endpoints": 36
+    },
+    {
+      "file": "sports-comprehensive.js",
+      "endpoints": 34
+    },
+    {
+      "file": "academics.js",
+      "endpoints": 26
+    },
+    {
+      "file": "dod-comprehensive.js",
+      "endpoints": 26
+    },
+    {
+      "file": "accountant.js",
+      "endpoints": 24
+    },
+    {
+      "file": "discipline.js",
+      "endpoints": 23
+    },
+    {
+      "file": "sportsManagement.js",
+      "endpoints": 23
+    },
+    {
+      "file": "comprehensive-library-hostel-transport-sports-communication-api.js",
+      "endpoints": 21
+    },
+    {
+      "file": "enhanced-dos.js",
+      "endpoints": 21
+    },
+    {
+      "file": "powerfulApisCollection.js",
+      "endpoints": 20
+    },
+    {
+      "file": "sports-hero-management.js",
+      "endpoints": 20
+    },
+    {
+      "file": "admin.js",
+      "endpoints": 18
+    },
+    {
+      "file": "alumni-system.js",
+      "endpoints": 18
+    },
+    {
+      "file": "dynamicContent.js",
+      "endpoints": 18
+    },
+    {
+      "file": "dos.js",
+      "endpoints": 17
+    },
+    {
+      "file": "home-content.js",
+      "endpoints": 17
+    },
+    {
+      "file": "admin-advanced.js",
+      "endpoints": 16
+    },
+    {
+      "file": "auth.js",
+      "endpoints": 16
+    },
+    {
+      "file": "class-management.js",
+      "endpoints": 16
+    },
+    {
+      "file": "comprehensive-knowledge-notifications-admissions-exams-api.js",
+      "endpoints": 16
+    },
+    {
+      "file": "class-sheets.js",
+      "endpoints": 15
+    },
+    {
+      "file": "academic-system.js",
+      "endpoints": 14
+    },
+    {
+      "file": "automated-notifications.js",
+      "endpoints": 14
+    },
+    {
+      "file": "messaging.js",
+      "endpoints": 14
+    },
+    {
+      "file": "support-enhanced.js",
+      "endpoints": 14
+    },
+    {
+      "file": "teacher-advanced.js",
+      "endpoints": 14
+    },
+    {
+      "file": "admin-management.js",
+      "endpoints": 13
+    },
+    {
+      "file": "advanced-assignments.js",
+      "endpoints": 13
+    },
+    {
+      "file": "advancedFeatures.js",
+      "endpoints": 13
+    },
+    {
+      "file": "certificate-system.js",
+      "endpoints": 13
+    },
+    {
+      "file": "comprehensive-attendance-grades-assignments-api.js",
+      "endpoints": 13
+    },
+    {
+      "file": "dos-updated.js",
+      "endpoints": 13
+    },
+    {
+      "file": "sports-advanced.js",
+      "endpoints": 13
+    },
+    {
+      "file": "system-updates.js",
+      "endpoints": 13
+    },
+    {
+      "file": "teacher-portal.js",
+      "endpoints": 13
+    },
+    {
+      "file": "admission-system.js",
+      "endpoints": 12
+    },
+    {
+      "file": "cafeteria-system.js",
+      "endpoints": 12
+    },
+    {
+      "file": "content-management.js",
+      "endpoints": 12
+    },
+    {
+      "file": "content.js",
+      "endpoints": 12
+    },
+    {
+      "file": "dos-management.js",
+      "endpoints": 12
+    },
+    {
+      "file": "dynamic.js",
+      "endpoints": 12
+    },
+    {
+      "file": "forums.js",
+      "endpoints": 12
+    },
+    {
+      "file": "hostel-system.js",
+      "endpoints": 12
+    },
+    {
+      "file": "sports-management.js",
+      "endpoints": 12
+    },
+    {
+      "file": "staff-management.js",
+      "endpoints": 12
+    },
+    {
+      "file": "students.js",
+      "endpoints": 12
+    },
+    {
+      "file": "unified-integration-api.js",
+      "endpoints": 12
+    },
+    {
+      "file": "financial-system.js",
+      "endpoints": 11
+    },
+    {
+      "file": "sports.js",
+      "endpoints": 11
+    },
+    {
+      "file": "student-competitions.js",
+      "endpoints": 11
+    },
+    {
+      "file": "teachers.js",
+      "endpoints": 11
+    },
+    {
+      "file": "users.js",
+      "endpoints": 11
+    },
+    {
+      "file": "alumni.js",
+      "endpoints": 10
+    },
+    {
+      "file": "announcements.js",
+      "endpoints": 10
+    },
+    {
+      "file": "article-interactions.js",
+      "endpoints": 10
+    },
+    {
+      "file": "comprehensive-trades-api.js",
+      "endpoints": 10
+    },
+    {
+      "file": "dos-old.js",
+      "endpoints": 10
+    },
+    {
+      "file": "events.js",
+      "endpoints": 10
+    },
+    {
+      "file": "invoices.js",
+      "endpoints": 10
+    },
+    {
+      "file": "library-system.js",
+      "endpoints": 10
+    },
+    {
+      "file": "modernTechnologyApis.js",
+      "endpoints": 10
+    },
+    {
+      "file": "powerfulSchoolApis.js",
+      "endpoints": 10
+    },
+    {
+      "file": "sms.js",
+      "endpoints": 10
+    },
+    {
+      "file": "student-management.js",
+      "endpoints": 10
+    },
+    {
+      "file": "trades.js",
+      "endpoints": 10
+    },
+    {
+      "file": "accountantManagement.js",
+      "endpoints": 9
+    },
+    {
+      "file": "admin-comprehensive.js",
+      "endpoints": 9
+    },
+    {
+      "file": "advanced-support.js",
+      "endpoints": 9
+    },
+    {
+      "file": "certificates.js",
+      "endpoints": 9
+    },
+    {
+      "file": "class-sheets-api.js",
+      "endpoints": 9
+    },
+    {
+      "file": "clubs.js",
+      "endpoints": 9
+    },
+    {
+      "file": "comprehensive-auth.js",
+      "endpoints": 9
+    },
+    {
+      "file": "comprehensive-messaging.js",
+      "endpoints": 9
+    },
+    {
+      "file": "comprehensive-staff.js",
+      "endpoints": 9
+    },
+    {
+      "file": "parent-dashboard.js",
+      "endpoints": 9
+    },
+    {
+      "file": "services-advanced.js",
+      "endpoints": 9
+    },
+    {
+      "file": "workshop-system.js",
+      "endpoints": 9
+    },
+    {
+      "file": "advancedSecurityApis.js",
+      "endpoints": 8
+    },
+    {
+      "file": "classes-api.js",
+      "endpoints": 8
+    },
+    {
+      "file": "contact.js",
+      "endpoints": 8
+    },
+    {
+      "file": "dynamic-system.js",
+      "endpoints": 8
+    },
+    {
+      "file": "emergency-contacts.js",
+      "endpoints": 8
+    },
+    {
+      "file": "exam-scheduling.js",
+      "endpoints": 8
+    },
+    {
+      "file": "exams.js",
+      "endpoints": 8
+    },
+    {
+      "file": "grades.js",
+      "endpoints": 8
+    },
+    {
+      "file": "modernTechApis.js",
+      "endpoints": 8
+    },
+    {
+      "file": "notifications.js",
+      "endpoints": 8
+    },
+    {
+      "file": "parent-monitoring.js",
+      "endpoints": 8
+    },
+    {
+      "file": "quizzes.js",
+      "endpoints": 8
+    },
+    {
+      "file": "realtime-notifications.js",
+      "endpoints": 8
+    },
+    {
+      "file": "salaries.js",
+      "endpoints": 8
+    },
+    {
+      "file": "stock.js",
+      "endpoints": 8
+    },
+    {
+      "file": "system-settings.js",
+      "endpoints": 8
+    },
+    {
+      "file": "testimonials.js",
+      "endpoints": 8
+    },
+    {
+      "file": "admissions.js",
+      "endpoints": 7
+    },
+    {
+      "file": "advancedAcademics.js",
+      "endpoints": 7
+    },
+    {
+      "file": "budgets.js",
+      "endpoints": 7
+    },
+    {
+      "file": "collaboration.js",
+      "endpoints": 7
+    },
+    {
+      "file": "curriculum.js",
+      "endpoints": 7
+    },
+    {
+      "file": "developers-api.js",
+      "endpoints": 7
+    },
+    {
+      "file": "dod-profile.js",
+      "endpoints": 7
+    },
+    {
+      "file": "medical-system.js",
+      "endpoints": 7
+    },
+    {
+      "file": "news.js",
+      "endpoints": 7
+    },
+    {
+      "file": "parent-linking.js",
+      "endpoints": 7
+    },
+    {
+      "file": "reporting.js",
+      "endpoints": 7
+    },
+    {
+      "file": "smartAnalyticsApis.js",
+      "endpoints": 7
+    },
+    {
+      "file": "student-sheets.js",
+      "endpoints": 7
+    },
+    {
+      "file": "studentPayments.js",
+      "endpoints": 7
+    },
+    {
+      "file": "support.js",
+      "endpoints": 7
+    },
+    {
+      "file": "timetable.js",
+      "endpoints": 7
+    },
+    {
+      "file": "adaptiveLearning.js",
+      "endpoints": 6
+    },
+    {
+      "file": "attendance.js",
+      "endpoints": 6
+    },
+    {
+      "file": "backups.js",
+      "endpoints": 6
+    },
+    {
+      "file": "counseling-system.js",
+      "endpoints": 6
+    },
+    {
+      "file": "courses.js",
+      "endpoints": 6
+    },
+    {
+      "file": "dod-actions.js",
+      "endpoints": 6
+    },
+    {
+      "file": "expenses.js",
+      "endpoints": 6
+    },
+    {
+      "file": "gamification.js",
+      "endpoints": 6
+    },
+    {
+      "file": "knowledge-base.js",
+      "endpoints": 6
+    },
+    {
+      "file": "parents.js",
+      "endpoints": 6
+    },
+    {
+      "file": "production-notifications.js",
+      "endpoints": 6
+    },
+    {
+      "file": "role-auth.js",
+      "endpoints": 6
+    },
+    {
+      "file": "serial-codes.js",
+      "endpoints": 6
+    },
+    {
+      "file": "student-advanced.js",
+      "endpoints": 6
+    },
+    {
+      "file": "student-auth.js",
+      "endpoints": 6
+    },
+    {
+      "file": "teams.js",
+      "endpoints": 6
+    },
+    {
+      "file": "trades-courses.js",
+      "endpoints": 6
+    },
+    {
+      "file": "advanced-role-features.js",
+      "endpoints": 5
+    },
+    {
+      "file": "advancedOperations.js",
+      "endpoints": 5
+    },
+    {
+      "file": "analytics.js",
+      "endpoints": 5
+    },
+    {
+      "file": "cms.js",
+      "endpoints": 5
+    },
+    {
+      "file": "dashboards.js",
+      "endpoints": 5
+    },
+    {
+      "file": "developers.js",
+      "endpoints": 5
+    },
+    {
+      "file": "intelligentSystems.js",
+      "endpoints": 5
+    },
+    {
+      "file": "leadership.js",
+      "endpoints": 5
+    },
+    {
+      "file": "live-chat.js",
+      "endpoints": 5
+    },
+    {
+      "file": "unified-content.js",
+      "endpoints": 5
+    },
+    {
+      "file": "user-auth.js",
+      "endpoints": 5
+    },
+    {
+      "file": "admin-dashboard.js",
+      "endpoints": 4
+    },
+    {
+      "file": "advanced-search.js",
+      "endpoints": 4
+    },
+    {
+      "file": "aiGrading.js",
+      "endpoints": 4
+    },
+    {
+      "file": "assignments.js",
+      "endpoints": 4
+    },
+    {
+      "file": "cms-unified.js",
+      "endpoints": 4
+    },
+    {
+      "file": "comprehensive-academic-api.js",
+      "endpoints": 4
+    },
+    {
+      "file": "comprehensive-finance-api.js",
+      "endpoints": 4
+    },
+    {
+      "file": "comprehensive-stock-api.js",
+      "endpoints": 4
+    },
+    {
+      "file": "comprehensive-users-api.js",
+      "endpoints": 4
+    },
+    {
+      "file": "finance.js",
+      "endpoints": 4
+    },
+    {
+      "file": "gallery.js",
+      "endpoints": 4
+    },
+    {
+      "file": "hero.js",
+      "endpoints": 4
+    },
+    {
+      "file": "homework.js",
+      "endpoints": 4
+    },
+    {
+      "file": "hostel.js",
+      "endpoints": 4
+    },
+    {
+      "file": "library.js",
+      "endpoints": 4
+    },
+    {
+      "file": "liveStudy.js",
+      "endpoints": 4
+    },
+    {
+      "file": "parent-messages.js",
+      "endpoints": 4
+    },
+    {
+      "file": "peerReview.js",
+      "endpoints": 4
+    },
+    {
+      "file": "roles.js",
+      "endpoints": 4
+    },
+    {
+      "file": "search.js",
+      "endpoints": 4
+    },
+    {
+      "file": "services.js",
+      "endpoints": 4
+    },
+    {
+      "file": "sports-players.js",
+      "endpoints": 4
+    },
+    {
+      "file": "trade-images.js",
+      "endpoints": 4
+    },
+    {
+      "file": "transport.js",
+      "endpoints": 4
+    },
+    {
+      "file": "unified-integration.js",
+      "endpoints": 4
+    },
+    {
+      "file": "unified-trades-api.js",
+      "endpoints": 4
+    },
+    {
+      "file": "uploads.js",
+      "endpoints": 4
+    },
+    {
+      "file": "accountant-advanced.js",
+      "endpoints": 3
+    },
+    {
+      "file": "classes.js",
+      "endpoints": 3
+    },
+    {
+      "file": "dos-advanced.js",
+      "endpoints": 3
+    },
+    {
+      "file": "holidayPackages.js",
+      "endpoints": 3
+    },
+    {
+      "file": "messages.js",
+      "endpoints": 3
+    },
+    {
+      "file": "parent-portal.js",
+      "endpoints": 3
+    },
+    {
+      "file": "paymentAnalytics.js",
+      "endpoints": 3
+    },
+    {
+      "file": "staff.js",
+      "endpoints": 3
+    },
+    {
+      "file": "reports.js",
+      "endpoints": 2
+    },
+    {
+      "file": "auth-health.js",
+      "endpoints": 1
+    },
+    {
+      "file": "docs.js",
+      "endpoints": 1
+    },
+    {
+      "file": "staff-auth.js",
+      "endpoints": 1
+    }
+  ],
+  "categories": [
+    {
+      "name": "Authentication",
+      "fileCount": 7,
+      "endpointCount": 44,
+      "files": [
+        "auth.js",
+        "comprehensive-auth.js",
+        "role-auth.js",
+        "student-auth.js",
+        "user-auth.js",
+        "auth-health.js",
+        "staff-auth.js"
+      ]
+    },
+    {
+      "name": "Academic",
+      "fileCount": 20,
+      "endpointCount": 195,
+      "files": [
+        "academics.js",
+        "class-management.js",
+        "comprehensive-knowledge-notifications-admissions-exams-api.js",
+        "class-sheets.js",
+        "academic-system.js",
+        "advanced-assignments.js",
+        "comprehensive-attendance-grades-assignments-api.js",
+        "class-sheets-api.js",
+        "classes-api.js",
+        "exam-scheduling.js",
+        "exams.js",
+        "grades.js",
+        "advancedAcademics.js",
+        "timetable.js",
+        "courses.js",
+        "trades-courses.js",
+        "assignments.js",
+        "comprehensive-academic-api.js",
+        "homework.js",
+        "classes.js"
+      ]
+    },
+    {
+      "name": "Student Management",
+      "fileCount": 6,
+      "endpointCount": 53,
+      "files": [
+        "students.js",
+        "student-competitions.js",
+        "student-management.js",
+        "student-sheets.js",
+        "studentPayments.js",
+        "student-advanced.js"
+      ]
+    },
+    {
+      "name": "Teacher Management",
+      "fileCount": 3,
+      "endpointCount": 38,
+      "files": [
+        "teacher-advanced.js",
+        "teacher-portal.js",
+        "teachers.js"
+      ]
+    },
+    {
+      "name": "Parent Management",
+      "fileCount": 6,
+      "endpointCount": 37,
+      "files": [
+        "parent-dashboard.js",
+        "parent-monitoring.js",
+        "parent-linking.js",
+        "parents.js",
+        "parent-messages.js",
+        "parent-portal.js"
+      ]
+    },
+    {
+      "name": "Staff Management",
+      "fileCount": 4,
+      "endpointCount": 25,
+      "files": [
+        "staff-management.js",
+        "comprehensive-staff.js",
+        "staff.js",
+        "staff-auth.js"
+      ]
+    },
+    {
+      "name": "Financial",
+      "fileCount": 8,
+      "endpointCount": 64,
+      "files": [
+        "accountant.js",
+        "invoices.js",
+        "accountantManagement.js",
+        "studentPayments.js",
+        "comprehensive-finance-api.js",
+        "finance.js",
+        "accountant-advanced.js",
+        "paymentAnalytics.js"
+      ]
+    },
+    {
+      "name": "Communication",
+      "fileCount": 9,
+      "endpointCount": 79,
+      "files": [
+        "comprehensive-knowledge-notifications-admissions-exams-api.js",
+        "automated-notifications.js",
+        "announcements.js",
+        "sms.js",
+        "notifications.js",
+        "realtime-notifications.js",
+        "production-notifications.js",
+        "parent-messages.js",
+        "messages.js"
+      ]
+    },
+    {
+      "name": "Sports & Activities",
+      "fileCount": 11,
+      "endpointCount": 163,
+      "files": [
+        "sports-comprehensive.js",
+        "sportsManagement.js",
+        "comprehensive-library-hostel-transport-sports-communication-api.js",
+        "sports-hero-management.js",
+        "sports-advanced.js",
+        "sports-management.js",
+        "sports.js",
+        "student-competitions.js",
+        "events.js",
+        "sports-players.js",
+        "transport.js"
+      ]
+    },
+    {
+      "name": "Inventory & Resources",
+      "fileCount": 5,
+      "endpointCount": 47,
+      "files": [
+        "comprehensive-library-hostel-transport-sports-communication-api.js",
+        "library-system.js",
+        "stock.js",
+        "comprehensive-stock-api.js",
+        "library.js"
+      ]
+    },
+    {
+      "name": "Reports & Analytics",
+      "fileCount": 8,
+      "endpointCount": 42,
+      "files": [
+        "parent-dashboard.js",
+        "reporting.js",
+        "smartAnalyticsApis.js",
+        "analytics.js",
+        "dashboards.js",
+        "admin-dashboard.js",
+        "paymentAnalytics.js",
+        "reports.js"
+      ]
+    },
+    {
+      "name": "System & Settings",
+      "fileCount": 17,
+      "endpointCount": 174,
+      "files": [
+        "alumni-system.js",
+        "academic-system.js",
+        "certificate-system.js",
+        "system-updates.js",
+        "admission-system.js",
+        "cafeteria-system.js",
+        "hostel-system.js",
+        "unified-integration-api.js",
+        "financial-system.js",
+        "library-system.js",
+        "workshop-system.js",
+        "dynamic-system.js",
+        "system-settings.js",
+        "medical-system.js",
+        "counseling-system.js",
+        "intelligentSystems.js",
+        "unified-integration.js"
+      ]
+    }
+  ]
+}

@@ -643,7 +643,7 @@ const RoleBasedDashboard: React.FC = () => {
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Roles</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
                   {data.roles.map((role: any) => (
                     <SelectItem key={role.id} value={role.name}>
                       {role.name.replace('_', ' ').toUpperCase()}

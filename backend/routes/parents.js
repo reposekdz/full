@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 
 const router = express.Router();
 
@@ -46,6 +47,15 @@ router.post('/register', [
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
+
+    // Send welcome message via WhatsApp/SMS
+    const welcomeMessage = `Muraho ${first_name} ${last_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umubyeyi yafunguwe neza. Mushobora gukurikirana imyigire y'abana banyu hano.`;
+    
+    smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
+      type: 'parent_registration',
+      parentId: result.insertId,
+      preferredMethod: 'whatsapp'
+    }).catch(err => console.error('Failed to send welcome message:', err));
 
     res.status(201).json({
       success: true,
@@ -122,6 +132,21 @@ router.post('/link-child', [
       'INSERT INTO parent_student (parent_id, student_id, relationship) VALUES (?, ?, ?)',
       [req.user.id, students[0].id, relationship || 'parent']
     );
+
+    // Send notification via WhatsApp/SMS
+    const [parentInfo] = await pool.execute('SELECT phone, first_name FROM users WHERE id = ?', [req.user.id]);
+    const [studentInfo] = await pool.execute('SELECT first_name, last_name FROM users WHERE id = ?', [students[0].id]);
+
+    if (parentInfo.length > 0 && studentInfo.length > 0) {
+      const linkMessage = `Muraho ${parentInfo[0].first_name}! Umwana wanyu ${studentInfo[0].first_name} ${studentInfo[0].last_name} bamaze kumuhuza na konti yanyu. Noneho mushobora kubona amanota n'imyitwarire bye kuri konti yanyu.`;
+
+      smsService.sendUniversalMessage(parentInfo[0].phone, linkMessage, 0, {
+        type: 'child_linking',
+        parentId: req.user.id,
+        studentId: students[0].id,
+        preferredMethod: 'whatsapp'
+      }).catch(err => console.error('Failed to send link message:', err));
+    }
 
     res.json({ success: true, message: 'Child linked successfully' });
   } catch (error) {
@@ -222,6 +247,21 @@ router.get('/children/:childId/fees', authenticateToken, requireRole('parent'), 
     res.json({ success: true, fees: fees[0] });
   } catch (error) {
     console.error('Get child fees error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Update parent profile
+router.put('/update', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const { name, email, phone, address } = req.body;
+    await pool.execute(`
+      UPDATE users SET first_name = ?, email = ?, phone = ?, address = ?
+      WHERE id = ?
+    `, [name, email, phone, address, req.user.id]);
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update profile error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

@@ -109,7 +109,11 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'settings', icon: Settings, label: 'Igenamiterere', color: 'from-orange-500 to-red-500' },
         { key: 'security', icon: Shield, label: 'Umutekano', color: 'from-yellow-500 to-amber-500' },
         { key: 'backup', icon: Database, label: 'Backup', color: 'from-pink-500 to-rose-500' },
-        { key: 'logs', icon: Activity, label: 'Logs', color: 'from-indigo-500 to-blue-500' }
+        { key: 'logs', icon: Activity, label: 'Logs', color: 'from-indigo-500 to-blue-500' },
+        { key: 'medical-system', icon: Activity, label: 'Ubuzima', color: 'from-blue-600 to-cyan-600' },
+        { key: 'library-system', icon: BookOpen, label: 'Isomero', color: 'from-green-600 to-emerald-600' },
+        { key: 'exam-management', icon: ClipboardList, label: 'Ibizamini', color: 'from-purple-600 to-pink-600' },
+        { key: 'hostel-management', icon: Bed, label: 'Hostel', color: 'from-orange-600 to-red-600' }
       ],
       accountant: [
         { key: 'fees', icon: DollarSign, label: 'Amafaranga', color: 'from-green-500 to-teal-500' },
@@ -147,7 +151,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-purple-500 to-violet-500' },
         { key: 'meetings', icon: Users, label: 'Inama', color: 'from-indigo-500 to-blue-500' }
       ],
-      head_master: [
+      headmaster: [
         { key: 'overview', icon: Home, label: 'Incamake', color: 'from-blue-500 to-indigo-500' },
         { key: 'staff-management', icon: Users, label: 'Ubuyobozi bw\'Ishuri', color: 'from-purple-500 to-pink-500' },
         { key: 'staff', icon: Users, label: 'Abakozi', color: 'from-green-500 to-teal-500' },
@@ -155,7 +159,11 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'finances', icon: DollarSign, label: 'Amafaranga', color: 'from-orange-500 to-red-500' },
         { key: 'performance', icon: TrendingUp, label: 'Imikorere', color: 'from-yellow-500 to-amber-500' },
         { key: 'meetings', icon: Calendar, label: 'Inama', color: 'from-pink-500 to-rose-500' },
-        { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' }
+        { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' },
+        { key: 'medical-system', icon: Activity, label: 'Ubuzima', color: 'from-blue-600 to-cyan-600' },
+        { key: 'library-system', icon: BookOpen, label: 'Isomero', color: 'from-green-600 to-emerald-600' },
+        { key: 'exam-management', icon: ClipboardList, label: 'Ibizamini', color: 'from-purple-600 to-pink-600' },
+        { key: 'hostel-management', icon: Bed, label: 'Hostel', color: 'from-orange-600 to-red-600' }
       ]
     };
 
@@ -204,7 +212,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'schedule-counseling', icon: Heart, label: 'Tegura Ubujyanama' },
         { key: 'review-rules', icon: BookOpen, label: 'Suzuma Amategeko' }
       ],
-      head_master: [
+      headmaster: [
         { key: 'schedule-meeting', icon: Calendar, label: 'Tegura Inama' },
         { key: 'review-performance', icon: TrendingUp, label: 'Suzuma Imikorere' },
         { key: 'approve-budget', icon: CheckCircle, label: 'Emeza Budget' }

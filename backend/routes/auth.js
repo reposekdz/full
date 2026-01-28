@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 const multer = require('multer');
 const path = require('path');
 
@@ -142,8 +143,172 @@ router.post('/login', [
   }
 });
 
-// Enhanced Student Registration
+// Student Login with Serial Code
+router.post('/login/student', [
+  body('serial_code').notEmpty().withMessage('Serial code is required'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { serial_code, password } = req.body;
+
+    // Find student by serial code (username)
+    const [users] = await pool.execute(`
+      SELECT u.*, sp.admission_number 
+      FROM users u 
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.username = ? AND u.role = 'student' AND u.is_active = true
+    `, [serial_code]);
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid serial code or password'
+      });
+    }
+
+    const user = users[0];
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid serial code or password'
+      });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user.id, username: user.username, role: 'student' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    // Update last login
+    await pool.execute(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        student_id: user.admission_number || user.username,
+        role: 'student'
+      }
+    });
+
+  } catch (error) {
+    console.error('Student login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Parent Login with Phone
+router.post('/login/parent', [
+  body('phone').notEmpty().withMessage('Phone number is required'),
+  body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, password } = req.body;
+
+    // Find parent by phone in parents table
+    const [parents] = await pool.execute(`
+      SELECT * FROM parents WHERE phone = ? AND is_active = true
+    `, [phone]);
+
+    if (parents.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
+    }
+
+    const parent = parents[0];
+    const isValidPassword = await bcrypt.compare(password, parent.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: parent.id, username: parent.username, role: 'parent' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    // Update last login
+    await pool.execute(
+      'UPDATE parents SET last_login = NOW() WHERE id = ?',
+      [parent.id]
+    );
+
+    // Get children count
+    const [children] = await pool.execute(
+      'SELECT COUNT(*) as count FROM parent_student WHERE parent_id = ?',
+      [parent.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: parent.id,
+        username: parent.username,
+        email: parent.email,
+        phone: parent.phone,
+        first_name: parent.first_name,
+        last_name: parent.last_name,
+        profile_image: parent.profile_image,
+        role: 'parent',
+        children_count: children[0].count
+      }
+    });
+
+  } catch (error) {
+    console.error('Parent login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Enhanced Student Registration with Serial Code
 router.post('/register/student', [
+  body('serial_code').notEmpty().withMessage('Serial code is required'),
   body('first_name').notEmpty().withMessage('First name is required'),
   body('last_name').notEmpty().withMessage('Last name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -151,9 +316,6 @@ router.post('/register/student', [
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('date_of_birth').optional().isDate().withMessage('Valid date of birth required'),
   body('gender').optional().isIn(['Male', 'Female']).withMessage('Valid gender required'),
-  body('trade_code').notEmpty().withMessage('Trade selection is required'),
-  body('level_number').isInt().withMessage('Level number is required'),
-  body('level_suffix').optional(),
   body('address').optional(),
   body('emergency_contact').optional(),
   body('medical_info').optional(),
@@ -165,6 +327,7 @@ router.post('/register/student', [
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      await connection.rollback();
       return res.status(400).json({
         success: false,
         message: 'Validation errors',
@@ -173,6 +336,7 @@ router.post('/register/student', [
     }
 
     const {
+      serial_code,
       first_name,
       last_name,
       email,
@@ -180,14 +344,40 @@ router.post('/register/student', [
       password,
       date_of_birth,
       gender,
-      trade_code,
-      level_number,
-      level_suffix,
       address,
       emergency_contact,
       medical_info,
       parent_info
     } = req.body;
+
+    // Validate serial code
+    const [serialCodeResult] = await connection.execute(
+      `SELECT * FROM student_serial_codes 
+       WHERE serial_code = ? AND status = 'active' AND is_used = false`,
+      [serial_code]
+    );
+
+    if (serialCodeResult.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or already used serial code'
+      });
+    }
+
+    const serialCodeData = serialCodeResult[0];
+    const trade_code = serialCodeData.trade_code;
+    const level_number = serialCodeData.level_number;
+    const level_suffix = serialCodeData.level_suffix;
+
+    // Check if serial code has expired
+    if (serialCodeData.expires_at && new Date(serialCodeData.expires_at) < new Date()) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Serial code has expired'
+      });
+    }
 
     // Check if email already exists
     const [existingUsers] = await connection.execute(
@@ -196,6 +386,7 @@ router.post('/register/student', [
     );
 
     if (existingUsers.length > 0) {
+      await connection.rollback();
       return res.status(400).json({
         success: false,
         message: 'Email already exists'
@@ -288,9 +479,10 @@ router.post('/register/student', [
 
     // Get trade level and assign to appropriate class
     const [tradeLevelResult] = await connection.execute(`
-      SELECT id FROM trade_levels
-      WHERE trade_code = ? AND level_number = ?
-      AND (level_suffix = ? OR (level_suffix IS NULL AND ? IS NULL))
+      SELECT tl.id, tl.trade_code, tl.level_number, tl.level_suffix
+      FROM trade_levels tl
+      WHERE tl.trade_code = ? AND tl.level_number = ?
+      AND (tl.level_suffix = ? OR (tl.level_suffix IS NULL AND ? IS NULL))
     `, [trade_code, level_number, level_suffix, level_suffix]);
 
     if (tradeLevelResult.length > 0) {
@@ -322,12 +514,12 @@ router.post('/register/student', [
           `, [class_id]);
         } else {
           // Create new class
-          const classCount = await connection.execute(`
+          const [classCount] = await connection.execute(`
             SELECT COUNT(*) as count FROM trade_classes
             WHERE trade_level_id = ? AND academic_year_id = ?
           `, [tradeLevelResult[0].id, academicYearResult[0].id]);
 
-          const classNumber = classCount[0][0].count + 1;
+          const classNumber = classCount[0].count + 1;
           const className = `Class ${classNumber}`;
 
           const [newClassResult] = await connection.execute(`
@@ -345,17 +537,40 @@ router.post('/register/student', [
             student_id, class_id, academic_year_id, enrollment_date, status
           ) VALUES (?, ?, ?, CURDATE(), 'active')
         `, [new_student_id, class_id, academicYearResult[0].id]);
-
-        // Initialize performance summary
-        await connection.execute(`
-          INSERT INTO student_performance_summary (
-            student_id, trade_class_id, academic_year_id
-          ) VALUES (?, ?, ?)
-        `, [new_student_id, class_id, academicYearResult[0].id]);
       }
     }
 
+    // Mark serial code as used
+    await connection.execute(`
+      UPDATE student_serial_codes
+      SET is_used = true, 
+          used_by = ?, 
+          used_at = NOW(), 
+          student_id = ?,
+          status = 'used'
+      WHERE serial_code = ?
+    `, [new_student_id, new_student_id, serial_code]);
+
     await connection.commit();
+
+    // Send welcome message to student
+    const studentMessage = `Muraho ${first_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umunyeshuri yafunguwe neza. Student ID yanyu ni: ${student_id}`;
+    smsService.sendUniversalMessage(phone, studentMessage, 0, {
+      type: 'student_registration',
+      studentId: new_student_id,
+      preferredMethod: 'whatsapp'
+    }).catch(err => console.error('Failed to send student welcome message:', err));
+
+    // Send welcome message to parent if created
+    if (parent_id && parent_info && parent_info.phone) {
+      const parentMessage = `Muraho ${parent_info.first_name}! Umwana wanyu ${first_name} ${last_name} yanditswe muri Garden TVET School. Student ID ye ni: ${student_id}. Mushobora kwinjira mukoresheje imeyili yanyu mwanatanze.`;
+      smsService.sendUniversalMessage(parent_info.phone, parentMessage, 0, {
+        type: 'parent_registration_via_student',
+        parentId: parent_id,
+        studentId: new_student_id,
+        preferredMethod: 'whatsapp'
+      }).catch(err => console.error('Failed to send parent welcome message:', err));
+    }
 
     // Generate JWT token for immediate login
     const token = jwt.sign(
@@ -382,6 +597,156 @@ router.post('/register/student', [
   } catch (error) {
     await connection.rollback();
     console.error('Student registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// Student Registration with Serial Code
+router.post('/register/student-serial', [
+  body('serial_code').notEmpty().withMessage('Serial code is required'),
+  body('first_name').notEmpty().withMessage('First name is required'),
+  body('last_name').notEmpty().withMessage('Last name is required'),
+  body('phone').notEmpty().withMessage('Phone number is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const {
+      serial_code,
+      first_name,
+      last_name,
+      phone,
+      password,
+      date_of_birth,
+      gender,
+      address
+    } = req.body;
+
+    // Check if serial code exists and is not used
+    const [serialCodes] = await connection.execute(
+      'SELECT * FROM serial_codes WHERE code = ? AND status = ? AND used_by IS NULL',
+      [serial_code, 'active']
+    );
+
+    if (serialCodes.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or already used serial code'
+      });
+    }
+
+    const serialCodeData = serialCodes[0];
+
+    // Check if phone already exists
+    const [existingUsers] = await connection.execute(
+      'SELECT id FROM users WHERE phone = ?',
+      [phone]
+    );
+
+    if (existingUsers.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already registered'
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Get student role ID
+    const [roles] = await connection.execute(
+      "SELECT id FROM roles WHERE name = 'student'"
+    );
+    const role_id = roles.length > 0 ? roles[0].id : null;
+
+    // Create user account with serial code as username
+    const [userResult] = await connection.execute(`
+      INSERT INTO users (username, email, password_hash, role, role_id, first_name, last_name, phone, is_active, created_at)
+      VALUES (?, ?, ?, 'student', ?, ?, ?, ?, true, NOW())
+    `, [serial_code, `${serial_code}@garden.tvet`, hashedPassword, role_id, first_name, last_name, phone]);
+
+    const new_student_id = userResult.insertId;
+
+    // Create student profile
+    await connection.execute(`
+      INSERT INTO student_profiles (user_id, admission_number, date_of_birth, gender, address, enrollment_date)
+      VALUES (?, ?, ?, ?, ?, NOW())
+    `, [new_student_id, serial_code, date_of_birth || null, gender || null, address || null]);
+
+    // Mark serial code as used
+    await connection.execute(
+      'UPDATE serial_codes SET status = ?, used_by = ?, used_at = NOW() WHERE code = ?',
+      ['used', new_student_id, serial_code]
+    );
+
+    // If serial code has trade info, create enrollment
+    if (serialCodeData.trade_code) {
+      const [tradeClasses] = await connection.execute(
+        'SELECT id FROM trade_classes WHERE trade_code = ? ORDER BY id DESC LIMIT 1',
+        [serialCodeData.trade_code]
+      );
+
+      if (tradeClasses.length > 0) {
+        await connection.execute(`
+          INSERT INTO enrollments (student_id, class_id, enrollment_date, status)
+          VALUES (?, ?, NOW(), 'active')
+        `, [new_student_id, tradeClasses[0].id]);
+      }
+    }
+
+    await connection.commit();
+
+    // Send welcome SMS
+    const welcomeMessage = `Muraho ${first_name}! Wakoze kwinjira muri Garden TVET School. Nimero yawe ni: ${serial_code}. Urakoze!`;
+    smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
+      type: 'student_registration',
+      studentId: new_student_id
+    }).catch(err => console.error('Failed to send welcome SMS:', err));
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: new_student_id, username: serial_code, role: 'student' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Student registration successful',
+      token,
+      user: {
+        id: new_student_id,
+        username: serial_code,
+        email: `${serial_code}@garden.tvet`,
+        first_name,
+        last_name,
+        student_id: serial_code,
+        role: 'student'
+      }
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Student serial registration error:', error);
     res.status(500).json({
       success: false,
       message: 'Registration failed',
@@ -429,13 +794,13 @@ router.post('/register/parent', [
       children
     } = req.body;
 
-    // Check if email already exists
-    const [existingUsers] = await connection.execute(
-      'SELECT id FROM users WHERE email = ?',
+    // Check if email already exists in parents table
+    const [existingParents] = await connection.execute(
+      'SELECT id FROM parents WHERE email = ?',
       [email]
     );
 
-    if (existingUsers.length > 0) {
+    if (existingParents.length > 0) {
       return res.status(400).json({
         success: false,
         message: 'Email already exists'
@@ -445,24 +810,15 @@ router.post('/register/parent', [
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Get parent role ID
-    const [parentRole] = await connection.execute(
-      'SELECT id FROM roles WHERE name = "parent"'
-    );
-
-    if (parentRole.length === 0) {
-      throw new Error('Parent role not found');
-    }
-
     // Generate username
     const username = `parent_${Date.now()}`;
 
-    // Create parent
+    // Create parent in parents table
     const [parentResult] = await connection.execute(`
-      INSERT INTO users (
+      INSERT INTO parents (
         username, email, password_hash, first_name, last_name,
-        phone, address, role_id, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
+        phone, address, occupation, relationship, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
     `, [
       username,
       email,
@@ -471,7 +827,8 @@ router.post('/register/parent', [
       last_name,
       phone,
       address,
-      parentRole[0].id
+      occupation,
+      relationship
     ]);
 
     const parent_id = parentResult.insertId;
@@ -481,7 +838,7 @@ router.post('/register/parent', [
       for (const child of children) {
         if (child.student_id) {
           await connection.execute(
-            'UPDATE users SET parent_id = ? WHERE student_id = ?',
+            'INSERT INTO parent_student (parent_id, student_id) VALUES (?, ?)',
             [parent_id, child.student_id]
           );
         }
@@ -489,6 +846,15 @@ router.post('/register/parent', [
     }
 
     await connection.commit();
+
+    // Send welcome message via WhatsApp/SMS
+    const welcomeMessage = `Muraho ${first_name} ${last_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umubyeyi yafunguwe neza. Mushobora gukurikirana imyigire y'abana banyu hano.`;
+    
+    smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
+      type: 'parent_registration',
+      parentId: parent_id,
+      preferredMethod: 'whatsapp'
+    }).catch(err => console.error('Failed to send welcome message:', err));
 
     // Generate JWT token for immediate login
     const token = jwt.sign(
@@ -507,6 +873,8 @@ router.post('/register/parent', [
         email,
         first_name,
         last_name,
+        phone,
+        profile_image: null,
         role: 'parent'
       }
     });
@@ -1157,6 +1525,334 @@ router.post('/register/parent-phone', [
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+});
+
+// Update profile for all user types
+router.put('/profile/update', authenticateToken, upload.single('profile_image'), [
+  body('first_name').optional().notEmpty().withMessage('First name cannot be empty'),
+  body('last_name').optional().notEmpty().withMessage('Last name cannot be empty'),
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+  body('phone').optional().notEmpty().withMessage('Phone cannot be empty'),
+  body('address').optional(),
+  body('current_password').optional(),
+  body('new_password').optional().isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+], async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array()
+      });
+    }
+
+    const userId = req.user.userId;
+    const userType = req.user.userType || 'user';
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      address,
+      current_password,
+      new_password,
+      date_of_birth,
+      gender,
+      emergency_contact,
+      medical_info
+    } = req.body;
+
+    // Determine which table to update
+    const isAdminUser = ['admin', 'headmaster', 'dos', 'dod', 'accountant', 'stockmanager', 'patron', 'advisor'].includes(req.user.role);
+    const tableName = isAdminUser ? 'admin_users' : 'users';
+
+    // Get current user data
+    const [currentUser] = await connection.execute(
+      `SELECT * FROM ${tableName} WHERE id = ?`,
+      [userId]
+    );
+
+    if (currentUser.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = currentUser[0];
+    const updates = [];
+    const values = [];
+    const changes = [];
+
+    // Validate email uniqueness if being changed
+    if (email && email !== user.email) {
+      const [existingEmail] = await connection.execute(
+        `SELECT id FROM ${tableName} WHERE email = ? AND id != ?`,
+        [email, userId]
+      );
+
+      if (existingEmail.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Email already in use by another user'
+        });
+      }
+
+      updates.push('email = ?');
+      values.push(email);
+      changes.push({ field: 'email', old_value: user.email, new_value: email });
+    }
+
+    // Update basic fields
+    if (first_name && first_name !== user.first_name) {
+      updates.push('first_name = ?');
+      values.push(first_name);
+      changes.push({ field: 'first_name', old_value: user.first_name, new_value: first_name });
+    }
+
+    if (last_name && last_name !== user.last_name) {
+      updates.push('last_name = ?');
+      values.push(last_name);
+      changes.push({ field: 'last_name', old_value: user.last_name, new_value: last_name });
+    }
+
+    if (phone && phone !== user.phone) {
+      updates.push('phone = ?');
+      values.push(phone);
+      changes.push({ field: 'phone', old_value: user.phone, new_value: phone });
+    }
+
+    // Update extended fields (only for users table)
+    if (!isAdminUser) {
+      if (address && address !== user.address) {
+        updates.push('address = ?');
+        values.push(address);
+        changes.push({ field: 'address', old_value: user.address, new_value: address });
+      }
+
+      if (date_of_birth && date_of_birth !== user.date_of_birth) {
+        updates.push('date_of_birth = ?');
+        values.push(date_of_birth);
+        changes.push({ field: 'date_of_birth', old_value: user.date_of_birth, new_value: date_of_birth });
+      }
+
+      if (gender && gender !== user.gender) {
+        updates.push('gender = ?');
+        values.push(gender);
+        changes.push({ field: 'gender', old_value: user.gender, new_value: gender });
+      }
+
+      if (emergency_contact && emergency_contact !== user.emergency_contact) {
+        updates.push('emergency_contact = ?');
+        values.push(emergency_contact);
+        changes.push({ field: 'emergency_contact', old_value: user.emergency_contact, new_value: emergency_contact });
+      }
+
+      if (medical_info && medical_info !== user.medical_info) {
+        updates.push('medical_info = ?');
+        values.push(medical_info);
+        changes.push({ field: 'medical_info', old_value: user.medical_info, new_value: medical_info });
+      }
+    }
+
+    // Handle profile image upload
+    if (req.file) {
+      const imagePath = `/uploads/profiles/${req.file.filename}`;
+      updates.push('profile_image = ?');
+      values.push(imagePath);
+      changes.push({ field: 'profile_image', old_value: user.profile_image, new_value: imagePath });
+    }
+
+    // Handle password change
+    if (new_password) {
+      if (!current_password) {
+        await connection.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is required to set new password'
+        });
+      }
+
+      // Verify current password
+      const passwordField = isAdminUser ? 'password' : 'password_hash';
+      const isValidPassword = await bcrypt.compare(current_password, user[passwordField]);
+
+      if (!isValidPassword) {
+        await connection.rollback();
+        return res.status(401).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      }
+
+      const hashedNewPassword = await bcrypt.hash(new_password, 10);
+      updates.push(`${passwordField} = ?`);
+      values.push(hashedNewPassword);
+      changes.push({ field: 'password', old_value: '***', new_value: '***' });
+
+      // Update password field for users table too if it exists
+      if (!isAdminUser) {
+        updates.push('password = ?');
+        values.push(hashedNewPassword);
+      }
+    }
+
+    // Perform update if there are changes
+    if (updates.length > 0) {
+      values.push(userId);
+      await connection.execute(
+        `UPDATE ${tableName} SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        values
+      );
+
+      // Log profile changes
+      for (const change of changes) {
+        await connection.execute(
+          `INSERT INTO profile_edit_history (user_id, field_changed, old_value, new_value, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            change.field,
+            change.old_value,
+            change.new_value,
+            req.ip,
+            req.get('user-agent')
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+
+    // Fetch updated user data
+    const [updatedUser] = await connection.execute(
+      `SELECT * FROM ${tableName} WHERE id = ?`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser[0].id,
+        username: updatedUser[0].username,
+        email: updatedUser[0].email,
+        first_name: updatedUser[0].first_name,
+        last_name: updatedUser[0].last_name,
+        phone: updatedUser[0].phone,
+        profile_image: updatedUser[0].profile_image,
+        role: req.user.role
+      },
+      changes_made: changes.length
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get profile information
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const isAdminUser = ['admin', 'headmaster', 'dos', 'dod', 'accountant', 'stockmanager', 'patron', 'advisor'].includes(req.user.role);
+    const tableName = isAdminUser ? 'admin_users' : 'users';
+
+    const [user] = await pool.execute(
+      `SELECT * FROM ${tableName} WHERE id = ?`,
+      [userId]
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const userData = user[0];
+    const profile = {
+      id: userData.id,
+      username: userData.username,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      phone: userData.phone,
+      profile_image: userData.profile_image,
+      role: req.user.role,
+      is_active: userData.is_active,
+      last_login: userData.last_login,
+      created_at: userData.created_at
+    };
+
+    // Add extended fields for regular users
+    if (!isAdminUser) {
+      profile.student_id = userData.student_id;
+      profile.date_of_birth = userData.date_of_birth;
+      profile.gender = userData.gender;
+      profile.address = userData.address;
+      profile.emergency_contact = userData.emergency_contact;
+      profile.medical_info = userData.medical_info;
+    }
+
+    res.json({
+      success: true,
+      profile
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get profile',
+      error: error.message
+    });
+  }
+});
+
+// Get profile edit history
+router.get('/profile/history', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const [history] = await pool.execute(
+      `SELECT * FROM profile_edit_history 
+       WHERE user_id = ? 
+       ORDER BY changed_at DESC 
+       LIMIT ? OFFSET ?`,
+      [userId, parseInt(limit), parseInt(offset)]
+    );
+
+    res.json({
+      success: true,
+      history,
+      count: history.length
+    });
+
+  } catch (error) {
+    console.error('Get profile history error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get profile history',
+      error: error.message
     });
   }
 });

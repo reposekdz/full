@@ -11,13 +11,12 @@ router.get('/all', async (req, res) => {
         COUNT(DISTINCT ti.id) as instructor_count,
         COUNT(DISTINCT tc.id) as course_count
       FROM trades t
-      LEFT JOIN trade_instructors ti ON t.id = ti.trade_id AND ti.is_active = true
-      LEFT JOIN trade_courses tc ON t.id = tc.trade_id AND tc.is_active = true
-      WHERE t.is_active = true
+      LEFT JOIN trade_instructors ti ON t.id = ti.trade_id
+      LEFT JOIN trade_courses tc ON t.id = tc.trade_id
       GROUP BY t.id
-      ORDER BY t.level, t.code
+      ORDER BY t.code
     `);
-np    
+    
     const enhancedTrades = trades.map(trade => ({
       ...trade,
       id: trade.code.toLowerCase(),
@@ -42,9 +41,9 @@ router.get('/level/:level', async (req, res) => {
         COUNT(DISTINCT ti.id) as instructor_count,
         COUNT(DISTINCT tc.id) as course_count
       FROM trades t
-      LEFT JOIN trade_instructors ti ON t.id = ti.trade_id AND ti.is_active = true
-      LEFT JOIN trade_courses tc ON t.id = tc.trade_id AND tc.is_active = true
-      WHERE t.is_active = true AND t.level = ?
+      LEFT JOIN trade_instructors ti ON t.id = ti.trade_id
+      LEFT JOIN trade_courses tc ON t.id = tc.trade_id
+      WHERE t.level = ?
       GROUP BY t.id
       ORDER BY t.code
     `, [req.params.level]);
@@ -57,16 +56,16 @@ router.get('/level/:level', async (req, res) => {
 // Get single trade with full details
 router.get('/:id', async (req, res) => {
   try {
-    const [trades] = await pool.query('SELECT * FROM trades WHERE id = ? AND is_active = true', [req.params.id]);
+    const [trades] = await pool.query('SELECT * FROM trades WHERE id = ?', [req.params.id]);
     if (trades.length === 0) return res.status(404).json({ success: false, message: 'Trade not found' });
 
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? AND is_active = true ORDER BY name', 
+      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name', 
       [req.params.id]
     );
     
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? AND is_active = true ORDER BY code', 
+      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code', 
       [req.params.id]
     );
 
@@ -98,17 +97,17 @@ router.get('/:id', async (req, res) => {
 // Get trade by code
 router.get('/code/:code', async (req, res) => {
   try {
-    const [trades] = await pool.query('SELECT * FROM trades WHERE code = ? AND is_active = true', [req.params.code]);
+    const [trades] = await pool.query('SELECT * FROM trades WHERE code = ?', [req.params.code]);
     if (trades.length === 0) return res.status(404).json({ success: false, message: 'Trade not found' });
 
     const tradeId = trades[0].id;
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? AND is_active = true ORDER BY name', 
+      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name', 
       [tradeId]
     );
     
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? AND is_active = true ORDER BY code', 
+      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code', 
       [tradeId]
     );
 
@@ -140,7 +139,7 @@ router.get('/code/:code', async (req, res) => {
 router.get('/:id/courses', async (req, res) => {
   try {
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? AND is_active = true ORDER BY code',
+      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code',
       [req.params.id]
     );
     res.json({ success: true, courses });
@@ -153,7 +152,7 @@ router.get('/:id/courses', async (req, res) => {
 router.get('/:id/instructors', async (req, res) => {
   try {
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? AND is_active = true ORDER BY name',
+      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name',
       [req.params.id]
     );
     res.json({ success: true, instructors });

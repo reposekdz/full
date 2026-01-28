@@ -26,7 +26,7 @@ router.get('/menu', async (req, res) => {
     }
 
     query += ' ORDER BY category, name';
-    const [menu] = await pool.query(query, params);
+    const [menu] = await pool.execute(query, params);
 
     res.json({ success: true, menu });
   } catch (error) {
@@ -38,7 +38,7 @@ router.get('/menu', async (req, res) => {
 router.get('/menu/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [items] = await pool.query('SELECT * FROM cafeteria_menu WHERE id = ?', [id]);
+    const [items] = await pool.execute('SELECT * FROM cafeteria_menu WHERE id = ?', [id]);
 
     if (items.length === 0) {
       return res.status(404).json({ success: false, message: 'Menu item not found' });
@@ -55,7 +55,7 @@ router.post('/menu', authenticateToken, requireRole('admin', 'accountant'), asyn
   try {
     const { name, description, category, price, image_url, is_available, nutritional_info, allergens } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = await pool.execute(
       `INSERT INTO cafeteria_menu 
        (name, description, category, price, image_url, is_available, nutritional_info, allergens) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -75,7 +75,7 @@ router.put('/menu/:id', authenticateToken, requireRole('admin', 'accountant'), a
     const { id } = req.params;
     const { name, description, category, price, image_url, is_available, nutritional_info, allergens } = req.body;
 
-    await pool.query(
+    await pool.execute(
       `UPDATE cafeteria_menu 
        SET name = ?, description = ?, category = ?, price = ?, image_url = ?, 
            is_available = ?, nutritional_info = ?, allergens = ?
@@ -94,7 +94,7 @@ router.put('/menu/:id', authenticateToken, requireRole('admin', 'accountant'), a
 router.delete('/menu/:id', authenticateToken, requireRole('admin', 'accountant'), async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM cafeteria_menu WHERE id = ?', [id]);
+    await pool.execute('DELETE FROM cafeteria_menu WHERE id = ?', [id]);
     res.json({ success: true, message: 'Menu item deleted' });
   } catch (error) {
     console.error('Delete menu item error:', error);
@@ -146,13 +146,13 @@ router.get('/orders', authenticateToken, async (req, res) => {
       'SELECT o.*, u.first_name, u.last_name, u.email, u.phone, (SELECT COUNT(*) FROM cafeteria_order_items WHERE order_id = o.id) as item_count',
       'SELECT COUNT(*) as total'
     );
-    const [[{ total }]] = await pool.query(countQuery, params);
+    const [[{ total }]] = await pool.execute(countQuery, params);
 
     // Get paginated results
     query += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), offset);
 
-    const [orders] = await pool.query(query, params);
+    const [orders] = await pool.execute(query, params);
 
     res.json({
       success: true,
@@ -174,7 +174,7 @@ router.get('/orders/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [orders] = await pool.query(`
+    const [orders] = await pool.execute(`
       SELECT o.*, 
         u.first_name, u.last_name, u.email, u.phone
       FROM cafeteria_orders o
@@ -194,7 +194,7 @@ router.get('/orders/:id', authenticateToken, async (req, res) => {
     }
 
     // Get order items
-    const [items] = await pool.query(`
+    const [items] = await pool.execute(`
       SELECT oi.*, cm.name as item_name, cm.category, cm.image_url
       FROM cafeteria_order_items oi
       LEFT JOIN cafeteria_menu cm ON oi.menu_item_id = cm.id
@@ -226,7 +226,7 @@ router.post('/orders', authenticateToken, async (req, res) => {
     // Calculate total amount
     let total_amount = 0;
     for (const item of items) {
-      const [menuItems] = await pool.query('SELECT price FROM cafeteria_menu WHERE id = ?', [item.menu_item_id]);
+      const [menuItems] = await pool.execute('SELECT price FROM cafeteria_menu WHERE id = ?', [item.menu_item_id]);
       if (menuItems.length === 0) {
         return res.status(400).json({ success: false, message: `Menu item ${item.menu_item_id} not found` });
       }
@@ -234,7 +234,7 @@ router.post('/orders', authenticateToken, async (req, res) => {
     }
 
     // Create order
-    const [orderResult] = await pool.query(
+    const [orderResult] = await pool.execute(
       `INSERT INTO cafeteria_orders 
        (user_id, total_amount, status, delivery_location, delivery_time, special_instructions) 
        VALUES (?, ?, 'pending', ?, ?, ?)`,
@@ -245,11 +245,11 @@ router.post('/orders', authenticateToken, async (req, res) => {
 
     // Create order items
     for (const item of items) {
-      const [menuItems] = await pool.query('SELECT price FROM cafeteria_menu WHERE id = ?', [item.menu_item_id]);
+      const [menuItems] = await pool.execute('SELECT price FROM cafeteria_menu WHERE id = ?', [item.menu_item_id]);
       const price = menuItems[0].price;
       const subtotal = price * item.quantity;
 
-      await pool.query(
+      await pool.execute(
         `INSERT INTO cafeteria_order_items 
          (order_id, menu_item_id, quantity, price, subtotal) 
          VALUES (?, ?, ?, ?, ?)`,
@@ -279,7 +279,7 @@ router.put('/orders/:id/status', authenticateToken, requireRole('admin', 'accoun
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    await pool.query('UPDATE cafeteria_orders SET status = ? WHERE id = ?', [status, id]);
+    await pool.execute('UPDATE cafeteria_orders SET status = ? WHERE id = ?', [status, id]);
 
     res.json({ success: true, message: 'Order status updated' });
   } catch (error) {
@@ -293,7 +293,7 @@ router.delete('/orders/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     // Check if user can delete (own order and status is pending, or admin)
-    const [orders] = await pool.query('SELECT user_id, status FROM cafeteria_orders WHERE id = ?', [id]);
+    const [orders] = await pool.execute('SELECT user_id, status FROM cafeteria_orders WHERE id = ?', [id]);
     if (orders.length === 0) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
@@ -307,8 +307,8 @@ router.delete('/orders/:id', authenticateToken, async (req, res) => {
     }
 
     // Delete order items first
-    await pool.query('DELETE FROM cafeteria_order_items WHERE order_id = ?', [id]);
-    await pool.query('DELETE FROM cafeteria_orders WHERE id = ?', [id]);
+    await pool.execute('DELETE FROM cafeteria_order_items WHERE order_id = ?', [id]);
+    await pool.execute('DELETE FROM cafeteria_orders WHERE id = ?', [id]);
 
     res.json({ success: true, message: 'Order cancelled' });
   } catch (error) {
@@ -338,7 +338,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
     }
 
     // Total orders and revenue
-    const [[totals]] = await pool.query(`
+    const [[totals]] = await pool.execute(`
       SELECT 
         COUNT(*) as total_orders,
         SUM(total_amount) as total_revenue,
@@ -348,7 +348,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
     `, params);
 
     // Orders by status
-    const [byStatus] = await pool.query(`
+    const [byStatus] = await pool.execute(`
       SELECT status, COUNT(*) as count, SUM(total_amount) as revenue
       FROM cafeteria_orders
       WHERE 1=1 ${dateFilter}
@@ -356,7 +356,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
     `, params);
 
     // Popular items
-    const [popularItems] = await pool.query(`
+    const [popularItems] = await pool.execute(`
       SELECT 
         cm.name,
         cm.category,
@@ -372,7 +372,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
     `, params);
 
     // Revenue by category
-    const [byCategory] = await pool.query(`
+    const [byCategory] = await pool.execute(`
       SELECT 
         cm.category,
         SUM(oi.quantity) as total_items,
@@ -386,7 +386,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
     `, params);
 
     // Daily revenue trend
-    const [dailyTrend] = await pool.query(`
+    const [dailyTrend] = await pool.execute(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as orders,
@@ -418,7 +418,7 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'accountant', '
 
 router.get('/categories', async (req, res) => {
   try {
-    const [categories] = await pool.query(`
+    const [categories] = await pool.execute(`
       SELECT DISTINCT category, COUNT(*) as item_count
       FROM cafeteria_menu
       GROUP BY category

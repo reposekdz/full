@@ -40,6 +40,9 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { Textarea } from '@/app/components/ui/textarea';
+import { Label } from '@/app/components/ui/label';
+import { AnimatePresence } from 'motion/react';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import StaffManagementPage from '../StaffManagementPage';
@@ -60,6 +63,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [assignmentsData, setAssignmentsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [selectedAssignmentForSubmission, setSelectedAssignmentForSubmission] = useState<any>(null);
+  const [submissionText, setSubmissionText] = useState('');
+  const [submissionFiles, setSubmissionFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (currentView === 'dashboard') fetchDashboardData();
@@ -164,6 +172,52 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     );
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSubmissionFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleAssignmentSubmit = async () => {
+    if (!selectedAssignmentForSubmission) return;
+    if (!submissionText && submissionFiles.length === 0) {
+      alert('Shyiramo igisubizo cyangwa ushyireho dosiye');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      
+      const formData = new FormData();
+      formData.append('assignment_id', selectedAssignmentForSubmission.id.toString());
+      formData.append('student_id', user.id.toString());
+      formData.append('submission_text', submissionText);
+      
+      submissionFiles.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const response = await apiService.submitAssignment(formData);
+      
+      if (response.success || response.id) {
+        alert('Igisubizo cyoherejwe neza!');
+        setIsSubmitModalOpen(false);
+        setSubmissionText('');
+        setSubmissionFiles([]);
+        fetchDashboardData();
+      } else {
+        alert('Ikosa ryabaye mu kohereza');
+      }
+    } catch (err) {
+      console.error('Failed to submit assignment:', err);
+      alert('Ikosa ryabaye');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const stats = [
     {
       title: 'Amaklasi Yanjye',
@@ -223,7 +277,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
     points: assign.total_marks,
     submitted: !!assign.submission_id,
     grade: assign.marks_obtained,
-    description: assign.description
+    description: assign.description,
+    study_links: assign.study_links || [],
+    id: assign.id,
+    type: assign.type
   }));
 
   const grades = dashboardData?.recent_grades?.map((grade: any) => ({
@@ -613,13 +670,43 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
                                     } text-white border-0`}>
                                       {assignment.priority === 'high' ? 'Byihutirwa' : assignment.priority === 'medium' ? 'Hagati' : 'Bihoro'}
                                     </Badge>
-                                    <Button size="sm" className="bg-gradient-to-r from-yellow-500 to-green-500 text-white">
+                                    <Button 
+                                      onClick={() => {
+                                        setSelectedAssignmentForSubmission(assignment);
+                                        setIsSubmitModalOpen(true);
+                                      }}
+                                      size="sm" 
+                                      className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
+                                    >
                                       Shyira
                                     </Button>
                                   </>
                                 )}
                               </div>
                             </div>
+                            
+                            {assignment.study_links && assignment.study_links.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-yellow-100">
+                                <p className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                  <BookMarked className="w-4 h-4 text-yellow-600" />
+                                  Ibikoresho byo kwifashisha:
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {assignment.study_links.map((link: any, lIndex: number) => (
+                                    <a 
+                                      key={lIndex} 
+                                      href={link.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-1"
+                                    >
+                                      <Play className="w-3 h-3" />
+                                      {link.title || 'Reba amakuru'}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -895,6 +982,99 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate, onLogou
         </ScrollArea>
         )}
       </div>
+
+      {/* Assignment Submission Modal */}
+      <AnimatePresence>
+        {isSubmitModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setIsSubmitModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} 
+              animate={{ scale: 1, y: 0 }} 
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()} 
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="bg-gradient-to-r from-yellow-500 to-green-500 text-white p-6 rounded-t-3xl">
+                <h2 className="text-2xl font-black mb-1">Kohereza Igisubizo</h2>
+                <p className="text-white/90">{selectedAssignmentForSubmission?.title}</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div>
+                  <Label className="text-lg font-bold text-gray-900 mb-2 block">Igisubizo cyawe (Inyandiko)</Label>
+                  <Textarea 
+                    placeholder="Andika igisubizo cyawe hano..."
+                    value={submissionText}
+                    onChange={(e) => setSubmissionText(e.target.value)}
+                    className="min-h-[200px] border-2 border-yellow-100 focus:border-yellow-500 text-lg"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-lg font-bold text-gray-900 mb-2 block">Shyiraho Amadosiye</Label>
+                  <div className="border-2 border-dashed border-yellow-200 rounded-xl p-6 text-center hover:border-yellow-500 transition-colors bg-yellow-50/30">
+                    <input 
+                      type="file" 
+                      multiple 
+                      onChange={handleFileChange}
+                      className="hidden" 
+                      id="student-file-upload" 
+                    />
+                    <label htmlFor="student-file-upload" className="cursor-pointer">
+                      <Upload className="w-10 h-10 text-yellow-500 mx-auto mb-2" />
+                      <p className="text-gray-600 font-bold">Kanda hano ushyireho amadosiye</p>
+                      <p className="text-xs text-gray-500 mt-1">PDF, Images, Word (Max 20MB)</p>
+                    </label>
+                  </div>
+                  {submissionFiles.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {submissionFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                          <span className="text-sm font-bold text-gray-700 truncate max-w-[80%]">{file.name}</span>
+                          <span className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 h-14 border-2 border-yellow-200 text-gray-600 font-bold text-lg"
+                    onClick={() => setIsSubmitModalOpen(false)}
+                  >
+                    Reka
+                  </Button>
+                  <Button 
+                    className="flex-1 h-14 bg-gradient-to-r from-yellow-500 to-green-500 text-white font-black text-lg shadow-lg"
+                    onClick={handleAssignmentSubmit}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Tegereza...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Save className="w-5 h-5" />
+                        Ohereza Igisubizo
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

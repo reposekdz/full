@@ -1,387 +1,173 @@
-# Complete Database Integration Setup Guide
+# Database Integration for Student Management
 
-## 🎯 Overview
+## Overview
+All student management forms now fetch real data from the database for trades and levels. This ensures consistency across all roles (admin, DOS, DOD, accountant, teacher, advisor).
 
-This guide will help you set up the complete database integration for your School Management System, replacing all mock data with real database-driven content.
+## Changes Made
 
-## 📋 Prerequisites
+### 1. Backend Routes (`backend/routes/levels.js`)
+Created a new route file to handle levels and trades data:
 
-- Node.js installed
-- MySQL database running
-- Backend server configured with database credentials
+**Endpoints:**
+- `GET /api/levels/levels` - Get all available levels
+- `GET /api/levels/trades/:tradeCode/levels` - Get levels for a specific trade
+- `GET /api/levels/trades-with-levels` - Get all trades with their associated levels
 
-## 🚀 Quick Start
+**Features:**
+- Fetches from `trades_levels` table
+- Falls back to standard levels (1-4) if table is empty
+- Returns structured data with trade codes and level information
 
-### Step 1: Initialize Homepage Database
-
-Run the initialization script to create tables and populate with data:
-
-```bash
-cd backend
-node scripts/init-homepage-data.js
-```
-
-**Expected Output:**
-```
-🚀 Initializing homepage data...
-
-📋 Creating tables...
-✅ Tables created successfully
-
-🗑️  Clearing existing data...
-✅ Data cleared
-
-📸 Inserting slides...
-✅ Slides inserted
-
-📰 Inserting news articles...
-✅ News articles inserted
-
-💬 Inserting testimonials...
-✅ Testimonials inserted
-
-📊 Inserting school stats...
-✅ School stats inserted
-
-🏆 Inserting achievements...
-✅ Achievements inserted
-
-📅 Inserting events...
-✅ Events inserted
-
-⭐ Inserting home features...
-✅ Home features inserted
-
-✅ Homepage data initialization completed successfully!
-
-📊 Summary:
-   - 4 Hero Slides
-   - 4 News Articles
-   - 4 Testimonials
-   - 4 School Stats
-   - 4 Achievements
-   - 4 Events
-   - 6 Home Features
-
-✅ Done!
-```
-
-### Step 2: Start Backend Server
-
-```bash
-cd backend
-npm start
-```
-
-The server should start on `http://localhost:5000`
-
-### Step 3: Start Frontend
-
-```bash
-npm run dev
-```
-
-The frontend should start on `http://localhost:5173`
-
-### Step 4: Verify Integration
-
-Open your browser and navigate to `http://localhost:5173`. The homepage should now display:
-- Real statistics from database
-- News articles from database
-- Testimonials from database
-- Achievements from database
-- Events from database
-- Features from database
-
-## 📊 Database Tables Created
-
-### 1. slides
-Stores hero carousel slides for homepage
-- 4 default slides created
-- Supports bilingual content
-- Sortable order
-
-### 2. news_articles
-Stores news and announcements
-- 4 default articles created
-- Category-based filtering
-- Featured article support
-
-### 3. testimonials
-Stores testimonials from students, parents, teachers
-- 4 default testimonials created
-- Rating system (1-5 stars)
-- Avatar initials support
-
-### 4. school_stats
-Stores key statistics displayed on homepage
-- 4 default stats created
-- Icon and color customization
-- Real-time calculation support
-
-### 5. achievements
-Stores school achievements and awards
-- 4 default achievements created
-- Year-based organization
-- Image support
-
-### 6. events
-Stores upcoming school events
-- 4 default events created
-- Bilingual support (English/Kinyarwanda)
-- Date/time/location tracking
-- Attendee management
-
-### 7. home_features
-Stores feature highlights for homepage
-- 6 default features created
-- Bilingual descriptions
-- Icon and color customization
-
-## 🔌 API Endpoints
-
-### Public Endpoints (No Authentication Required)
-
-```
-GET /api/homepage/stats              - Get school statistics
-GET /api/homepage/news               - Get news articles
-GET /api/homepage/testimonials       - Get testimonials
-GET /api/homepage/achievements       - Get achievements
-GET /api/homepage/events             - Get upcoming events
-GET /api/homepage/hero-slides        - Get hero slides
-GET /api/homepage/features           - Get home features
-GET /api/homepage/trades             - Get available trades/courses
-```
-
-### Admin Endpoints (Authentication Required)
-
-```
-POST   /api/content/news             - Create news article
-PUT    /api/content/news/:id         - Update news article
-DELETE /api/content/news/:id         - Delete news article
-
-POST   /api/content/slides           - Create slide
-PUT    /api/content/slides/:id       - Update slide
-DELETE /api/content/slides/:id       - Delete slide
-```
-
-## 🎨 Frontend Integration
-
-The HomePage component automatically fetches data from the API:
-
+### 2. API Service Updates (`src/app/services/apiService.ts`)
+Added new methods:
 ```typescript
-// Fetches from /api/homepage/stats
-const statsResponse = await fetch(`${API_BASE}/homepage/stats`);
-
-// Fetches from /api/homepage/news
-const newsResponse = await fetch(`${API_BASE}/homepage/news`);
-
-// Fetches from /api/homepage/testimonials
-const testimonialsResponse = await fetch(`${API_BASE}/homepage/testimonials`);
+async getAllTrades() - Fetch all trades from database
+async getAllLevels() - Fetch all levels
+async getTradesByLevel(tradeCode) - Get levels for specific trade
+async getTradesWithLevels() - Get trades with nested levels
 ```
 
-### Fallback Mechanism
+### 3. UniversalStudentManagement Component Updates
+**Changes:**
+- Now fetches trades with levels from `/api/levels/trades-with-levels`
+- Dropdown filters dynamically populate based on selected trade
+- Level selection shows only levels available for the selected trade
+- All data comes from database, no hardcoded values
 
-If API calls fail, the frontend displays default mock data:
-- No breaking errors
-- Seamless user experience
-- Console logs for debugging
+**Form Flow:**
+1. User selects a trade (e.g., "ELE", "MCT", "CON")
+2. System fetches available levels for that trade from database
+3. Level dropdown populates with real data
+4. Student is created with proper trade_code and level information
 
-## 🔧 Customization
+### 4. Server Configuration (`backend/server.js`)
+- Added levels route to the server
+- Mounted at `/api/levels`
+- Available to all authenticated users
 
-### Adding New News Article
+## Database Structure
 
-**Via Database:**
+### Required Tables:
+
+**1. courses (trades)**
 ```sql
-INSERT INTO news_articles (title, description, content, image_url, author, category, date_published)
-VALUES ('New Article', 'Description', 'Full content', 'https://...', 'Author', 'Category', CURDATE());
+- id
+- code (trade_code: ELE, MCT, CON, etc.)
+- name (trade name)
+- description
+- duration_months
+- fee_amount
+- is_active
 ```
 
-**Via API (requires authentication):**
-```bash
-curl -X POST http://localhost:5000/api/content/news \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "New Article",
-    "description": "Description",
-    "content": "Full content",
-    "image_url": "https://...",
-    "author": "Author",
-    "category": "Category"
-  }'
-```
-
-### Updating Statistics
-
-Statistics are calculated in real-time from the database:
-- Student count: From `users` table where role = 'student'
-- Teacher count: From `users` table where role = 'teacher'
-- Employment rate: From `enrollments` table
-- Awards: From `achievements` table
-
-To update, simply add/modify records in the respective tables.
-
-### Adding New Testimonial
-
+**2. trades_levels**
 ```sql
-INSERT INTO testimonials (name, role, avatar, quote, rating, sort_order)
-VALUES ('John Doe', 'Student', 'JD', 'Great school!', 5, 5);
+- id
+- trade_code (references courses.code)
+- level_number (1, 2, 3, 4)
+- level_suffix (optional: A, B, etc.)
+- description
+- is_active
 ```
 
-### Adding New Event
+## Usage Across Roles
 
-```sql
-INSERT INTO events (title, title_rw, description, description_rw, event_date, event_time, location, event_type, priority, organizer, contact_info, status)
-VALUES ('New Event', 'Ibirori Bishya', 'Event description', 'Ibisobanuro', '2026-02-15', '10:00:00', 'Main Hall', 'academic', 'high', 'Admin', 'admin@school.rw', 'upcoming');
-```
+### Admin / Super Admin
+- Full access to add students with any trade/level
+- Can manage trades and levels
 
-## 🔍 Troubleshooting
+### DOS (Director of Studies)
+- Add students to any trade/level
+- View all students by trade/level
+- Filter and search by trade/level
 
-### Issue: API returns empty arrays
+### DOD (Director of Discipline)
+- View students by trade/level
+- Filter discipline records by trade/level
 
-**Solution:**
-1. Check if database tables exist:
-```sql
-SHOW TABLES LIKE '%news%';
-SHOW TABLES LIKE '%testimonials%';
-```
+### Accountant
+- View student payments by trade/level
+- Generate financial reports by trade/level
+- Filter students for fee management
 
-2. Check if data exists:
-```sql
-SELECT COUNT(*) FROM news_articles;
-SELECT COUNT(*) FROM testimonials;
-```
+### Teacher
+- View assigned students by trade/level
+- Access class lists filtered by trade/level
+- Submit grades for specific trade/level combinations
 
-3. Re-run initialization script:
-```bash
-node scripts/init-homepage-data.js
-```
+### Advisor
+- View students by trade/level
+- Access student records filtered by trade/level
 
-### Issue: Frontend shows mock data
+## Benefits
 
-**Solution:**
-1. Check if backend is running on port 5000
-2. Check browser console for API errors
-3. Verify API_BASE constant in HomePage.tsx:
-```typescript
-const API_BASE = 'http://localhost:5000/api';
-```
+1. **Consistency**: All roles use the same database source
+2. **Flexibility**: Easy to add new trades or levels without code changes
+3. **Accuracy**: No hardcoded data, always up-to-date
+4. **Scalability**: Supports any number of trades and levels
+5. **Maintainability**: Single source of truth for trade/level data
 
-### Issue: Database connection error
+## Testing
 
-**Solution:**
-1. Check `.env` file in backend folder:
-```
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=school_management
-DB_PORT=3306
-```
+To test the integration:
 
-2. Test database connection:
-```bash
-cd backend
-node scripts/test-db-connection.js
-```
+1. **Start the backend server:**
+   ```bash
+   cd backend
+   npm start
+   ```
 
-## 📈 Performance Optimization
+2. **Verify the endpoint:**
+   ```
+   GET http://localhost:5000/api/levels/trades-with-levels
+   ```
 
-### Caching Strategy
+3. **Expected Response:**
+   ```json
+   {
+     "success": true,
+     "trades": [
+       {
+         "id": 1,
+         "trade_code": "ELE",
+         "trade_name": "Electrical Installation",
+         "levels": [
+           { "level_number": 1, "level_suffix": "", "level_name": "Level 1" },
+           { "level_number": 2, "level_suffix": "", "level_name": "Level 2" }
+         ]
+       }
+     ]
+   }
+   ```
 
-Frontend caches API responses in component state:
-- Data fetched once on component mount
-- No repeated API calls during navigation
-- Refresh on page reload
+4. **Test in UI:**
+   - Login as any role with student management access
+   - Navigate to student management
+   - Click "Add Student"
+   - Select a trade - levels should populate automatically
+   - Submit form - student should be created with correct trade/level
 
-### Database Indexing
+## Future Enhancements
 
-Key indexes created for performance:
-```sql
-CREATE INDEX idx_news_date ON news_articles(date_published);
-CREATE INDEX idx_events_date ON events(event_date);
-CREATE INDEX idx_active ON news_articles(is_active);
-```
+1. Add class management (e.g., ELE-1A, ELE-1B)
+2. Add academic year filtering
+3. Add enrollment status tracking
+4. Add capacity limits per trade/level
+5. Add prerequisite checking for level progression
 
-## 🔐 Security
+## Troubleshooting
 
-### Public Endpoints
-- Read-only access
-- No authentication required
-- Safe for public consumption
+**Issue: No trades showing**
+- Check if `courses` table has data with `is_active = true`
+- Verify backend server is running
+- Check browser console for API errors
 
-### Admin Endpoints
-- JWT authentication required
-- Role-based access control
-- Input validation and sanitization
+**Issue: No levels for selected trade**
+- Check if `trades_levels` table has data for that trade_code
+- System will fall back to standard levels 1-4 if table is empty
+- Verify trade_code matches between tables
 
-## 🎯 Next Steps
-
-### 1. Add More Content
-- Add more news articles
-- Add more testimonials
-- Add more events
-- Upload custom images
-
-### 2. Customize Design
-- Update colors in `school_stats` table
-- Update icons in `home_features` table
-- Modify sort orders for display priority
-
-### 3. Enable Admin Panel
-- Create admin interface for content management
-- Add image upload functionality
-- Implement WYSIWYG editor for news articles
-
-### 4. Extend Functionality
-- Add pagination for news articles
-- Add search functionality
-- Add filtering by category
-- Add event registration system
-
-## 📚 Additional Resources
-
-- [API Documentation](./HOMEPAGE_API_DOCUMENTATION.md)
-- [Database Schema](./backend/scripts/comprehensive-schema.sql)
-- [Backend Routes](./backend/routes/)
-- [Frontend Components](./src/app/pages/)
-
-## ✅ Verification Checklist
-
-- [ ] Database tables created successfully
-- [ ] Default data inserted
-- [ ] Backend server running
-- [ ] Frontend server running
-- [ ] Homepage displays database content
-- [ ] Statistics show real numbers
-- [ ] News articles display correctly
-- [ ] Testimonials display correctly
-- [ ] Events display correctly
-- [ ] No console errors
-
-## 🎉 Success!
-
-If all steps completed successfully, your School Management System is now fully integrated with the database and displaying real dynamic content!
-
-## 💡 Tips
-
-1. **Regular Backups**: Backup your database regularly
-2. **Content Updates**: Update content regularly to keep site fresh
-3. **Image Optimization**: Optimize images before uploading
-4. **Monitoring**: Monitor API response times
-5. **Testing**: Test on different devices and browsers
-
-## 🆘 Support
-
-If you encounter any issues:
-1. Check the troubleshooting section above
-2. Review console logs for errors
-3. Verify database connection
-4. Check API endpoints with curl/Postman
-5. Review backend server logs
-
----
-
-**Last Updated:** January 2026
-**Version:** 1.0.0
+**Issue: Cannot create student**
+- Verify all required fields are filled
+- Check backend logs for validation errors
+- Ensure user has proper permissions

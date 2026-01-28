@@ -17,8 +17,8 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
 import { Progress } from '@/app/components/ui/progress';
-
-const API_BASE = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
+import { toast } from 'sonner';
 
 interface Book {
   id: number;
@@ -80,6 +80,11 @@ const LibraryManagementSystem: React.FC = () => {
   const [showBookDialog, setShowBookDialog] = useState(false);
   const [showBorrowDialog, setShowBorrowDialog] = useState(false);
   const [showBookDetails, setShowBookDetails] = useState(false);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [borrowDueDate, setBorrowDueDate] = useState<string>(
+    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
 
   const [bookForm, setBookForm] = useState({
     title: '',
@@ -105,24 +110,15 @@ const LibraryManagementSystem: React.FC = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { 'Authorization': `Bearer ${token}` };
-
       const [statsRes, booksRes, borrowingsRes] = await Promise.all([
-        fetch(`${API_BASE}/library-system/stats`, { headers }),
-        fetch(`${API_BASE}/library-system/books?limit=200`, { headers }),
-        fetch(`${API_BASE}/library-system/borrowings?limit=100`, { headers })
+        apiService.getLibraryStats(),
+        apiService.getLibraryBooks({ limit: 200 }),
+        apiService.getLibraryBorrowings({ limit: 100 })
       ]);
 
-      const [statsData, booksData, borrowingsData] = await Promise.all([
-        statsRes.json(),
-        booksRes.json(),
-        borrowingsRes.json()
-      ]);
-
-      if (statsData.success) setStats(statsData.stats || statsData);
-      if (booksData.success) setBooks(booksData.books || []);
-      if (borrowingsData.success) setBorrowings(borrowingsData.borrowings || borrowingsData.data || []);
+      if (statsRes.success) setStats(statsRes.stats || statsRes);
+      if (booksRes.success) setBooks(booksRes.books || []);
+      if (borrowingsRes.success) setBorrowings(borrowingsRes.borrowings || borrowingsRes.data || []);
 
     } catch (error) {
       console.error('Fetch error:', error);
@@ -139,21 +135,12 @@ const LibraryManagementSystem: React.FC = () => {
 
   const handleAddBook = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/library-system/books`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...bookForm,
-          quantity: parseInt(bookForm.quantity),
-          publication_year: parseInt(bookForm.publication_year)
-        })
+      const data = await apiService.createLibraryBook({
+        ...bookForm,
+        quantity: parseInt(bookForm.quantity),
+        publication_year: parseInt(bookForm.publication_year)
       });
 
-      const data = await response.json();
       if (data.success) {
         setShowBookDialog(false);
         setBookForm({
@@ -167,33 +154,57 @@ const LibraryManagementSystem: React.FC = () => {
     }
   };
 
-  const handleBorrowBook = async (bookId: number) => {
+  const fetchStudents = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_BASE}/library-system/borrow`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ book_id: bookId })
+      const data = await apiService.getStudents();
+      if (data.success) setStudents(data.students || data.users || data.data || []);
+    } catch (error) {
+      console.error('Fetch students error:', error);
+    }
+  };
+
+  const handleBorrowBook = async (bookId: number) => {
+    if (!selectedStudentId) {
+      toast.error('Please select a student');
+      return;
+    }
+
+    try {
+      const data = await apiService.borrowLibraryBook({ 
+        book_id: bookId, 
+        user_id: parseInt(selectedStudentId),
+        due_date: borrowDueDate
       });
-      fetchAllData();
+      if (data.success) {
+        setShowBorrowDialog(false);
+        setShowBookDetails(false);
+        setSelectedStudentId('');
+        fetchAllData();
+        toast.success('Book borrowed successfully and parent notified!');
+      } else {
+        toast.error(data.message || 'Failed to borrow book');
+      }
     } catch (error) {
       console.error('Borrow book error:', error);
+      toast.error('An error occurred while borrowing the book');
     }
   };
 
   const handleReturnBook = async (borrowingId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_BASE}/library-system/return/${borrowingId}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await apiService.returnLibraryBook(borrowingId, {
+        condition: 'good',
+        fine_amount: 0
       });
-      fetchAllData();
+      if (data.success) {
+        fetchAllData();
+        toast.success('Book returned successfully and parent notified!');
+      } else {
+        toast.error(data.message || 'Failed to return book');
+      }
     } catch (error) {
       console.error('Return book error:', error);
+      toast.error('An error occurred while returning the book');
     }
   };
 
@@ -810,7 +821,10 @@ const LibraryManagementSystem: React.FC = () => {
                     )}
                     <div className="flex gap-2 pt-4">
                       {selectedBook.available_quantity > 0 && (
-                        <Button onClick={() => handleBorrowBook(selectedBook.id)} className="flex-1 bg-green-600 hover:bg-green-700">
+                        <Button onClick={() => { 
+                          fetchStudents();
+                          setShowBorrowDialog(true); 
+                        }} className="flex-1 bg-green-600 hover:bg-green-700">
                           <BookMarked className="w-4 h-4 mr-2" />
                           Borrow Book
                         </Button>
@@ -824,6 +838,54 @@ const LibraryManagementSystem: React.FC = () => {
                 </div>
               </>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showBorrowDialog} onOpenChange={setShowBorrowDialog}>
+          <DialogContent className="bg-gray-800 border-green-500/30 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-green-400">Borrow Book: {selectedBook?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Student</Label>
+                <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                  <SelectTrigger className="bg-gray-700 border-green-500/30">
+                    <SelectValue placeholder="Search student..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 text-white border-green-500/30">
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id.toString()}>
+                        {student.name || `${student.first_name} ${student.last_name}`} ({student.student_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Input
+                  type="date"
+                  value={borrowDueDate}
+                  onChange={(e) => setBorrowDueDate(e.target.value)}
+                  className="bg-gray-700 border-green-500/30"
+                />
+              </div>
+              <div className="pt-4 flex gap-2">
+                <Button 
+                  onClick={() => selectedBook && handleBorrowBook(selectedBook.id)} 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  Confirm Borrowing
+                </Button>
+                <Button onClick={() => setShowBorrowDialog(false)} variant="outline" className="flex-1 border-gray-600">
+                  Cancel
+                </Button>
+              </div>
+              <p className="text-xs text-yellow-500 italic">
+                * Parent will be notified automatically via WhatsApp/SMS
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
       </motion.div>

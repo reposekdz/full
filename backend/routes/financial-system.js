@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { notifyFeePayment } = require('../utils/parentNotifications');
 
 router.get('/budgets', authenticateToken, requireRole('admin', 'headmaster', 'accountant'), async (req, res) => {
   try {
@@ -305,6 +306,15 @@ router.post('/fee-payments', authenticateToken, requireRole('admin', 'headmaster
        VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
       [student_id, fee_structure_id, amount_paid, payment_date, payment_method,
        transaction_reference, receiptNumber, req.user.id, notes]
+    );
+
+    // Fetch fee type for notification
+    const [feeStructure] = await pool.query('SELECT fee_type FROM fee_structure WHERE id = ?', [fee_structure_id]);
+    const fee_type = feeStructure[0]?.fee_type || 'School Fees';
+
+    // Notify parents
+    notifyFeePayment(student_id, { amount: amount_paid, payment_type: fee_type }).catch(err => 
+      console.error('Failed to notify parent of fee payment:', err)
     );
 
     res.status(201).json({

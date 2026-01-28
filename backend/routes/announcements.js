@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { broadcastAnnouncementToParents } = require('../utils/parentNotifications');
 const multer = require('multer');
 const path = require('path');
 const router = express.Router();
@@ -220,6 +221,39 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error deleting announcement:', error);
     res.status(500).json({ success: false, message: 'Failed to delete announcement' });
+  }
+});
+
+// Broadcast announcement to parents
+router.post('/:id/broadcast', authenticateToken, async (req, res) => {
+  try {
+    const [announcement] = await pool.execute(
+      'SELECT title, content, target_audience FROM announcements WHERE id = ?',
+      [req.params.id]
+    );
+
+    if (announcement.length === 0) {
+      return res.status(404).json({ success: false, message: 'Announcement not found' });
+    }
+
+    const a = announcement[0];
+    if (a.target_audience !== 'parent' && a.target_audience !== 'all') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Broadcast only allowed for parent or all audience announcements' 
+      });
+    }
+
+    const result = await broadcastAnnouncementToParents(a);
+    
+    if (result.success) {
+      res.json({ success: true, message: `Broadcast sent to ${result.count} parents` });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send broadcast' });
+    }
+  } catch (error) {
+    console.error('Error broadcasting announcement:', error);
+    res.status(500).json({ success: false, message: 'Failed to broadcast announcement' });
   }
 });
 

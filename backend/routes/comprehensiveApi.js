@@ -870,4 +870,11 @@ router.post('/finance/record-payment', authenticateToken, requireRole('accountan
       VALUES (?, ?, ?, ?, 'paid', CURDATE(), ?, ?)
     `, [student_id, amount, payment_method, transaction_id, req.user.id, notes]);
 
-    res.status(201).
+    res.status(201).json({ success: true, message: 'Payment recorded', paymentId: result.insertId });
+  } catch (error) {
+    console.error('Record payment error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+module.exports = router;

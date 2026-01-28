@@ -1,7 +1,7 @@
 # 🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM - API DOCUMENTATION
 
 ## Server Information
-- **Base URL**: `http://localhost:5001/api`
+- **Base URL**: `http://localhost:5000/api`
 - **Version**: 4.0.0  
 - **Status**: ✅ Running
 - **Mounted Routes**: 25 modules
@@ -341,18 +341,18 @@ The following route files exist but are not mounted in server.js:
 
 ```bash
 # Health Check
-curl http://localhost:5001/api/health
+curl http://localhost:5000/api/health
 
 # Test Authentication
-curl -X POST http://localhost:5001/api/auth/login \
+curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"reponse@gmail.com","password":"2026"}'
 
 # Get Leadership Team
-curl http://localhost:5001/api/leadership
+curl http://localhost:5000/api/leadership
 
 # Get Services
-curl http://localhost:5001/api/services
+curl http://localhost:5000/api/services
 ```
 
 ### Default Credentials
@@ -370,7 +370,7 @@ curl http://localhost:5001/api/services
 
 ## 📝 Notes
 
-- **Server Port**: Changed from 5000 to 5001 (port 5000 conflict resolved)
+- **Server Port**: 5000 (standard development port)
 - **Database**: MySQL (school_management)
 - **Authentication**: JWT-based
 - **File Uploads**: Supported via `/uploads` endpoint
@@ -381,7 +381,7 @@ curl http://localhost:5001/api/services
 ## ⚠️ To Do
 
 1. Mount additional route files in server.js as needed
-2. Update frontend API calls to use port 5001
+2. Ensure frontend API calls use port 5000
 3. Implement comprehensive endpoint documentation for unmounted routes
 4. Set up API rate limiting
 5. Add API versioning (v1, v2)

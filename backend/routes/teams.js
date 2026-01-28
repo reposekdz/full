@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
       FROM teams t
       LEFT JOIN players p ON t.id = p.team_id
       LEFT JOIN matches m ON t.id = m.home_team_id OR t.id = m.away_team_id
-      WHERE t.status = 'active'
+      WHERE t.is_active = 1
       GROUP BY t.id
       ORDER BY t.created_at DESC
     `);
@@ -73,12 +73,12 @@ router.get('/:id', async (req, res) => {
 // Create team with logo
 router.post('/', upload.single('logo'), async (req, res) => {
   try {
-    const { name, sport_type, coach, captain, description } = req.body;
+    const { name, description } = req.body;
     const logo = req.file ? `/uploads/sports/${req.file.filename}` : null;
     
     const [result] = await pool.execute(
-      `INSERT INTO teams (name, sport_type, coach, captain, description, logo, status) VALUES (?, ?, ?, ?, ?, ?, 'active')`,
-      [name, sport_type, coach, captain, description, logo]
+      `INSERT INTO teams (name, description, logo, is_active) VALUES (?, ?, ?, 1)`,
+      [name || 'New Team', description || null, logo]
     );
     res.json({ success: true, teamId: result.insertId });
   } catch (error) {
@@ -89,9 +89,9 @@ router.post('/', upload.single('logo'), async (req, res) => {
 // Update team
 router.put('/:id', upload.single('logo'), async (req, res) => {
   try {
-    const { name, sport_type, coach, captain, description, status } = req.body;
-    let query = `UPDATE teams SET name = ?, sport_type = ?, coach = ?, captain = ?, description = ?, status = ?`;
-    const params = [name, sport_type, coach, captain, description, status];
+    const { name, sport, coach, captain, description, is_active } = req.body;
+    let query = `UPDATE teams SET name = ?, sport = ?, coach = ?, captain = ?, description = ?, is_active = ?`;
+    const params = [name, sport, coach, captain, description, is_active !== undefined ? is_active : 1];
     
     if (req.file) {
       query += `, logo = ?`;
@@ -111,7 +111,7 @@ router.put('/:id', upload.single('logo'), async (req, res) => {
 // Delete team
 router.delete('/:id', async (req, res) => {
   try {
-    await pool.execute('UPDATE teams SET status = "inactive" WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE teams SET is_active = 0 WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

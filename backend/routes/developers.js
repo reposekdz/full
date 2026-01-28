@@ -20,6 +20,18 @@ router.get('/team', async (req, res) => {
   }
 });
 
+router.get('/team/:id', async (req, res) => {
+  try {
+    const [developers] = await pool.query('SELECT * FROM developers WHERE id = ? AND is_active = true', [req.params.id]);
+    if (developers.length === 0) {
+      return res.json({ success: false, message: 'Developer not found' });
+    }
+    res.json({ success: true, developer: developers[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get('/dashboard', (req, res) => {
   res.json({ success: true, data: {}, message: 'Dashboard' });
 });

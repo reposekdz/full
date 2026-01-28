@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amakuru Y'Ishuri</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.3em; font-weight: bold; }
+        .back-link { color: white; text-decoration: none; padding: 8px 15px; background: rgba(255,255,255,0.2); border-radius: 5px; }
+        .back-link:hover { background: rgba(255,255,255,0.3); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1em; }
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; }
+        .news-card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); transition: 0.3s; cursor: pointer; }
+        .news-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .news-image { width: 100%; height: 200px; object-fit: cover; }
+        .news-content { padding: 20px; }
+        .news-category { display: inline-block; background: #667eea; color: white; padding: 5px 12px; border-radius: 15px; font-size: 0.85em; margin-bottom: 10px; }
+        .news-title { font-size: 1.3em; color: #333; margin-bottom: 10px; font-weight: bold; }
+        .news-description { color: #666; line-height: 1.6; margin-bottom: 15px; }
+        .news-meta { display: flex; justify-content: space-between; align-items: center; color: #999; font-size: 0.9em; }
+        .news-author { display: flex; align-items: center; gap: 5px; }
+        .news-stats { display: flex; gap: 15px; }
+        .loading { text-align: center; padding: 50px; color: #667eea; font-size: 1.2em; }
+        .error { text-align: center; padding: 50px; color: #e74c3c; }
+        .featured-badge { position: absolute; top: 10px; right: 10px; background: #f39c12; color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; }
+        .news-card { position: relative; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">📰 Amakuru Y'Ishuri</div>
+        <a href="home.html" class="back-link">← Ahabanza</a>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Amakuru Y'Ishuri</h1>
+            <p>Amakuru mashya n'ibikorwa by'ishuri ryacu</p>
+        </div>
+
+        <div id="newsContainer" class="news-grid">
+            <div class="loading">Gupakurura amakuru...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/news';
+
+        async function loadNews() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                if (data.success && data.articles) {
+                    displayNews(data.articles);
+                } else {
+                    showError('Nta makuru abonetse');
+                }
+            } catch (error) {
+                showError('Ikosa mu gupakurura amakuru: ' + error.message);
+            }
+        }
+
+        function displayNews(articles) {
+            const container = document.getElementById('newsContainer');
+            
+            if (articles.length === 0) {
+                container.innerHTML = '<div class="error">Nta makuru ahari kuri ubu</div>';
+                return;
+            }
+
+            container.innerHTML = articles.map(article => `
+                <div class="news-card" onclick="viewArticle(${article.id})">
+                    ${article.is_featured ? '<div class="featured-badge">⭐ Ikintu Cyihariye</div>' : ''}
+                    <img src="http://localhost:3000${article.image_url}" alt="${article.title}" class="news-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2224%22%3EAmakuru%3C/text%3E%3C/svg%3E'">
+                    <div class="news-content">
+                        <span class="news-category">${article.category}</span>
+                        <h3 class="news-title">${article.title}</h3>
+                        <p class="news-description">${article.description}</p>
+                        <div class="news-meta">
+                            <div class="news-author">
+                                <span>👤</span>
+                                <span>${article.author}</span>
+                            </div>
+                            <div class="news-stats">
+                                <span>👁️ ${article.views || 0}</span>
+                                <span>❤️ ${article.likes || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showError(message) {
+            document.getElementById('newsContainer').innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function viewArticle(id) {
+            window.location.href = `article.html?id=${id}`;
+        }
+
+        loadNews();
+    </script>
+</body>
+</html>

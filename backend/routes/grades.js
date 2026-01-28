@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { notifyGradeUpdate } = require('../utils/parentNotifications');
 
 // Submit grade
 router.post('/', authenticateToken, async (req, res) => {
@@ -18,10 +19,21 @@ router.post('/', authenticateToken, async (req, res) => {
     else if (percentage >= 60) grade_letter = 'D';
     else if (percentage >= 50) grade_letter = 'E';
 
-    const [result] = await pool.query(`
+    const [result] = await pool.execute(`
       INSERT INTO grades (student_id, subject_id, class_id, academic_year_id, exam_type, obtained_marks, max_marks, grade_letter, remarks, graded_by, graded_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [student_id, subject_id, class_id, academic_year_id, exam_type, obtained_marks, max_marks, grade_letter, remarks, graded_by]);
+
+    // Fetch subject name for notification
+    const [subjects] = await pool.execute('SELECT name FROM subjects WHERE id = ?', [subject_id]);
+    const subject_name = subjects[0]?.name || 'Unknown Subject';
+
+    // Notify parents
+    notifyGradeUpdate(student_id, { 
+      subject_name, 
+      obtained_marks, 
+      max_marks 
+    }).catch(err => console.error('Failed to notify parent of grade:', err));
 
     res.json({ success: true, message: 'Grade submitted successfully', gradeId: result.insertId });
   } catch (error) {
@@ -52,10 +64,29 @@ router.post('/bulk', authenticateToken, async (req, res) => {
       ];
     });
 
-    await pool.query(`
+    await pool.execute(`
       INSERT INTO grades (student_id, subject_id, class_id, academic_year_id, exam_type, obtained_marks, max_marks, grade_letter, remarks, graded_by, graded_at)
       VALUES ?
     `, [values.map(v => [...v, new Date()])]);
+
+    // Notify parents for each grade
+    const subjectCache = {};
+    for (const g of grades) {
+      try {
+        if (!subjectCache[g.subject_id]) {
+          const [subjects] = await pool.execute('SELECT name FROM subjects WHERE id = ?', [g.subject_id]);
+          subjectCache[g.subject_id] = subjects[0]?.name || 'Unknown Subject';
+        }
+        
+        notifyGradeUpdate(g.student_id, {
+          subject_name: subjectCache[g.subject_id],
+          obtained_marks: g.obtained_marks,
+          max_marks: g.max_marks
+        }).catch(err => console.error(`Failed to notify parent for student ${g.student_id}:`, err));
+      } catch (err) {
+        console.error('Error in bulk grade notification loop:', err);
+      }
+    }
 
     res.json({ success: true, message: 'Grades submitted successfully' });
   } catch (error) {
@@ -109,7 +140,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY g.graded_at DESC';
 
-    const [grades] = await pool.query(query, params);
+    const [grades] = await pool.execute(query, params);
     res.json({ success: true, grades });
   } catch (error) {
     console.error('Error fetching grades:', error);
@@ -144,9 +175,9 @@ router.get('/student-summary/:studentId', authenticateToken, async (req, res) =>
 
     query += ' GROUP BY g.subject_id ORDER BY average_percentage DESC';
 
-    const [summary] = await pool.query(query, params);
+    const [summary] = await pool.execute(query, params);
 
-    const [overall] = await pool.query(`
+    const [overall] = await pool.execute(`
       SELECT 
         AVG((obtained_marks / max_marks) * 100) as overall_average,
         COUNT(*) as total_assessments
@@ -194,7 +225,7 @@ router.get('/class-performance/:classId', authenticateToken, async (req, res) =>
 
     query += ' GROUP BY g.student_id ORDER BY average_percentage DESC';
 
-    const [performance] = await pool.query(query, params);
+    const [performance] = await pool.execute(query, params);
 
     res.json({ success: true, performance });
   } catch (error) {
@@ -217,7 +248,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     else if (percentage >= 60) grade_letter = 'D';
     else if (percentage >= 50) grade_letter = 'E';
 
-    await pool.query(`
+    await pool.execute(`
       UPDATE grades 
       SET obtained_marks = ?, max_marks = ?, grade_letter = ?, remarks = ?
       WHERE id = ?
@@ -233,7 +264,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete grade
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    await pool.query('DELETE FROM grades WHERE id = ?', [req.params.id]);
+    await pool.execute('DELETE FROM grades WHERE id = ?', [req.params.id]);
     res.json({ success: true, message: 'Grade deleted successfully' });
   } catch (error) {
     console.error('Error deleting grade:', error);
@@ -285,7 +316,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       params.push(level);
     }
 
-    const [analytics] = await pool.query(query, params);
+    const [analytics] = await pool.execute(query, params);
     res.json({ success: true, analytics: analytics[0] });
   } catch (error) {
     console.error('Error fetching analytics:', error);

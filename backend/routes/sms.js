@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { sendSMS, sendBulkSMS, checkBalance, getMessageHistory, getSMSStats } = require('../services/smsService');
+const { sendUniversalMessage, checkBalance, getMessageHistory, getSMSStats } = require('../services/smsService');
 const db = require('../config/database');
 
 // Check role permissions
@@ -13,10 +13,21 @@ const checkPermission = async (req, res, next) => {
     if (!staff || staff.length === 0) return res.status(404).json({ success: false, error: 'Staff not found' });
 
     const [perms] = await db.query('SELECT * FROM sms_role_permissions WHERE role = ?', [staff[0].role]);
-    if (!perms || perms.length === 0) return res.status(403).json({ success: false, error: 'No SMS permissions' });
+    if (!perms || perms.length === 0) {
+      // Default permissions for staff if not explicitly set
+      req.permissions = {
+        can_send_single: 1,
+        can_send_bulk: 0,
+        can_send_class: 1,
+        can_send_all: 0,
+        can_view_history: 1,
+        can_view_stats: 0
+      };
+    } else {
+      req.permissions = perms[0];
+    }
 
     req.staffMember = staff[0];
-    req.permissions = perms[0];
     next();
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -28,34 +39,53 @@ module.exports = (io) => {
   router.post('/send', checkPermission, async (req, res) => {
     if (!req.permissions.can_send_single) return res.status(403).json({ success: false, error: 'No permission' });
 
-    const { parentId, message, staffId } = req.body;
+    const { parentId, message, staffId, subject = 'School Message' } = req.body;
     if (!parentId || !message) return res.status(400).json({ success: false, error: 'Parent ID and message required' });
 
     try {
       const [parents] = await db.query('SELECT * FROM parents WHERE id = ?', [parentId]);
-      if (!parents || parents.length === 0) return res.status(404).json({ success: false, error: 'Parent not found' });
+      if (!parents || parents.length === 0) return res.status(404).json({ success: false, error: 'Parent found' });
 
       const parent = parents[0];
-      if (!parent.phone) return res.status(400).json({ success: false, error: 'No phone number' });
-
-      io.emit('sms:sending', { parentId: parent.id, parentName: `${parent.first_name} ${parent.last_name}`, phone: parent.phone, status: 'sending', timestamp: new Date() });
-
       const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
 
-      if (parent.has_smartphone) {
-        io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date(), type: 'in-app', schoolName: 'GARDEN TSS' });
+      // 1. Save to main messages table for UI history
+      const [msgResult] = await db.query(
+        'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parentId, subject, message, 'message', 'sent']
+      );
+
+      // 2. Real-time delivery via Socket.io
+      io.emit('parent:message', {
+        id: msgResult.insertId,
+        parentId: parent.id,
+        message: fullMessage,
+        content: message,
+        sender: req.staffMember,
+        timestamp: new Date(),
+        type: 'in-app'
+      });
+
+      // 3. External delivery (WhatsApp/SMS) if needed
+      let externalResult = { success: true, method: 'none' };
+      if (!parent.has_smartphone || parent.preferred_contact_method !== 'app') {
+        externalResult = await sendUniversalMessage(parent.phone, fullMessage, staffId, {
+          parentId: parent.id,
+          hasSmartphone: parent.has_smartphone,
+          preferredMethod: parent.preferred_contact_method || 'dual'
+        });
       }
 
-      const smsResult = await sendSMS(parent.phone, fullMessage, staffId, { parentId: parent.id, hasSmartphone: parent.has_smartphone });
+      res.json({
+        success: true,
+        message: 'Message processed',
+        inApp: true,
+        external: externalResult,
+        messageId: msgResult.insertId
+      });
 
-      if (smsResult.success) {
-        io.emit('sms:sent', { parentId: parent.id, phone: parent.phone, status: 'success', method: parent.has_smartphone ? 'dual' : 'sms-only' });
-        res.json({ success: true, message: parent.has_smartphone ? 'Sent via app and SMS' : 'Sent via SMS', method: parent.has_smartphone ? 'dual' : 'sms-only', data: smsResult.data });
-      } else {
-        io.emit('sms:failed', { parentId: parent.id, phone: parent.phone, status: 'failed', error: smsResult.error });
-        res.status(500).json({ success: false, error: smsResult.error });
-      }
     } catch (error) {
+      console.error('Send error:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
@@ -64,35 +94,41 @@ module.exports = (io) => {
   router.post('/bulk', checkPermission, async (req, res) => {
     if (!req.permissions.can_send_bulk) return res.status(403).json({ success: false, error: 'No bulk permission' });
 
-    const { parentIds, message, staffId } = req.body;
+    const { parentIds, message, staffId, subject = 'School Announcement' } = req.body;
     if (!parentIds || !Array.isArray(parentIds) || !message) return res.status(400).json({ success: false, error: 'Invalid data' });
 
     try {
       const [parents] = await db.query(`SELECT * FROM parents WHERE id IN (${parentIds.map(() => '?').join(',')})`, parentIds);
-      const results = { total: parents.length, sent: 0, failed: 0, details: [] };
+      const results = { total: parents.length, sent: 0, failed: 0 };
 
       for (const parent of parents) {
-        if (!parent.phone) { results.failed++; continue; }
-
-        io.emit('sms:sending', { parentId: parent.id, parentName: `${parent.first_name} ${parent.last_name}`, phone: parent.phone, status: 'sending' });
-
         const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
 
-        if (parent.has_smartphone) {
-          io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date(), type: 'in-app', schoolName: 'GARDEN TSS' });
-        }
+        // Save to DB
+        await db.query(
+          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
+        );
 
-        const smsResult = await sendSMS(parent.phone, fullMessage, staffId, { parentId: parent.id, bulk: true });
+        // Socket.io
+        io.emit('parent:message', {
+          parentId: parent.id,
+          message: fullMessage,
+          sender: req.staffMember,
+          timestamp: new Date()
+        });
 
-        if (smsResult.success) {
-          results.sent++;
-          io.emit('sms:sent', { parentId: parent.id, phone: parent.phone, status: 'success' });
-        } else {
-          results.failed++;
-          io.emit('sms:failed', { parentId: parent.id, phone: parent.phone, status: 'failed' });
-        }
+        // External
+        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, {
+          parentId: parent.id,
+          hasSmartphone: parent.has_smartphone,
+          preferredMethod: 'dual'
+        });
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        ext.success ? results.sent++ : results.failed++;
+        
+        // Small delay to prevent rate limiting
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       res.json({ success: true, results });
@@ -105,31 +141,34 @@ module.exports = (io) => {
   router.post('/send-to-class', checkPermission, async (req, res) => {
     if (!req.permissions.can_send_class) return res.status(403).json({ success: false, error: 'No class permission' });
 
-    const { classId, message, staffId } = req.body;
+    const { classId, message, staffId, subject = 'Class Announcement' } = req.body;
     if (!classId || !message) return res.status(400).json({ success: false, error: 'Class ID and message required' });
 
     try {
       const [students] = await db.query('SELECT DISTINCT parent_id FROM students WHERE class_id = ? AND parent_id IS NOT NULL', [classId]);
       const parentIds = students.map(s => s.parent_id);
 
-      if (parentIds.length === 0) return res.status(404).json({ success: false, error: 'No parents found' });
+      if (parentIds.length === 0) return res.status(404).json({ success: false, error: 'No parents found in this class' });
 
       req.body.parentIds = parentIds;
+      req.body.subject = subject;
+      // Forward to bulk route logic
       const [parents] = await db.query(`SELECT * FROM parents WHERE id IN (${parentIds.map(() => '?').join(',')})`, parentIds);
       const results = { total: parents.length, sent: 0, failed: 0 };
 
       for (const parent of parents) {
-        if (!parent.phone) { results.failed++; continue; }
-
         const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
 
-        if (parent.has_smartphone) {
-          io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date(), type: 'in-app', schoolName: 'GARDEN TSS' });
-        }
+        await db.query(
+          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
+        );
 
-        const smsResult = await sendSMS(parent.phone, fullMessage, staffId, { classId, parentId: parent.id });
-        smsResult.success ? results.sent++ : results.failed++;
-        await new Promise(resolve => setTimeout(resolve, 100));
+        io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date() });
+
+        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, { parentId: parent.id, hasSmartphone: parent.has_smartphone, preferredMethod: 'dual' });
+        ext.success ? results.sent++ : results.failed++;
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       res.json({ success: true, results });
@@ -142,23 +181,26 @@ module.exports = (io) => {
   router.post('/send-to-all', checkPermission, async (req, res) => {
     if (!req.permissions.can_send_all) return res.status(403).json({ success: false, error: 'Only admin/director can broadcast' });
 
-    const { message, staffId } = req.body;
+    const { message, staffId, subject = 'School-Wide Announcement' } = req.body;
     if (!message) return res.status(400).json({ success: false, error: 'Message required' });
 
     try {
-      const [parents] = await db.query('SELECT * FROM parents WHERE phone IS NOT NULL');
+      const [parents] = await db.query('SELECT * FROM parents WHERE status = "active"');
       const results = { total: parents.length, sent: 0, failed: 0 };
 
       for (const parent of parents) {
         const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
 
-        if (parent.has_smartphone) {
-          io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date(), type: 'in-app', schoolName: 'GARDEN TSS' });
-        }
+        await db.query(
+          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
+        );
 
-        const smsResult = await sendSMS(parent.phone, fullMessage, staffId, { broadcast: true });
-        smsResult.success ? results.sent++ : results.failed++;
-        await new Promise(resolve => setTimeout(resolve, 100));
+        io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date() });
+
+        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, { parentId: parent.id, hasSmartphone: parent.has_smartphone, preferredMethod: 'dual' });
+        ext.success ? results.sent++ : results.failed++;
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       res.json({ success: true, results });

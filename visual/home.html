@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahabanza - Sisitemu y'Ubuyobozi bw'Ishuri</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        h1 { color: #667eea; text-align: center; font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; font-size: 1.2em; margin-bottom: 20px; }
+        .explanation-box { margin-top: 20px; padding: 25px; background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); border-radius: 10px; border-left: 5px solid #667eea; }
+        .explanation-box h3 { color: #667eea; margin-bottom: 15px; font-size: 1.5em; }
+        .explanation-box p { color: #333; line-height: 1.8; margin-bottom: 10px; text-align: justify; }
+        .roles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-top: 30px; }
+        .role-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden; }
+        .role-card:hover { transform: translateY(-10px); box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+        .role-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #667eea, #764ba2); }
+        .role-icon { font-size: 3em; margin-bottom: 15px; text-align: center; }
+        .role-title { font-size: 1.4em; color: #333; margin-bottom: 10px; text-align: center; font-weight: bold; }
+        .role-desc { color: #666; text-align: center; margin-bottom: 15px; line-height: 1.6; font-size: 0.95em; }
+        .role-importance { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left; font-size: 0.88em; line-height: 1.7; color: #555; border-left: 3px solid #667eea; }
+        .role-importance strong { color: #667eea; display: block; margin-bottom: 8px; font-size: 1.05em; }
+        .role-features { list-style: none; margin-bottom: 15px; }
+        .role-features li { padding: 8px 0; color: #555; border-bottom: 1px solid #eee; font-size: 0.9em; }
+        .role-features li:before { content: '✓'; color: #667eea; font-weight: bold; margin-right: 10px; }
+        .btn { display: block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 25px; border-radius: 25px; text-decoration: none; text-align: center; transition: all 0.3s; font-weight: bold; }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2.5em; color: #667eea; font-weight: bold; }
+        .stat-label { color: #666; margin-top: 5px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .role-card { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
+        .role-card:nth-child(1) { animation-delay: 0.1s; }
+        .role-card:nth-child(2) { animation-delay: 0.2s; }
+        .role-card:nth-child(3) { animation-delay: 0.3s; }
+        .role-card:nth-child(4) { animation-delay: 0.4s; }
+        .role-card:nth-child(5) { animation-delay: 0.5s; }
+        .role-card:nth-child(6) { animation-delay: 0.6s; }
+        .role-card:nth-child(7) { animation-delay: 0.7s; }
+        .role-card:nth-child(8) { animation-delay: 0.8s; }
+        .role-card:nth-child(9) { animation-delay: 0.9s; }
+        .role-card:nth-child(10) { animation-delay: 1s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 Sisitemu y'Ubuyobozi bw'Ishuri</h1>
+            <p class="subtitle">Ikoranabuhanga rigezweho mu micungire y'amashuri - Gufasha abanyeshuri, ababyeyi, abarimu n'abakozi bose</p>
+            <div class="explanation-box">
+                <h3>📖 Ibisobanuro by'Ingenzi ku Sisitemu</h3>
+                <p><strong>Sisitemu iyi</strong> ni ikoranabuhanga rigezweho ryakozwe kugira ngo rifashe ishuri ryose gucunga ibikorwa byaryo byose mu buryo bworoshye, bwihuse kandi bwizewe. Buri wese afite uruhare runaka mu ishuri - haba ari umunyeshuri, umubyeyi, umwarimu, umubare, umucunga ibikoresho, umuyobozi, cyangwa umukozi uwo ariwe wese - afite portal yihariye aho ashobora gukora akazi ke neza cyane.</p>
+                <p><strong>Intego nyamukuru:</strong> Gutuma ishuri rikora neza mu buryo bwuzuye, abanyeshuri biga neza kandi bakamenya uko bagenda mu masomo, ababyeyi bakurikirana abana babo mu buryo bworoshye, kandi abakozi bose bakora akazi kabo mu buryo bwihuse, bwizewe kandi bwuzuye umutekano.</p>
+                <p><strong>Ibyiza by'ingenzi:</strong> Sisitemu ifasha kugabanya ibikorwa byinshi, gutuma amakuru aboneka vuba, gukumira amakosa, no gutuma buri wese amenya icyo agomba gukora. Byose bigenzurwa neza kandi bifite umutekano ukomeye.</p>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">10</div>
+                <div class="stat-label">Inshingano Zitandukanye</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">500+</div>
+                <div class="stat-label">Ibikorwa Byihariye</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Umutekano w'Amakuru</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Serivisi Zihoraho</div>
+            </div>
+        </div>
+
+        <div class="roles-grid">
+            <div class="role-card" onclick="location.href='student.html'">
+                <div class="role-icon">👨🎓</div>
+                <div class="role-title">UMUNYESHURI</div>
+                <div class="role-desc">Kugenzura amasomo, amanota, n'ibyitegererezo byose</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umunyeshuri:</strong>
+                    Portal y'umunyeshuri ni urubuga rwihariye rwakozwe kugira ngo rufashe umunyeshuri wese gukurikirana iterambere rye mu masomo no mu bikorwa byose by'ishuri. Umunyeshuri ashobora kubona amanota ye yose y'ibizamini n'ibikorwa byose, ibitabo bye by'amasomo yose, raporo z'iterambere rye, no gusuzuma uko agenda mu buri somo. Ibi bifasha umunyeshuri kumenya neza amasomo akora neza, ayakeneye kwiyubakaho, n'icyo agomba gukora kugira ngo yige neza. Kwitabira kwe amasomo gikurikiranwa buri munsi, bityo umunyeshuri amenya iminsi yitabiriye, yataye, cyangwa yatinze, kandi akamenya ingaruka zabyo ku iterambere rye. Mu isomero ry'ibitabo, umunyeshuri ashobora gushakisha ibitabo, kubihagarika, kureba ibitabo yahagaritse, igihe cyo kubigarura, n'amande afite. Amafaranga yishyuye n'asigaye arakurikiranwa neza, bityo umunyeshuri amenya amafaranga yishyuwe, asigaye, n'igihe cyo kwishyura. Icumbi cye, icyumba cye, n'igitanda cye birakurikiranwa, hamwe n'amakuru y'abandi banyeshuri babarizwamo. Siporo akina, amakipe yinjiyemo, amarushanwa yitabiriye, n'ibihembo yaronse byose birakurikiranwa. Kumenyesha k'ibizamini bizaza, ibikorwa by'ishuri, itangazo ry'ishuri, n'ubutumwa bw'abarimu byose bigera kuri umunyeshuri mu gihe nyacyo binyuze kuri sisitemu, SMS, WhatsApp, na Email.
+                </div>
+                <ul class="role-features">
+                    <li>Amanota n'ibitabo byose</li>
+                    <li>Gahunda y'amasomo</li>
+                    <li>Isomero ry'ibitabo</li>
+                    <li>Siporo n'imyidagaduro</li>
+                    <li>Amafaranga n'icumbi</li>
+                </ul>
+                <a href="student.html" class="btn">Injira Nk'Umunyeshuri</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='parent.html'">
+                <div class="role-icon">👨👩👧</div>
+                <div class="role-title">UMUBYEYI</div>
+                <div class="role-desc">Gukurikirana iterambere ry'umwana wanjye</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umubyeyi:</strong>
+                    Portal y'umubyeyi ni urubuga rw'ingenzi cyane rwakozwe kugira ngo rufashe ababyeyi gukurikirana iterambere ry'abana babo mu ishuri mu buryo bwuzuye kandi bworoshye. Umubyeyi ashobora kubona amanota yose y'umwana we mu masomo yose, ibitabo bye, raporo z'iterambere rye, no gusuzuma uko agenda mu buri somo. Ibi bifasha umubyeyi kumenya neza amasomo umwana we akora neza, ayakeneye kwiyubakaho, n'icyo agomba kumufasha. Kwitabira kw'umwana amasomo girakurikiranwa buri munsi, bityo umubyeyi amenya iminsi umwana we yitabiriye, yataye, cyangwa yatinze, kandi akamenya impamvu n'ingaruka zabyo. Imyitwarire y'umwana irakurikiranwa neza - indangagaciro yahawe, ibihano yahawe, ibihembo yaronse, n'ibibazo by'imyitwarire byose. Umubyeyi abona kumenyesha k'imyitwarire mibi mu gihe nyacyo kugira ngo afashe umwana we. Ubuzima bw'umwana burakurikiranwa - amateka y'ubuzima, indwara, imiti yahawe, ubuvuzi bwahawe, n'ibibazo by'ubuzima byose. Umubyeyi abona kumenyesha k'ibibazo by'ubuzima mu gihe nyacyo. Amafaranga y'ishuri arakurikiranwa neza - amafaranga yishyuwe, asigaye, imyenda, n'igihe cyo kwishyura. Umubyeyi ashobora kwishyura online binyuze kuri Mobile Money, Bank Transfer, cyangwa Credit Card. Icumbi cy'umwana, icyumba cye, n'igitanda cye birakurikiranwa. Siporo umwana akina, amakipe yinjiyemo, amarushanwa yitabiriye, n'ibihembo yaronse byose birakurikiranwa. Umubyeyi ashobora kuvugana n'abarimu b'umwana we, kubabwira ibibazo, gusaba inama, no kubona raporo z'iterambere. Kumenyesha k'ibizamini bizaza, imyitwarire, ubuzima, amafaranga, ibikorwa by'ishuri, n'itangazo ry'ishuri byose bigera ku mubyeyi mu gihe nyacyo.
+                </div>
+                <ul class="role-features">
+                    <li>Amanota y'umwana</li>
+                    <li>Kwitabira n'imyitwarire</li>
+                    <li>Kwishyura amafaranga</li>
+                    <li>Itumanaho n'abarimu</li>
+                    <li>Ubuzima bw'umwana</li>
+                </ul>
+                <a href="parent.html" class="btn">Injira Nk'Umubyeyi</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='teacher.html'">
+                <div class="role-icon">👨🏫</div>
+                <div class="role-title">UMWARIMU</div>
+                <div class="role-desc">Gucunga amasomo n'abanyeshuri banjye</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umwarimu:</strong>
+                    Portal y'umwarimu ni urubuga rukomeye rwakozwe kugira ngo rufashe abarimu gukora akazi kabo mu buryo bwihuse, bworoshye kandi bwizewe. Umwarimu ashobora gutanga amanota y'abanyeshuri be mu buryo bworoshye - amanota y'ibizamini, amanota y'ibikorwa, amanota y'imirimo, n'amanota y'ukwezi. Sisitemu ibara amanota rusange, ibitabo, n'iterambere ry'abanyeshuri ku buryo bwikora. Kwitabira kw'abanyeshuri girakurikiranwa buri munsi - umwarimu ashobora kwandika abanyeshuri bitabiriye, bataye, batinze, cyangwa bafite uruhushya, kandi sisitemu ikamenyesha ababyeyi mu gihe nyacyo. Umwarimu ashobora gutegura ibizamini n'ibikorwa, kubigenera, kubikoresha inshuro nyinshi, no kubona raporo z'ibyavuyemo. Gahunda y'amasomo ye irakurikiranwa - amasomo y'uyu munsi, ay'ejo, n'ay'icyumweru cyose. Umwarimu ashobora kubona profil z'abanyeshuri be - amanota yabo, kwitabira kwabo, imyitwarire yabo, ubuzima bwabo, n'amakuru yabo yose. Ibi bifasha umwarimu kumenya neza abanyeshuri be, ababafasha neza, no kubamenya ibibazo byabo. Umwarimu ashobora kuvugana n'ababyeyi b'abanyeshuri be - kohereza ubutumwa, gusaba inama, gutanga raporo z'iterambere, no kubabwira ibibazo by'abana babo. Umwarimu ashobora gutanga indangagaciro n'ibihano ku banyeshuri - indangagaciro nziza, ibihano by'imyitwarire mibi, ibihembo by'ibikorwa byiza, kandi sisitemu ikamenyesha ababyeyi mu gihe nyacyo. Raporo zitandukanye zirakozwa - raporo z'ukwezi, z'igihembwe, z'umwaka, raporo z'abanyeshuri, raporo z'amasomo, n'ibindi. Ibikoresho by'amasomo birakurikiranwa - ibitabo, ibikoresho bya tekinolojiya, ibikoresho by'ubushakashatsi, kandi umwarimu ashobora kubisaba igihe akeneye.
+                </div>
+                <ul class="role-features">
+                    <li>Gutanga amanota</li>
+                    <li>Kwitabira amasomo</li>
+                    <li>Ibizamini n'ibikorwa</li>
+                    <li>Raporo z'abanyeshuri</li>
+                    <li>Itumanaho n'ababyeyi</li>
+                </ul>
+                <a href="teacher.html" class="btn">Injira Nk'Umwarimu</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='accountant.html'">
+                <div class="role-icon">💰</div>
+                <div class="role-title">UMUBARE</div>
+                <div class="role-desc">Gucunga amafaranga yose y'ishuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umubare:</strong>
+                    Portal y'umubare ni urubuga rw'ingenzi cyane mu gucunga amafaranga yose y'ishuri mu buryo bwizewe, bwihuse kandi bwuzuye umutekano. Umubare acunga kwishyura kw'abanyeshuri - amafaranga yishyuwe, asigaye, imyenda, igihe cyo kwishyura, n'uburyo bwo kwishyura. Sisitemu ikurikirana buri munyeshuri ku giti cye, ikamenyesha ababyeyi igihe amafaranga asigaye cyangwa igihe cyo kwishyura kigeze. Kwishyura online kwemewe - Mobile Money (MTN, Airtel), Bank Transfer, Credit Card, kandi sisitemu ikemeza kwishyura mu gihe nyacyo. Imishahara y'abakozi yose irakurikiranwa - abarimu, abakozi b'ubuyobozi, abakozi b'isuku, abakozi b'umutekano, n'abandi bakozi bose. Sisitemu ibara imishahara, ikuramo imisoro, ikemeza kwishyura, kandi ikakora raporo z'imishahara. Ibyinjijwe n'ibyasohowe byose birakurikiranwa - amafaranga yinjiye, ayasohowe, impamvu z'ibyasohowe, igihe cyakoreshejwe, n'uwabikoreye. Konti z'amafaranga zirakurikiranwa - amafaranga muri konti, amafaranga mu isanduku, amafaranga mu banki, n'amafaranga mu mobile money. Raporo z'amafaranga zikozwa buri gihe - raporo z'ukwezi, z'igihembwe, z'umwaka, raporo z'ibyinjijwe, z'ibyasohowe, z'imyenda, n'iz'imishahara. Ibi bifasha ishuri kumenya neza uko amafaranga yacyo agenda, gufata ibyemezo byiza, no gucunga amafaranga neza. Umubare ashobora gukora bije (budget) y'ishuri, kuyikurikirana, no kuyisuzuma. Sisitemu ifite umutekano ukomeye - uburenganzira bwo kubona amafaranga, amateka y'ibikorwa byose, backup y'amakuru, kandi gusa umubare n'umuyobozi mukuru bashobora kubona amakuru y'amafaranga.
+                </div>
+                <ul class="role-features">
+                    <li>Kwishyura kw'abanyeshuri</li>
+                    <li>Imishahara y'abakozi</li>
+                    <li>Imyenda n'inguzanyo</li>
+                    <li>Ibyinjijwe n'ibyasohowe</li>
+                    <li>Raporo z'amafaranga</li>
+                </ul>
+                <a href="accountant.html" class="btn">Injira Nk'Umubare</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='stockmanager.html'">
+                <div class="role-icon">📦</div>
+                <div class="role-title">UMUCUNGA IBIKORESHO</div>
+                <div class="role-desc">Gucunga ibikoresho byose by'ishuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umucunga Ibikoresho:</strong>
+                    Portal y'umucunga ibikoresho ni urubuga rukomeye rwakozwe kugira ngo rufashe ishuri gucunga ibikoresho byaryo byose mu buryo bwizewe, bworoshye kandi bwihuse. Umucunga ibikoresho acunga ububiko bwose bw'ibikoresho by'ishuri - ibitabo by'amasomo by'abanyeshuri n'abarimu, ibikoresho bya tekinolojiya nka mudasobwa, impapuro, amakarita, ibikoresho bya siporo nk'imipira, imyenda ya siporo, ibikoresho by'ubuvuzi nk'imiti, ibikoresho by'isuku, ibikoresho by'ubwubatsi, n'ibindi byose bikenewe mu ishuri. Ibyinjijwe n'ibyasohowe byose birakurikiranwa - igihe byinjiye, uwabinjije, igiciro cyabyo, igihe byasohowe, uwabisohoje, impamvu yo kubisohora, n'igihe cyo kubigarura. Sisitemu ikurikirana buri gikoresho ku giti cyacyo - aho kiri, uwakifashe, igihe cyafashwe, igihe cyo kugarura, n'imiterere yacyo. Ibi bifasha ishuri kumenya ibikoresho bifite, ibikoresho bikenewe, ibikoresho byarangiye, n'ibikoresho byahunikiye. Abakozi bashobora gusaba ibikoresho bakeneye - abarimu basaba ibitabo n'ibikoresho by'amasomo, abakozi ba siporo basaba ibikoresho bya siporo, abakozi b'ubuvuzi basaba imiti n'ibikoresho by'ubuvuzi, kandi umucunga ibikoresho akemeza cyangwa akahakana ibyasabwe. Raporo z'ibikoresho zikozwa buri gihe - raporo z'ibyinjijwe, z'ibyasohowe, z'ibyasabwe, z'ibikoresho byarangiye, z'ibikoresho byahunikiye, n'iz'ibikoresho bikenewe. Sisitemu imenyesha umucunga ibikoresho igihe ibikoresho byarangiye cyangwa bigeze ku rugero ruto, kugira ngo ayigure vuba. Ibicuruzwa byose birakurikiranwa - amazina yabyo, ibiciro byabyo, abacuruzi, igihe cyaguze, n'igihe cyo kugura. Umutekano w'ibikoresho urakurikiranwa - gusa abakozi bemerewe bashobora gusaba ibikoresho, amateka y'ibikorwa byose arakurikiranwa, kandi sisitemu ifite backup y'amakuru yose.
+                </div>
+                <ul class="role-features">
+                    <li>Ububiko bw'ibikoresho</li>
+                    <li>Ibyinjijwe n'ibyasohowe</li>
+                    <li>Ibyasabwe n'abakozi</li>
+                    <li>Raporo z'ibikoresho</li>
+                    <li>Gukurikirana ibikoresho</li>
+                </ul>
+                <a href="stockmanager.html" class="btn">Injira Nk'Umucunga Ibikoresho</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='admin.html'">
+                <div class="role-icon">⚙️</div>
+                <div class="role-title">UMUYOBOZI MUKURU</div>
+                <div class="role-desc">Gucunga sisitemu yose y'ishuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umuyobozi Mukuru:</strong>
+                    Portal y'umuyobozi mukuru ni urubuga rw'ingenzi cyane mu gucunga sisitemu yose y'ishuri mu buryo bwuzuye kandi bwizewe. Umuyobozi mukuru ni we uyobora ishuri ryose kandi afite uburenganzira bwose bwo gucunga sisitemu. Acunga abanyeshuri bose - kwandikisha abanyeshuri bashya, guhindura amakuru y'abanyeshuri, gusiba abanyeshuri, kureba profil zabo zose, amanota yabo, kwitabira kwabo, imyitwarire yabo, ubuzima bwabo, amafaranga yabo, n'amakuru yabo yose. Acunga abarimu n'abakozi bose - kwandikisha abakozi bashya, gutanga uburenganzira bw'abakozi, guhindura amakuru y'abakozi, gusiba abakozi, kureba imikorere y'abakozi, imishahara yabo, kwitabira kwabo, n'amakuru yabo yose. Acunga amafaranga yose y'ishuri - kureba amafaranga yinjiye, ayasohowe, ayasigaye, imyenda, imishahara, konti z'amafaranga, no gukora raporo z'amafaranga. Acunga amasomo yose - gahunda y'amasomo, ibizamini, amanota, abarimu b'amasomo, ibikoresho by'amasomo, n'amakuru y'amasomo yose. Acunga ibikoresho byose by'ishuri - ububiko bw'ibikoresho, ibyinjijwe, ibyasohowe, ibyasabwe, ibikoresho byarangiye, n'ibikoresho bikenewe. Acunga amacumbi n'ibyumba - gutanga ibyumba, gukurikirana abanyeshuri mu macumbi, kwishyura amacumbi, n'umutekano w'amacumbi. Acunga ubuzima bw'abanyeshuri - amateka y'ubuzima, imiti, ubuvuzi, kliniki y'ishuri, n'ibibazo by'ubuzima. Igenamiterere ry'ishuri ryose rirakurikiranwa - igenamiterere ry'ishuri, uburenganzira bw'abakozi, umutekano w'amakuru, backup y'amakuru, amateka y'ibikorwa byose, n'ibindi byose. Umuyobozi mukuru ashobora kohereza itangazo ku bantu bose - abanyeshuri, ababyeyi, abarimu, abakozi, kandi sisitemu ikamenyesha abantu bose mu gihe nyacyo binyuze kuri sisitemu, SMS, WhatsApp, na Email. Raporo zose z'ishuri zirakozwa - raporo z'abanyeshuri, z'abakozi, z'amafaranga, z'amasomo, z'ibikoresho, z'amacumbi, z'ubuzima, n'ibindi byose. Umuyobozi mukuru ni we ufata ibyemezo byose by'ingenzi by'ishuri kandi ni we ugenzura ko ishuri rikora neza.
+                </div>
+                <ul class="role-features">
+                    <li>Abanyeshuri n'abakozi</li>
+                    <li>Amafaranga n'ibikoresho</li>
+                    <li>Raporo z'ishuri</li>
+                    <li>Igenamiterere</li>
+                    <li>Umutekano w'amakuru</li>
+                </ul>
+                <a href="admin.html" class="btn">Injira Nk'Umuyobozi</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='dod.html'">
+                <div class="role-icon">🎯</div>
+                <div class="role-title">UMUYOBOZI W'IMYITWARIRE (DOD)</div>
+                <div class="role-desc">Gucunga imyitwarire n'indangagaciro z'abanyeshuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro bya DOD (Director of Discipline):</strong>
+                    Portal ya DOD ni urubuga rukomeye rwakozwe kugira ngo rufashe umuyobozi w'imyitwarire gucunga imyitwarire y'abanyeshuri, indangagaciro, ibihano, ibihembo, n'amategeko y'ishuri mu buryo bwuzuye kandi bwizewe. DOD ni we uyobora ishami ry'imyitwarire kandi agenzura ko abanyeshuri bafite imyitwarire myiza, bakubahiriza amategeko y'ishuri, kandi bakora nk'abanyeshuri beza. Imyitwarire y'abanyeshuri yose irakurikiranwa mu buryo bwitonze - indangagaciro nziza z'abanyeshuri bakora neza, ibihano by'abanyeshuri bakora nabi, ibihembo by'abanyeshuri batsinze, ibibazo by'imyitwarire, amakosa y'abanyeshuri, n'ingaruka zabyo ku iterambere ryabo. DOD ashobora gutanga indangagaciro ku banyeshuri - indangagaciro nziza z'abanyeshuri bitabira neza, biga neza, bafite imyitwarire myiza, bafasha abandi, bakora ibikorwa byiza, kandi sisitemu ikamenyesha ababyeyi n'abanyeshuri mu gihe nyacyo. Ibihano by'abanyeshuri biratangwa - ibihano by'abanyeshuri bataye amasomo, batinze, bakora amakosa, batesha agaciro abandi, bakora ibikorwa bibi, kandi sisitemu ikamenyesha ababyeyi mu gihe nyacyo kugira ngo bafashe abana babo. Ibihembo by'abanyeshuri biratangwa - ibihembo by'abanyeshuri bafite imyitwarire myiza, bakora neza mu masomo, batsinda amarushanwa, bafasha ishuri, bakora ibikorwa byiza, kandi sisitemu ikamenyesha ababyeyi n'ishuri ryose. Amategeko y'ishuri arakurikiranwa - amategeko y'imyitwarire, amategeko y'imyambaro, amategeko y'igihe, amategeko y'amacumbi, amategeko y'amasomo, n'amategeko y'ibikorwa byose. DOD ashobora gushyiraho amategeko mashya, kuyahindura, kuyemeza, no kuyohereza abanyeshuri n'ababyeyi. Ibibazo by'imyitwarire birakemurwa - ibibazo hagati y'abanyeshuri, ibibazo hagati y'abanyeshuri n'abarimu, amakimbirane, kurwana, gukora amakosa, n'ibindi byose. DOD ashobora gukemura ibibazo, gutanga ibihano, gufasha abanyeshuri, kumenyesha ababyeyi, no gufatanya n'abarimu. Raporo z'imyitwarire zikozwa buri gihe - raporo z'ukwezi, z'igihembwe, z'umwaka, raporo z'abanyeshuri, z'indangagaciro, z'ibihano, z'ibihembo, n'iz'ibibazo. DOD ni we ufata ibyemezo byose bijyanye n'imyitwarire y'abanyeshuri kandi ni we ugenzura ko abanyeshuri bafite imyitwarire myiza mu ishuri.
+                </div>
+                <ul class="role-features">
+                    <li>Gahunda y'amasomo</li>
+                    <li>Gukurikirana abarimu</li>
+                    <li>Ibizamini n'ibikorwa</li>
+                    <li>Amahugurwa y'abarimu</li>
+                    <li>Raporo z'amasomo</li>
+                </ul>
+                <a href="dod.html" class="btn">Injira Nka DOD</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='dos.html'">
+                <div class="role-icon">👥</div>
+                <div class="role-title">UMUYOBOZI W'AMASOMO (DOS)</div>
+                <div class="role-desc">Gucunga amasomo yose, abarimu n'ibizamini</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro bya DOS (Director of Studies):</strong>
+                    Portal ya DOS ni urubuga rukomeye rwakozwe kugira ngo rufashe umuyobozi w'amasomo gucunga amasomo yose y'ishuri, abarimu, ibizamini, amanota, gahunda y'amasomo, n'iterambere ry'abanyeshuri mu masomo mu buryo bwuzuye kandi bwizewe. DOS ni we uyobora ishami ry'amasomo kandi agenzura ko amasomo agenda neza, abarimu bakora neza, abanyeshuri biga neza, ibizamini bitegurwa neza, kandi iterambere ry'abanyeshuri rirakurikiranwa. Gahunda y'amasomo yose irakurikiranwa mu buryo bwitonze - gahunda y'icyumweru, y'ukwezi, y'igihembwe, n'y'umwaka wose. DOS ashobora gutegura gahunda y'amasomo, kuyihindura, kuyemeza, kuyohereza abarimu n'abanyeshuri, no kugenzura ko ikurikizwa neza. Abarimu bose barakurikiranwa mu buryo bwuzuye - profil z'abarimu, amasomo babo, abanyeshuri babo, kwitabira kwabo, imikorere yabo, ubushobozi bwabo, amahugurwa bakeneye, n'amakuru yabo yose. DOS ashobora gusuzuma imikorere y'abarimu mu buryo bwitonze - uko batanga amasomo, uko batanga amanota, uko bakurikirana abanyeshuri, uko bavugana n'ababyeyi, uko bakora ibikorwa, n'uko bakora akazi kabo. Ibizamini byose birakurikiranwa mu buryo bwizewe - gutegura ibizamini, gahunda y'ibizamini, ibibazo by'ibizamini, amanota y'ibizamini, raporo z'ibizamini, ibyavuyemo, n'ingaruka zabyo. DOS ashobora gutegura ibizamini by'igihembwe, by'umwaka, ibizamini by'umwuga, ibizamini by'igihugu, kandi akagenzura ko bitegurwa neza, bikurikizwa neza, kandi amanota atangwa mu gihe. Amanota y'abanyeshuri arakurikiranwa mu buryo bwuzuye - amanota y'ibizamini, amanota y'ibikorwa, amanota y'imirimo, ibitabo by'amasomo, iterambere ry'abanyeshuri mu buri somo, ibibazo by'amasomo, n'aho bakeneye ubufasha. DOS ashobora kubona raporo z'amanota, gusuzuma iterambere ry'abanyeshuri, gufasha abanyeshuri bakeneye ubufasha, kumenyesha ababyeyi, no gufatanya n'abarimu. Ibikoresho by'amasomo birakurikiranwa mu buryo bwizewe - ibitabo by'amasomo, ibikoresho bya tekinolojiya, ibikoresho by'ubushakashatsi, ibikoresho by'amahugurwa, n'ibindi bikoresho bikenewe mu masomo. DOS ashobora gusaba ibikoresho bikenewe, kuyikurikirana, kugenzura ko bikoreshwa neza, no gufasha abarimu babikeneye. Amahugurwa y'abarimu arakurikiranwa mu buryo bwuzuye - gutegura amahugurwa, gahunda y'amahugurwa, abarimu bitabiriye, ibyavuyemo, ingaruka zabyo, n'iterambere ry'abarimu. DOS ashobora gutegura amahugurwa y'abarimu kugira ngo bateze imbere ubushobozi bwabo, bige uburyo bushya bwo kwigisha, bakoreshe tekinolojiya neza, kandi bakore neza. Raporo z'amasomo zikozwa buri gihe mu buryo bwuzuye - raporo z'ukwezi, z'igihembwe, z'umwaka, raporo z'abarimu, z'abanyeshuri, z'ibizamini, z'amanota, z'iterambere, n'iz'ibibazo. DOS ni we ufata ibyemezo byose bijyanye n'amasomo, ni we ugenzura ko amasomo agenda neza mu ishuri, kandi ni we ufasha abanyeshuri n'abarimu kugera ku ntego zabo.
+                </div>
+                <ul class="role-features">
+                    <li>Imyitwarire y'abanyeshuri</li>
+                    <li>Ibikorwa n'amacumbi</li>
+                    <li>Ubuzima n'indyo</li>
+                    <li>Ubwikorezi n'ubuhanzi</li>
+                    <li>Uruhushya n'itumanaho</li>
+                </ul>
+                <a href="dos.html" class="btn">Injira Nka DOS</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='advisor.html'">
+                <div class="role-icon">💡</div>
+                <div class="role-title">UMUJYANAMA</div>
+                <div class="role-desc">Gutanga inama abanyeshuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umujyanama:</strong>
+                    Portal y'umujyanama ni urubuga rw'ingenzi cyane rwakozwe kugira ngo rufashe umujyanama gutanga inama abanyeshuri mu buryo bwuzuye kandi bwizewe. Umujyanama ni inshuti y'abanyeshuri kandi ni we babwira ibibazo byabo byose - ibibazo by'amasomo, by'imyuga, by'amashuri makuru, by'ubuzima bwo mu mutwe, by'imibanire, by'umuryango, n'ibindi byose. Inama ku myuga ziratangwa - umujyanama afasha abanyeshuri guhitamo imyuga ikwiriye ubushobozi bwabo, inyungu zabo, n'ibyo bakunda. Afasha abanyeshuri kumenya imyuga itandukanye, ibisabwa n'imyuga, amahirwe y'akazi, n'uko bashobora kugera ku myuga. Umujyanama afasha abanyeshuri gukora gahunda y'imyuga yabo, kuyikurikirana, no kuyubaka. Inama ku masomo ziratangwa - umujyanama afasha abanyeshuri guhitamo amasomo akwiriye ubushobozi bwabo, intego zabo, n'imyuga bakunda. Afasha abanyeshuri kumenya amasomo atandukanye, ibisabwa n'amasomo, n'uko bashobora kwiga neza. Umujyanama afasha abanyeshuri gukemura ibibazo by'amasomo, gushaka uburyo bwo kwiga neza, no guteza imbere ubushobozi bwabo. Inama ku mashuri makuru ziratangwa - umujyanama afasha abanyeshuri guhitamo kaminuza cyangwa ishuri rikuru rikwiriye ubushobozi bwabo, intego zabo, n'imyuga bakunda. Afasha abanyeshuri kumenya amashuri makuru atandukanye, amashami atandukanye, ibisabwa n'amashuri, n'uko bashobora kwinjiramo. Umujyanama afasha abanyeshuri gutegura dosiye z'amashuri makuru, gukora ibiganiro, no guhitamo neza. Inama ku buzima bwo mu mutwe ziratangwa - umujyanama afasha abanyeshuri bakeneye ubufasha bw'ubuzima bwo mu mutwe. Afasha abanyeshuri gukemura ibibazo by'ubwoba, by'ihungabana, by'umujinya, by'ubwoba bwo mu mashuri, n'ibindi byose. Umujyanama ni inshuti y'abanyeshuri kandi abafasha gukemura ibibazo byabo mu buryo bwizewe. Inama ku mibanire ziratangwa - umujyanama afasha abanyeshuri gukemura ibibazo by'imibanire n'abandi banyeshuri, n'abarimu, n'ababyeyi, n'abandi bantu. Afasha abanyeshuri kwiga uko bavugana neza, uko bakemura amakimbirane, n'uko babana neza n'abandi. Gahunda y'inama irakurikiranwa - inama zitegerejwe, inama zatanzwe, abanyeshuri bahawe inama, ibyavuyemo, n'ingaruka zabyo. Umujyanama ashobora gutegura gahunda y'inama, kuyikurikirana, no gukora raporo. Raporo z'inama zikozwa buri gihe - raporo z'ukwezi, z'igihembwe, z'umwaka, raporo z'abanyeshuri, z'inama zatanzwe, n'ibyavuyemo. Umujyanama afasha abanyeshuri gukura neza mu buzima, guhitamo neza, no kugera ku ntego zabo.
+                </div>
+                <ul class="role-features">
+                    <li>Inama ku myuga</li>
+                    <li>Inama ku masomo</li>
+                    <li>Inama ku mashuri makuru</li>
+                    <li>Ubuzima bwo mu mutwe</li>
+                    <li>Gufasha abanyeshuri</li>
+                </ul>
+                <a href="advisor.html" class="btn">Injira Nk'Umujyanama</a>
+            </div>
+
+            <div class="role-card" onclick="location.href='patron.html'">
+                <div class="role-icon">🏆</div>
+                <div class="role-title">UMUKORESHA W'IBIKORWA</div>
+                <div class="role-desc">Gucunga ibikorwa by'abanyeshuri</div>
+                <div class="role-importance">
+                    <strong>🎯 Akamaro n'Ibisobanuro by'Umukoresha w'Ibikorwa:</strong>
+                    Portal y'umukoresha w'ibikorwa (Patron) ni urubuga rukomeye rwakozwe kugira ngo rufashe umukoresha w'ibikorwa gucunga ibikorwa byose by'abanyeshuri mu buryo bwuzuye kandi bwizewe. Umukoresha w'ibikorwa ni we uyobora ibikorwa byose by'inyongera - siporo, imikino, ubuhanzi, umuco, amarushanwa, amahugurwa, ibihembo, n'ibikorwa byose bitari by'amasomo. Siporo n'imikino byose birakurikiranwa - umupira w'amaguru, umupira w'amaboko, volleyball, basketball, tennis, atletike, n'izindi siporo zose. Umukoresha w'ibikorwa acunga amakipe yose y'ishuri, abanyeshuri mu makipe, abatoza, amahugurwa, amarushanwa, n'ibyavuyemo. Amakipe y'ishuri arakurikiranwa - gukora amakipe, kwandikisha abanyeshuri mu makipe, guhitamo abatoza, gutegura amahugurwa, gutegura amarushanwa, no gukurikirana ibikorwa by'amakipe. Umukoresha w'ibikorwa ashobora gukora amakipe mashya, kuyahindura, gukurikirana abanyeshuri mu makipe, no gusuzuma imikorere y'amakipe. Amarushanwa yose arakurikiranwa - gutegura amarushanwa, gahunda y'amarushanwa, amakipe yitabiriye, amanota y'amarushanwa, ibihembo, n'ibyavuyemo. Umukoresha w'ibikorwa ashobora gutegura amarushanwa y'ishuri, amarushanwa hagati y'amashuri, amarushanwa y'akarere, n'amarushanwa y'igihugu. Amahugurwa y'abanyeshuri arakurikiranwa - gutegura amahugurwa, gahunda y'amahugurwa, abanyeshuri bitabiriye, abatoza, ibyavuyemo, n'ingaruka zabyo. Umukoresha w'ibikorwa ashobora gutegura amahugurwa y'abanyeshuri kugira ngo bateze imbere ubushobozi bwabo mu siporo n'ibikorwa. Ibihembo n'indangamuntu birakurikiranwa - gutanga ibihembo ku banyeshuri batsindiye amarushanwa, indangamuntu z'abanyeshuri bakora neza, amateka y'ibihembo, n'ibyavuyemo. Umukoresha w'ibikorwa ashobora gutanga ibihembo, kumenyesha abanyeshuri n'ababyeyi, no gukora ibirori by'ibihembo. Ubuhanzi n'umuco birakurikiranwa - imbyino, indirimbo, ikinamico, ubuvanganzo, amarushanwa y'ubuhanzi, ibihembo by'ubuhanzi, n'iterambere ry'abanyeshuri mu buhanzi. Umukoresha w'ibikorwa ashobora gutegura ibikorwa by'ubuhanzi, amarushanwa y'umuco, no gufasha abanyeshuri bateza imbere ubushobozi bwabo mu buhanzi. Ibikoresho bya siporo birakurikiranwa - imipira, imyenda ya siporo, ibikoresho by'amahugurwa, ibikoresho by'amarushanwa, n'ibindi bikoresho byose. Umukoresha w'ibikorwa ashobora gusaba ibikoresho bikenewe, kuyikurikirana, no kugenzura ko bikoreshwa neza. Raporo z'ibikorwa zikozwa buri gihe - raporo z'amakipe, z'amarushanwa, z'amahugurwa, z'ibihembo, n'iz'ubuhanzi. Umukoresha w'ibikorwa afasha abanyeshuri gukura mu mubiri no mu mutwe binyuze mu bikorwa, gutsinda amarushanwa, no kubona ibihembo.
+                </div>
+                <ul class="role-features">
+                    <li>Siporo n'imikino</li>
+                    <li>Amakipe n'amarushanwa</li>
+                    <li>Ubuhanzi n'umuco</li>
+                    <li>Amahugurwa n'ibihembo</li>
+                    <li>Raporo z'ibikorwa</li>
+                </ul>
+                <a href="patron.html" class="btn">Injira Nk'Umukoresha</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

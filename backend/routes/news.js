@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
     query += ' ORDER BY date_published DESC, created_at DESC LIMIT ?';
     params.push(parseInt(limit));
     
-    const [articles] = await db.query(query, params);
+    const [articles] = await db.execute(query, params);
     res.json({ success: true, articles });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 // Get single news article
 router.get('/:id', async (req, res) => {
   try {
-    const [articles] = await db.query(
+    const [articles] = await db.execute(
       'SELECT * FROM news_articles WHERE id = ? AND is_active = true',
       [req.params.id]
     );
@@ -57,10 +57,10 @@ router.post('/', upload.single('image'), async (req, res) => {
     const { title, description, content, author, category, is_featured } = req.body;
     const image_url = req.file ? `/uploads/news/${req.file.filename}` : null;
     
-    const [result] = await db.query(
+    const [result] = await db.execute(
       `INSERT INTO news_articles (title, description, content, image_url, author, category, is_featured, date_published)
        VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())`,
-      [title, description, content, image_url, author, category, is_featured === 'true']
+      [title || 'Untitled', description || '', content || '', image_url, author || 'Admin', category || 'General', is_featured === 'true']
     );
     
     res.json({ success: true, id: result.insertId, message: 'Article created successfully' });
@@ -84,7 +84,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     query += ' WHERE id = ?';
     params.push(req.params.id);
     
-    await db.query(query, params);
+    await db.execute(query, params);
     res.json({ success: true, message: 'Article updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -94,7 +94,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 // Delete article (soft delete)
 router.delete('/:id', async (req, res) => {
   try {
-    await db.query('UPDATE news_articles SET is_active = false WHERE id = ?', [req.params.id]);
+    await db.execute('UPDATE news_articles SET is_active = false WHERE id = ?', [req.params.id]);
     res.json({ success: true, message: 'Article deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -104,7 +104,7 @@ router.delete('/:id', async (req, res) => {
 // Track article view
 router.post('/:id/view', async (req, res) => {
   try {
-    await db.query(
+    await db.execute(
       'UPDATE news_articles SET views = COALESCE(views, 0) + 1 WHERE id = ?',
       [req.params.id]
     );
@@ -117,7 +117,7 @@ router.post('/:id/view', async (req, res) => {
 // Like article
 router.post('/:id/like', async (req, res) => {
   try {
-    await db.query(
+    await db.execute(
       'UPDATE news_articles SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
       [req.params.id]
     );

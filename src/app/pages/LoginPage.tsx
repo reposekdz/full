@@ -31,34 +31,56 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
     setSuccess('');
 
     try {
+      let endpoint = 'http://localhost:5000/api/auth/login';
       let loginData: any = { password: formData.password };
       
-      if (loginMethod === 'email') {
-        loginData.email = formData.email;
-      } else if (loginMethod === 'phone') {
-        loginData.phone = formData.phone;
+      // Determine endpoint and data based on login method
+      if (loginMethod === 'phone') {
+        // Parent login with phone
+        endpoint = 'http://localhost:5000/api/auth/login/parent';
+        loginData = { phone: formData.phone, password: formData.password };
+      } else if (loginMethod === 'serial') {
+        // Student login with serial code
+        endpoint = 'http://localhost:5000/api/auth/login/student';
+        loginData = { serial_code: formData.serialCode, password: formData.password };
       } else {
-        loginData.serialCode = formData.serialCode;
+        // Regular login with email/username
+        loginData = { username: formData.email, password: formData.password };
       }
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData)
       });
 
       const data = await response.json();
+      console.log('Login response:', data);
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setSuccess('Kwinjira byagenze neza!');
-        if (formData.rememberMe) {
-          localStorage.setItem('authToken', data.token);
-          localStorage.setItem('userData', JSON.stringify(data.user));
-        } else {
-          sessionStorage.setItem('authToken', data.token);
-          sessionStorage.setItem('userData', JSON.stringify(data.user));
-        }
-        setTimeout(() => onLogin(data.user), 1000);
+        
+        // Store token and user data
+        const storage = formData.rememberMe ? localStorage : sessionStorage;
+        storage.setItem('token', data.token);
+        storage.setItem('user', JSON.stringify(data.user));
+        
+        // Redirect based on role
+        const role = data.user.role;
+        const dashboardMap: Record<string, string> = {
+          student: 'dashboard-student',
+          parent: 'dashboard-parent',
+          teacher: 'dashboard-teacher',
+          admin: 'admin',
+          headmaster: 'dashboard-headmaster',
+          advisor: 'dashboard-advisor',
+          director_study: 'dashboard-director-study',
+          director_discipline: 'dashboard-director-discipline',
+          accountant: 'dashboard-accountant',
+          stock_manager: 'dashboard-stock'
+        };
+        const dashboardPage = dashboardMap[role] || 'dashboard';
+        window.location.href = `/${dashboardPage}`;
       } else {
         setError(data.message || 'Kwinjira ntibyakunze. Gerageza ukundi.');
       }

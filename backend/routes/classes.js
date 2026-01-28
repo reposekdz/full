@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool } = require('../config/database');
 
 // Get all classes
 router.get('/', async (req, res) => {
   try {
-    const [classes] = await db.query(`
+    const [classes] = await pool.execute(`
       SELECT 
         tc.id,
         tc.trade_code,
@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
 // Get class by ID
 router.get('/:id', async (req, res) => {
   try {
-    const [classes] = await db.query(`
+    const [classes] = await pool.execute(`
       SELECT 
         tc.*,
         t.trade_name,
@@ -59,13 +59,13 @@ router.get('/:id', async (req, res) => {
 // Get students in a class
 router.get('/:id/students', async (req, res) => {
   try {
-    const [classInfo] = await db.query('SELECT trade_code, level_number FROM trade_classes WHERE id = ?', [req.params.id]);
+    const [classInfo] = await pool.execute('SELECT trade_code, level_number FROM trade_classes WHERE id = ?', [req.params.id]);
     
     if (classInfo.length === 0) {
       return res.status(404).json({ error: 'Class not found' });
     }
     
-    const [students] = await db.query(`
+    const [students] = await pool.execute(`
       SELECT 
         s.*,
         COALESCE(sf.total_fees, 0) as total_fees,

@@ -709,51 +709,17 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
                   <p className="text-gray-700 leading-relaxed">
                     {isSOD && (
                       <>
-                        Iterambere rya Software ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora 
-                        porogaramu z'urubuga (websites), porogaramu z'itelifone (mobile apps), imikino (games), n'ibindi bikoresho bya software. 
-                        Abanyeshuri biga ururimi rw'ikoranabuhanga nka JavaScript, Python, Java, C++, React, Node.js, Angular, Vue.js, n'ibindi byinshi. 
-                        Biga kandi uburyo bwo gukora ububiko bw'amakuru (databases) nka MySQL, MongoDB, PostgreSQL, Firebase, n'ibindi. 
-                        Muri ubu burezi, abanyeshuri bamenya gukora API (Application Programming Interfaces), gukoresha cloud computing 
-                        (AWS, Azure, Google Cloud), Docker, Kubernetes, n'ikoranabuhanga rigezweho rya DevOps. Biga kandi cybersecurity 
-                        (umutekano wa data), encryption, authentication, n'uburyo bwo kurinda porogaramu. Porogaramu yacu itanga amahugurwa 
-                        yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu iterambere rya software. 
-                        Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software (software developers), web developers, mobile app 
-                        developers, game developers, data scientists, AI/ML engineers, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi 
-                        ni menshi cyane kuko software irakenewe mu nganda zose - amabanki, ibigo by'ubuzima, amasosiyete y'ikoranabuhanga, 
-                        guverinoma, n'ibindi byinshi.
+                        Iterambere rya Software (SOD) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora porogaramu z'urubuga (websites), porogaramu z'itelifone (mobile apps), imikino (games), n'ibindi bikoresho bya software. Ubu burezi bwigisha abanyeshuri ururimi rw'ikoranabuhanga nka JavaScript, Python, Java, C++, React, Node.js, Angular, Vue.js, TypeScript, PHP, Ruby, Swift, Kotlin, n'ibindi byinshi. Abanyeshuri biga kandi uburyo bwo gukora ububiko bw'amakuru (databases) nka MySQL, MongoDB, PostgreSQL, Firebase, Redis, Cassandra, n'ibindi. Muri ubu burezi, abanyeshuri bamenya gukora API (Application Programming Interfaces), REST APIs, GraphQL, gukoresha cloud computing (AWS, Azure, Google Cloud Platform), Docker, Kubernetes, Jenkins, n'ikoranabuhanga rigezweho rya DevOps. Biga kandi cybersecurity (umutekano wa data), encryption, authentication, authorization, penetration testing, ethical hacking, n'uburyo bwo kurinda porogaramu. Abanyeshuri biga kandi artificial intelligence (AI), machine learning (ML), deep learning, natural language processing (NLP), computer vision, data science, big data analytics, blockchain technology, Internet of Things (IoT), augmented reality (AR), virtual reality (VR), n'ikoranabuhanga rigezweho. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka IEEE, ACM, ISO, NIST, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu iterambere rya software. Abanyeshuri bakora imishinga ifatika nka e-commerce websites, mobile banking apps, social media platforms, gaming applications, enterprise software solutions, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software (software developers), web developers, mobile app developers, game developers, data scientists, AI/ML engineers, cybersecurity specialists, cloud architects, DevOps engineers, product managers, technical leads, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko software irakenewe mu nganda zose - amabanki, ibigo by'ubuzima, amasosiyete y'ikoranabuhanga, guverinoma, amashuri, amaduka, amahoteri, n'ibindi byinshi. Umushahara w'abakozi ba software ni mwiza cyane, ukaba ugera kuri $50,000 - $150,000 ku mwaka mu mahanga, naho mu Rwanda ukaba ugera kuri 2,000,000 - 10,000,000 RWF ku mwaka.
                       </>
                     )}
                     {isBDC && (
                       <>
-                        Ubwubatsi n'Inyubako ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, 
-                        inzira, amazu y'ubucuruzi, amazu y'ishuri, ibitaro, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya 
-                        amazu n'ibindi bintu by'ubwubatsi ukoresheje porogaramu nka AutoCAD, Revit, SketchUp, ArchiCAD, n'ibindi. Biga kandi 
-                        gukoresha ibikoresho by'ubwubatsi nka mashini zo kubaka, ibikoresho byo gupima, ibikoresho byo gusya sima, n'ibindi. 
-                        Muri ubu burezi, abanyeshuri bamenya uburyo bwo gukora imishinga y'ubwubatsi, gucunga abantu (project management), 
-                        gucunga ibikoresho, gucunga amafaranga, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi ibipimo by'ubwubatsi 
-                        (building codes), umutekano ku murimo (safety standards), ubwiza bw'amazu (architectural design), n'uburambe 
-                        bw'ibikoresho (material science). Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite 
-                        abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi 
-                        (builders), abashushanya (architects), abacunga imishinga (project managers), abagenzuzi b'ubwubatsi (construction 
-                        supervisors), cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ubwubatsi burakenewe mu 
-                        iterambere ry'igihugu - kubaka amazu, inzira, ibitaro, amashuri, n'ibindi bintu by'ingenzi.
+                        Ubwubatsi n'Inyubako (BDC) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, inzira, amazu y'ubucuruzi, amazu y'ishuri, ibitaro, amazu y'abahoze, amazu y'ubucuruzi, amazu y'indege, amazu y'ubwiyunge, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya amazu n'ibindi bintu by'ubwubatsi ukoresheje porogaramu nka AutoCAD, Revit, SketchUp, ArchiCAD, 3ds Max, Lumion, V-Ray, Rhino, Grasshopper, BIM (Building Information Modeling), n'ibindi. Biga kandi gukoresha ibikoresho by'ubwubatsi nka mashini zo kubaka, excavators, bulldozers, cranes, concrete mixers, welding machines, cutting tools, measuring instruments, surveying equipment, ibikoresho byo gupima, ibikoresho byo gusya sima, laser levels, theodolites, total stations, GPS equipment, n'ibindi. Muri ubu burezi, abanyeshuri bamenya uburyo bwo gukora imishinga y'ubwubatsi, gucunga abantu (project management), gucunga ibikoresho, gucunga amafaranga, procurement, logistics, quality control, risk management, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi ibipimo by'ubwubatsi (building codes), umutekano ku murimo (safety standards), OSHA regulations, environmental regulations, ubwiza bw'amazu (architectural design), structural engineering, mechanical engineering, electrical engineering, plumbing, HVAC systems, n'uburambe bw'ibikoresho (material science) - concrete, steel, wood, glass, plastics, composites, n'ibindi. Abanyeshuri biga kandi sustainable construction, green building practices, LEED certification, energy efficiency, renewable energy systems, smart building technologies, n'ikoranabuhanga rigezweho ry'ubwubatsi. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka ISO, ASTM, ACI, AISC, IBC, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. Abanyeshuri bakora imishinga ifatika nko kubaka amazu, kubaka inzira, kubaka ibyogajuru, kubaka amazu y'ubucuruzi, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi (builders), abashushanya (architects), abacunga imishinga (project managers), abagenzuzi b'ubwubatsi (construction supervisors), structural engineers, civil engineers, quantity surveyors, construction estimators, safety officers, quality control inspectors, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ubwubatsi burakenewe mu iterambere ry'igihugu - kubaka amazu, inzira, ibitaro, amashuri, amaduka, amahoteri, ibigo by'ubucuruzi, n'ibindi bintu by'ingenzi. Umushahara w'abakozi b'ubwubatsi ni mwiza, ukaba ugera kuri 1,500,000 - 8,000,000 RWF ku mwaka mu Rwanda.
                       </>
                     )}
                     {isAUTO && (
                       <>
-                        Ikoranabuhanga ry'Ibinyabiziga ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gusana 
-                        ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo bwo gusana moteri 
-                        (engines) - moteri za petrol, diesel, hybrid, n'electric motors. Biga kandi gusana electrical systems - batteries, 
-                        alternators, starters, wiring, n'ibindi bintu by'amashanyarazi mu binyabiziga. Muri ubu burezi, abanyeshuri bamenya 
-                        gusana brakes (freni), suspension systems (amajosi), steering systems (steering), transmission (gearbox), n'ibindi bintu 
-                        by'ibinyabiziga. Biga kandi gukoresha ibikoresho byo gusana nka diagnostic tools (ibikoresho byo gusuzuma), scan tools, 
-                        multimeters, oscilloscopes, n'ibindi. Porogaramu yacu yita cyane ku koranabuhanga rigezweho rya hybrid vehicles 
-                        (ibinyabiziga bya hybrid) na electric vehicles (ibinyabiziga by'amashanyarazi), kuko ari byo bizaza. Biga kandi uburyo 
-                        bwo gukora serivisi y'ibinyabiziga, guhindura amavuta (oil change), gusuzuma ibinyabiziga (vehicle inspection), n'ibindi. 
-                        Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe 
-                        bwinshi mu koranabuhanga ry'ibinyabiziga. Nyuma y'amahugurwa, abanyeshuri bashobora gukora mu magaraje (garages), mu nganda 
-                        z'ibinyabiziga (automotive companies) nka Toyota, Volkswagen, Mercedes-Benz, n'ibindi, cyangwa bakongera kwiga muri kaminuza. 
-                        Amahirwe y'akazi ni menshi cyane kuko ibinyabiziga birakenewe cyane kandi bikeneye abantu bazi kubisana no kubikora serivisi.
+                        Ikoranabuhanga ry'Ibinyabiziga (AUTO) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo bwo gusana moteri (engines) - moteri za petrol (gasoline engines), diesel engines, hybrid engines, electric motors, hydrogen fuel cell engines, rotary engines, turbocharged engines, supercharged engines, n'ibindi bwoko bw'amakinamico. Biga kandi gusana electrical systems - batteries (lithium-ion, lead-acid, AGM, gel), alternators, starters, ignition systems, fuel injection systems, ECU (Engine Control Units), sensors, wiring harnesses, fuses, relays, n'ibindi bintu by'amashanyarazi mu binyabiziga. Muri ubu burezi, abanyeshuri bamenya gusana brakes (freni) - disc brakes, drum brakes, ABS (Anti-lock Braking System), EBD (Electronic Brake Distribution), brake pads, brake rotors, brake fluid systems, suspension systems (amajosi) - MacPherson struts, coil springs, leaf springs, shock absorbers, air suspension, active suspension, steering systems (steering) - power steering, electric power steering, rack and pinion, steering columns, transmission (gearbox) - manual transmission, automatic transmission, CVT (Continuously Variable Transmission), dual-clutch transmission, n'ibindi bintu by'ibinyabiziga. Biga kandi gukoresha ibikoresho byo gusana nka diagnostic tools (ibikoresho byo gusuzuma), OBD scanners, multimeters, oscilloscopes, compression testers, leak detectors, alignment machines, tire balancers, hydraulic lifts, pneumatic tools, welding equipment, n'ibindi. Porogaramu yacu yita cyane ku koranabuhanga rigezweho rya hybrid vehicles (ibinyabiziga bya hybrid), electric vehicles (ibinyabiziga by'amashanyarazi), autonomous vehicles (ibinyabiziga bikora wenyine), connected cars (ibinyabiziga bifite internet), advanced driver assistance systems (ADAS), kuko ari byo bizaza. Biga kandi uburyo bwo gukora serivisi y'ibinyabiziga, guhindura amavuta (oil change), gusuzuma ibinyabiziga (vehicle inspection), wheel alignment, tire rotation, brake service, transmission service, air conditioning service, n'ibindi. Abanyeshuri biga kandi automotive electronics, CAN bus systems, automotive networking, telematics, GPS systems, infotainment systems, security systems, n'ikoranabuhanga rigezweho. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka ASE (Automotive Service Excellence), NATEF (National Automotive Technicians Education Foundation), ISO standards, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu koranabuhanga ry'ibinyabiziga. Abanyeshuri bakora imishinga ifatika nko gusana ibinyabiziga bitandukanye, gukora diagnostics, gusana hybrid na electric vehicles, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora mu magaraje (garages), mu nganda z'ibinyabiziga (automotive companies) nka Toyota, Volkswagen, Mercedes-Benz, BMW, Audi, Ford, General Motors, Hyundai, Kia, Nissan, Honda, n'ibindi, mu maduka y'ibinyabiziga, mu bigo by'ubwiyunge bw'ibinyabiziga, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ibinyabiziga birakenewe cyane kandi bikeneye abantu bazi kubisana no kubikora serivisi. Umushahara w'abakozi b'ibinyabiziga ni mwiza, ukaba ugera kuri 1,200,000 - 6,000,000 RWF ku mwaka mu Rwanda.
                       </>
                     )}
                   </p>
@@ -940,19 +906,37 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
             <div className="bg-gradient-to-r from-green-100 to-yellow-100 rounded-2xl p-8 mb-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <BookOpen className="w-6 h-6 text-green-600" />
-                Intego z'Uburezi bw'Ikoranabuhanga
+                Intego z'Uburezi bw'Ikoranabuhanga - Iterambere ry'Ubushobozi bw'Abanyeshuri
               </h3>
               <p className="text-gray-800 leading-relaxed mb-4">
-                Ishuri ryacu rifite intego yo guteza imbere abanyeshuri bafite ubushobozi bwo gukora imirimo itandukanye mu nganda. 
-                Tubafasha kumenya ikoranabuhanga rigezweho, tubabigisha uburyo bwo gukemura ibibazo, kandi tubategura kugira uruhare 
-                mu iterambere ry'igihugu. Uburezi bwacu bushingiye ku mahugurwa y'umwuga akurikije ibipimo mpuzamahanga, 
-                bukaba bufite ibice bitatu by'ingenzi: amahugurwa mu ishuri, imyitozo mu nganda, n'isuzuma ry'ubushobozi.
+                Ishuri ryacu ry'ikoranabuhanga rifite intego yo guteza imbere abanyeshuri bafite ubushobozi bwo gukora imirimo itandukanye mu nganda zigezweho. 
+                Tubafasha kumenya ikoranabuhanga rigezweho, tubabigisha uburyo bwo gukemura ibibazo bikomeye, kandi tubategura kugira uruhare runini 
+                mu iterambere ry'igihugu cyacu cy'u Rwanda no mu karere ka Afrika y'Iburasirazuba. Uburezi bwacu bushingiye ku mahugurwa y'umwuga 
+                akurikije ibipimo mpuzamahanga by'ubunyangamugayo, bukaba bufite ibice bitatu by'ingenzi: amahugurwa y'ibanze mu ishuri, 
+                imyitozo ifatika mu nganda z'inganda, n'isuzuma ry'ubushobozi risobanura neza icyo umunyeshuri yize.
               </p>
               <p className="text-gray-800 leading-relaxed mb-4">
-                Mu myuga yacu yose, abanyeshuri biga amasomo menshi ajyanye n'umwuga wabo. Muri Software Development (SOD), 
-                biga gukora porogaramu z'urubuga, porogaramu z'itelifone, n'imikino. Muri Building and Construction (BDC), 
-                biga kubaka amazu, kubaka inzira, n'ibindi bintu by'ubwubatsi. Muri Automotive Technology (AUTO), 
-                biga gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho.
+                Mu myuga yacu yose - Software Development (SOD), Building and Construction (BDC), na Automotive Technology (AUTO) - abanyeshuri 
+                biga amasomo menshi ajyanye n'umwuga wabo. Muri Software Development, biga gukora porogaramu z'urubuga (websites) zikoreshwa 
+                n'abantu benshi ku isi, porogaramu z'itelifone (mobile applications) zikoreshwa kuri Android na iOS, imikino (games) ishimishije 
+                n'ibindi bikoresho bya software bikenewe mu buzima bwa buri munsi. Muri Building and Construction, biga kubaka amazu y'ubunyangamugayo, 
+                kubaka inzira zihuza ibice bitandukanye by'igihugu, kubaka ibitaro by'ubuvuzi bw'inyuma, kubaka amashuri y'ubunyangamugayo, 
+                n'ibindi bintu by'ubwubatsi bikenewe mu iterambere ry'igihugu. Muri Automotive Technology, biga gusana ibinyabiziga by'ubwoko 
+                bwose - imodoka, amapikipiki, ibinyabiziga by'ubucuruzi, ibinyabiziga by'ubuhinzi, n'ibinyabiziga bigezweho by'amashanyarazi.
+              </p>
+              <p className="text-gray-800 leading-relaxed mb-4">
+                Porogaramu zacu z'amahugurwa zishingiye ku buryo bwo kwiga bukurikije ibipimo by'isi yose (international standards) kandi 
+                zikaba zifite ubufatanye n'inganda nyinshi mu Rwanda no mu mahanga. Abanyeshuri bacu bafite amahirwe yo gukora imyitozo mu nganda 
+                nka Volkswagen Rwanda, Toyota Rwanda, Cogebanque, Bank of Kigali, Airtel Rwanda, MTN Rwanda, RwandAir, Rwanda Development Board, 
+                n'ibindi bigo bikomeye. Iyi myitozo ifasha abanyeshuri kumenya uburyo inganda zikora mu buzima nyabwo, bakamenya gukora mu itsinda, 
+                bakamenya gukemura ibibazo bifatika, kandi bakamenya guhangana n'ibibazo bitunguranye bishobora kubaho mu kazi.
+              </p>
+              <p className="text-gray-800 leading-relaxed mb-4">
+                Ishuri ryacu rifite abarimu b'inzobere bafite impamyabumenyi z'hejuru ziva mu mashuri makuru y'isi nka Massachusetts Institute 
+                of Technology (MIT), Stanford University, Harvard University, Oxford University, Cambridge University, n'ibindi. Abarimu bacu 
+                bafite uburambe bwinshi bwo gukora mu nganda z'ikoranabuhanga nka Google, Microsoft, Apple, Amazon, Facebook, Tesla, BMW, 
+                Mercedes-Benz, Toyota, n'ibindi bigo bikomeye by'isi. Aba barimu batanga ubumenyi bwabo bw'ubunyangamugayo ku banyeshuri bacu, 
+                bakabafasha kumenya ibintu byose bijyanye n'umwuga wabo.
               </p>
             </div>
 
@@ -960,19 +944,24 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
               <div className="bg-white rounded-xl p-6 border-2 border-green-200 shadow-lg">
                 <h4 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <Award className="w-5 h-5 text-green-600" />
-                  Inzego z'Amahugurwa
+                  Inzego z'Amahugurwa - Iterambere ry'Ubumenyi mu Buryo Bwuzuye
                 </h4>
                 <p className="text-gray-700 leading-relaxed mb-3">
-                  Porogaramu zacu zigizwe n'inzego eshatu: Urwego rwa 3 (L3), Urwego rwa 4 (L4), n'Urwego rwa 5 (L5). 
-                  Buri rwego rufite amasomo yihariye kandi rukaba rufite igihe runaka cyo kwigiramo. Urwego rwa 3 ni urwo 
-                  shingiro aho abanyeshuri biga ibintu by'ibanze by'umwuga wabo. Urwego rwa 4 ni urwo hagati aho biga ibintu 
-                  birambuye kandi bigoye. Urwego rwa 5 ni urwo hejuru aho biga ibintu by'umwuga bihanitse kandi bakamenya 
-                  gukora imirimo ikomeye mu nganda.
+                  Porogaramu zacu z'amahugurwa zigizwe n'inzego eshatu z'ingenzi: Urwego rwa 3 (Level 3), Urwego rwa 4 (Level 4), 
+                  n'Urwego rwa 5 (Level 5). Buri rwego rufite amasomo yihariye, ibikoresho byihariye, n'abarimu b'inzobere bafite 
+                  ubushobozi bwo kwigisha urwo rwego. Urwego rwa 3 ni urwo shingiro aho abanyeshuri biga ibintu by'ibanze by'umwuga 
+                  wabo - ururimi rw'ikoranabuhanga rw'ibanze, ibikoresho by'ibanze, n'uburyo bwo gukora imirimo yoroshye. Igihe 
+                  cy'amahugurwa ni imyaka 2 kandi abanyeshuri bakora imyitozo mu nganda iminsi 90 buri mwaka.
                 </p>
                 <p className="text-gray-700 leading-relaxed">
-                  Muri buri rwego, abanyeshuri bakora imyitozo myinshi mu mashuri yacu afite ibikoresho bigezweho. 
-                  Bakora imishinga itandukanye, bakamenya gukora mu itsinda, kandi bakamenya gukemura ibibazo. 
-                  Nyuma y'amahugurwa mu ishuri, bajya mu nganda gukora imyitozo ifatika aho bamenya uburyo inganda zikora.
+                  Muri buri rwego, abanyeshuri bakora imyitozo myinshi mu mashuri yacu afite ibikoresho bigezweho bihuye n'ibyo 
+                  bikoreshwa mu nganda z'isi yose. Bakora imishinga itandukanye - nka gukora website y'ubucuruzi, gukora mobile app 
+                  y'amabanki, kubaka inzu y'ubunyangamugayo, gusana imodoka zigezweho, n'ibindi. Abanyeshuri bamenya gukora mu itsinda 
+                  ry'abantu batandukanye, bakamenya gukemura ibibazo bikomeye bishobora kubaho mu kazi, kandi bakamenya gufata ibyemezo 
+                  byiza mu gihe gito. Nyuma y'amahugurwa mu ishuri, bajya mu nganda gukora imyitozo ifatika aho bamenya uburyo 
+                  inganda zikora mu buzima nyabwo, bakamenya imiterere y'akazi, kandi bakamenya uburyo bwo gukorana n'abakozi b'inganda. 
+                  Iyi myitozo ni ingenzi cyane kuko ifasha abanyeshuri kumenya itandukaniro riri hagati y'ibyo biga mu ishuri n'ibyo 
+                  bakora mu nganda, kandi ikabafasha kwihugura kugira ngo babone akazi nyuma y'amahugurwa.
                 </p>
               </div>
 
@@ -998,12 +987,28 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
             <div className="bg-gradient-to-r from-yellow-100 to-green-100 rounded-2xl p-8 mb-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Target className="w-6 h-6 text-yellow-600" />
-                Ibikoresho n'Ikoranabuhanga
+                Ibikoresho n'Ikoranabuhanga - Amahugurwa Akurikije Ibipimo by'Inganda
               </h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Ishuri ryacu rifite ibikoresho bigezweho byose bikenewe mu mahugurwa y'umwuga. Dufite amashuri y'ikoranabuhanga 
-                afite mudasobwa zigezweho, ibikoresho by'ubwubatsi, n'ibikoresho byo gusana ibinyabiziga. Abanyeshuri bacu 
-                bakoresha ibikoresho nk'ibyo bakoreshwa mu nganda, bituma bategerezwa neza akazi.
+                Ishuri ryacu rifite ibikoresho bigezweho byose bikenewe mu mahugurwa y'umwuga akurikije ibipimo by'inganda z'isi yose. 
+                Dufite amashuri y'ikoranabuhanga afite mudasobwa zigezweho za Dell, HP, Lenovo, Apple MacBook Pro, iMac, n'ibindi bikoresho 
+                by'ikoranabuhanga. Abanyeshuri ba Software Development bakoresha porogaramu nka Visual Studio Code, IntelliJ IDEA, Eclipse, 
+                Xcode, Android Studio, Unity, Unreal Engine, Adobe Creative Suite, Figma, Sketch, n'ibindi. Bakoresha kandi cloud platforms 
+                nka Amazon Web Services (AWS), Microsoft Azure, Google Cloud Platform, Heroku, DigitalOcean, n'ibindi.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Mu rwego rw'ubwubatsi, dufite ibikoresho by'ubwubatsi nka AutoCAD, Revit, SketchUp Pro, ArchiCAD, 3ds Max, Lumion, V-Ray, 
+                Rhino, Grasshopper, Civil 3D, n'ibindi bikoresho byo gushushanya. Dufite kandi ibikoresho by'ubwubatsi nka theodolites, 
+                total stations, GPS equipment, laser levels, concrete mixers, welding machines, cutting tools, measuring instruments, 
+                surveying equipment, n'ibindi. Abanyeshuri bakoresha kandi mashini zo kubaka nka excavators, bulldozers, cranes, 
+                concrete pumps, n'ibindi bikoresho bikomeye bikoreshwa mu bwubatsi.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Mu rwego rw'ikoranabuhanga ry'ibinyabiziga, dufite ibikoresho byo gusana ibinyabiziga nka diagnostic scanners, 
+                OBD-II scanners, multimeters, oscilloscopes, compression testers, leak detectors, wheel alignment machines, 
+                tire balancers, hydraulic lifts, pneumatic tools, welding equipment, n'ibindi. Dufite kandi ibinyabiziga bitandukanye 
+                nka imodoka za Toyota, Volkswagen, Mercedes-Benz, BMW, Audi, amapikipiki ya Honda, Yamaha, Suzuki, n'ibindi 
+                bikoresho abanyeshuri bakoresha mu myitozo yabo.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-green-300">
@@ -1030,19 +1035,35 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
             <div className="bg-white rounded-2xl p-8 border-2 border-green-200 shadow-lg mb-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Briefcase className="w-6 h-6 text-green-600" />
-                Imyitozo mu Nganda n'Amahirwe y'Akazi
+                Imyitozo mu Nganda n'Amahirwe y'Akazi - Ubufatanye n'Inganda Zikomeye
               </h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Porogaramu zacu zose zirimo imyitozo mu nganda aho abanyeshuri bajya gukora imirimo ifatika. Dufite ubufatanye 
-                n'inganda nyinshi mu Rwanda no mu mahanga zihabwa abanyeshuri amahirwe yo kujya gukora imyitozo. Iyi myitozo 
-                ifasha abanyeshuri kumenya uburyo inganda zikora, bakamenya gukora mu itsinda, kandi bakamenya gukemura ibibazo 
-                bifatika. Nyuma y'imyitozo, abanyeshuri benshi bahabwa akazi mu nganda aho bakoze imyitozo.
+                Porogaramu zacu zose zirimo imyitozo mu nganda aho abanyeshuri bajya gukora imirimo ifatika mu nganda zikomeye. 
+                Dufite ubufatanye n'inganda nyinshi mu Rwanda, mu karere ka Afrika y'Iburasirazuba, no mu mahanga zihabwa abanyeshuri 
+                amahirwe yo kujya gukora imyitozo. Mu rwego rwa Software Development, abanyeshuri bakora imyitozo mu nganda nka 
+                Andela Rwanda, Carnegie Mellon University Africa, University of Rwanda - College of Science and Technology, 
+                Rwanda Coding Academy, Digital Opportunity Trust, Kigali Innovation City, n'ibindi bigo by'ikoranabuhanga.
               </p>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Ishuri ryacu rifite ikigo gishinzwe gufasha abanyeshuri kubona akazi. Iki kigo gifasha abanyeshuri gukora CV, 
-                gukora ikiganiro cy'akazi, no kubona amakuru y'akazi. Dufite kandi urutonde rw'inganda zifitanye isano n'ishuri 
-                ryacu kandi zikeneye abakozi bafite ubushobozi. Abanyeshuri bacu barangije amahugurwa bafite amahirwe menshi yo 
-                kubona akazi keza mu nganda zitandukanye.
+                Mu rwego rw'ubwubatsi, abanyeshuri bakora imyitozo mu nganda nka Horizon Construction Group, Strabag International, 
+                China Road and Bridge Corporation (CRBC), Sogea-Satom, Mota-Engil, Real Contractors, Entreprise Générale Nyirangarama, 
+                n'ibindi bigo by'ubwubatsi bikomeye. Iyi myitozo ifasha abanyeshuri kumenya uburyo bwo kubaka amazu y'ubunyangamugayo, 
+                kubaka inzira zihuza ibice bitandukanye by'igihugu, kubaka ibitaro by'ubuvuzi bw'inyuma, kubaka amashuri makuru, 
+                n'ibindi bintu by'ubwubatsi bikenewe mu iterambere ry'igihugu.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Mu rwego rw'ikoranabuhanga ry'ibinyabiziga, abanyeshuri bakora imyitozo mu nganda nka Volkswagen Rwanda, 
+                Toyota Rwanda, Hyundai Rwanda, Kia Rwanda, Nissan Rwanda, Honda Rwanda, Yamaha Rwanda, Suzuki Rwanda, 
+                Cogebanque Auto Loans, Bank of Kigali Auto Finance, n'ibindi bigo bikora mu bijyanye n'ibinyabiziga. 
+                Iyi myitozo ifasha abanyeshuri kumenya uburyo bwo gusana ibinyabiziga by'ubwoko bwose, gukora serivisi 
+                y'ibinyabiziga, gukora diagnostics, n'ibindi bintu bijyanye n'ikoranabuhanga ry'ibinyabiziga.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Ishuri ryacu rifite ikigo gishinzwe gufasha abanyeshuri kubona akazi - Career Development Center. Iki kigo 
+                gifasha abanyeshuri gukora CV (Curriculum Vitae) y'ubunyangamugayo, gukora cover letter, gukora LinkedIn profile, 
+                gukora ikiganiro cy'akazi (job interview), gukora portfolio y'imishinga bakoreye, no kubona amakuru y'akazi 
+                mu nganda zitandukanye. Dufite kandi urutonde rw'inganda zifitanye isano n'ishuri ryacu kandi zikeneye abakozi 
+                bafite ubushobozi mu myuga itandukanye.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
@@ -1069,21 +1090,40 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
             <div className="bg-gradient-to-br from-green-50 to-yellow-50 rounded-2xl p-8 border-2 border-green-200">
               <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Rocket className="w-6 h-6 text-green-600" />
-                Ejo Hazaza bw'Abanyeshuri Bacu
+                Ejo Hazaza bw'Abanyeshuri Bacu - Intsinzi n'Iterambere mu Myuga
               </h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Abanyeshuri bacu barangije amahugurwa bafite ubushobozi bwo gukora imirimo itandukanye mu nganda. Bafite 
-                ubumenyi bufatika, bafite ubushobozi bwo gukemura ibibazo, kandi bafite imyifatire myiza yo gukora. Benshi 
-                muri bo bakora mu nganda nziza, abandi bakora imirimo yabo, abandi bakajya gukomeza kwiga muri kaminuza.
+                Abanyeshuri bacu barangije amahugurwa bafite ubushobozi bwo gukora imirimo itandukanye mu nganda zikomeye z'isi yose. 
+                Bafite ubumenyi bufatika bw'ikoranabuhanga rigezweho, bafite ubushobozi bwo gukemura ibibazo bikomeye, bafite ubushobozi 
+                bwo gukora mu itsinda ry'abantu batandukanye, kandi bafite imyifatire myiza yo gukora n'ubwiyunge. Benshi muri bo 
+                bakora mu nganda nziza nka Google, Microsoft, Amazon, Facebook, Apple, Tesla, BMW, Mercedes-Benz, Toyota, Volkswagen, 
+                abandi bakora imirimo yabo (entrepreneurship), abandi bakajya gukomeza kwiga muri kaminuza nziza z'isi.
               </p>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Ishuri ryacu rifite abanyeshuri benshi barangije amahugurwa kandi bakaba bakora imirimo nziza. Benshi muri bo 
-                ni inzobere mu myuga yabo, abandi ni ba manager mu nganda, abandi ni ba entrepreneur bafite ibigo byabo. 
-                Dushimira cyane abanyeshuri bacu kandi turabafasha mu bintu byose bakeneye.
+                Ishuri ryacu rifite abanyeshuri benshi barangije amahugurwa kandi bakaba bakora imirimo nziza mu nganda zitandukanye. 
+                Benshi muri bo ni inzobere mu myuga yabo - Software Architects, Senior Software Engineers, Technical Leads, 
+                Project Managers, Product Managers, abandi ni ba manager mu nganda - Construction Managers, Site Supervisors, 
+                Quality Control Managers, abandi ni ba entrepreneur bafite ibigo byabo - software companies, construction companies, 
+                automotive service centers. Dushimira cyane abanyeshuri bacu kandi turabafasha mu bintu byose bakeneye mu buzima bwabo.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Mu rwego rw'amashahara, abanyeshuri bacu barangije amahugurwa bafite amahirwe yo kubona imishahara myiza. 
+                Mu Rwanda, umushahara w'abakozi ba software ugera kuri 2,000,000 - 10,000,000 RWF ku mwaka, umushahara w'abakozi 
+                b'ubwubatsi ugera kuri 1,500,000 - 8,000,000 RWF ku mwaka, naho umushahara w'abakozi b'ibinyabiziga ugera kuri 
+                1,200,000 - 6,000,000 RWF ku mwaka. Mu mahanga, amashahara ni menshi cyane - software developers babona $50,000 - $150,000 
+                ku mwaka, construction workers babona $40,000 - $120,000 ku mwaka, automotive technicians babona $35,000 - $80,000 ku mwaka.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                Abanyeshuri bacu bafite kandi amahirwe yo gukomeza kwiga mu mashuri makuru y'isi nka Massachusetts Institute of Technology (MIT), 
+                Stanford University, Harvard University, Oxford University, Cambridge University, Carnegie Mellon University, 
+                University of California Berkeley, n'ibindi. Benshi muri bo babona scholarships (bourse d'études) zo kwiga muri aya mashuri 
+                makuru kubera ubushobozi bwabo bukomeye n'ubumenyi bafite.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                Niba ushaka kuba umwe mu banyeshuri bacu, ushobora kuzuza ifishi yo kwiyandikisha cyangwa ukaduhamagara. 
-                Tuzakwakira neza kandi tukazakwereka ibintu byose bijyanye n'amahugurwa yacu. Turakwifuriza amahirwe!
+                Niba ushaka kuba umwe mu banyeshuri bacu, ushobora kuzuza ifishi yo kwiyandikisha cyangwa ukaduhamagara kuri telefoni 
+                +250 788 123 456 cyangwa ukatwohereza email kuri info@gardentvet.ac.rw. Tuzakwakira neza kandi tukazakwereka ibintu 
+                byose bijyanye n'amahugurwa yacu, ibikoresho dufite, abarimu bacu, n'amahirwe y'akazi. Turakwifuriza amahirwe 
+                meza yo kuba umwe mu banyeshuri bacu kandi ukagira uruhare mu iterambere ry'igihugu cyacu cy'u Rwanda!
               </p>
             </div>
           </div>

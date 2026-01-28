@@ -109,7 +109,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       let payload: any = {};
 
       if (formData.role === 'parent') {
-        endpoint = 'http://localhost:5001/api/auth/register/parent';
+        endpoint = 'http://localhost:5000/api/auth/register/parent';
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -122,7 +122,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           national_id: formData.nationalId
         };
       } else if (formData.role === 'student') {
-        endpoint = 'http://localhost:5001/api/auth/register/student';
+        endpoint = 'http://localhost:5000/api/auth/register/student';
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -163,9 +163,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           localStorage.setItem('user', JSON.stringify(data.user));
         }
         
-        // Redirect to appropriate dashboard
+        // Redirect to appropriate dashboard immediately
         const dashboardPage = getRoleDashboard(formData.role);
-        setTimeout(() => onNavigate(dashboardPage), 1500);
+        setTimeout(() => {
+          window.location.href = `/${dashboardPage}`;
+        }, 1500);
       } else {
         setError(data.message || 'Kwiyandikisha ntibyakunze. Gerageza ukundi.');
       }

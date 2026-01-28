@@ -20,7 +20,7 @@ const auth = require('../middleware/auth');
 // ==================================================
 
 // 61. API ya Natural Language Processing - Text Analysis
-router.post('/ai/text-analysis', auth, async (req, res) => {
+router.post('/ai/text-analysis', auth.authenticate, async (req, res) => {
   try {
     const { text, analysis_type = 'sentiment' } = req.body;
 
@@ -63,7 +63,7 @@ router.post('/ai/text-analysis', auth, async (req, res) => {
 });
 
 // 62. API ya Smart Content Generation
-router.post('/ai/content-generation', auth, async (req, res) => {
+router.post('/ai/content-generation', auth.authenticate, async (req, res) => {
   try {
     const { 
       content_type = 'lesson_plan',
@@ -120,7 +120,7 @@ router.post('/ai/content-generation', auth, async (req, res) => {
 });
 
 // 63. API ya Intelligent Tutoring System
-router.post('/ai/tutoring/session', auth, async (req, res) => {
+router.post('/ai/tutoring/session', auth.authenticate, async (req, res) => {
   try {
     const {
       student_id,
@@ -175,7 +175,7 @@ router.post('/ai/tutoring/session', auth, async (req, res) => {
 });
 
 // 64. API ya Automated Essay Scoring
-router.post('/ai/essay-scoring', auth, async (req, res) => {
+router.post('/ai/essay-scoring', auth.authenticate, async (req, res) => {
   try {
     const {
       essay_text,
@@ -227,7 +227,7 @@ router.post('/ai/essay-scoring', auth, async (req, res) => {
 });
 
 // 65. API ya Plagiarism Detection
-router.post('/ai/plagiarism-check', auth, async (req, res) => {
+router.post('/ai/plagiarism-check', auth.authenticate, async (req, res) => {
   try {
     const {
       text,
@@ -283,7 +283,7 @@ router.post('/ai/plagiarism-check', auth, async (req, res) => {
 // ==================================================
 
 // 66. API ya Smart Attendance via IoT Devices
-router.post('/iot/attendance/smart-check', auth, async (req, res) => {
+router.post('/iot/attendance/smart-check', auth.authenticate, async (req, res) => {
   try {
     const {
       device_id,
@@ -348,7 +348,7 @@ router.post('/iot/attendance/smart-check', auth, async (req, res) => {
 });
 
 // 67. API ya Environmental Monitoring
-router.get('/iot/environment/monitoring', auth, async (req, res) => {
+router.get('/iot/environment/monitoring', auth.authenticate, async (req, res) => {
   try {
     const { 
       location_id = null,
@@ -412,7 +412,7 @@ router.get('/iot/environment/monitoring', auth, async (req, res) => {
 });
 
 // 68. API ya Smart Energy Management
-router.get('/iot/energy/consumption', auth, async (req, res) => {
+router.get('/iot/energy/consumption', auth.authenticate, async (req, res) => {
   try {
     const { 
       building_id = null,
@@ -486,7 +486,7 @@ router.get('/iot/energy/consumption', auth, async (req, res) => {
 // ==================================================
 
 // 69. API ya Digital Certificate Management (Blockchain-based)
-router.post('/blockchain/certificate/issue', auth, async (req, res) => {
+router.post('/blockchain/certificate/issue', auth.authenticate, async (req, res) => {
   try {
     const {
       student_id,

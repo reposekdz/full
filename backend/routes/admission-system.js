@@ -22,7 +22,7 @@ router.get('/sessions', async (req, res) => {
     }
 
     query += ' ORDER BY s.start_date DESC';
-    const [sessions] = await pool.query(query, params);
+    const [sessions] = await pool.execute(query, params);
 
     res.json({ success: true, sessions });
   } catch (error) {
@@ -35,7 +35,7 @@ router.post('/sessions', authenticateToken, requireRole('admin', 'headmaster'), 
   try {
     const { session_name, academic_year_id, start_date, end_date, status, description } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = await pool.execute(
       `INSERT INTO admissions_sessions (session_name, academic_year_id, start_date, end_date, status, description) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [session_name, academic_year_id, start_date, end_date, status || 'upcoming', description]
@@ -53,7 +53,7 @@ router.put('/sessions/:id', authenticateToken, requireRole('admin', 'headmaster'
     const { id } = req.params;
     const { session_name, academic_year_id, start_date, end_date, status, description } = req.body;
 
-    await pool.query(
+    await pool.execute(
       `UPDATE admissions_sessions 
        SET session_name = ?, academic_year_id = ?, start_date = ?, end_date = ?, status = ?, description = ?
        WHERE id = ?`,
@@ -106,13 +106,13 @@ router.get('/applications', authenticateToken, requireRole('admin', 'headmaster'
 
     // Get total count
     const countQuery = query.replace('SELECT a.*, s.session_name, c.name as course_name, r.first_name as reviewer_first_name, r.last_name as reviewer_last_name', 'SELECT COUNT(*) as total');
-    const [[{ total }]] = await pool.query(countQuery, params);
+    const [[{ total }]] = await pool.execute(countQuery, params);
 
     // Get paginated results
     query += ' ORDER BY a.application_date DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), offset);
 
-    const [applications] = await pool.query(query, params);
+    const [applications] = await pool.execute(query, params);
 
     res.json({
       success: true,
@@ -134,7 +134,7 @@ router.get('/applications/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [applications] = await pool.query(`
+    const [applications] = await pool.execute(`
       SELECT a.*, 
         s.session_name,
         c.name as course_name,
@@ -151,7 +151,7 @@ router.get('/applications/:id', authenticateToken, async (req, res) => {
     }
 
     // Get comments
-    const [comments] = await pool.query(`
+    const [comments] = await pool.execute(`
       SELECT c.*, u.first_name, u.last_name
       FROM admission_comments c
       LEFT JOIN users u ON c.user_id = u.id
@@ -160,7 +160,7 @@ router.get('/applications/:id', authenticateToken, async (req, res) => {
     `, [id]);
 
     // Get interviews
-    const [interviews] = await pool.query(`
+    const [interviews] = await pool.execute(`
       SELECT i.*, u.first_name as interviewer_first_name, u.last_name as interviewer_last_name
       FROM admission_interviews i
       LEFT JOIN users u ON i.interviewer_id = u.id
@@ -169,7 +169,7 @@ router.get('/applications/:id', authenticateToken, async (req, res) => {
     `, [id]);
 
     // Get workflow history
-    const [workflow] = await pool.query(`
+    const [workflow] = await pool.execute(`
       SELECT w.*, u.first_name as reviewer_first_name, u.last_name as reviewer_last_name
       FROM admission_workflow w
       LEFT JOIN users u ON w.reviewer_id = u.id
@@ -199,10 +199,10 @@ router.post('/applications', async (req, res) => {
 
     // Generate application number
     const year = new Date().getFullYear();
-    const [countResult] = await pool.query('SELECT COUNT(*) as count FROM admission_applications WHERE YEAR(application_date) = ?', [year]);
+    const [countResult] = await pool.execute('SELECT COUNT(*) as count FROM admission_applications WHERE YEAR(application_date) = ?', [year]);
     const applicationNumber = `APP${year}${String(countResult[0].count + 1).padStart(5, '0')}`;
 
-    const [result] = await pool.query(
+    const [result] = await pool.execute(
       `INSERT INTO admission_applications 
        (session_id, application_number, first_name, last_name, email, phone, date_of_birth, 
         gender, address, course_id, previous_education, documents, status, application_date) 
@@ -212,7 +212,7 @@ router.post('/applications', async (req, res) => {
     );
 
     // Create initial workflow entry
-    await pool.query(
+    await pool.execute(
       `INSERT INTO admission_workflow (application_id, stage, status, notes) 
        VALUES (?, 'application_submitted', 'pending', 'Application submitted')`,
       [result.insertId]
@@ -236,7 +236,7 @@ router.put('/applications/:id/status', authenticateToken, requireRole('admin', '
     const { status, review_notes } = req.body;
     const reviewed_by = req.user.id;
 
-    await pool.query(
+    await pool.execute(
       `UPDATE admission_applications 
        SET status = ?, review_notes = ?, reviewed_by = ?, reviewed_at = NOW()
        WHERE id = ?`,
@@ -244,7 +244,7 @@ router.put('/applications/:id/status', authenticateToken, requireRole('admin', '
     );
 
     // Add to workflow
-    await pool.query(
+    await pool.execute(
       `INSERT INTO admission_workflow (application_id, stage, status, reviewer_id, notes) 
        VALUES (?, 'status_update', ?, ?, ?)`,
       [id, status, reviewed_by, review_notes]
@@ -265,7 +265,7 @@ router.post('/applications/:id/comments', authenticateToken, async (req, res) =>
     const { comment } = req.body;
     const user_id = req.user.id;
 
-    const [result] = await pool.query(
+    const [result] = await pool.execute(
       'INSERT INTO admission_comments (application_id, user_id, comment) VALUES (?, ?, ?)',
       [id, user_id, comment]
     );
@@ -284,7 +284,7 @@ router.post('/applications/:id/interviews', authenticateToken, requireRole('admi
     const { id } = req.params;
     const { interview_date, interview_time, interviewer_id, location, notes } = req.body;
 
-    const [result] = await pool.query(
+    const [result] = await pool.execute(
       `INSERT INTO admission_interviews 
        (application_id, interview_date, interview_time, interviewer_id, location, notes, status) 
        VALUES (?, ?, ?, ?, ?, ?, 'scheduled')`,
@@ -292,7 +292,7 @@ router.post('/applications/:id/interviews', authenticateToken, requireRole('admi
     );
 
     // Add to workflow
-    await pool.query(
+    await pool.execute(
       `INSERT INTO admission_workflow (application_id, stage, status, reviewer_id, notes) 
        VALUES (?, 'interview_scheduled', 'scheduled', ?, ?)`,
       [id, interviewer_id, `Interview scheduled for ${interview_date} at ${interview_time}`]
@@ -310,7 +310,7 @@ router.put('/interviews/:id', authenticateToken, requireRole('admin', 'headmaste
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    await pool.query(
+    await pool.execute(
       'UPDATE admission_interviews SET status = ?, notes = ? WHERE id = ?',
       [status, notes, id]
     );
@@ -330,14 +330,14 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'headmaster'), 
     let whereClause = session_id ? 'WHERE session_id = ?' : '';
     const params = session_id ? [session_id, session_id, session_id, session_id] : [];
 
-    const [statusCounts] = await pool.query(`
+    const [statusCounts] = await pool.execute(`
       SELECT status, COUNT(*) as count
       FROM admission_applications
       ${whereClause}
       GROUP BY status
     `, session_id ? [session_id] : []);
 
-    const [courseCounts] = await pool.query(`
+    const [courseCounts] = await pool.execute(`
       SELECT c.name as course_name, COUNT(a.id) as count
       FROM admission_applications a
       LEFT JOIN courses c ON a.course_id = c.id
@@ -346,14 +346,14 @@ router.get('/analytics', authenticateToken, requireRole('admin', 'headmaster'), 
       ORDER BY count DESC
     `, session_id ? [session_id] : []);
 
-    const [genderCounts] = await pool.query(`
+    const [genderCounts] = await pool.execute(`
       SELECT gender, COUNT(*) as count
       FROM admission_applications
       ${whereClause}
       GROUP BY gender
     `, session_id ? [session_id] : []);
 
-    const [[totalApplicants]] = await pool.query(`
+    const [[totalApplicants]] = await pool.execute(`
       SELECT COUNT(*) as total FROM admission_applications ${whereClause}
     `, session_id ? [session_id] : []);
 
@@ -384,7 +384,7 @@ router.post('/applications/bulk-update-status', authenticateToken, requireRole('
     }
 
     const placeholders = application_ids.map(() => '?').join(',');
-    await pool.query(
+    await pool.execute(
       `UPDATE admission_applications 
        SET status = ?, review_notes = ?, reviewed_by = ?, reviewed_at = NOW()
        WHERE id IN (${placeholders})`,

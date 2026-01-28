@@ -49,18 +49,20 @@ const authenticateToken = async (req, res, next) => {
 };
 
 const requireRole = (...roles) => {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ 
         success: false, 
-        message: 'Insufficient permissions' 
+        message: 'Insufficient permissions',
+        required_roles: roles,
+        user_role: req.user?.role || 'none'
       });
     }
     next();
   };
 };
 
-// Check specific permissions
+// Check specific permissions with role hierarchy
 const requirePermission = (permission) => {
   return async (req, res, next) => {
     if (!req.user) {
@@ -71,6 +73,11 @@ const requirePermission = (permission) => {
     }
 
     try {
+      // Admin and headmaster have all permissions
+      if (['admin', 'headmaster', 'patron'].includes(req.user.role)) {
+        return next();
+      }
+
       // Check if user has the specific permission
       const [permissions] = await pool.execute(`
         SELECT p.name
@@ -89,7 +96,9 @@ const requirePermission = (permission) => {
       if (permissions.length === 0) {
         return res.status(403).json({ 
           success: false, 
-          message: 'Insufficient permissions' 
+          message: 'Insufficient permissions',
+          required_permission: permission,
+          user_role: req.user.role
         });
       }
 
@@ -109,5 +118,7 @@ module.exports = {
   authenticate: authenticateToken,
   requireRole,
   authorize: requireRole,
+  authorizeRoles: requireRole,
+  checkRole: requireRole,
   requirePermission
 };

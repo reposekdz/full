@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool } = require('../config/database');
 const crypto = require('crypto');
 
 // Generate certificate
@@ -9,14 +9,14 @@ router.post('/generate', async (req, res) => {
     const { student_id, certificate_type, template_id, issue_date, data } = req.body;
     
     // Get student details
-    const [students] = await db.query('SELECT * FROM students WHERE id = ?', [student_id]);
+    const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [student_id]);
     if (students.length === 0) return res.status(404).json({ success: false, message: 'Student not found' });
     
     const student = students[0];
     const certificate_number = `CERT-${Date.now()}-${student_id}`;
     const verification_code = crypto.randomBytes(16).toString('hex');
     
-    const [result] = await db.query(
+    const [result] = await pool.execute(
       `INSERT INTO certificates (student_id, certificate_number, certificate_type, template_id, issue_date, verification_code, data, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?, 'issued')`,
       [student_id, certificate_number, certificate_type, template_id, issue_date, verification_code, JSON.stringify(data)]
@@ -44,7 +44,7 @@ router.post('/generate/bulk', async (req, res) => {
       const certificate_number = `CERT-${Date.now()}-${student_id}`;
       const verification_code = crypto.randomBytes(16).toString('hex');
       
-      const [result] = await db.query(
+      const [result] = await pool.execute(
         `INSERT INTO certificates (student_id, certificate_number, certificate_type, template_id, issue_date, verification_code, status) 
          VALUES (?, ?, ?, ?, ?, ?, 'issued')`,
         [student_id, certificate_number, certificate_type, template_id, issue_date, verification_code]
@@ -62,7 +62,7 @@ router.post('/generate/bulk', async (req, res) => {
 // Get certificate
 router.get('/:id', async (req, res) => {
   try {
-    const [certificates] = await db.query(
+    const [certificates] = await pool.execute(
       `SELECT c.*, s.first_name, s.last_name, s.email, t.name as template_name 
        FROM certificates c 
        JOIN students s ON c.student_id = s.id 
@@ -82,7 +82,7 @@ router.get('/:id', async (req, res) => {
 // Verify certificate
 router.get('/verify/:code', async (req, res) => {
   try {
-    const [certificates] = await db.query(
+    const [certificates] = await pool.execute(
       `SELECT c.*, s.first_name, s.last_name, s.student_code 
        FROM certificates c 
        JOIN students s ON c.student_id = s.id 
@@ -103,7 +103,7 @@ router.get('/verify/:code', async (req, res) => {
 // Get student certificates
 router.get('/student/:studentId', async (req, res) => {
   try {
-    const [certificates] = await db.query(
+    const [certificates] = await pool.execute(
       `SELECT c.*, t.name as template_name 
        FROM certificates c 
        LEFT JOIN certificate_templates t ON c.template_id = t.id 
@@ -123,7 +123,7 @@ router.put('/:id/revoke', async (req, res) => {
   try {
     const { reason, revoked_by } = req.body;
     
-    await db.query(
+    await pool.execute(
       'UPDATE certificates SET status = ?, revoked_at = NOW(), revoke_reason = ?, revoked_by = ? WHERE id = ?',
       ['revoked', reason, revoked_by, req.params.id]
     );
@@ -137,7 +137,7 @@ router.put('/:id/revoke', async (req, res) => {
 // Certificate templates
 router.get('/templates/list', async (req, res) => {
   try {
-    const [templates] = await db.query('SELECT * FROM certificate_templates WHERE active = 1');
+    const [templates] = await pool.execute('SELECT * FROM certificate_templates WHERE active = 1');
     res.json({ success: true, templates });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -148,7 +148,7 @@ router.post('/templates', async (req, res) => {
   try {
     const { name, type, design, fields } = req.body;
     
-    const [result] = await db.query(
+    const [result] = await pool.execute(
       'INSERT INTO certificate_templates (name, type, design, fields) VALUES (?, ?, ?, ?)',
       [name, type, JSON.stringify(design), JSON.stringify(fields)]
     );
@@ -162,9 +162,9 @@ router.post('/templates', async (req, res) => {
 // Statistics
 router.get('/stats/overview', async (req, res) => {
   try {
-    const [total] = await db.query('SELECT COUNT(*) as count FROM certificates');
-    const [byType] = await db.query('SELECT certificate_type, COUNT(*) as count FROM certificates GROUP BY certificate_type');
-    const [recent] = await db.query('SELECT COUNT(*) as count FROM certificates WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    const [total] = await pool.execute('SELECT COUNT(*) as count FROM certificates');
+    const [byType] = await pool.execute('SELECT certificate_type, COUNT(*) as count FROM certificates GROUP BY certificate_type');
+    const [recent] = await pool.execute('SELECT COUNT(*) as count FROM certificates WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)');
     
     res.json({ 
       success: true, 

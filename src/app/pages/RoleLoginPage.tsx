@@ -61,6 +61,16 @@ interface RegisterFormData {
 // Role configurations
 const roles = [
   {
+    role: 'advisor' as UserRole,
+    title: "Umujyanama w'Ishuri",
+    subtitle: 'School Advisor',
+    description: "Gucunga inama, gukurikirana iterambere ry'ishuri n'abanyeshuri",
+    icon: Users,
+    color: 'from-indigo-500 to-purple-600',
+    bgGradient: 'from-indigo-50 to-purple-50',
+    features: ['Contact Management', 'Student Counseling', 'School Analytics', 'Development Initiatives']
+  },
+  {
     role: 'director_study' as UserRole,
     title: "Umuyobozi w'Amasomo",
     subtitle: 'Director of Studies',

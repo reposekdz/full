@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { notifyAttendance } = require('../utils/parentNotifications');
 
 // Mark attendance
 router.post('/', authenticateToken, async (req, res) => {
@@ -9,7 +10,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const { student_id, class_id, subject_id, attendance_date, status, remarks } = req.body;
     const marked_by = req.user.id;
 
-    await pool.query(`
+    await pool.execute(`
       INSERT INTO attendance (student_id, class_id, subject_id, attendance_date, status, remarks, marked_by)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE 
@@ -17,6 +18,13 @@ router.post('/', authenticateToken, async (req, res) => {
         remarks = VALUES(remarks),
         marked_by = VALUES(marked_by)
     `, [student_id, class_id, subject_id, attendance_date, status, remarks, marked_by]);
+
+    // Notify parents if absent or late
+    if (status === 'absent' || status === 'late') {
+      notifyAttendance(student_id, { status, date: attendance_date }).catch(err => 
+        console.error('Failed to notify parent of attendance:', err)
+      );
+    }
 
     res.json({ success: true, message: 'Attendance marked successfully' });
   } catch (error) {
@@ -35,7 +43,7 @@ router.post('/bulk', authenticateToken, async (req, res) => {
       a.student_id, class_id, subject_id, attendance_date, a.status, a.remarks || null, marked_by
     ]);
 
-    await pool.query(`
+    await pool.execute(`
       INSERT INTO attendance (student_id, class_id, subject_id, attendance_date, status, remarks, marked_by)
       VALUES ?
       ON DUPLICATE KEY UPDATE 
@@ -43,6 +51,15 @@ router.post('/bulk', authenticateToken, async (req, res) => {
         remarks = VALUES(remarks),
         marked_by = VALUES(marked_by)
     `, [values]);
+
+    // Notify parents for absences and lateness
+    attendance.forEach(a => {
+      if (a.status === 'absent' || a.status === 'late') {
+        notifyAttendance(a.student_id, { status: a.status, date: attendance_date }).catch(err => 
+          console.error(`Failed to notify parent of attendance for student ${a.student_id}:`, err)
+        );
+      }
+    });
 
     res.json({ success: true, message: 'Bulk attendance marked successfully' });
   } catch (error) {
@@ -98,7 +115,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY a.attendance_date DESC, u.last_name, u.first_name';
 
-    const [attendance] = await pool.query(query, params);
+    const [attendance] = await pool.execute(query, params);
     res.json({ success: true, attendance });
   } catch (error) {
     console.error('Error fetching attendance:', error);
@@ -141,7 +158,7 @@ router.get('/statistics', authenticateToken, async (req, res) => {
       params.push(end_date);
     }
 
-    const [stats] = await pool.query(query, params);
+    const [stats] = await pool.execute(query, params);
     res.json({ success: true, statistics: stats[0] });
   } catch (error) {
     console.error('Error fetching attendance statistics:', error);
@@ -155,7 +172,7 @@ router.get('/class-report/:classId', authenticateToken, async (req, res) => {
     const { start_date, end_date } = req.query;
     const classId = req.params.classId;
 
-    const [students] = await pool.query(`
+    const [students] = await pool.execute(`
       SELECT DISTINCT u.id, u.first_name, u.last_name, u.student_code
       FROM users u
       JOIN enrollments e ON u.id = e.student_id
@@ -166,7 +183,7 @@ router.get('/class-report/:classId', authenticateToken, async (req, res) => {
     const report = [];
 
     for (const student of students) {
-      const [stats] = await pool.query(`
+      const [stats] = await pool.execute(`
         SELECT 
           COUNT(*) as total_days,
           SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days,
@@ -194,7 +211,7 @@ router.get('/class-report/:classId', authenticateToken, async (req, res) => {
 // Delete attendance record
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    await pool.query('DELETE FROM attendance WHERE id = ?', [req.params.id]);
+    await pool.execute('DELETE FROM attendance WHERE id = ?', [req.params.id]);
     res.json({ success: true, message: 'Attendance record deleted successfully' });
   } catch (error) {
     console.error('Error deleting attendance:', error);

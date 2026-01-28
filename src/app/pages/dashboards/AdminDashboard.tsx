@@ -37,6 +37,7 @@ import CollaborationStudyGroupsPage from '../admin/CollaborationStudyGroupsPage'
 import QuizSystemPage from '../admin/QuizSystemPage';
 import SportsManagementPage from '../admin/SportsManagementPage';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -103,6 +104,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
         return <QuizSystemPage />;
       case 'sports-management':
         return <SportsManagementPage />;
+      case 'class-sheets':
+        return <ClassLevelSheetsDashboard userRole="admin" userId={user?.id || 1} />;
       case 'articles':
         onNavigate('admin-articles');
         return null;

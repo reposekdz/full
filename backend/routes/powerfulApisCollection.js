@@ -20,7 +20,7 @@ const auth = require('../middleware/auth');
 // ==================================================
 
 // 1. API ya Gutegereza Ubushobozi bw'Abanyeshuri - Student Performance Prediction
-router.get('/ai/predict-performance/:studentId', auth, async (req, res) => {
+router.get('/ai/predict-performance/:studentId', auth.authenticate, async (req, res) => {
   try {
     const { studentId } = req.params;
     const { period = 'monthly' } = req.query;
@@ -52,7 +52,7 @@ router.get('/ai/predict-performance/:studentId', auth, async (req, res) => {
 });
 
 // 2. API yo Gutanga Inama za AI - AI Recommendations Engine
-router.get('/ai/recommendations/:userId', auth, async (req, res) => {
+router.get('/ai/recommendations/:userId', auth.authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
     const { type = 'academic' } = req.query;
@@ -86,7 +86,7 @@ router.get('/ai/recommendations/:userId', auth, async (req, res) => {
 });
 
 // 3. API ya Ubumenyi bwa Otomatike - Automated Insights
-router.get('/ai/insights', auth, async (req, res) => {
+router.get('/ai/insights', auth.authenticate, async (req, res) => {
   try {
     const { severity = 'all', limit = 20 } = req.query;
     
@@ -130,7 +130,7 @@ router.get('/ai/insights', auth, async (req, res) => {
 });
 
 // 4. API ya Forecasting - Advanced Predictive Forecasts
-router.get('/ai/forecasts/:type', auth, async (req, res) => {
+router.get('/ai/forecasts/:type', auth.authenticate, async (req, res) => {
   try {
     const { type } = req.params;
     const { period = 'monthly' } = req.query;
@@ -168,7 +168,7 @@ router.get('/ai/forecasts/:type', auth, async (req, res) => {
 });
 
 // 5. API ya Machine Learning Model Performance
-router.get('/ai/model-performance', auth, async (req, res) => {
+router.get('/ai/model-performance', auth.authenticate, async (req, res) => {
   try {
     const [performance] = await db.execute(`
       SELECT 
@@ -205,7 +205,7 @@ router.get('/ai/model-performance', auth, async (req, res) => {
 // ==================================================
 
 // 6. API ya WebSocket Connections Management
-router.get('/realtime/connections', auth, async (req, res) => {
+router.get('/realtime/connections', auth.authenticate, async (req, res) => {
   try {
     const [connections] = await db.execute(`
       SELECT 
@@ -239,7 +239,7 @@ router.get('/realtime/connections', auth, async (req, res) => {
 });
 
 // 7. API yo Kohereza Amakuru mu Gihe Nyacyo - Real-time Events
-router.post('/realtime/broadcast', auth, async (req, res) => {
+router.post('/realtime/broadcast', auth.authenticate, async (req, res) => {
   try {
     const { 
       event_type, 
@@ -281,7 +281,7 @@ router.post('/realtime/broadcast', auth, async (req, res) => {
 });
 
 // 8. API ya Live Notifications
-router.get('/realtime/notifications', auth, async (req, res) => {
+router.get('/realtime/notifications', auth.authenticate, async (req, res) => {
   try {
     const { unread_only = 'false', limit = 50 } = req.query;
     
@@ -334,7 +334,7 @@ router.get('/realtime/notifications', auth, async (req, res) => {
 });
 
 // 9. API yo Gusoma Amakuru - Mark Notifications as Read
-router.put('/realtime/notifications/:id/read', auth, async (req, res) => {
+router.put('/realtime/notifications/:id/read', auth.authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -354,7 +354,7 @@ router.put('/realtime/notifications/:id/read', auth, async (req, res) => {
 });
 
 // 10. API ya System Status mu Gihe Nyacyo
-router.get('/realtime/system-status', auth, async (req, res) => {
+router.get('/realtime/system-status', auth.authenticate, async (req, res) => {
   try {
     const [metrics] = await db.execute(`
       SELECT 
@@ -403,7 +403,7 @@ router.get('/realtime/system-status', auth, async (req, res) => {
 // ==================================================
 
 // 11. API ya Advanced Messaging System
-router.post('/communication/messages', auth, async (req, res) => {
+router.post('/communication/messages', auth.authenticate, async (req, res) => {
   try {
     const {
       message_type = 'text',
@@ -444,7 +444,7 @@ router.post('/communication/messages', auth, async (req, res) => {
 });
 
 // 12. API ya Message Threads Management
-router.get('/communication/threads', auth, async (req, res) => {
+router.get('/communication/threads', auth.authenticate, async (req, res) => {
   try {
     const { thread_type = 'all', limit = 20 } = req.query;
 
@@ -493,7 +493,7 @@ router.get('/communication/threads', auth, async (req, res) => {
 });
 
 // 13. API ya Video Conference Management
-router.post('/communication/video-conference', auth, async (req, res) => {
+router.post('/communication/video-conference', auth.authenticate, async (req, res) => {
   try {
     const {
       title,
@@ -539,7 +539,7 @@ router.post('/communication/video-conference', auth, async (req, res) => {
 });
 
 // 14. API ya Communication Analytics
-router.get('/communication/analytics', auth, async (req, res) => {
+router.get('/communication/analytics', auth.authenticate, async (req, res) => {
   try {
     const { period = 'week' } = req.query;
     const days = period === 'week' ? 7 : period === 'month' ? 30 : 90;
@@ -589,7 +589,7 @@ router.get('/communication/analytics', auth, async (req, res) => {
 });
 
 // 15. API ya Bulk Communication
-router.post('/communication/bulk-message', auth, async (req, res) => {
+router.post('/communication/bulk-message', auth.authenticate, async (req, res) => {
   try {
     const {
       target_role,
@@ -643,7 +643,7 @@ router.post('/communication/bulk-message', auth, async (req, res) => {
 // ==================================================
 
 // 16. API ya Custom Dashboard Widgets
-router.get('/dashboard/widgets/:role', auth, async (req, res) => {
+router.get('/dashboard/widgets/:role', auth.authenticate, async (req, res) => {
   try {
     const { role } = req.params;
 
@@ -680,7 +680,7 @@ router.get('/dashboard/widgets/:role', auth, async (req, res) => {
 });
 
 // 17. API ya User Dashboard Configuration
-router.get('/dashboard/config', auth, async (req, res) => {
+router.get('/dashboard/config', auth.authenticate, async (req, res) => {
   try {
     const [config] = await db.execute(`
       SELECT 
@@ -735,7 +735,7 @@ router.get('/dashboard/config', auth, async (req, res) => {
 });
 
 // 18. API yo Kugenzura Dashboard - Update Dashboard Config
-router.put('/dashboard/config', auth, async (req, res) => {
+router.put('/dashboard/config', auth.authenticate, async (req, res) => {
   try {
     const {
       layout_config,
@@ -769,7 +769,7 @@ router.put('/dashboard/config', auth, async (req, res) => {
 });
 
 // 19. API ya Advanced Performance Analytics
-router.get('/analytics/performance/comprehensive', auth, async (req, res) => {
+router.get('/analytics/performance/comprehensive', auth.authenticate, async (req, res) => {
   try {
     const { 
       start_date = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -817,7 +817,7 @@ router.get('/analytics/performance/comprehensive', auth, async (req, res) => {
 });
 
 // 20. API ya Budget Optimization Analytics
-router.get('/analytics/budget/optimization', auth, async (req, res) => {
+router.get('/analytics/budget/optimization', auth.authenticate, async (req, res) => {
   try {
     const [optimizations] = await db.execute(`
       SELECT 

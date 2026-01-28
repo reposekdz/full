@@ -250,10 +250,11 @@ const ComprehensiveContentManagement: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const filteredData = (data: ContentItem[]) => {
+  const filteredData = (data: ContentItem[] | any) => {
+    if (!Array.isArray(data)) return [];
     return data.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesFilter = filterStatus === 'all' || item.status === filterStatus;
       return matchesSearch && matchesFilter;
     });

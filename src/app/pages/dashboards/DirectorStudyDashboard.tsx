@@ -36,7 +36,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
-import { apiService } from '@/app/services/apiService';
+import apiService from '@/app/services/apiService';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
+import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 
 interface DirectorStudyDashboardProps {
   onNavigate: (page: string) => void;
@@ -347,7 +348,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 lg:w-auto bg-white border-2 border-yellow-200 p-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 bg-white border-2 border-yellow-200 p-1 gap-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
               </TabsTrigger>
@@ -365,6 +366,9 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
               </TabsTrigger>
               <TabsTrigger value="curriculum" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Gahunda
+              </TabsTrigger>
+              <TabsTrigger value="class-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Class Sheets
               </TabsTrigger>
             </TabsList>
 
@@ -1056,6 +1060,10 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   </ScrollArea>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="class-sheets">
+              <ClassLevelSheetsDashboard userRole="director_study" userId={1} />
             </TabsContent>
           </Tabs>
         </div>

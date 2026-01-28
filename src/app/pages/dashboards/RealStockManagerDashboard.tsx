@@ -201,7 +201,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
                     <Select value={filterCategory} onValueChange={setFilterCategory}>
                       <SelectTrigger className="w-40"><SelectValue placeholder="Icyiciro" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Byose</SelectItem>
+                        <SelectItem value="all">Byose</SelectItem>
                         <SelectItem value="office">Office</SelectItem>
                         <SelectItem value="teaching">Teaching</SelectItem>
                         <SelectItem value="science">Science</SelectItem>

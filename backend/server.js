@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const socketIO = require('socket.io');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Initialize Cron Jobs
 require('./services/cronJobs');
@@ -15,10 +15,19 @@ const io = socketIO(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+// Import middleware
+const { generalLimiter, authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { sanitizeMiddleware } = require('./middleware/validation');
+const { cacheMiddleware, getCacheStats } = require('./middleware/cache');
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Security middleware
+// app.use(generalLimiter); // DISABLED for high-load testing
+app.use(sanitizeMiddleware);
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -62,6 +71,7 @@ const routes = {
   parents: loadRoute('./routes/parents', 'Parents'),
   staff: loadRoute('./routes/staff', 'Staff'),
   roles: loadRoute('./routes/roles', 'Roles'),
+  serialCodes: loadRoute('./routes/serial-codes', 'Serial Codes'),
   
   // Academic Management
   academics: loadRoute('./routes/academics', 'Academics'),
@@ -116,9 +126,11 @@ const routes = {
   studentManagement: loadRoute('./routes/student-management', 'Student Management'),
   studentSheets: loadRoute('./routes/student-sheets', 'Student Sheets'),
   studentCompetitions: loadRoute('./routes/student-competitions', 'Student Competitions'),
+  studentAdvanced: loadRoute('./routes/student-advanced', 'Student Advanced'),
   
   // Teacher Features
   teacherPortal: loadRoute('./routes/teacher-portal', 'Teacher Portal'),
+  teacherAdvanced: loadRoute('./routes/teacher-advanced', 'Teacher Advanced'),
   
   // Communication
   messages: loadRoute('./routes/messages', 'Messages'),
@@ -143,18 +155,28 @@ const routes = {
   sportsPlayers: loadRoute('./routes/sports-players', 'Sports Players'),
   sportsAdvanced: loadRoute('./routes/sports-advanced', 'Sports Advanced'),
   sportsManagement: loadRoute('./routes/sports-management', 'Sports Management'),
+  sportsComprehensive: loadRoute('./routes/sports-comprehensive', 'Sports Comprehensive'),
   teams: loadRoute('./routes/teams', 'Teams'),
   
   // Trades & Services
-  trades: loadRoute('./routes/unified-trades-api', 'Unified Trades API'),
+  trades: loadRoute('./routes/trades', 'Trades'),
   tradesCourses: loadRoute('./routes/trades-courses', 'Trades Courses'),
   tradeImages: loadRoute('./routes/trade-images', 'Trade Images'),
+  levels: loadRoute('./routes/levels', 'Levels'),
   services: loadRoute('./routes/services', 'Services'),
   servicesAdvanced: loadRoute('./routes/services-advanced', 'Services Advanced'),
   
   // Support & Contact
   contact: loadRoute('./routes/contact', 'Contact'),
   support: loadRoute('./routes/support', 'Support'),
+  
+  // Advanced Management APIs
+  hrManagement: loadRoute('./routes/hr-management', 'HR Management'),
+  advancedAnalytics: loadRoute('./routes/advanced-analytics', 'Advanced Analytics'),
+  inventoryManagement: loadRoute('./routes/inventory-management', 'Inventory Management'),
+  eventManagement: loadRoute('./routes/event-management', 'Event Management'),
+  communicationHub: loadRoute('./routes/communication-hub', 'Communication Hub'),
+  advancedReports: loadRoute('./routes/advanced-reports', 'Advanced Reports'),
   supportEnhanced: loadRoute('./routes/support-enhanced', 'Support Enhanced'),
   
   // Learning Features
@@ -185,6 +207,7 @@ const routes = {
   studentPayments: loadRoute('./routes/studentPayments', 'Student Payments'),
   paymentAnalytics: loadRoute('./routes/paymentAnalytics', 'Payment Analytics'),
   accountantManagement: loadRoute('./routes/accountantManagement', 'Accountant Management'),
+  accountantAdvanced: loadRoute('./routes/accountant-advanced', 'Accountant Advanced'),
   classes: loadRoute('./routes/classes', 'Classes'),
   docs: loadRoute('./routes/docs', 'Documentation'),
   
@@ -263,6 +286,7 @@ const routes = {
   invoices: loadRoute('./routes/invoices', 'Invoices'),
   events: loadRoute('./routes/events', 'Events'),
   forums: loadRoute('./routes/forums', 'Forums'),
+  advancedRoleFeatures: loadRoute('./routes/advanced-role-features', 'Advanced Role Features'),
 };
 
 // Mount routes
@@ -270,6 +294,7 @@ let mountedRoutes = 0;
 
 // Authentication & Authorization
 if (routes.auth) { app.use('/api/auth', routes.auth); mountedRoutes++; }
+if (routes.authEnhanced) { app.use('/api/auth-enhanced', require('./routes/auth-enhanced')); mountedRoutes++; }
 if (routes.comprehensiveAuth) { app.use('/api/comprehensive-auth', routes.comprehensiveAuth); mountedRoutes++; }
 if (routes.roleAuth) { app.use('/api/role-auth', routes.roleAuth); mountedRoutes++; }
 if (routes.staffAuth) { app.use('/api/staff-auth', routes.staffAuth); mountedRoutes++; }
@@ -279,7 +304,9 @@ if (routes.studentAuth) { app.use('/api/student-auth', routes.studentAuth); moun
 // User Management
 if (routes.users) { app.use('/api/users', routes.users); mountedRoutes++; }
 if (routes.students) { app.use('/api/students', routes.students); mountedRoutes++; }
+if (routes.serialCodes) { app.use('/api/serial-codes', routes.serialCodes); mountedRoutes++; }
 if (routes.teachers) { app.use('/api/teachers', routes.teachers); mountedRoutes++; }
+if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
 if (routes.parents) { app.use('/api/parents', routes.parents); mountedRoutes++; }
 if (routes.staff) { app.use('/api/staff', routes.staff); mountedRoutes++; }
 if (routes.roles) { app.use('/api/roles', routes.roles); mountedRoutes++; }
@@ -337,12 +364,13 @@ if (routes.classSheetsApi) { app.use('/api/class-sheets-api', routes.classSheets
 if (routes.studentManagement) { app.use('/api/student-management', routes.studentManagement); mountedRoutes++; }
 if (routes.studentSheets) { app.use('/api/student-sheets', routes.studentSheets); mountedRoutes++; }
 if (routes.studentCompetitions) { app.use('/api/student-competitions', routes.studentCompetitions); mountedRoutes++; }
+if (routes.studentAdvanced) { app.use('/api/student-advanced', routes.studentAdvanced); mountedRoutes++; }
 
 // Teacher Features
 if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal); mountedRoutes++; }
 
 // Communication
-if (routes.messages) { app.use('/api/messages', routes.messages); mountedRoutes++; }
+if (routes.messages) { app.use('/api/messages', routes.messages(io)); mountedRoutes++; }
 if (routes.notifications) { app.use('/api/notifications', routes.notifications); mountedRoutes++; }
 if (routes.liveChat) { app.use('/api/live-chat', routes.liveChat); mountedRoutes++; }
 if (routes.comprehensiveMessaging) { app.use('/api/comprehensive-messaging', routes.comprehensiveMessaging); mountedRoutes++; }
@@ -364,12 +392,14 @@ if (routes.sports) { app.use('/api/sports', routes.sports); mountedRoutes++; }
 if (routes.sportsPlayers) { app.use('/api/sports-players', routes.sportsPlayers); mountedRoutes++; }
 if (routes.sportsAdvanced) { app.use('/api/sports-advanced', routes.sportsAdvanced); mountedRoutes++; }
 if (routes.sportsManagement) { app.use('/api/sports-management', routes.sportsManagement); mountedRoutes++; }
+if (routes.sportsComprehensive) { app.use('/api/sports-comprehensive', routes.sportsComprehensive); mountedRoutes++; }
 if (routes.teams) { app.use('/api/teams', routes.teams); mountedRoutes++; }
 
 // Trades & Services (Unified: trades + courses + classes)
 if (routes.trades) { app.use('/api/trades', routes.trades); mountedRoutes++; }
 if (routes.tradesCourses) { app.use('/api/trades-courses', routes.tradesCourses); mountedRoutes++; }
 if (routes.tradeImages) { app.use('/api/trade-images', routes.tradeImages); mountedRoutes++; }
+if (routes.levels) { app.use('/api/levels', routes.levels); mountedRoutes++; }
 if (routes.services) { app.use('/api/services', routes.services); mountedRoutes++; }
 if (routes.servicesAdvanced) { app.use('/api/services-advanced', routes.servicesAdvanced); mountedRoutes++; }
 
@@ -393,9 +423,28 @@ if (routes.gamification) { app.use('/api/gamification', routes.gamification); mo
 // System & Admin
 if (routes.systemUpdates) { app.use('/api/system-updates', routes.systemUpdates); mountedRoutes++; }
 if (routes.leadership) { app.use('/api/leadership', routes.leadership); mountedRoutes++; }
+app.use('/api/advisor', require('./routes/advisor')); mountedRoutes++;
+app.use('/api/advisor-staff', require('./routes/advisor-staff')); mountedRoutes++;
+app.use('/api/advisor-management', require('./routes/advisor-management')); mountedRoutes++;
+app.use('/api/advisor-detail', require('./routes/advisor-detail')); mountedRoutes++;
+app.use('/api/advisor-comprehensive', require('./routes/advisor-comprehensive')); mountedRoutes++;
+app.use('/api/advisor-dashboard', require('./routes/advisor-dashboard-kinyarwanda')); mountedRoutes++;
+app.use('/api/staff-roles', require('./routes/staff-roles')); mountedRoutes++;
+app.use('/api/staff-credentials', require('./routes/staff-credentials')); mountedRoutes++;
+app.use('/api/dynamic-sheets', require('./routes/dynamic-student-sheets')); mountedRoutes++;
+app.use('/api/staff-dynamic-sheets', require('./routes/staff-dynamic-sheets')); mountedRoutes++;
+app.use('/api/timetable-generator', require('./routes/timetable-generator')); mountedRoutes++;
 if (routes.developers) { app.use('/api/developers', routes.developers); mountedRoutes++; }
 if (routes.developersApi) { app.use('/api/developers-api', routes.developersApi); mountedRoutes++; }
 if (routes.advisor) { app.use('/api/advisor', routes.advisor); mountedRoutes++; }
+
+// Advanced Management APIs
+if (routes.hrManagement) { app.use('/api/hr-management', routes.hrManagement); mountedRoutes++; }
+if (routes.advancedAnalytics) { app.use('/api/advanced-analytics', routes.advancedAnalytics); mountedRoutes++; }
+if (routes.inventoryManagement) { app.use('/api/inventory-management', routes.inventoryManagement); mountedRoutes++; }
+if (routes.eventManagement) { app.use('/api/event-management', routes.eventManagement); mountedRoutes++; }
+if (routes.communicationHub) { app.use('/api/communication-hub', routes.communicationHub); mountedRoutes++; }
+if (routes.advancedReports) { app.use('/api/advanced-reports', routes.advancedReports); mountedRoutes++; }
 if (routes.search) { app.use('/api/search', routes.search); mountedRoutes++; }
 if (routes.advancedSearch) { app.use('/api/advanced-search', routes.advancedSearch); mountedRoutes++; }
 if (routes.uploads) { app.use('/api/uploads', routes.uploads); mountedRoutes++; }
@@ -406,6 +455,7 @@ if (routes.accountant) { app.use('/api/accountant', routes.accountant); mountedR
 if (routes.studentPayments) { app.use('/api/accountant', routes.studentPayments); mountedRoutes++; }
 if (routes.paymentAnalytics) { app.use('/api/accountant', routes.paymentAnalytics); mountedRoutes++; }
 if (routes.accountantManagement) { app.use('/api/accountant', routes.accountantManagement); mountedRoutes++; }
+if (routes.accountantAdvanced) { app.use('/api/accountant-advanced', routes.accountantAdvanced); mountedRoutes++; }
 if (routes.classes) { app.use('/api/classes', routes.classes); mountedRoutes++; }
 if (routes.docs) { app.use('/api/docs', routes.docs); mountedRoutes++; }
 
@@ -484,6 +534,7 @@ if (routes.emergencyContacts) { app.use('/api/emergency-contacts', routes.emerge
 if (routes.invoices) { app.use('/api/invoices', routes.invoices); mountedRoutes++; }
 if (routes.events) { app.use('/api/events', routes.events); mountedRoutes++; }
 if (routes.forums) { app.use('/api/forums', routes.forums); mountedRoutes++; }
+if (routes.advancedRoleFeatures) { app.use('/api/advanced-role-features', routes.advancedRoleFeatures); mountedRoutes++; }
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -514,33 +565,44 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => {
+// Start server with dynamic port selection
+const PORT = process.env.PORT || 5000;
+const startServer = (port) => {
+  server.listen(port, () => {
   console.log('\n' + '='.repeat(80));
   console.log('🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM');
   console.log('='.repeat(80));
-  console.log(`🚀 Server: http://localhost:${PORT}`);
-  console.log(`📊 Database: ${process.env.DB_NAME || 'school_management'}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ Mounted ${mountedRoutes} route modules`);
-  console.log('\n📡 API Endpoints:');
-  console.log('   /api/auth                    - Authentication');
-  console.log('   /api/unified-integration     - 🌟 Master Integration API');
-  console.log('   /api/developers              - Developers Team');
-  console.log('   /api/leadership              - School Leadership');
-  console.log('   /api/trades                  - School Trades');
-  console.log('   /api/services                - School Services');
-  console.log('   /api/services-advanced       - Advanced Services & Coaches');
-  console.log('   /api/sports                  - Sports & Teams');
-  console.log('   /api/sports-players          - Players & Goals');
-  console.log('   /api/news                    - News Articles');
-  console.log('   /api/search                  - Global Search');
-  console.log('   /api/comprehensive-staff     - Staff Management');
-  console.log('   /api/system-updates          - System Management');
-  console.log('   /api/advisor                 - Advisor Dashboard');
-  console.log('\n✅ All systems operational - Unified Integration Active');
-  console.log('='.repeat(80) + '\n');
-});
+    console.log(`🚀 Server: http://localhost:${port}`);
+    console.log(`📊 Database: ${process.env.DB_NAME || 'school_management'}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✅ Mounted ${mountedRoutes} route modules`);
+    console.log('\n📡 API Endpoints:');
+    console.log('   /api/auth                    - Authentication');
+    console.log('   /api/unified-integration     - 🌟 Master Integration API');
+    console.log('   /api/developers              - Developers Team');
+    console.log('   /api/leadership              - School Leadership');
+    console.log('   /api/trades                  - School Trades');
+    console.log('   /api/services                - School Services');
+    console.log('   /api/services-advanced       - Advanced Services & Coaches');
+    console.log('   /api/sports                  - Sports & Teams');
+    console.log('   /api/sports-players          - Players & Goals');
+    console.log('   /api/news                    - News Articles');
+    console.log('   /api/search                  - Global Search');
+    console.log('   /api/comprehensive-staff     - Staff Management');
+    console.log('   /api/system-updates          - System Management');
+    console.log('   /api/advisor                 - Advisor Dashboard');
+    console.log('\n✅ All systems operational - Unified Integration Active');
+    console.log('='.repeat(80) + '\n');
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️  Port ${port} is busy, trying ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('❌ Server error:', err);
+    }
+  });
+};
+
+startServer(PORT);
 
 module.exports = app;

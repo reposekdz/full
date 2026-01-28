@@ -18,8 +18,8 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
 import { Progress } from '@/app/components/ui/progress';
-
-const API_BASE = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
+import { toast } from 'sonner';
 
 interface Budget {
   id: number;
@@ -159,33 +159,23 @@ const FinancialManagementSystem: React.FC = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { 'Authorization': `Bearer ${token}` };
-
       const [statsRes, budgetsRes, expensesRes, incomesRes, invoicesRes] = await Promise.all([
-        fetch(`${API_BASE}/financial-system/stats`, { headers }),
-        fetch(`${API_BASE}/financial-system/budgets?limit=100`, { headers }),
-        fetch(`${API_BASE}/financial-system/expenses?limit=100`, { headers }),
-        fetch(`${API_BASE}/financial-system/income?limit=100`, { headers }),
-        fetch(`${API_BASE}/invoices?limit=100`, { headers })
+        apiService.getFinancialStats(),
+        apiService.getBudgets({ limit: 100 }),
+        apiService.getExpenses({ limit: 100 }),
+        apiService.getIncome({ limit: 100 }),
+        apiService.getInvoices({ limit: 100 })
       ]);
 
-      const [statsData, budgetsData, expensesData, incomesData, invoicesData] = await Promise.all([
-        statsRes.json(),
-        budgetsRes.json(),
-        expensesRes.json(),
-        incomesRes.json(),
-        invoicesRes.json()
-      ]);
-
-      if (statsData.success) setStats(statsData.stats || statsData);
-      if (budgetsData.success) setBudgets(budgetsData.budgets || []);
-      if (expensesData.success) setExpenses(expensesData.expenses || []);
-      if (incomesData.success) setIncomes(incomesData.income || []);
-      if (invoicesData.success) setInvoices(invoicesData.invoices || invoicesData.data || []);
+      if (statsRes.success) setStats(statsRes.stats || statsRes);
+      if (budgetsRes.success) setBudgets(budgetsRes.budgets || []);
+      if (expensesRes.success) setExpenses(expensesRes.expenses || []);
+      if (incomesRes.success) setIncomes(incomesRes.income || []);
+      if (invoicesRes.success) setInvoices(invoicesRes.invoices || invoicesRes.data || []);
 
     } catch (error) {
       console.error('Fetch error:', error);
+      toast.error('Failed to fetch financial data');
     } finally {
       setLoading(false);
     }
@@ -195,50 +185,37 @@ const FinancialManagementSystem: React.FC = () => {
     setRefreshing(true);
     await fetchAllData();
     setRefreshing(false);
+    toast.success('Data refreshed');
   };
 
   const handleCreateBudget = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/financial-system/budgets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...budgetForm,
-          allocated_amount: parseFloat(budgetForm.allocated_amount)
-        })
+      const data = await apiService.createBudget({
+        ...budgetForm,
+        allocated_amount: parseFloat(budgetForm.allocated_amount)
       });
 
-      const data = await response.json();
       if (data.success) {
         setShowBudgetDialog(false);
         setBudgetForm({ category: '', allocated_amount: '', fiscal_year: new Date().getFullYear().toString() });
         fetchAllData();
+        toast.success('Budget created successfully');
+      } else {
+        toast.error(data.message || 'Failed to create budget');
       }
     } catch (error) {
       console.error('Create budget error:', error);
+      toast.error('An error occurred while creating the budget');
     }
   };
 
   const handleCreateExpense = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/financial-system/expenses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...expenseForm,
-          amount: parseFloat(expenseForm.amount)
-        })
+      const data = await apiService.createExpense({
+        ...expenseForm,
+        amount: parseFloat(expenseForm.amount)
       });
 
-      const data = await response.json();
       if (data.success) {
         setShowExpenseDialog(false);
         setExpenseForm({
@@ -251,28 +228,23 @@ const FinancialManagementSystem: React.FC = () => {
           receipt_number: ''
         });
         fetchAllData();
+        toast.success('Expense recorded successfully');
+      } else {
+        toast.error(data.message || 'Failed to record expense');
       }
     } catch (error) {
       console.error('Create expense error:', error);
+      toast.error('An error occurred while recording the expense');
     }
   };
 
   const handleCreateIncome = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE}/financial-system/income`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...incomeForm,
-          amount: parseFloat(incomeForm.amount)
-        })
+      const data = await apiService.createIncome({
+        ...incomeForm,
+        amount: parseFloat(incomeForm.amount)
       });
 
-      const data = await response.json();
       if (data.success) {
         setShowIncomeDialog(false);
         setIncomeForm({
@@ -285,22 +257,28 @@ const FinancialManagementSystem: React.FC = () => {
           receipt_number: ''
         });
         fetchAllData();
+        toast.success('Income recorded successfully');
+      } else {
+        toast.error(data.message || 'Failed to record income');
       }
     } catch (error) {
       console.error('Create income error:', error);
+      toast.error('An error occurred while recording the income');
     }
   };
 
   const handleApproveExpense = async (expenseId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_BASE}/financial-system/expenses/${expenseId}/approve`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      fetchAllData();
+      const data = await apiService.approveExpense(expenseId);
+      if (data.success) {
+        fetchAllData();
+        toast.success('Expense approved successfully');
+      } else {
+        toast.error(data.message || 'Failed to approve expense');
+      }
     } catch (error) {
       console.error('Approve expense error:', error);
+      toast.error('An error occurred while approving the expense');
     }
   };
 

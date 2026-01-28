@@ -18,7 +18,7 @@ const auth = require('../middleware/auth');
 // ==================================================
 
 // 41. API ya Student Performance Deep Analytics
-router.get('/analytics/students/performance-deep', auth, async (req, res) => {
+router.get('/analytics/students/performance-deep', auth.authenticate, async (req, res) => {
   try {
     const { 
       student_id = null,
@@ -110,7 +110,7 @@ router.get('/analytics/students/performance-deep', auth, async (req, res) => {
 });
 
 // 42. API ya Learning Pattern Analysis
-router.get('/analytics/learning/patterns', auth, async (req, res) => {
+router.get('/analytics/learning/patterns', auth.authenticate, async (req, res) => {
   try {
     const { 
       timeframe = 'month',
@@ -177,7 +177,7 @@ router.get('/analytics/learning/patterns', auth, async (req, res) => {
 });
 
 // 43. API ya Academic Progress Tracking
-router.get('/analytics/academic/progress/:studentId', auth, async (req, res) => {
+router.get('/analytics/academic/progress/:studentId', auth.authenticate, async (req, res) => {
   try {
     const { studentId } = req.params;
     const { period = 'semester' } = req.query;
@@ -242,7 +242,7 @@ router.get('/analytics/academic/progress/:studentId', auth, async (req, res) => 
 });
 
 // 44. API ya Comparative Analysis Between Students
-router.get('/analytics/students/comparison', auth, async (req, res) => {
+router.get('/analytics/students/comparison', auth.authenticate, async (req, res) => {
   try {
     const { 
       student_ids,
@@ -318,7 +318,7 @@ router.get('/analytics/students/comparison', auth, async (req, res) => {
 });
 
 // 45. API ya Predictive Student Risk Assessment
-router.get('/analytics/students/risk-assessment', auth, async (req, res) => {
+router.get('/analytics/students/risk-assessment', auth.authenticate, async (req, res) => {
   try {
     const { 
       threshold = 60,
@@ -411,7 +411,7 @@ router.get('/analytics/students/risk-assessment', auth, async (req, res) => {
 // ==================================================
 
 // 46. API ya Revenue Analytics & Forecasting
-router.get('/analytics/finance/revenue', auth, async (req, res) => {
+router.get('/analytics/finance/revenue', auth.authenticate, async (req, res) => {
   try {
     const { 
       period = 'year',
@@ -487,7 +487,7 @@ router.get('/analytics/finance/revenue', auth, async (req, res) => {
 });
 
 // 47. API ya Payment Behavior Analysis
-router.get('/analytics/finance/payment-behavior', auth, async (req, res) => {
+router.get('/analytics/finance/payment-behavior', auth.authenticate, async (req, res) => {
   try {
     const { student_id = null, timeframe = 'semester' } = req.query;
     const days = timeframe === 'month' ? 30 : timeframe === 'semester' ? 120 : 365;

@@ -77,9 +77,7 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
     address: '',
     date_of_birth: '',
     gender: '' as 'Male' | 'Female' | '',
-    trade_code: '',
-    level_number: '',
-    level_suffix: ''
+    serial_code: ''
   });
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,8 +111,8 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
       setError(translations.selectRoleErr);
       return;
     }
-    if (formData.role === 'student' && !formData.trade_code) {
-      setError(translations.selectTradeErr);
+    if (formData.role === 'student' && !formData.serial_code) {
+      setError(isKinyarwanda ? 'Wibagiwe gushyiramo nimero y\'umunyeshuri' : 'Please enter your serial code');
       return;
     }
 
@@ -137,23 +135,29 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
           setError(result.message || 'Registration failed');
         }
       } else {
-        const result = await apiService.registerStudent({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          date_of_birth: formData.date_of_birth || undefined,
-          gender: formData.gender || undefined,
-          trade_code: formData.trade_code,
-          level_number: parseInt(formData.level_number),
-          level_suffix: formData.level_suffix || undefined,
-          address: formData.address || undefined
+        const response = await fetch('http://localhost:5000/api/auth/register/student-serial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serial_code: formData.serial_code,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            phone: formData.phone,
+            password: formData.password,
+            date_of_birth: formData.date_of_birth || undefined,
+            gender: formData.gender || undefined,
+            address: formData.address || undefined
+          })
         });
 
+        const result = await response.json();
+
         if (result.success && result.token) {
-          setSuccess(`${translations.studentIdMsg}${result.user.student_id}`);
-          setTimeout(() => onNavigate(getRoleDashboard('student')), 2000);
+          localStorage.setItem('token', result.token);
+          setSuccess(isKinyarwanda ? `Kwiyandikisha byagenze neza! Nimero yawe ni: ${formData.serial_code}` : `Registration successful! Your serial code: ${formData.serial_code}`);
+          setTimeout(() => {
+            window.location.href = '/dashboard-student';
+          }, 2000);
         } else {
           setError(result.message || 'Registration failed');
         }
@@ -288,15 +292,31 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                     </div>
                   </div>
 
-                  <div>
-                    <Label>{translations.email} {formData.role === 'parent' ? translations.optional : '*'}</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required={formData.role === 'student'}
-                    />
-                  </div>
+                  {formData.role === 'student' && (
+                    <div>
+                      <Label>{isKinyarwanda ? 'Nimero y\'Umunyeshuri (Serial Code) *' : 'Student Serial Code *'}</Label>
+                      <Input
+                        value={formData.serial_code}
+                        onChange={(e) => setFormData({ ...formData, serial_code: e.target.value })}
+                        placeholder={isKinyarwanda ? 'Shyiramo nimero yawe' : 'Enter your serial code'}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isKinyarwanda ? 'Nimero yawe yaje kuri email y\'ababyeyi bawe cyangwa yakwerekanwe n\'ishuri' : 'Your serial code was sent to your parent\'s email or provided by the school'}
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.role === 'parent' && (
+                    <div>
+                      <Label>{translations.email} {translations.optional}</Label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <Label>{translations.phone}</Label>
@@ -334,29 +354,6 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                         </div>
                       </div>
 
-                      <div>
-                        <Label>{translations.selectTrade}</Label>
-                        <Select value={formData.trade_code} onValueChange={(value) => {
-                          const selectedTrade = trades.find(t => t.trade_code === value);
-                          setFormData({ 
-                            ...formData, 
-                            trade_code: value,
-                            level_number: selectedTrade?.level_number?.toString() || '',
-                            level_suffix: selectedTrade?.level_suffix || ''
-                          });
-                        }}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={translations.chooseTrade} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {trades.map((trade) => (
-                              <SelectItem key={trade.id} value={trade.trade_code}>
-                                {trade.full_name || trade.trade_name} - Level {trade.level_number}{trade.level_suffix || ''}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </>
                   )}
 

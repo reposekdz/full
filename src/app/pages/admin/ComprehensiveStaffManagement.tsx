@@ -351,7 +351,7 @@ const ComprehensiveStaffManagement: React.FC = () => {
               <Select value={formData.trade_id} onValueChange={(value) => setFormData({ ...formData, trade_id: value })}>
                 <SelectTrigger className="border-yellow-300"><SelectValue placeholder="Select trade" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {trades.map(trade => <SelectItem key={trade.id} value={trade.id.toString()}>{trade.title}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -361,7 +361,7 @@ const ComprehensiveStaffManagement: React.FC = () => {
               <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
                 <SelectTrigger className="border-yellow-300"><SelectValue placeholder="Select level" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {levels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
                 </SelectContent>
               </Select>

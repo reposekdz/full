@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const { pool } = require('../config/database');
 const multer = require('multer');
 const path = require('path');
 
@@ -31,7 +31,7 @@ router.get('/articles', async (req, res) => {
     }
     
     query += ' ORDER BY views DESC, created_at DESC';
-    const [articles] = await db.query(query, params);
+    const [articles] = await pool.execute(query, params);
     res.json({ success: true, articles });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -41,10 +41,10 @@ router.get('/articles', async (req, res) => {
 // Get single article
 router.get('/articles/:id', async (req, res) => {
   try {
-    const [articles] = await db.query('SELECT * FROM knowledge_articles WHERE id = ?', [req.params.id]);
+    const [articles] = await pool.execute('SELECT * FROM knowledge_articles WHERE id = ?', [req.params.id]);
     if (articles.length === 0) return res.status(404).json({ success: false, message: 'Article not found' });
     
-    await db.query('UPDATE knowledge_articles SET views = views + 1 WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE knowledge_articles SET views = views + 1 WHERE id = ?', [req.params.id]);
     res.json({ success: true, article: articles[0] });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -57,9 +57,9 @@ router.post('/articles', upload.single('attachment'), async (req, res) => {
     const { title, content, category, tags, author_id } = req.body;
     const attachment = req.file ? req.file.filename : null;
     
-    const [result] = await db.query(
+    const [result] = await pool.execute(
       'INSERT INTO knowledge_articles (title, content, category, tags, attachment, author_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [title, content, category, tags, attachment, author_id]
+      [title || 'Untitled', content || '', category || 'General', tags || '', attachment, author_id || null]
     );
     
     res.json({ success: true, id: result.insertId });
@@ -85,7 +85,7 @@ router.put('/articles/:id', upload.single('attachment'), async (req, res) => {
     query += ' WHERE id = ?';
     params.push(req.params.id);
     
-    await db.query(query, params);
+    await pool.execute(query, params);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -95,7 +95,7 @@ router.put('/articles/:id', upload.single('attachment'), async (req, res) => {
 // Delete article
 router.delete('/articles/:id', async (req, res) => {
   try {
-    await db.query('DELETE FROM knowledge_articles WHERE id = ?', [req.params.id]);
+    await pool.execute('DELETE FROM knowledge_articles WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -105,7 +105,7 @@ router.delete('/articles/:id', async (req, res) => {
 // Get categories
 router.get('/categories', async (req, res) => {
   try {
-    const [categories] = await db.query('SELECT DISTINCT category, COUNT(*) as count FROM knowledge_articles GROUP BY category');
+    const [categories] = await pool.execute('SELECT DISTINCT category, COUNT(*) as count FROM knowledge_articles GROUP BY category');
     res.json({ success: true, categories });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

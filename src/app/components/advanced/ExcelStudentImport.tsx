@@ -85,9 +85,9 @@ const ExcelStudentImport: React.FC<ExcelStudentImportProps> = ({ onNavigate }) =
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
-      if (classFilter) params.append('class_id', classFilter);
-      if (courseFilter) params.append('course_id', courseFilter);
-      if (academicYearFilter) params.append('academic_year_id', academicYearFilter);
+      if (classFilter && classFilter !== 'all') params.append('class_id', classFilter);
+      if (courseFilter && courseFilter !== 'all') params.append('course_id', courseFilter);
+      if (academicYearFilter && academicYearFilter !== 'all') params.append('academic_year_id', academicYearFilter);
 
       const response = await fetch(`${API_BASE}/advanced/excel-views/students?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -365,7 +365,7 @@ const ExcelStudentImport: React.FC<ExcelStudentImportProps> = ({ onNavigate }) =
                         <SelectValue placeholder="All classes" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All classes</SelectItem>
+                        <SelectItem value="all">All classes</SelectItem>
                         <SelectItem value="1">Class 1A</SelectItem>
                         <SelectItem value="2">Class 1B</SelectItem>
                         <SelectItem value="3">Class 2A</SelectItem>
@@ -381,7 +381,7 @@ const ExcelStudentImport: React.FC<ExcelStudentImportProps> = ({ onNavigate }) =
                         <SelectValue placeholder="All courses" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All courses</SelectItem>
+                        <SelectItem value="all">All courses</SelectItem>
                         <SelectItem value="1">Software Development</SelectItem>
                         <SelectItem value="2">Building Construction</SelectItem>
                         <SelectItem value="3">Electrical Installation</SelectItem>
@@ -396,7 +396,7 @@ const ExcelStudentImport: React.FC<ExcelStudentImportProps> = ({ onNavigate }) =
                         <SelectValue placeholder="All years" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All years</SelectItem>
+                        <SelectItem value="all">All years</SelectItem>
                         <SelectItem value="1">2024-2025</SelectItem>
                         <SelectItem value="2">2025-2026</SelectItem>
                         <SelectItem value="3">2026-2027</SelectItem>

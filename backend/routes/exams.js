@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { notifyExamResult } = require('../utils/parentNotifications');
 
 // Get all exams with filters
 router.get('/', async (req, res) => {
@@ -183,13 +184,13 @@ router.post('/:id/results', authenticateToken, async (req, res) => {
     const { student_id, obtained_marks, remarks } = req.body;
     const examId = req.params.id;
 
-    const [exams] = await pool.query('SELECT total_marks, passing_marks FROM exams WHERE id = ?', [examId]);
+    const [exams] = await pool.query('SELECT title, total_marks, passing_marks FROM exams WHERE id = ?', [examId]);
     if (exams.length === 0) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
     }
 
     const exam = exams[0];
-    const percentage = (obtained_marks / exam.total_marks) * 100;
+    const percentage = Math.round((obtained_marks / exam.total_marks) * 100);
     let grade_letter = 'F';
     
     if (percentage >= 90) grade_letter = 'A';
@@ -208,6 +209,18 @@ router.post('/:id/results', authenticateToken, async (req, res) => {
         remarks = VALUES(remarks),
         result_date = VALUES(result_date)
     `, [examId, student_id, obtained_marks, grade_letter, percentage, remarks]);
+
+    // Notify parent
+    try {
+      await notifyExamResult(student_id, {
+        title: exam.title,
+        obtained_marks,
+        total_marks: exam.total_marks,
+        percentage
+      });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about exam result:', notifyError);
+    }
 
     res.json({ success: true, message: 'Exam result submitted successfully' });
   } catch (error) {

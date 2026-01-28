@@ -8,9 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
 
 export default function HostelPage() {
   const [rooms, setRooms] = useState<any[]>([]);
@@ -25,32 +23,27 @@ export default function HostelPage() {
 
   const fetchRooms = async () => {
     try {
-      const res = await axios.get(`${API_URL}/hostel/rooms`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setRooms(res.data);
+      const data = await apiService.getHostelRooms();
+      setRooms(data);
     } catch (err) { console.error(err); }
   };
 
   const fetchApplications = async () => {
     try {
-      const res = await axios.get(`${API_URL}/hostel/my-applications`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setApplications(res.data);
+      const data = await apiService.getMyHostelApplications();
+      setApplications(data);
     } catch (err) { console.error(err); }
   };
 
   const applyHostel = async () => {
     try {
-      await axios.post(`${API_URL}/hostel/apply`, { room_id: selectedRoom.id, reason }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await apiService.applyForHostel(selectedRoom.id, reason);
+      if (res.error) throw new Error(res.error);
       fetchApplications();
       setSelectedRoom(null);
       setReason('');
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Application failed');
+      alert(err.message || 'Application failed');
     }
   };
 

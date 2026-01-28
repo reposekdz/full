@@ -31,6 +31,7 @@ const MANAGEMENT_ROLES = [
   { value: 'teacher' as UserRole, label: 'Teacher', labelRw: 'Umwarimu', icon: GraduationCap, color: 'from-yellow-400 to-green-500' },
   { value: 'director_study' as UserRole, label: 'Director of Study', labelRw: "DOS", icon: BookOpen, color: 'from-green-400 to-yellow-500' },
   { value: 'director_discipline' as UserRole, label: 'Director of Discipline', labelRw: "DOD", icon: Shield, color: 'from-yellow-500 to-green-400' },
+  { value: 'advisor' as UserRole, label: 'Advisor', labelRw: 'Umujyanama', icon: Target, color: 'from-blue-500 to-purple-500' },
   { value: 'headmaster' as UserRole, label: 'Head Master', labelRw: 'Umuyobozi Mukuru', icon: School, color: 'from-green-500 to-yellow-400' },
   { value: 'accountant' as UserRole, label: 'Accountant', labelRw: 'Umubare', icon: DollarSign, color: 'from-yellow-600 to-green-500' },
   { value: 'stock_manager' as UserRole, label: 'Stock Manager', labelRw: "Ububiko", icon: Package, color: 'from-green-600 to-yellow-500' },
@@ -77,10 +78,11 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
         
         if (result.success) {
           setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
-          if (result.token) localStorage.setItem('token', result.token);
-          setTimeout(() => {
-            onNavigate('dashboard-student');
-          }, 1000);
+          if (result.token) {
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+          }
+          window.location.href = `/${getRoleDashboard(selectedRole)}`;
         } else {
           setError(result.message || 'Invalid serial code or password');
         }
@@ -94,26 +96,31 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
         
         if (result.success) {
           setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
-          if (result.token) localStorage.setItem('token', result.token);
-          setTimeout(() => {
-            onNavigate('dashboard-parent');
-          }, 1000);
+          if (result.token) {
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+          }
+          window.location.href = '/dashboard-parent';
         } else {
           setError(result.message || 'Invalid phone or password');
         }
       } else {
-        result = await loginWithRole(selectedRole, {
-          email: email,
-          password: password
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: email, password })
         });
-
+        result = await response.json();
+        
         if (result.success) {
           setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
-          setTimeout(() => {
-            onNavigate((result as any).dashboardPage || getRoleDashboard(selectedRole));
-          }, 1000);
+          if (result.token) {
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+          }
+          window.location.href = `/${getRoleDashboard(selectedRole)}`;
         } else {
-          setError(language === 'rw' ? 'Email cyangwa ijambo ry\'ibanga sibyo' : 'Invalid credentials');
+          setError(result.message || (language === 'rw' ? 'Email cyangwa ijambo ry\'ibanga sibyo' : 'Invalid credentials'));
         }
       }
     } catch (err) {

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal y'Umuyobozi Mukuru</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .navbar { background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.3em; font-weight: bold; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 1.5em; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px 20px; }
+        .welcome { background: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .welcome h1 { color: #8e44ad; margin-bottom: 10px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        .card-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .card-icon { font-size: 2.5em; }
+        .card-title { font-size: 1.3em; color: #333; font-weight: bold; }
+        .feature-list { list-style: none; }
+        .feature-list li { padding: 10px; border-bottom: 1px solid #eee; }
+        .btn { background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; display: inline-block; margin-top: 15px; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-box { background: linear-gradient(135deg, #8e44ad, #9b59b6); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .stat-number { font-size: 2.5em; font-weight: bold; }
+        .back-link { color: white; text-decoration: none; padding: 8px 15px; background: rgba(255,255,255,0.2); border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">⚙️ PORTAL Y'UMUYOBOZI MUKURU</div>
+        <div class="user-info">
+            <a href="home.html" class="back-link">← Ahabanza</a>
+            <div class="avatar">⚙️</div>
+            <span>Habimana David</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="welcome">
+            <h1>Murakaza neza, Umuyobozi Habimana David!</h1>
+            <p>Hano ushobora gucunga sisitemu yose y'ishuri</p>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-number">500</div>
+                <div class="stat-label">Abanyeshuri</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">50</div>
+                <div class="stat-label">Abarimu</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">100</div>
+                <div class="stat-label">Abakozi</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">50M</div>
+                <div class="stat-label">Amafaranga</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👨🎓</div>
+                    <div class="card-title">Gucunga Abanyeshuri</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Kwandikisha abanyeshuri</li>
+                    <li>Profil z'abanyeshuri</li>
+                    <li>Amanota n'ibitabo</li>
+                    <li>Kwitabira amasomo</li>
+                    <li>Raporo z'abanyeshuri</li>
+                </ul>
+                <a href="#" class="btn">Reba Abanyeshuri</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👨🏫</div>
+                    <div class="card-title">Gucunga Abarimu</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Kwandikisha abarimu</li>
+                    <li>Profil z'abarimu</li>
+                    <li>Gahunda y'amasomo</li>
+                    <li>Imishahara y'abarimu</li>
+                    <li>Raporo z'abarimu</li>
+                </ul>
+                <a href="#" class="btn">Reba Abarimu</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">Gucunga Abakozi</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Kwandikisha abakozi</li>
+                    <li>Profil z'abakozi</li>
+                    <li>Imishahara y'abakozi</li>
+                    <li>Kwitabira kw'abakozi</li>
+                    <li>Raporo z'abakozi</li>
+                </ul>
+                <a href="#" class="btn">Reba Abakozi</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">Gucunga Amafaranga</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Kwishyura kw'abanyeshuri</li>
+                    <li>Imishahara y'abakozi</li>
+                    <li>Ibyinjijwe n'ibyasohowe</li>
+                    <li>Raporo z'amafaranga</li>
+                    <li>Imibare y'amafaranga</li>
+                </ul>
+                <a href="#" class="btn">Reba Amafaranga</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <div class="card-title">Gucunga Amasomo</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Gahunda y'amasomo</li>
+                    <li>Ibizamini n'ibikorwa</li>
+                    <li>Amanota n'ibitabo</li>
+                    <li>Raporo z'amasomo</li>
+                    <li>Imibare y'amasomo</li>
+                </ul>
+                <a href="#" class="btn">Reba Amasomo</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">Raporo n'Imibare</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Raporo z'ishuri</li>
+                    <li>Imibare y'ishuri</li>
+                    <li>Gusuzuma imikorere</li>
+                    <li>Raporo z'umwaka</li>
+                    <li>Imibare y'iterambere</li>
+                </ul>
+                <a href="#" class="btn">Reba Raporo</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">Igenamiterere</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Igenamiterere ry'ishuri</li>
+                    <li>Uburenganzira bw'abakozi</li>
+                    <li>Umutekano w'amakuru</li>
+                    <li>Backup n'ibyabitswe</li>
+                    <li>Raporo z'umutekano</li>
+                </ul>
+                <a href="#" class="btn">Reba Igenamiterere</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔔</div>
+                    <div class="card-title">Kumenyesha n'Itangazo</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Kohereza itangazo</li>
+                    <li>Kumenyesha abanyeshuri</li>
+                    <li>Kumenyesha ababyeyi</li>
+                    <li>Kumenyesha abakozi</li>
+                    <li>Raporo z'itangazo</li>
+                </ul>
+                <a href="#" class="btn">Tanga Itangazo</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📖</div>
+                    <div class="card-title">Isomero ry'Ibitabo</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Ububiko bw'ibitabo</li>
+                    <li>Guhagarika ibitabo</li>
+                    <li>Kugarura ibitabo</li>
+                    <li>Raporo z'isomero</li>
+                    <li>Imibare y'ibitabo</li>
+                </ul>
+                <a href="#" class="btn">Reba Isomero</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🏠</div>
+                    <div class="card-title">Gucunga Amacumbi</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Amacumbi y'ishuri</li>
+                    <li>Gutanga ibyumba</li>
+                    <li>Kwishyura amacumbi</li>
+                    <li>Raporo z'amacumbi</li>
+                    <li>Imibare y'amacumbi</li>
+                </ul>
+                <a href="#" class="btn">Reba Amacumbi</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🏥</div>
+                    <div class="card-title">Ubuzima bw'Abanyeshuri</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Amateka y'ubuzima</li>
+                    <li>Imiti n'ubuvuzi</li>
+                    <li>Kliniki y'ishuri</li>
+                    <li>Raporo z'ubuzima</li>
+                    <li>Kumenyesha ababyeyi</li>
+                </ul>
+                <a href="#" class="btn">Reba Ubuzima</a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔒</div>
+                    <div class="card-title">Umutekano w'Amakuru</div>
+                </div>
+                <ul class="feature-list">
+                    <li>Uburenganzira bw'abakozi</li>
+                    <li>Amateka y'ibikorwa</li>
+                    <li>Backup y'amakuru</li>
+                    <li>Raporo z'umutekano</li>
+                    <li>Gusuzuma umutekano</li>
+                </ul>
+                <a href="#" class="btn">Reba Umutekano</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

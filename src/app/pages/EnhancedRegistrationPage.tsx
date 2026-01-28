@@ -221,11 +221,14 @@ const EnhancedRegistrationPage: React.FC<EnhancedRegistrationPageProps> = ({ onN
       const data = await response.json();
 
       if (data.success) {
+        // Store user data and token
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
         setSuccess(true);
-        // Auto login after successful registration
+        // Redirect to parent dashboard
         setTimeout(() => {
-          const dashboard = getRoleDashboard('parent');
-          onNavigate(dashboard);
+          onNavigate('/parent/dashboard');
         }, 2000);
       } else {
         setError(data.message || 'Registration failed');

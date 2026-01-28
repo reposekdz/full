@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { notifyHostelAllocation, notifyHostelCheckout } = require('../utils/parentNotifications');
 
 router.get('/rooms', async (req, res) => {
   try {
@@ -274,6 +275,22 @@ router.put('/applications/:id/approve', authenticateToken, requireRole('admin', 
 
     await pool.query('COMMIT');
 
+    // Notify parent
+    try {
+      const [[roomInfo]] = await pool.query(
+        'SELECT room_number, hostel_name FROM hostel_rooms WHERE id = ?',
+        [application.room_id]
+      );
+      await notifyHostelAllocation(application.student_id, {
+        hostel_name: roomInfo.hostel_name,
+        room_number: roomInfo.room_number,
+        bed_number: bed_number,
+        check_in_date: application.check_in_date
+      });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about hostel allocation:', notifyError);
+    }
+
     res.json({
       success: true,
       message: 'Application approved and allocation created',
@@ -379,7 +396,7 @@ router.put('/allocations/:id/checkout', authenticateToken, requireRole('admin', 
     const { check_out_date } = req.body;
 
     const [[allocation]] = await pool.query(
-      'SELECT room_id, status FROM hostel_allocations WHERE id = ?',
+      'SELECT room_id, student_id, status FROM hostel_allocations WHERE id = ?',
       [id]
     );
 
@@ -404,6 +421,21 @@ router.put('/allocations/:id/checkout', authenticateToken, requireRole('admin', 
     );
 
     await pool.query('COMMIT');
+
+    // Notify parent
+    try {
+      const [[roomInfo]] = await pool.query(
+        'SELECT room_number, hostel_name FROM hostel_rooms WHERE id = ?',
+        [allocation.room_id]
+      );
+      await notifyHostelCheckout(allocation.student_id, {
+        hostel_name: roomInfo.hostel_name,
+        room_number: roomInfo.room_number,
+        check_out_date: check_out_date || new Date()
+      });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about hostel checkout:', notifyError);
+    }
 
     res.json({ success: true, message: 'Student checked out successfully' });
   } catch (error) {

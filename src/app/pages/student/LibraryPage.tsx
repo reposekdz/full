@@ -6,9 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/ca
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import { apiService } from '@/app/services/apiService';
 
 export default function LibraryPage() {
   const [books, setBooks] = useState<any[]>([]);
@@ -23,31 +21,26 @@ export default function LibraryPage() {
 
   const fetchBooks = async () => {
     try {
-      const res = await axios.get(`${API_URL}/library/books?search=${searchTerm}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setBooks(res.data);
+      const data = await apiService.getLibraryBooks({ search: searchTerm });
+      setBooks(data);
     } catch (err) { console.error(err); }
   };
 
   const fetchMyIssues = async () => {
     try {
-      const res = await axios.get(`${API_URL}/library/my-issues`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setMyIssues(res.data);
+      const data = await apiService.getMyLibraryIssues();
+      setMyIssues(data);
     } catch (err) { console.error(err); }
   };
 
   const issueBook = async (bookId: number) => {
     try {
-      await axios.post(`${API_URL}/library/issue`, { book_id: bookId }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await apiService.issueLibraryBook(bookId);
+      if (res.error) throw new Error(res.error);
       fetchBooks();
       fetchMyIssues();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to issue book');
+      alert(err.message || 'Failed to issue book');
     }
   };
 

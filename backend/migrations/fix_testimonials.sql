@@ -1,0 +1,14 @@
+-- Fix testimonials table
+
+CREATE TABLE IF NOT EXISTS testimonials (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(255),
+  content TEXT NOT NULL,
+  image VARCHAR(255),
+  rating INT DEFAULT 5,
+  is_featured BOOLEAN DEFAULT FALSE,
+  status ENUM('active', 'inactive') DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

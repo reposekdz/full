@@ -40,11 +40,28 @@ async function initDatabase() {
       CREATE TABLE users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        username VARCHAR(255) UNIQUE,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255),
         role ENUM('student', 'teacher', 'dos', 'admin', 'parent') NOT NULL,
+        role_id INT,
+        phone VARCHAR(20),
+        phone_type ENUM('smartphone', 'basic') DEFAULT 'smartphone',
+        is_whatsapp_enabled BOOLEAN DEFAULT false,
+        student_id VARCHAR(50),
+        parent_id INT,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        date_of_birth DATE,
+        gender ENUM('Male', 'Female', 'Other'),
+        address TEXT,
+        emergency_contact TEXT,
+        medical_info TEXT,
+        profile_image VARCHAR(500),
         avatar_url VARCHAR(500),
         is_active BOOLEAN DEFAULT true,
+        last_login TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 

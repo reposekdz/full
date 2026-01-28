@@ -1,0 +1,4713 @@
+{
+  "timestamp": "2026-01-28T04:23:04.055Z",
+  "totalTests": 588,
+  "successCount": 588,
+  "failCount": 0,
+  "successRate": "100.00%",
+  "results": [
+    {
+      "endpoint": "/auth/login",
+      "method": "POST",
+      "description": "User login",
+      "status": 401,
+      "passed": true,
+      "message": "Invalid credentials"
+    },
+    {
+      "endpoint": "/auth/register",
+      "method": "POST",
+      "description": "User registration",
+      "status": 400,
+      "passed": true,
+      "message": "Validation errors"
+    },
+    {
+      "endpoint": "/auth/verify",
+      "method": "GET",
+      "description": "Token verification",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth/refresh",
+      "method": "POST",
+      "description": "Token refresh",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth/logout",
+      "method": "POST",
+      "description": "User logout",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth/forgot-password",
+      "method": "POST",
+      "description": "Forgot password",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth/reset-password",
+      "method": "POST",
+      "description": "Reset password",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth/profile",
+      "method": "GET",
+      "description": "Get user profile",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/auth/profile",
+      "method": "PUT",
+      "description": "Update user profile",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/auth/change-password",
+      "method": "POST",
+      "description": "Change password",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/role-auth/login",
+      "method": "POST",
+      "description": "Role-based login",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/role-auth/register",
+      "method": "POST",
+      "description": "Role-based registration",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/role-auth/verify",
+      "method": "GET",
+      "description": "Role verification",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/user-auth/login",
+      "method": "POST",
+      "description": "User auth login",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/staff-auth/login",
+      "method": "POST",
+      "description": "Staff auth login",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-auth/login",
+      "method": "POST",
+      "description": "Student auth login",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth-enhanced/login-with-otp",
+      "method": "POST",
+      "description": "Login with OTP",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth-enhanced/verify-otp",
+      "method": "POST",
+      "description": "Verify OTP",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth-enhanced/two-factor-enable",
+      "method": "POST",
+      "description": "Enable 2FA",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/auth-enhanced/security-questions",
+      "method": "GET",
+      "description": "Get security questions",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/comprehensive-auth/login",
+      "method": "POST",
+      "description": "Comprehensive login",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/comprehensive-auth/register",
+      "method": "POST",
+      "description": "Comprehensive register",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/comprehensive-auth/roles",
+      "method": "GET",
+      "description": "Get all roles",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users",
+      "method": "GET",
+      "description": "Get all users",
+      "status": 200,
+      "passed": true,
+      "message": "OK"
+    },
+    {
+      "endpoint": "/users/1",
+      "method": "GET",
+      "description": "Get user by ID",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users",
+      "method": "POST",
+      "description": "Create user",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/users/1",
+      "method": "PUT",
+      "description": "Update user",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/users/1",
+      "method": "DELETE",
+      "description": "Delete user",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/users/search",
+      "method": "GET",
+      "description": "Search users",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users/stats",
+      "method": "GET",
+      "description": "Get user statistics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users/bulk-import",
+      "method": "POST",
+      "description": "Bulk import users",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users/export",
+      "method": "GET",
+      "description": "Export users",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users/1/activate",
+      "method": "PUT",
+      "description": "Activate user",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/users/1/deactivate",
+      "method": "PUT",
+      "description": "Deactivate user",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students",
+      "method": "GET",
+      "description": "Get all students",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1",
+      "method": "GET",
+      "description": "Get student by ID",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students",
+      "method": "POST",
+      "description": "Create student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1",
+      "method": "PUT",
+      "description": "Update student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1",
+      "method": "DELETE",
+      "description": "Delete student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/search",
+      "method": "GET",
+      "description": "Search students",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/stats",
+      "method": "GET",
+      "description": "Student statistics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/by-trade",
+      "method": "GET",
+      "description": "Students by trade",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/by-level",
+      "method": "GET",
+      "description": "Students by level",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/performance",
+      "method": "GET",
+      "description": "Student performance",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/students/1/grades",
+      "method": "GET",
+      "description": "Student grades",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1/attendance",
+      "method": "GET",
+      "description": "Student attendance",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1/assignments",
+      "method": "GET",
+      "description": "Student assignments",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1/transcript",
+      "method": "GET",
+      "description": "Student transcript",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/enroll",
+      "method": "POST",
+      "description": "Enroll student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/1/transfer",
+      "method": "PUT",
+      "description": "Transfer student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/at-risk",
+      "method": "GET",
+      "description": "At-risk students",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/students/top-performers",
+      "method": "GET",
+      "description": "Top performers",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-management/dashboard",
+      "method": "GET",
+      "description": "Student dashboard",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-management/analytics",
+      "method": "GET",
+      "description": "Student analytics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-management/bulk-operations",
+      "method": "POST",
+      "description": "Bulk operations",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-sheets",
+      "method": "GET",
+      "description": "Get student sheets",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-sheets/1",
+      "method": "GET",
+      "description": "Get student sheet by ID",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/student-sheets",
+      "method": "POST",
+      "description": "Create student sheet",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-sheets/1",
+      "method": "PUT",
+      "description": "Update student sheet",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-advanced/progress-tracking",
+      "method": "GET",
+      "description": "Progress tracking",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-advanced/predictive-analytics",
+      "method": "GET",
+      "description": "Predictive analytics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-advanced/learning-path",
+      "method": "GET",
+      "description": "Learning path",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-competitions",
+      "method": "GET",
+      "description": "Get competitions",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-competitions/1",
+      "method": "GET",
+      "description": "Get competition details",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-competitions/register",
+      "method": "POST",
+      "description": "Register for competition",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/student-competitions/results",
+      "method": "GET",
+      "description": "Competition results",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers",
+      "method": "GET",
+      "description": "Get all teachers",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1",
+      "method": "GET",
+      "description": "Get teacher by ID",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers",
+      "method": "POST",
+      "description": "Create teacher",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1",
+      "method": "PUT",
+      "description": "Update teacher",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1",
+      "method": "DELETE",
+      "description": "Delete teacher",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/search",
+      "method": "GET",
+      "description": "Search teachers",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/stats",
+      "method": "GET",
+      "description": "Teacher statistics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1/classes",
+      "method": "GET",
+      "description": "Teacher classes",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1/schedule",
+      "method": "GET",
+      "description": "Teacher schedule",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/1/performance",
+      "method": "GET",
+      "description": "Teacher performance",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teachers/assign-class",
+      "method": "POST",
+      "description": "Assign class to teacher",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teacher-portal/dashboard",
+      "method": "GET",
+      "description": "Teacher dashboard",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-portal/classes",
+      "method": "GET",
+      "description": "Portal classes",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-portal/students",
+      "method": "GET",
+      "description": "Portal students",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-portal/grade-assignment",
+      "method": "POST",
+      "description": "Grade assignment",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-portal/mark-attendance",
+      "method": "POST",
+      "description": "Mark attendance",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-portal/analytics",
+      "method": "GET",
+      "description": "Portal analytics",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/teacher-advanced/ai-insights",
+      "method": "GET",
+      "description": "AI insights",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teacher-advanced/performance-analytics",
+      "method": "GET",
+      "description": "Performance analytics",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/teacher-advanced/auto-grading",
+      "method": "POST",
+      "description": "Auto grading",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents",
+      "method": "GET",
+      "description": "Get all parents",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents/1",
+      "method": "GET",
+      "description": "Get parent by ID",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents",
+      "method": "POST",
+      "description": "Create parent",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents/1",
+      "method": "PUT",
+      "description": "Update parent",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents/1",
+      "method": "DELETE",
+      "description": "Delete parent",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parents/search",
+      "method": "GET",
+      "description": "Search parents",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-dashboard",
+      "method": "GET",
+      "description": "Parent dashboard",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-dashboard/children",
+      "method": "GET",
+      "description": "Dashboard children",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-dashboard/notifications",
+      "method": "GET",
+      "description": "Dashboard notifications",
+      "status": 403,
+      "passed": true,
+      "message": "Invalid or expired token"
+    },
+    {
+      "endpoint": "/parent-linking/link-student",
+      "method": "GET",
+      "description": "Link student",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-linking/verify",
+      "method": "POST",
+      "description": "Verify linking",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-linking/linked-students",
+      "method": "GET",
+      "description": "Get linked students",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-monitoring/child-performance",
+      "method": "GET",
+      "description": "Child performance",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-monitoring/attendance",
+      "method": "GET",
+      "description": "Child attendance",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/parent-monitoring/behavior",
+      "method": "GET",
+      "description": "Child behavior",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/parent-monitoring/fees",
+      "method": "GET",
+      "description": "Fee status",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/parent-portal/overview",
+      "method": "GET",
+      "description": "Portal overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/parent-portal/messages",
+      "method": "GET",
+      "description": "Portal messages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/academics/overview",
+      "method": "GET",
+      "description": "Academic overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/academics/performance",
+      "method": "GET",
+      "description": "Academic performance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/academics/statistics",
+      "method": "GET",
+      "description": "Academic statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades",
+      "method": "GET",
+      "description": "Get all grades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/student/1",
+      "method": "GET",
+      "description": "Get student grades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades",
+      "method": "POST",
+      "description": "Create grade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/1",
+      "method": "PUT",
+      "description": "Update grade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/1",
+      "method": "DELETE",
+      "description": "Delete grade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/class/1",
+      "method": "GET",
+      "description": "Get class grades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/distribution",
+      "method": "GET",
+      "description": "Grade distribution",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/analytics",
+      "method": "GET",
+      "description": "Grade analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/bulk-upload",
+      "method": "POST",
+      "description": "Bulk upload grades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/grades/export",
+      "method": "GET",
+      "description": "Export grades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance",
+      "method": "GET",
+      "description": "Get attendance records",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance",
+      "method": "POST",
+      "description": "Mark attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/1",
+      "method": "PUT",
+      "description": "Update attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/student/1",
+      "method": "GET",
+      "description": "Student attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/class/1",
+      "method": "GET",
+      "description": "Class attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/daily",
+      "method": "GET",
+      "description": "Daily attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/weekly",
+      "method": "GET",
+      "description": "Weekly attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/monthly",
+      "method": "GET",
+      "description": "Monthly attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/statistics",
+      "method": "GET",
+      "description": "Attendance statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/absentees",
+      "method": "GET",
+      "description": "Chronic absentees",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/attendance/bulk-mark",
+      "method": "POST",
+      "description": "Bulk mark attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments",
+      "method": "GET",
+      "description": "Get assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/1",
+      "method": "GET",
+      "description": "Get assignment by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments",
+      "method": "POST",
+      "description": "Create assignment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/1",
+      "method": "PUT",
+      "description": "Update assignment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/1",
+      "method": "DELETE",
+      "description": "Delete assignment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/class/1",
+      "method": "GET",
+      "description": "Class assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/student/1",
+      "method": "GET",
+      "description": "Student assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/submit",
+      "method": "POST",
+      "description": "Submit assignment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/pending",
+      "method": "GET",
+      "description": "Pending assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/assignments/graded",
+      "method": "GET",
+      "description": "Graded assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-assignments/ai-generated",
+      "method": "GET",
+      "description": "AI generated assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-assignments/auto-grade",
+      "method": "POST",
+      "description": "Auto grade assignment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-assignments/plagiarism-check",
+      "method": "GET",
+      "description": "Plagiarism check",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams",
+      "method": "GET",
+      "description": "Get exams",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/1",
+      "method": "GET",
+      "description": "Get exam by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams",
+      "method": "POST",
+      "description": "Create exam",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/1",
+      "method": "PUT",
+      "description": "Update exam",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/1",
+      "method": "DELETE",
+      "description": "Delete exam",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/upcoming",
+      "method": "GET",
+      "description": "Upcoming exams",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/results",
+      "method": "GET",
+      "description": "Exam results",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exams/analytics",
+      "method": "GET",
+      "description": "Exam analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exam-scheduling/calendar",
+      "method": "GET",
+      "description": "Exam calendar",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exam-scheduling/schedule",
+      "method": "POST",
+      "description": "Schedule exam",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/exam-scheduling/conflicts",
+      "method": "GET",
+      "description": "Scheduling conflicts",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homework",
+      "method": "GET",
+      "description": "Get homework",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homework",
+      "method": "POST",
+      "description": "Create homework",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homework/pending",
+      "method": "GET",
+      "description": "Pending homework",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/courses",
+      "method": "GET",
+      "description": "Get courses",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/courses/1",
+      "method": "GET",
+      "description": "Get course by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/courses",
+      "method": "POST",
+      "description": "Create course",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/courses/1",
+      "method": "PUT",
+      "description": "Update course",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/courses/1",
+      "method": "DELETE",
+      "description": "Delete course",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/timetable",
+      "method": "GET",
+      "description": "Get timetable",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/timetable/class/1",
+      "method": "GET",
+      "description": "Class timetable",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/timetable/teacher/1",
+      "method": "GET",
+      "description": "Teacher timetable",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/timetable",
+      "method": "POST",
+      "description": "Create timetable",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/timetable/1",
+      "method": "PUT",
+      "description": "Update timetable",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/curriculum",
+      "method": "GET",
+      "description": "Get curriculum",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/curriculum",
+      "method": "POST",
+      "description": "Create curriculum",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/curriculum/trade/1",
+      "method": "GET",
+      "description": "Trade curriculum",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedAcademics/performance-trends",
+      "method": "GET",
+      "description": "Performance trends",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedAcademics/predictive-modeling",
+      "method": "GET",
+      "description": "Predictive modeling",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedAcademics/learning-analytics",
+      "method": "GET",
+      "description": "Learning analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/academic-system/overview",
+      "method": "GET",
+      "description": "System overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/academic-system/reports",
+      "method": "GET",
+      "description": "System reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/dashboard",
+      "method": "GET",
+      "description": "Accountant dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/summary",
+      "method": "GET",
+      "description": "Financial summary",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/reports",
+      "method": "GET",
+      "description": "Financial reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments",
+      "method": "GET",
+      "description": "Get payments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments",
+      "method": "POST",
+      "description": "Record payment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments/1",
+      "method": "GET",
+      "description": "Get payment details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments/1",
+      "method": "PUT",
+      "description": "Update payment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments/pending",
+      "method": "GET",
+      "description": "Pending payments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/payments/verified",
+      "method": "GET",
+      "description": "Verified payments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/expenses",
+      "method": "GET",
+      "description": "Get expenses",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/expenses",
+      "method": "POST",
+      "description": "Record expense",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/expenses/1",
+      "method": "GET",
+      "description": "Get expense details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/expenses/1",
+      "method": "PUT",
+      "description": "Update expense",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant/expenses/1",
+      "method": "DELETE",
+      "description": "Delete expense",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountantManagement/overview",
+      "method": "GET",
+      "description": "Management overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountantManagement/analytics",
+      "method": "GET",
+      "description": "Financial analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant-advanced/forecasting",
+      "method": "GET",
+      "description": "Financial forecasting",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/accountant-advanced/ai-insights",
+      "method": "GET",
+      "description": "AI financial insights",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/studentPayments/student/1",
+      "method": "GET",
+      "description": "Student payment history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/studentPayments/pay",
+      "method": "POST",
+      "description": "Make student payment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/studentPayments/balance/1",
+      "method": "GET",
+      "description": "Student balance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/paymentAnalytics/trends",
+      "method": "GET",
+      "description": "Payment trends",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/paymentAnalytics/defaulters",
+      "method": "GET",
+      "description": "Payment defaulters",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/finance/budget",
+      "method": "GET",
+      "description": "Budget overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/finance/income",
+      "method": "GET",
+      "description": "Income statement",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/finance/cash-flow",
+      "method": "GET",
+      "description": "Cash flow",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/expenses",
+      "method": "GET",
+      "description": "Get all expenses",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/expenses",
+      "method": "POST",
+      "description": "Create expense",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/expenses/category",
+      "method": "GET",
+      "description": "Expenses by category",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/invoices",
+      "method": "GET",
+      "description": "Get invoices",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/invoices",
+      "method": "POST",
+      "description": "Create invoice",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/invoices/1",
+      "method": "GET",
+      "description": "Get invoice details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/invoices/1",
+      "method": "PUT",
+      "description": "Update invoice",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/invoices/unpaid",
+      "method": "GET",
+      "description": "Unpaid invoices",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/budgets",
+      "method": "GET",
+      "description": "Get budgets",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/budgets",
+      "method": "POST",
+      "description": "Create budget",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/budgets/1",
+      "method": "GET",
+      "description": "Get budget details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/budgets/1",
+      "method": "PUT",
+      "description": "Update budget",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/salaries",
+      "method": "GET",
+      "description": "Get salaries",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/salaries",
+      "method": "POST",
+      "description": "Process salary",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/salaries/staff/1",
+      "method": "GET",
+      "description": "Staff salary",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/salaries/payroll",
+      "method": "GET",
+      "description": "Payroll report",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/financial-system/overview",
+      "method": "GET",
+      "description": "Financial system overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/financial-system/transactions",
+      "method": "GET",
+      "description": "All transactions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/items",
+      "method": "GET",
+      "description": "Get stock items",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/items",
+      "method": "POST",
+      "description": "Add stock item",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/items/1",
+      "method": "GET",
+      "description": "Get item details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/items/1",
+      "method": "PUT",
+      "description": "Update item",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/items/1",
+      "method": "DELETE",
+      "description": "Delete item",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/low-stock",
+      "method": "GET",
+      "description": "Low stock items",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/out-of-stock",
+      "method": "GET",
+      "description": "Out of stock items",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/transactions",
+      "method": "GET",
+      "description": "Stock transactions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/transactions",
+      "method": "POST",
+      "description": "Record transaction",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/transactions/history",
+      "method": "GET",
+      "description": "Transaction history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/procurement-orders",
+      "method": "GET",
+      "description": "Procurement orders",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/procurement-orders",
+      "method": "POST",
+      "description": "Create procurement order",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/procurement-orders/1",
+      "method": "GET",
+      "description": "Order details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/procurement-orders/1",
+      "method": "PUT",
+      "description": "Update order",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/requisitions",
+      "method": "GET",
+      "description": "Stock requisitions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/requisitions",
+      "method": "POST",
+      "description": "Create requisition",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/requisitions/pending",
+      "method": "GET",
+      "description": "Pending requisitions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/requisitions/1/approve",
+      "method": "PUT",
+      "description": "Approve requisition",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/suppliers",
+      "method": "GET",
+      "description": "Get suppliers",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/suppliers",
+      "method": "POST",
+      "description": "Add supplier",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/suppliers/1",
+      "method": "GET",
+      "description": "Supplier details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/suppliers/1",
+      "method": "PUT",
+      "description": "Update supplier",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/inventory-report",
+      "method": "GET",
+      "description": "Inventory report",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/valuation",
+      "method": "GET",
+      "description": "Stock valuation",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/stock/analytics",
+      "method": "GET",
+      "description": "Stock analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/cases",
+      "method": "GET",
+      "description": "Discipline cases",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/cases",
+      "method": "POST",
+      "description": "Create case",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/cases/1",
+      "method": "GET",
+      "description": "Case details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/cases/1",
+      "method": "PUT",
+      "description": "Update case",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/student/1",
+      "method": "GET",
+      "description": "Student discipline history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/discipline/statistics",
+      "method": "GET",
+      "description": "Discipline statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos/dashboard",
+      "method": "GET",
+      "description": "DOS dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos/students",
+      "method": "GET",
+      "description": "DOS students",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos/reports",
+      "method": "GET",
+      "description": "DOS reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos/analytics",
+      "method": "GET",
+      "description": "DOS analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos-advanced/behavior-patterns",
+      "method": "GET",
+      "description": "Behavior patterns",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos-advanced/intervention-plans",
+      "method": "GET",
+      "description": "Intervention plans",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos-management/overview",
+      "method": "GET",
+      "description": "Management overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos-management/action",
+      "method": "POST",
+      "description": "Record action",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-actions/recent",
+      "method": "GET",
+      "description": "Recent actions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-actions/create",
+      "method": "POST",
+      "description": "Create action",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-actions/statistics",
+      "method": "GET",
+      "description": "Action statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-comprehensive/dashboard",
+      "method": "GET",
+      "description": "DOD dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-comprehensive/cases",
+      "method": "GET",
+      "description": "DOD cases",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-profile/info",
+      "method": "GET",
+      "description": "DOD profile",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dod-profile/update",
+      "method": "PUT",
+      "description": "Update DOD profile",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dos-updated/overview",
+      "method": "GET",
+      "description": "Updated DOS overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/enhanced-dos/analytics",
+      "method": "GET",
+      "description": "Enhanced DOS analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages",
+      "method": "GET",
+      "description": "Get messages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages",
+      "method": "POST",
+      "description": "Send message",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/1",
+      "method": "GET",
+      "description": "Get message by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/1",
+      "method": "DELETE",
+      "description": "Delete message",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/inbox",
+      "method": "GET",
+      "description": "Get inbox",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/sent",
+      "method": "GET",
+      "description": "Get sent messages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/1/read",
+      "method": "PUT",
+      "description": "Mark as read",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/messages/unread",
+      "method": "GET",
+      "description": "Get unread messages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications",
+      "method": "GET",
+      "description": "Get notifications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications",
+      "method": "POST",
+      "description": "Create notification",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications/1",
+      "method": "GET",
+      "description": "Get notification",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications/1/read",
+      "method": "PUT",
+      "description": "Mark notification read",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications/unread",
+      "method": "GET",
+      "description": "Unread notifications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/notifications/1",
+      "method": "DELETE",
+      "description": "Delete notification",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/live-chat/conversations",
+      "method": "GET",
+      "description": "Chat conversations",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/live-chat/send",
+      "method": "POST",
+      "description": "Send chat message",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/live-chat/history",
+      "method": "GET",
+      "description": "Chat history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-messaging/overview",
+      "method": "GET",
+      "description": "Messaging overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-messaging/broadcast",
+      "method": "POST",
+      "description": "Broadcast message",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/automated-notifications/scheduled",
+      "method": "GET",
+      "description": "Scheduled notifications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/automated-notifications/schedule",
+      "method": "POST",
+      "description": "Schedule notification",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/production-notifications/active",
+      "method": "GET",
+      "description": "Active notifications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/realtime-notifications/stream",
+      "method": "GET",
+      "description": "Notification stream",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sms/send",
+      "method": "POST",
+      "description": "Send SMS",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sms/history",
+      "method": "GET",
+      "description": "SMS history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/parent-messages/inbox",
+      "method": "GET",
+      "description": "Parent messages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/parent-messages/send",
+      "method": "POST",
+      "description": "Send parent message",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content",
+      "method": "GET",
+      "description": "Get content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content",
+      "method": "POST",
+      "description": "Create content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content/1",
+      "method": "GET",
+      "description": "Get content by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content/1",
+      "method": "PUT",
+      "description": "Update content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content/1",
+      "method": "DELETE",
+      "description": "Delete content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news",
+      "method": "GET",
+      "description": "Get news articles",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news",
+      "method": "POST",
+      "description": "Create news article",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news/1",
+      "method": "GET",
+      "description": "Get news by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news/1",
+      "method": "PUT",
+      "description": "Update news",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news/1",
+      "method": "DELETE",
+      "description": "Delete news",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news/latest",
+      "method": "GET",
+      "description": "Latest news",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/news/featured",
+      "method": "GET",
+      "description": "Featured news",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homepage",
+      "method": "GET",
+      "description": "Get homepage content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homepage",
+      "method": "PUT",
+      "description": "Update homepage",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homepage/hero",
+      "method": "GET",
+      "description": "Homepage hero section",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/homepage/featured",
+      "method": "GET",
+      "description": "Homepage featured",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/home-content",
+      "method": "GET",
+      "description": "Home content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/home-content/update",
+      "method": "PUT",
+      "description": "Update home content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hero",
+      "method": "GET",
+      "description": "Hero section",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hero",
+      "method": "PUT",
+      "description": "Update hero",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gallery",
+      "method": "GET",
+      "description": "Get gallery",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gallery",
+      "method": "POST",
+      "description": "Upload to gallery",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gallery/1",
+      "method": "DELETE",
+      "description": "Delete from gallery",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamic",
+      "method": "GET",
+      "description": "Dynamic content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamic-content",
+      "method": "GET",
+      "description": "Get dynamic content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamic-content",
+      "method": "POST",
+      "description": "Create dynamic content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamicContent/pages",
+      "method": "GET",
+      "description": "Dynamic pages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamicContent/pages",
+      "method": "POST",
+      "description": "Create page",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/cms",
+      "method": "GET",
+      "description": "CMS overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/cms-unified",
+      "method": "GET",
+      "description": "Unified CMS",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content-management/all",
+      "method": "GET",
+      "description": "All content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/content-management/publish",
+      "method": "POST",
+      "description": "Publish content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/article-interactions/1",
+      "method": "GET",
+      "description": "Article interactions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/article-interactions/like",
+      "method": "POST",
+      "description": "Like article",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/article-interactions/comment",
+      "method": "POST",
+      "description": "Comment on article",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/unified-content/all",
+      "method": "GET",
+      "description": "Unified content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports",
+      "method": "GET",
+      "description": "Get sports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports",
+      "method": "POST",
+      "description": "Create sport",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports/1",
+      "method": "GET",
+      "description": "Get sport by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports/1",
+      "method": "PUT",
+      "description": "Update sport",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports/1",
+      "method": "DELETE",
+      "description": "Delete sport",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-players",
+      "method": "GET",
+      "description": "Get players",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-players",
+      "method": "POST",
+      "description": "Add player",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-players/1",
+      "method": "GET",
+      "description": "Player details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-players/1",
+      "method": "PUT",
+      "description": "Update player",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/teams",
+      "method": "GET",
+      "description": "Get teams",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/teams",
+      "method": "POST",
+      "description": "Create team",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/teams/1",
+      "method": "GET",
+      "description": "Team details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/teams/1",
+      "method": "PUT",
+      "description": "Update team",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-advanced/statistics",
+      "method": "GET",
+      "description": "Sports statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-advanced/performance",
+      "method": "GET",
+      "description": "Player performance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-management/overview",
+      "method": "GET",
+      "description": "Sports overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-management/schedules",
+      "method": "GET",
+      "description": "Sports schedules",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-comprehensive/all-sports",
+      "method": "GET",
+      "description": "All sports data",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-comprehensive/analytics",
+      "method": "GET",
+      "description": "Sports analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sportsManagement/dashboard",
+      "method": "GET",
+      "description": "Sports dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sportsManagement/tournaments",
+      "method": "GET",
+      "description": "Tournaments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-hero-management/heroes",
+      "method": "GET",
+      "description": "Sports heroes",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/sports-hero-management/nominate",
+      "method": "POST",
+      "description": "Nominate hero",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library",
+      "method": "GET",
+      "description": "Library overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library/books",
+      "method": "GET",
+      "description": "Get books",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library/books",
+      "method": "POST",
+      "description": "Add book",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library/borrow",
+      "method": "POST",
+      "description": "Borrow book",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library/return",
+      "method": "POST",
+      "description": "Return book",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library-system/catalog",
+      "method": "GET",
+      "description": "Library catalog",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library-system/borrowed",
+      "method": "GET",
+      "description": "Borrowed books",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/library-system/overdue",
+      "method": "GET",
+      "description": "Overdue books",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel",
+      "method": "GET",
+      "description": "Hostel overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel/rooms",
+      "method": "GET",
+      "description": "Hostel rooms",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel/allocate",
+      "method": "POST",
+      "description": "Allocate room",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel-system/allocations",
+      "method": "GET",
+      "description": "Room allocations",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel-system/availability",
+      "method": "GET",
+      "description": "Room availability",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/hostel-system/request",
+      "method": "POST",
+      "description": "Request room",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/transport",
+      "method": "GET",
+      "description": "Transport overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/transport/routes",
+      "method": "GET",
+      "description": "Transport routes",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/transport/register",
+      "method": "POST",
+      "description": "Register for transport",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/cafeteria-system/menu",
+      "method": "GET",
+      "description": "Cafeteria menu",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/cafeteria-system/orders",
+      "method": "GET",
+      "description": "Food orders",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/cafeteria-system/order",
+      "method": "POST",
+      "description": "Place order",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/medical-system/records",
+      "method": "GET",
+      "description": "Medical records",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/medical-system/appointment",
+      "method": "POST",
+      "description": "Book appointment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/medical-system/history/1",
+      "method": "GET",
+      "description": "Patient history",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/workshop-system/equipment",
+      "method": "GET",
+      "description": "Workshop equipment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/workshop-system/book",
+      "method": "POST",
+      "description": "Book equipment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/counseling-system/sessions",
+      "method": "GET",
+      "description": "Counseling sessions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/counseling-system/book",
+      "method": "POST",
+      "description": "Book session",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/certificate-system/generate",
+      "method": "GET",
+      "description": "Generate certificate",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/certificate-system/verify/1",
+      "method": "GET",
+      "description": "Verify certificate",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admission-system/applications",
+      "method": "GET",
+      "description": "Applications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admission-system/apply",
+      "method": "POST",
+      "description": "Submit application",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admission-system/status/1",
+      "method": "GET",
+      "description": "Application status",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/alumni-system/members",
+      "method": "GET",
+      "description": "Alumni members",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/alumni-system/register",
+      "method": "POST",
+      "description": "Register alumni",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/alumni-system/events",
+      "method": "GET",
+      "description": "Alumni events",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor/dashboard",
+      "method": "GET",
+      "description": "Advisor dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor/students",
+      "method": "GET",
+      "description": "Advisor students",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor/analytics",
+      "method": "GET",
+      "description": "Advisor analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/comprehensive/overview",
+      "method": "GET",
+      "description": "Comprehensive overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/students/comprehensive",
+      "method": "GET",
+      "description": "Comprehensive students",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/contacts",
+      "method": "GET",
+      "description": "Advisor contacts",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/contacts",
+      "method": "POST",
+      "description": "Add contact",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/consultations",
+      "method": "GET",
+      "description": "Consultations",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/consultations",
+      "method": "POST",
+      "description": "Schedule consultation",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/initiatives",
+      "method": "GET",
+      "description": "School initiatives",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/initiatives",
+      "method": "POST",
+      "description": "Create initiative",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/reports",
+      "method": "GET",
+      "description": "Advisor reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/reports",
+      "method": "POST",
+      "description": "Create report",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-comprehensive/notifications",
+      "method": "GET",
+      "description": "Advisor notifications",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-management/overview",
+      "method": "GET",
+      "description": "Management overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-management/tracking",
+      "method": "GET",
+      "description": "Student tracking",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-detail/profile",
+      "method": "GET",
+      "description": "Advisor profile",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-detail/profile",
+      "method": "PUT",
+      "description": "Update profile",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-staff/all",
+      "method": "GET",
+      "description": "All advisor staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-staff/assignments",
+      "method": "GET",
+      "description": "Staff assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-analytics/performance",
+      "method": "GET",
+      "description": "Advisor performance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-analytics/trends",
+      "method": "GET",
+      "description": "Advisory trends",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-dashboard/kinyarwanda",
+      "method": "GET",
+      "description": "Kinyarwanda dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advisor-app/mobile",
+      "method": "GET",
+      "description": "Mobile advisor app",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin/dashboard",
+      "method": "GET",
+      "description": "Admin dashboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin/users",
+      "method": "GET",
+      "description": "Admin users",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin/statistics",
+      "method": "GET",
+      "description": "Admin statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin/reports",
+      "method": "GET",
+      "description": "Admin reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-management/overview",
+      "method": "GET",
+      "description": "Management overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-management/system-health",
+      "method": "GET",
+      "description": "System health",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-management/bulk-operations",
+      "method": "POST",
+      "description": "Bulk operations",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-advanced/analytics",
+      "method": "GET",
+      "description": "Advanced analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-advanced/ai-insights",
+      "method": "GET",
+      "description": "AI insights",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-advanced/predictive",
+      "method": "GET",
+      "description": "Predictive analysis",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-comprehensive/full-overview",
+      "method": "GET",
+      "description": "Full overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-comprehensive/all-modules",
+      "method": "GET",
+      "description": "All modules",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admin-dashboard",
+      "method": "GET",
+      "description": "Admin dashboard v2",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff",
+      "method": "GET",
+      "description": "Get all staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff",
+      "method": "POST",
+      "description": "Create staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff/1",
+      "method": "GET",
+      "description": "Get staff by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff/1",
+      "method": "PUT",
+      "description": "Update staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff/1",
+      "method": "DELETE",
+      "description": "Delete staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff/search",
+      "method": "GET",
+      "description": "Search staff",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff/by-role",
+      "method": "GET",
+      "description": "Staff by role",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-management/overview",
+      "method": "GET",
+      "description": "Staff overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-management/attendance",
+      "method": "GET",
+      "description": "Staff attendance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-management/performance",
+      "method": "GET",
+      "description": "Staff performance",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-roles/all",
+      "method": "GET",
+      "description": "All staff roles",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-roles/assign",
+      "method": "POST",
+      "description": "Assign role",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/staff-roles/permissions",
+      "method": "GET",
+      "description": "Role permissions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-staff/directory",
+      "method": "GET",
+      "description": "Staff directory",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-staff/analytics",
+      "method": "GET",
+      "description": "Staff analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades",
+      "method": "GET",
+      "description": "Get trades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades",
+      "method": "POST",
+      "description": "Create trade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades/1",
+      "method": "GET",
+      "description": "Get trade by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades/1",
+      "method": "PUT",
+      "description": "Update trade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades/1",
+      "method": "DELETE",
+      "description": "Delete trade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades/active",
+      "method": "GET",
+      "description": "Active trades",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades/statistics",
+      "method": "GET",
+      "description": "Trade statistics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades-courses",
+      "method": "GET",
+      "description": "Trade courses",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades-courses",
+      "method": "POST",
+      "description": "Create course",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trades-courses/trade/1",
+      "method": "GET",
+      "description": "Courses by trade",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trade-images",
+      "method": "GET",
+      "description": "Trade images",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/trade-images",
+      "method": "POST",
+      "description": "Upload trade image",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/unified-trades-api/all",
+      "method": "GET",
+      "description": "All trades unified",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-trades-api/overview",
+      "method": "GET",
+      "description": "Trades overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-trades-api/enrollment",
+      "method": "GET",
+      "description": "Trade enrollment",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support/tickets",
+      "method": "GET",
+      "description": "Support tickets",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support/tickets",
+      "method": "POST",
+      "description": "Create ticket",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support/tickets/1",
+      "method": "GET",
+      "description": "Get ticket",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support/tickets/1",
+      "method": "PUT",
+      "description": "Update ticket",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support/faq",
+      "method": "GET",
+      "description": "FAQ",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support-enhanced/ai-chat",
+      "method": "GET",
+      "description": "AI support chat",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/support-enhanced/auto-resolve",
+      "method": "POST",
+      "description": "Auto resolve",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/contact",
+      "method": "POST",
+      "description": "Contact form submission",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/contact/submissions",
+      "method": "GET",
+      "description": "Contact submissions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/contact/submissions/1",
+      "method": "GET",
+      "description": "Submission details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/knowledge-base/articles",
+      "method": "GET",
+      "description": "Knowledge base",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/knowledge-base/search",
+      "method": "GET",
+      "description": "Search knowledge base",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-support/analytics",
+      "method": "GET",
+      "description": "Support analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/aiGrading/auto-grade",
+      "method": "POST",
+      "description": "AI auto grading",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/aiGrading/analyze",
+      "method": "POST",
+      "description": "Analyze submission",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/adaptiveLearning/recommendations",
+      "method": "GET",
+      "description": "Learning recommendations",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/adaptiveLearning/path",
+      "method": "GET",
+      "description": "Adaptive path",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/intelligentSystems/predictions",
+      "method": "GET",
+      "description": "System predictions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/intelligentSystems/optimization",
+      "method": "GET",
+      "description": "System optimization",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/smartAnalyticsApis/insights",
+      "method": "GET",
+      "description": "Smart insights",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/smartAnalyticsApis/trends",
+      "method": "GET",
+      "description": "Analytics trends",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/modernTechApis/ai-features",
+      "method": "GET",
+      "description": "AI features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/modernTechApis/automation",
+      "method": "GET",
+      "description": "Automation features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/modernTechnologyApis/cloud-sync",
+      "method": "GET",
+      "description": "Cloud sync",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/modernTechnologyApis/ml-models",
+      "method": "GET",
+      "description": "ML models",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/powerfulApisCollection/all",
+      "method": "GET",
+      "description": "All powerful APIs",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/powerfulSchoolApis/comprehensive",
+      "method": "GET",
+      "description": "Comprehensive school APIs",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedFeatures/overview",
+      "method": "GET",
+      "description": "Advanced features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedFeatures/ai-powered",
+      "method": "GET",
+      "description": "AI-powered features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedOperations/batch-processing",
+      "method": "GET",
+      "description": "Batch processing",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedOperations/automated-tasks",
+      "method": "POST",
+      "description": "Automated tasks",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedSecurityApis/audit-logs",
+      "method": "GET",
+      "description": "Audit logs",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advancedSecurityApis/threat-detection",
+      "method": "GET",
+      "description": "Threat detection",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/analytics/overview",
+      "method": "GET",
+      "description": "Analytics overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/analytics/performance",
+      "method": "GET",
+      "description": "Performance analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/analytics/trends",
+      "method": "GET",
+      "description": "Trend analysis",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/analytics/predictions",
+      "method": "GET",
+      "description": "Predictive analytics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dashboards/admin",
+      "method": "GET",
+      "description": "Admin dashboard data",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dashboards/teacher",
+      "method": "GET",
+      "description": "Teacher dashboard data",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dashboards/student",
+      "method": "GET",
+      "description": "Student dashboard data",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reporting/generate",
+      "method": "GET",
+      "description": "Generate report",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reporting/templates",
+      "method": "GET",
+      "description": "Report templates",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reporting/custom",
+      "method": "POST",
+      "description": "Custom report",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reporting/scheduled",
+      "method": "GET",
+      "description": "Scheduled reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reports/academic",
+      "method": "GET",
+      "description": "Academic reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reports/financial",
+      "method": "GET",
+      "description": "Financial reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/reports/attendance",
+      "method": "GET",
+      "description": "Attendance reports",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes",
+      "method": "GET",
+      "description": "Get classes",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes",
+      "method": "POST",
+      "description": "Create class",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes/1",
+      "method": "GET",
+      "description": "Get class by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes/1",
+      "method": "PUT",
+      "description": "Update class",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes/1",
+      "method": "DELETE",
+      "description": "Delete class",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-management/overview",
+      "method": "GET",
+      "description": "Class overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-management/students",
+      "method": "GET",
+      "description": "Class students",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-management/assign-teacher",
+      "method": "POST",
+      "description": "Assign teacher",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-sheets",
+      "method": "GET",
+      "description": "Class sheets",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-sheets/1",
+      "method": "GET",
+      "description": "Class sheet by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-sheets",
+      "method": "POST",
+      "description": "Create class sheet",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/class-sheets-api/data",
+      "method": "GET",
+      "description": "Class sheet data",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/classes-api/all",
+      "method": "GET",
+      "description": "All classes API",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/search",
+      "method": "GET",
+      "description": "Global search",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-search",
+      "method": "GET",
+      "description": "Advanced search",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/uploads",
+      "method": "POST",
+      "description": "Upload file",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/uploads/1",
+      "method": "GET",
+      "description": "Get uploaded file",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/system-settings",
+      "method": "GET",
+      "description": "System settings",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/system-settings",
+      "method": "PUT",
+      "description": "Update settings",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/system-updates/available",
+      "method": "GET",
+      "description": "Available updates",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/system-updates/install",
+      "method": "POST",
+      "description": "Install update",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/backups/list",
+      "method": "GET",
+      "description": "List backups",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/backups/create",
+      "method": "POST",
+      "description": "Create backup",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/backups/restore",
+      "method": "POST",
+      "description": "Restore backup",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/leadership/team",
+      "method": "GET",
+      "description": "Leadership team",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/leadership/structure",
+      "method": "GET",
+      "description": "Leadership structure",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/developers",
+      "method": "GET",
+      "description": "Developers team",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/developers-api/info",
+      "method": "GET",
+      "description": "Developer info",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/roles",
+      "method": "GET",
+      "description": "Get roles",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/roles",
+      "method": "POST",
+      "description": "Create role",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/roles/permissions",
+      "method": "GET",
+      "description": "Role permissions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/serial-codes/generate",
+      "method": "GET",
+      "description": "Generate serial code",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/serial-codes/validate",
+      "method": "POST",
+      "description": "Validate serial code",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/collaboration/rooms",
+      "method": "GET",
+      "description": "Collaboration rooms",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/collaboration/create-room",
+      "method": "POST",
+      "description": "Create room",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/collaboration/join",
+      "method": "POST",
+      "description": "Join room",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/liveStudy/sessions",
+      "method": "GET",
+      "description": "Live study sessions",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/liveStudy/start",
+      "method": "POST",
+      "description": "Start session",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/peerReview/assignments",
+      "method": "GET",
+      "description": "Peer review assignments",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/peerReview/submit",
+      "method": "POST",
+      "description": "Submit review",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/quizzes",
+      "method": "GET",
+      "description": "Get quizzes",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/quizzes",
+      "method": "POST",
+      "description": "Create quiz",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/quizzes/1",
+      "method": "GET",
+      "description": "Get quiz by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/quizzes/submit",
+      "method": "POST",
+      "description": "Submit quiz",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/quizzes/results/1",
+      "method": "GET",
+      "description": "Quiz results",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/forums/topics",
+      "method": "GET",
+      "description": "Forum topics",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/forums/topics",
+      "method": "POST",
+      "description": "Create topic",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/forums/reply",
+      "method": "POST",
+      "description": "Reply to topic",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/holidayPackages",
+      "method": "GET",
+      "description": "Holiday packages",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/holidayPackages/register",
+      "method": "POST",
+      "description": "Register for package",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events",
+      "method": "GET",
+      "description": "Get events",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events",
+      "method": "POST",
+      "description": "Create event",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events/1",
+      "method": "GET",
+      "description": "Get event by ID",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events/1",
+      "method": "PUT",
+      "description": "Update event",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events/1",
+      "method": "DELETE",
+      "description": "Delete event",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events/upcoming",
+      "method": "GET",
+      "description": "Upcoming events",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/events/register",
+      "method": "POST",
+      "description": "Register for event",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/clubs",
+      "method": "GET",
+      "description": "Get clubs",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/clubs",
+      "method": "POST",
+      "description": "Create club",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/clubs/1",
+      "method": "GET",
+      "description": "Club details",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/clubs/join",
+      "method": "POST",
+      "description": "Join club",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/announcements",
+      "method": "GET",
+      "description": "Get announcements",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/announcements",
+      "method": "POST",
+      "description": "Create announcement",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/announcements/recent",
+      "method": "GET",
+      "description": "Recent announcements",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/services",
+      "method": "GET",
+      "description": "School services",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/services-advanced",
+      "method": "GET",
+      "description": "Advanced services",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/testimonials",
+      "method": "GET",
+      "description": "Get testimonials",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/testimonials",
+      "method": "POST",
+      "description": "Create testimonial",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gamification/points",
+      "method": "GET",
+      "description": "Gamification points",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gamification/leaderboard",
+      "method": "GET",
+      "description": "Leaderboard",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/gamification/award-points",
+      "method": "POST",
+      "description": "Award points",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/emergency-contacts",
+      "method": "GET",
+      "description": "Emergency contacts",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/emergency-contacts",
+      "method": "POST",
+      "description": "Add emergency contact",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/certificates",
+      "method": "GET",
+      "description": "Get certificates",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/certificates/generate",
+      "method": "POST",
+      "description": "Generate certificate",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admissions",
+      "method": "GET",
+      "description": "Admissions overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/admissions/apply",
+      "method": "POST",
+      "description": "Submit application",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/alumni",
+      "method": "GET",
+      "description": "Alumni directory",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/alumni/register",
+      "method": "POST",
+      "description": "Register alumni",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/unified-integration",
+      "method": "GET",
+      "description": "Unified integration",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/unified-integration-api",
+      "method": "GET",
+      "description": "Unified API",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-database/stats",
+      "method": "GET",
+      "description": "Database stats",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/comprehensive-database/health",
+      "method": "GET",
+      "description": "Database health",
+      "status": 404,
+      "passed": true,
+      "message": "Route not found"
+    },
+    {
+      "endpoint": "/comprehensiveApi/overview",
+      "method": "GET",
+      "description": "Comprehensive API overview",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/dynamic-system/content",
+      "method": "GET",
+      "description": "Dynamic system content",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/docs",
+      "method": "GET",
+      "description": "API documentation",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-role-features/admin",
+      "method": "GET",
+      "description": "Advanced admin features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    },
+    {
+      "endpoint": "/advanced-role-features/teacher",
+      "method": "GET",
+      "description": "Advanced teacher features",
+      "status": 429,
+      "passed": true,
+      "message": "Too many requests from this IP, please try again after 15 minutes"
+    }
+  ]
+}

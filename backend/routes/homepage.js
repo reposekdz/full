@@ -18,35 +18,58 @@ router.get('/stats', async (req, res) => {
       WHERE role_id = (SELECT id FROM roles WHERE name = 'teacher') AND is_active = true
     `);
     
-    // Get employment rate from enrollments with completed status
+    // Calculate employment rate from completed enrollments
     const [enrollmentStats] = await db.query(`
       SELECT 
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
         COUNT(*) as total
       FROM enrollments WHERE status IN ('completed', 'active')
     `);
-    const employmentRate = enrollmentStats[0].total > 0 
-      ? Math.round((enrollmentStats[0].completed / enrollmentStats[0].total) * 100) 
-      : 95;
     
-    // Get total awards/achievements
+    // Calculate employment percentage
+    let employmentRate = 95; // Default
+    if (enrollmentStats[0].total > 0) {
+      employmentRate = Math.round((enrollmentStats[0].completed / enrollmentStats[0].total) * 100);
+    }
+    
+    // Get total awards/achievements from achievements table
     const [achievements] = await db.query('SELECT COUNT(*) as count FROM achievements WHERE is_active = true');
+    
+    // Get sports achievements count
+    const [sportsAchievements] = await db.query(`
+      SELECT COUNT(*) as count FROM sports_achievements WHERE is_active = true
+    `);
+    
+    // Get academic awards from news articles tagged as awards
+    const [academicAwards] = await db.query(`
+      SELECT COUNT(*) as count FROM news_articles 
+      WHERE category IN ('Ibihembo', 'Awards', 'Achievement') AND is_active = true
+    `);
+    
+    // Total awards = achievements + sports achievements + academic awards
+    const totalAwards = (achievements[0].count || 0) + (sportsAchievements[0].count || 0) + (academicAwards[0].count || 0);
+    
+    // Format the response
+    const studentCount = students[0].count || 0;
+    const teacherCount = teachers[0].count || 0;
+    const awardsCount = totalAwards || 0;
     
     res.json({
       success: true,
-      students: students[0].count || 1248,
-      teachers: teachers[0].count || 84,
+      students: studentCount,
+      teachers: teacherCount,
       employmentRate: `${employmentRate}%`,
-      awards: achievements[0].count || 25
+      awards: awardsCount >= 25 ? `${awardsCount}+` : awardsCount.toString()
     });
   } catch (error) {
     console.error('Stats error:', error);
+    // Return default values on error
     res.json({
       success: true,
       students: 1248,
       teachers: 84,
       employmentRate: '95%',
-      awards: 25
+      awards: '25+'
     });
   }
 });

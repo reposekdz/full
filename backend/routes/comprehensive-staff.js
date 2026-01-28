@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
 
     query += ' ORDER BY s.created_at DESC';
 
-    const [staff] = await pool.query(query, params);
+    const [staff] = await pool.execute(query, params);
     res.json({ success: true, staff });
   } catch (error) {
     console.error('Fetch staff error:', error);
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
 // GET staff by ID
 router.get('/:id', async (req, res) => {
   try {
-    const [staff] = await pool.query(`
+    const [staff] = await pool.execute(`
       SELECT s.*, t.name as trade_name, t.code as trade_code
       FROM staff s
       LEFT JOIN trades t ON s.trade_id = t.id
@@ -93,7 +93,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const image = req.file ? `/uploads/staff/${req.file.filename}` : null;
 
-    const [result] = await pool.query(`
+    const [result] = await pool.execute(`
       INSERT INTO staff (
         name, email, phone, role, trade_id, level, specialization,
         qualifications, experience_years, hire_date, salary, status,
@@ -105,7 +105,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       emergency_contact || null, address || null, bio || null, bio_rw || null, image
     ]);
 
-    const [newStaff] = await pool.query('SELECT * FROM staff WHERE id = ?', [result.insertId]);
+    const [newStaff] = await pool.execute('SELECT * FROM staff WHERE id = ?', [result.insertId]);
     res.status(201).json({ success: true, staff: newStaff[0] });
   } catch (error) {
     console.error('Create staff error:', error);
@@ -123,7 +123,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     } = req.body;
 
     // Get existing staff
-    const [existing] = await pool.query('SELECT * FROM staff WHERE id = ?', [req.params.id]);
+    const [existing] = await pool.execute('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, error: 'Staff not found' });
     }
@@ -138,7 +138,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       }
     }
 
-    await pool.query(`
+    await pool.execute(`
       UPDATE staff SET
         name = ?, email = ?, phone = ?, role = ?, trade_id = ?, level = ?,
         specialization = ?, qualifications = ?, experience_years = ?,
@@ -152,7 +152,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       bio_rw || null, image, req.params.id
     ]);
 
-    const [updated] = await pool.query('SELECT * FROM staff WHERE id = ?', [req.params.id]);
+    const [updated] = await pool.execute('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     res.json({ success: true, staff: updated[0] });
   } catch (error) {
     console.error('Update staff error:', error);
@@ -163,7 +163,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 // DELETE staff
 router.delete('/:id', async (req, res) => {
   try {
-    const [staff] = await pool.query('SELECT * FROM staff WHERE id = ?', [req.params.id]);
+    const [staff] = await pool.execute('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     if (staff.length === 0) {
       return res.status(404).json({ success: false, error: 'Staff not found' });
     }
@@ -174,7 +174,7 @@ router.delete('/:id', async (req, res) => {
       if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
     }
 
-    await pool.query('DELETE FROM staff WHERE id = ?', [req.params.id]);
+    await pool.execute('DELETE FROM staff WHERE id = ?', [req.params.id]);
     res.json({ success: true, message: 'Staff deleted successfully' });
   } catch (error) {
     console.error('Delete staff error:', error);
@@ -185,7 +185,7 @@ router.delete('/:id', async (req, res) => {
 // GET staff by trade
 router.get('/by-trade/:tradeId', async (req, res) => {
   try {
-    const [staff] = await pool.query(`
+    const [staff] = await pool.execute(`
       SELECT s.*, t.name as trade_name
       FROM staff s
       LEFT JOIN trades t ON s.trade_id = t.id
@@ -203,7 +203,7 @@ router.get('/by-trade/:tradeId', async (req, res) => {
 // GET staff by level
 router.get('/by-level/:level', async (req, res) => {
   try {
-    const [staff] = await pool.query(`
+    const [staff] = await pool.execute(`
       SELECT s.*, t.name as trade_name
       FROM staff s
       LEFT JOIN trades t ON s.trade_id = t.id
@@ -221,15 +221,15 @@ router.get('/by-level/:level', async (req, res) => {
 // GET staff statistics
 router.get('/stats/overview', async (req, res) => {
   try {
-    const [totalStaff] = await pool.query('SELECT COUNT(*) as count FROM staff WHERE status = "active"');
-    const [byRole] = await pool.query('SELECT role, COUNT(*) as count FROM staff WHERE status = "active" GROUP BY role');
-    const [byTrade] = await pool.query(`
+    const [totalStaff] = await pool.execute('SELECT COUNT(*) as count FROM staff WHERE status = "active"');
+    const [byRole] = await pool.execute('SELECT role, COUNT(*) as count FROM staff WHERE status = "active" GROUP BY role');
+    const [byTrade] = await pool.execute(`
       SELECT t.name, COUNT(s.id) as count
       FROM trades t
       LEFT JOIN staff s ON t.id = s.trade_id AND s.status = 'active'
       GROUP BY t.id, t.name
     `);
-    const [byLevel] = await pool.query('SELECT level, COUNT(*) as count FROM staff WHERE status = "active" AND level IS NOT NULL GROUP BY level');
+    const [byLevel] = await pool.execute('SELECT level, COUNT(*) as count FROM staff WHERE status = "active" AND level IS NOT NULL GROUP BY level');
 
     res.json({
       success: true,
@@ -251,10 +251,10 @@ router.post('/:id/assign-trade', async (req, res) => {
   try {
     const { trade_id, level } = req.body;
     
-    await pool.query('UPDATE staff SET trade_id = ?, level = ?, updated_at = NOW() WHERE id = ?', 
+    await pool.execute('UPDATE staff SET trade_id = ?, level = ?, updated_at = NOW() WHERE id = ?', 
       [trade_id, level || null, req.params.id]);
     
-    const [updated] = await pool.query('SELECT * FROM staff WHERE id = ?', [req.params.id]);
+    const [updated] = await pool.execute('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     res.json({ success: true, staff: updated[0] });
   } catch (error) {
     console.error('Assign trade error:', error);
@@ -265,7 +265,7 @@ router.post('/:id/assign-trade', async (req, res) => {
 // Create staff table if not exists
 async function ensureStaffTable() {
   try {
-    await pool.query(`
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS staff (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,

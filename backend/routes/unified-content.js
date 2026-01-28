@@ -218,7 +218,7 @@ function addTypeSpecificFields(type, body, data) {
 async function ensureTables() {
   try {
     // Courses table
-    await db.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,
@@ -238,7 +238,7 @@ async function ensureTables() {
     `);
 
     // Gallery table
-    await db.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS gallery_images (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,
@@ -256,7 +256,7 @@ async function ensureTables() {
     `);
 
     // Events table
-    await db.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS events (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,
@@ -275,7 +275,7 @@ async function ensureTables() {
     `);
 
     // Testimonials table
-    await db.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS testimonials (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,

@@ -11,6 +11,7 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import LeftSidebar from '@/app/components/LeftSidebar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import apiService from '@/app/services/apiService';
 
 interface PatronDashboardProps {
   onNavigate: (page: string) => void;
@@ -34,13 +35,10 @@ const PatronDashboard: React.FC<PatronDashboardProps> = ({ onNavigate }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const [studentsRes, analyticsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/discipline/students', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/discipline/analytics', { headers: { Authorization: `Bearer ${token}` } })
+      const [studentsData, analyticsData] = await Promise.all([
+        apiService.getDisciplineStudents(filters),
+        apiService.getDisciplineAnalytics()
       ]);
-      const studentsData = await studentsRes.json();
-      const analyticsData = await analyticsRes.json();
       if (studentsData.success) setStudents(studentsData.students);
       if (analyticsData.success) setAnalytics(analyticsData.analytics);
     } catch (error) {
@@ -53,14 +51,8 @@ const PatronDashboard: React.FC<PatronDashboardProps> = ({ onNavigate }) => {
   const submitIncident = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/discipline/conduct/remove', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student_id: selectedStudent.id, ...incidentForm })
-    });
-    const data = await res.json();
-    if (data.success) {
+    const res = await apiService.submitIncident({ student_id: selectedStudent.id, ...incidentForm });
+    if (res.success) {
       alert('Incident recorded and parents notified!');
       setShowIncidentModal(false);
       loadData();
@@ -70,14 +62,8 @@ const PatronDashboard: React.FC<PatronDashboardProps> = ({ onNavigate }) => {
   const submitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/discipline/leave/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student_id: selectedStudent.id, ...leaveForm })
-    });
-    const data = await res.json();
-    if (data.success) {
+    const res = await apiService.submitLeave({ student_id: selectedStudent.id, ...leaveForm });
+    if (res.success) {
       alert('Leave recorded and parents notified!');
       setShowLeaveModal(false);
       loadData();
@@ -87,14 +73,8 @@ const PatronDashboard: React.FC<PatronDashboardProps> = ({ onNavigate }) => {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
-    const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/messaging/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ recipient_ids: [selectedStudent.id], ...messageForm })
-    });
-    const data = await res.json();
-    if (data.success) {
+    const res = await apiService.sendMessage({ recipient_ids: [selectedStudent.id], ...messageForm });
+    if (res.success) {
       alert('Message sent successfully!');
       setShowMessageModal(false);
     }
@@ -202,7 +182,7 @@ const PatronDashboard: React.FC<PatronDashboardProps> = ({ onNavigate }) => {
                     <Select value={filters.trade} onValueChange={(v) => setFilters({...filters, trade: v})}>
                       <SelectTrigger className="w-32"><SelectValue placeholder="Umwuga" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Byose</SelectItem>
+                        <SelectItem value="all">Byose</SelectItem>
                         <SelectItem value="SOD">SOD</SelectItem>
                         <SelectItem value="BDC">BDC</SelectItem>
                         <SelectItem value="AUT">AUT</SelectItem>

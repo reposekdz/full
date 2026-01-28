@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import apiService from '@/app/services/apiService';
 import { 
   School, 
   Users, 
@@ -41,6 +42,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import LeftSidebar from '@/app/components/LeftSidebar';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import ComprehensiveAnalyticsDashboard from '@/app/components/analytics/ComprehensiveAnalyticsDashboard';
+import HRManagementDashboard from '@/app/components/hr/HRManagementDashboard';
+import InventoryManagementDashboard from '@/app/components/inventory/InventoryManagementDashboard';
+import EventManagementDashboard from '@/app/components/events/EventManagementDashboard';
+import CommunicationHubDashboard from '@/app/components/communication/CommunicationHubDashboard';
+import StaffDynamicSheetsDashboard from '@/app/components/staff/StaffDynamicSheetsDashboard';
+import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 
 interface HeadMasterDashboardProps {
   onNavigate: (page: string) => void;
@@ -49,11 +57,31 @@ interface HeadMasterDashboardProps {
 
 const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const res = await apiService.getHeadMasterDashboard();
+        if (res.success) {
+          setDashboardData(res);
+        }
+      } catch (error) {
+        console.error('Error fetching headmaster dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const stats = [
     {
       title: 'Abanyeshuri Bose',
-      value: '1,248',
+      value: dashboardData?.stats?.total_students?.toLocaleString() || '1,248',
       change: '+5.2%',
       trend: 'up',
       icon: Users,
@@ -62,7 +90,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
     {
       title: 'Abarimu',
-      value: '84',
+      value: dashboardData?.stats?.total_teachers?.toLocaleString() || '84',
       change: '+3.5%',
       trend: 'up',
       icon: GraduationCap,
@@ -71,7 +99,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
     {
       title: 'Amafaranga',
-      value: 'RWF 45M',
+      value: dashboardData?.stats?.total_revenue ? `RWF ${dashboardData.stats.total_revenue.toLocaleString()}` : 'RWF 45M',
       change: '+12.8%',
       trend: 'up',
       icon: DollarSign,
@@ -80,7 +108,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
     {
       title: 'Imikorere Rusange',
-      value: '92.5%',
+      value: dashboardData?.stats?.overall_performance ? `${dashboardData.stats.overall_performance}%` : '92.5%',
       change: '+2.1%',
       trend: 'up',
       icon: TrendingUp,
@@ -89,7 +117,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
   ];
 
-  const departments = [
+  const departments = dashboardData?.departments || [
     {
       name: 'Amashuri',
       head: 'Dr. Sarah Johnson',
@@ -152,7 +180,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
   ];
 
-  const recentActivities = [
+  const recentActivities = dashboardData?.recentActivities || [
     {
       title: 'Ikizamini cya National yasozwe',
       department: 'Amashuri',
@@ -195,7 +223,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
   ];
 
-  const upcomingEvents = [
+  const upcomingEvents = dashboardData?.upcomingEvents || [
     {
       title: 'Inama y\'Ababyeyi',
       date: 'Jan 25, 2026',
@@ -230,7 +258,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
   ];
 
-  const schoolPerformance = [
+  const schoolPerformance = dashboardData?.schoolPerformance || [
     {
       category: 'Amasomo',
       score: 87,
@@ -263,7 +291,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     },
   ];
 
-  const keyMetrics = [
+  const keyMetrics = dashboardData?.keyMetrics || [
     { label: 'Kwitabira', value: '96.8%', change: '+1.2%', trend: 'up', color: 'text-green-600' },
     { label: 'Gusubira Inyuma', value: '2.3%', change: '-0.8%', trend: 'down', color: 'text-green-600' },
     { label: 'Kwinjiza Amafaranga', value: '98.5%', change: '+2.5%', trend: 'up', color: 'text-green-600' },
@@ -272,7 +300,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     { label: 'Ihiganwa', value: '88.4%', change: '+3.2%', trend: 'up', color: 'text-green-600' },
   ];
 
-  const strategicGoals = [
+  const strategicGoals = dashboardData?.strategicGoals || [
     {
       goal: 'Kuzamura Ubwiza bw\'Amasomo',
       progress: 75,
@@ -306,6 +334,17 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
       completed: 9
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
+        <LeftSidebar currentPage="dashboard" onNavigate={onNavigate} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
@@ -379,7 +418,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
           </motion.div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 lg:w-auto bg-white border-2 border-yellow-200 p-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 lg:grid-cols-13 bg-white border-2 border-yellow-200 p-1 gap-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
               </TabsTrigger>
@@ -397,6 +436,27 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
               </TabsTrigger>
               <TabsTrigger value="reports" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Raporo
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="hr" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                HR
+              </TabsTrigger>
+              <TabsTrigger value="inventory" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Inventory
+              </TabsTrigger>
+              <TabsTrigger value="events-mgmt" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Events
+              </TabsTrigger>
+              <TabsTrigger value="communication" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Messages
+              </TabsTrigger>
+              <TabsTrigger value="staff-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Staff Performance
+              </TabsTrigger>
+              <TabsTrigger value="class-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Class Sheets
               </TabsTrigger>
             </TabsList>
 
@@ -893,6 +953,34 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <ComprehensiveAnalyticsDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="hr">
+              <HRManagementDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="inventory">
+              <InventoryManagementDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="events-mgmt">
+              <EventManagementDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="communication">
+              <CommunicationHubDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="staff-sheets">
+              <StaffDynamicSheetsDashboard userRole="headmaster" userId={1} />
+            </TabsContent>
+
+            <TabsContent value="class-sheets">
+              <ClassLevelSheetsDashboard userRole="headmaster" userId={1} />
             </TabsContent>
           </Tabs>
         </div>

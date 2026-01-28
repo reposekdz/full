@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { notifyLibraryBorrow, notifyLibraryReturn } = require('../utils/parentNotifications');
 
 router.get('/books', async (req, res) => {
   try {
@@ -266,6 +267,17 @@ router.post('/borrowings', authenticateToken, requireRole('admin', 'headmaster',
 
     await pool.query('COMMIT');
 
+    // Notify parent
+    try {
+      const [[bookInfo]] = await pool.query('SELECT title FROM library_books WHERE id = ?', [book_id]);
+      await notifyLibraryBorrow(user_id, {
+        title: bookInfo.title,
+        due_date: due_date
+      });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about library borrow:', notifyError);
+    }
+
     res.status(201).json({ success: true, message: 'Book issued successfully', id: result.insertId });
   } catch (error) {
     await pool.query('ROLLBACK');
@@ -310,6 +322,17 @@ router.put('/borrowings/:id/return', authenticateToken, requireRole('admin', 'he
     );
 
     await pool.query('COMMIT');
+
+    // Notify parent
+    try {
+      const [[bookInfo]] = await pool.query('SELECT title FROM library_books WHERE id = ?', [borrowing.book_id]);
+      const [[borrowingInfo]] = await pool.query('SELECT user_id FROM library_borrowings WHERE id = ?', [id]);
+      await notifyLibraryReturn(borrowingInfo.user_id, {
+        title: bookInfo.title
+      });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about library return:', notifyError);
+    }
 
     res.json({
       success: true,

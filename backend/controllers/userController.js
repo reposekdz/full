@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 
 const router = express.Router();
 
@@ -194,6 +195,34 @@ router.post('/', [
       username, email, hashedPassword, first_name, last_name, phone, address,
       date_of_birth, gender, role_id, finalStudentId, parent_id
     ]);
+
+    // Send welcome message if user is a parent or student
+    const [newUserInfo] = await pool.execute(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE u.id = ?
+    `, [result.insertId]);
+
+    if (newUserInfo.length > 0) {
+      const newUser = newUserInfo[0];
+      let welcomeMessage = '';
+
+      if (newUser.role_name === 'parent' && phone) {
+        welcomeMessage = `Muraho ${first_name} ${last_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umubyeyi yafunguwe neza. Mushobora gukurikirana imyigire y'abana banyu hano.`;
+      } else if (newUser.role_name === 'student' && phone) {
+        welcomeMessage = `Muraho ${first_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umunyeshuri yafunguwe neza. Student ID yanyu ni: ${finalStudentId}`;
+      }
+
+      if (welcomeMessage) {
+        smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
+          type: 'account_creation',
+          userId: result.insertId,
+          role: newUser.role_name,
+          preferredMethod: 'whatsapp'
+        }).catch(err => console.error('Failed to send welcome message:', err));
+      }
+    }
 
     res.status(201).json({
       success: true,

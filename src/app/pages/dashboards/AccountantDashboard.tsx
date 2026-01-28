@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, PieChart, Users, Package, Bell, Receipt, Wallet, ArrowUpDown, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, PieChart, Users, Package, Bell, Receipt, Wallet, ArrowUpDown, BarChart3, Table } from 'lucide-react';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 import AccountantSidebar from '@/app/components/AccountantSidebar';
+import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 
 import apiService from '@/app/services/apiService';
 
@@ -16,6 +18,7 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   const [notifications, setNotifications] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
+  const [activeView, setActiveView] = useState('dashboard');
 
   useEffect(() => {
     fetchDashboard();
@@ -79,6 +82,18 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
             <h1 className="text-4xl font-bold mb-2">Dashboard y'Umubare w'Imari</h1>
             <p className="text-emerald-100">Gucunga imari y'ishuri mu buryo bwuzuye</p>
           </div>
+
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 lg:w-auto bg-white border-2 border-emerald-200 p-1 gap-1">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
+                Incamake
+              </TabsTrigger>
+              <TabsTrigger value="class-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
+                Class Financial Sheets
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition-shadow">
@@ -228,6 +243,12 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
               </div>
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="class-sheets">
+              <ClassLevelSheetsDashboard userRole="accountant" userId={1} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

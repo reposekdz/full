@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const bcrypt = require('bcrypt');
+const smsService = require('../services/smsService');
 
 const router = express.Router();
 
@@ -121,6 +122,87 @@ router.get('/details/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get student details error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch student details' });
+  }
+});
+
+// Get comprehensive student profile (Admin/Teacher) - Advanced Profile Dialog
+router.get('/:id/profile', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [students] = await pool.execute(`
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
+        sp.admission_number, sp.date_of_birth, sp.gender, sp.blood_group, sp.address,
+        sp.guardian_name, sp.guardian_phone, sp.guardian_email
+      FROM users u
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.id = ? AND u.role = 'student'
+    `, [id]);
+
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const [enrollments] = await pool.execute(`
+      SELECT e.*, tc.name as class_name, tc.level_number as level, tc.level_suffix,
+        t.name as trade_name, t.code as trade_code
+      FROM enrollments e
+      JOIN trade_classes tc ON e.class_id = tc.id
+      LEFT JOIN trades t ON tc.trade_code = t.code
+      WHERE e.student_id = ?
+      ORDER BY e.enrollment_date DESC
+    `, [id]);
+
+    const [grades] = await pool.execute(`
+      SELECT g.id, g.obtained_marks, g.max_marks, g.assessment_date, g.remarks,
+        s.name as subject_name, s.code as subject_code,
+        c.name as class_name
+      FROM grades g
+      LEFT JOIN subjects s ON g.subject_id = s.id
+      LEFT JOIN classes c ON g.class_id = c.id
+      WHERE g.student_id = ?
+      ORDER BY g.assessment_date DESC
+      LIMIT 20
+    `, [id]);
+
+    const [attendance] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+      FROM attendance
+      WHERE student_id = ?
+    `, [id]);
+
+    const [avgGrade] = await pool.execute(`
+      SELECT AVG(obtained_marks/max_marks * 100) as average
+      FROM grades
+      WHERE student_id = ?
+    `, [id]);
+
+    const [medicalRecords] = await pool.execute(`
+      SELECT * FROM student_medical_records 
+      WHERE student_id = ? 
+      ORDER BY created_at DESC
+      LIMIT 5
+    `, [id]);
+
+    res.json({
+      success: true,
+      data: {
+        student: students[0],
+        enrollments: enrollments || [],
+        grades: grades || [],
+        attendance: attendance[0] || { total: 0, present: 0, absent: 0, late: 0, excused: 0 },
+        average_grade: avgGrade[0]?.average || 0,
+        medical_records: medicalRecords || []
+      }
+    });
+  } catch (error) {
+    console.error('Get comprehensive student profile error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch student profile' });
   }
 });
 

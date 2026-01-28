@@ -24,6 +24,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedNavItems, setExpandedNavItems] = useState<string[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const displayUser = currentUser || user;
 
   const navItems = [
     { key: 'home', icon: Home, label: language === 'rw' ? 'Ahabanza' : 'Home', subItems: [] },
@@ -152,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                 </DropdownMenu>
 
                 {/* Desktop Auth Buttons */}
-                {!user && (
+                {!displayUser && (
                   <div className="flex items-center gap-1.5">
                     <Button
                       variant="outline"
@@ -175,26 +185,34 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                 )}
 
                 {/* User Menu */}
-                {user && (
+                {displayUser && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 p-0">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white text-xs font-bold">
-                            {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                            {displayUser?.first_name?.charAt(0)}{displayUser?.last_name?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem className="flex flex-col items-start">
-                        <p className="font-semibold text-sm">{user.first_name} {user.last_name}</p>
-                        <p className="text-xs text-gray-500">{user.role}</p>
+                        <p className="font-semibold text-sm">{displayUser.first_name} {displayUser.last_name}</p>
+                        <p className="text-xs text-gray-500">{displayUser.role}</p>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onNavigate(getRoleDashboard(user.role))}>
+                      <DropdownMenuItem onClick={() => {
+                        const dashboard = getRoleDashboard(displayUser.role);
+                        window.location.href = `/${dashboard}`;
+                      }}>
                         Dashboard
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600" onClick={() => {
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                        sessionStorage.removeItem('user');
+                        sessionStorage.removeItem('token');
+                        setCurrentUser(null);
                         logout();
                         onNavigate('home');
                       }}>
@@ -382,7 +400,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
               {/* Enhanced Footer */}
               <div className="border-t-2 border-yellow-200 p-3 bg-gradient-to-br from-yellow-50 to-green-50 space-y-2 flex flex-col justify-center">
-                {!user ? (
+                {!displayUser ? (
                   <div className="space-y-2">
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
@@ -418,18 +436,19 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     >
                       <Avatar className="h-12 w-12 ring-2 ring-yellow-400">
                         <AvatarFallback className="bg-gradient-to-br from-yellow-500 to-green-500 text-white font-bold text-lg">
-                          {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                          {displayUser?.first_name?.charAt(0)}{displayUser?.last_name?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate text-green-800">{user.first_name} {user.last_name}</p>
-                        <p className="text-xs text-yellow-700 font-semibold truncate">{user.role}</p>
+                        <p className="text-sm font-bold truncate text-green-800">{displayUser.first_name} {displayUser.last_name}</p>
+                        <p className="text-xs text-yellow-700 font-semibold truncate">{displayUser.role}</p>
                       </div>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         onClick={() => {
-                          onNavigate(getRoleDashboard(user.role));
+                          const dashboard = getRoleDashboard(displayUser.role);
+                          window.location.href = `/${dashboard}`;
                           setIsSidebarOpen(false);
                         }}
                         variant="outline"
@@ -442,6 +461,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         onClick={() => {
+                          localStorage.removeItem('user');
+                          localStorage.removeItem('token');
+                          sessionStorage.removeItem('user');
+                          sessionStorage.removeItem('token');
+                          setCurrentUser(null);
                           logout();
                           onNavigate('home');
                           setIsSidebarOpen(false);

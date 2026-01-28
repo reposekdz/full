@@ -6,6 +6,7 @@ const xlsx = require('xlsx');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const smsService = require('../services/smsService');
 
 const router = express.Router();
 
@@ -97,6 +98,15 @@ router.post('/parent/generate-code', [
       [student_id, parent_phone, verificationCode, studentName, 'N/A', studentData.course_name, studentData.academic_year]
     );
 
+    // Send code via WhatsApp/SMS
+    const codeMessage = `Muraho! Verification code yanyu yo guhuza konti y'umubyeyi n'umwana wanyu ${studentName} muri Garden TVET School ni: ${verificationCode}. Iyi code imara amasaha 24.`;
+    
+    smsService.sendUniversalMessage(parent_phone, codeMessage, 0, {
+      type: 'parent_link_code',
+      studentId: student_id,
+      preferredMethod: 'whatsapp'
+    }).catch(err => console.error('Failed to send verification code:', err));
+
     res.status(201).json({
       success: true,
       message: 'Verification code generated successfully',
@@ -136,7 +146,7 @@ router.post('/parent/verify-code', [
 
     // Check if parent already linked
     const [existingLink] = await pool.execute(
-      'SELECT id FROM parent_student_links WHERE parent_id = ?',
+      'SELECT id FROM parent_student WHERE parent_id = ?',
       [parent_id]
     );
 
@@ -146,8 +156,8 @@ router.post('/parent/verify-code', [
 
     // Create link
     const [result] = await pool.execute(
-      'INSERT INTO parent_student_links (parent_id, student_id, relationship_type, linked_by) VALUES (?, ?, ?, ?)',
-      [parent_id, codeData.student_id, 'guardian', null]
+      'INSERT INTO parent_student (parent_id, student_id, relationship) VALUES (?, ?, ?)',
+      [parent_id, codeData.student_id, 'guardian']
     );
 
     // Mark code as used
@@ -181,15 +191,15 @@ router.get('/parent/my-student', [authenticateToken], async (req, res) => {
     const parentId = req.user.id;
 
     const [links] = await pool.execute(`
-      SELECT psl.*, u.first_name, u.last_name, u.student_id as student_number,
+      SELECT ps.*, u.first_name, u.last_name, u.student_id as student_number,
              c.name as course_name, ay.name as academic_year
-      FROM parent_student_links psl
-      JOIN users u ON psl.student_id = u.id
+      FROM parent_student ps
+      JOIN users u ON ps.student_id = u.id
       LEFT JOIN enrollments e ON u.id = e.student_id
       LEFT JOIN classes cl ON e.class_id = cl.id
       LEFT JOIN courses c ON cl.course_id = c.id
       LEFT JOIN academic_years ay ON e.academic_year_id = ay.id
-      WHERE psl.parent_id = ? AND psl.status = 'active'
+      WHERE ps.parent_id = ?
       ORDER BY e.enrollment_date DESC LIMIT 1
     `, [parentId]);
 

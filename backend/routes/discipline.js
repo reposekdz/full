@@ -90,29 +90,17 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
       req.user.userId, req.user.name
     ]);
 
-    // Get parent info
-    const [parents] = await pool.execute(`
-      SELECT u.id, u.name FROM users u
-      INNER JOIN parent_sheets ps ON u.id = ps.parent_id
-      WHERE ps.student_id = ?
-    `, [student_id]);
-
-    // Notify parents
-    for (const parent of parents) {
-      const message = `Uburenganzira bw'umwana wawe ${student.name} (${student.student_code}) bwakuweho.\n\nUbwoko: ${conduct_type}\nUkomeye: ${severity}\nIgisobanuro: ${description}\nIcyakozwe: ${action_taken || 'N/A'}\nIsomo ryatakajwe: ${lesson_missed || 'N/A'}\nWakuyeho: ${req.user.name}\nIgihe: ${new Date().toLocaleString('rw-RW')}`;
-      
-      await pool.execute(`
-        INSERT INTO parent_discipline_notifications 
-        (parent_id, student_id, notification_type, title, message, record_id)
-        VALUES (?, ?, 'conduct_removed', ?, ?, ?)
-      `, [parent.id, student_id, `Uburenganzira bwakuweho - ${student.name}`, message, result.insertId]);
-    }
+    // Auto-notify parents using consolidated utility
+    await notifyConductRemoval(student_id, { 
+      conduct_type, 
+      severity, 
+      description, 
+      action_taken, 
+      removed_by_name: req.user.name 
+    }, result.insertId);
 
     // Update discipline record as notified
     await pool.execute('UPDATE discipline_records SET parent_notified = true WHERE id = ?', [result.insertId]);
-
-    // Auto-notify parents
-    await notifyConductRemoval(student_id, { conduct_type, severity, description, action_taken, removed_by_name: req.user.name });
 
     res.json({ success: true, message: 'Conduct removed and parents notified', recordId: result.insertId });
   } catch (error) {
@@ -144,29 +132,18 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
       req.user.userId, req.user.name
     ]);
 
-    // Get parent info
-    const [parents] = await pool.execute(`
-      SELECT u.id, u.name FROM users u
-      INNER JOIN parent_sheets ps ON u.id = ps.parent_id
-      WHERE ps.student_id = ?
-    `, [student_id]);
-
-    // Notify parents
-    for (const parent of parents) {
-      const message = `Umwana wawe ${student.name} (${student.student_code}) yavuye mu ishuri.\n\nImpamvu: ${leave_type}\nIgisobanuro: ${reason}\nIsomo ryatakajwe: ${lesson_missed || 'N/A'}\nIgihe cyo gutangira: ${new Date(start_time).toLocaleString('rw-RW')}\n${end_time ? `Igihe cyo kurangira: ${new Date(end_time).toLocaleString('rw-RW')}` : 'Igihe cyo kurangira: Ntabwo cyagenwe'}\nWemeje: ${req.user.name}`;
-      
-      await pool.execute(`
-        INSERT INTO parent_discipline_notifications 
-        (parent_id, student_id, notification_type, title, message, record_id)
-        VALUES (?, ?, 'leave_approved', ?, ?, ?)
-      `, [parent.id, student_id, `Umwana wawe yavuye mu ishuri - ${student.name}`, message, result.insertId]);
-    }
+    // Auto-notify parents using consolidated utility
+    await notifyLeaveApproval(student_id, { 
+      leave_type, 
+      reason, 
+      lesson_missed, 
+      start_time, 
+      end_time, 
+      approved_by_name: req.user.name 
+    }, result.insertId);
 
     // Update leave record as notified
     await pool.execute('UPDATE student_leaves SET parent_notified = true WHERE id = ?', [result.insertId]);
-
-    // Auto-notify parents
-    await notifyLeaveApproval(student_id, { leave_type, reason, lesson_missed, start_time, end_time, approved_by_name: req.user.name });
 
     res.json({ success: true, message: 'Leave recorded and parents notified', leaveId: result.insertId });
   } catch (error) {

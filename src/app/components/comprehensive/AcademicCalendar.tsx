@@ -142,7 +142,7 @@ export const AcademicCalendar: React.FC = () => {
             <Select value={filters.event_type} onValueChange={v => setFilters({...filters, event_type: v})}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Event Type" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="exam">Exam</SelectItem>
                 <SelectItem value="holiday">Holiday</SelectItem>
                 <SelectItem value="meeting">Meeting</SelectItem>
@@ -152,7 +152,7 @@ export const AcademicCalendar: React.FC = () => {
             <Select value={filters.month} onValueChange={v => setFilters({...filters, month: v})}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Month" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Months</SelectItem>
+                <SelectItem value="all">All Months</SelectItem>
                 {Array.from({length: 12}, (_, i) => (
                   <SelectItem key={i+1} value={String(i+1)}>{new Date(2024, i).toLocaleString('default', {month: 'long'})}</SelectItem>
                 ))}

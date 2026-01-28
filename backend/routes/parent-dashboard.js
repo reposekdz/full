@@ -269,4 +269,55 @@ router.get('/notifications', authenticate, authorize(['parent']), async (req, re
   }
 });
 
+// Get parent overview
+router.get('/overview', authenticate, authorize(['parent']), async (req, res) => {
+  try {
+    const [parent] = await db.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    const [children] = await db.query(`
+      SELECT s.*, u.name, u.email, tc.name as class_name,
+             (SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id) as average_grade,
+             (SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id) as attendance_rate
+      FROM parent_student_links psl
+      JOIN students s ON psl.student_id = s.user_id
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
+      WHERE psl.parent_id = ? AND psl.is_active = true
+    `, [req.user.id]);
+    
+    const [stats] = await db.query(`
+      SELECT 
+        COUNT(DISTINCT s.user_id) as total_children,
+        AVG((SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id)) as average_grade,
+        AVG((SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id)) as attendance_rate,
+        SUM((SELECT COALESCE(SUM(balance), 0) FROM fee_payments WHERE student_id = s.user_id)) as pending_fees
+      FROM parent_student_links psl
+      JOIN students s ON psl.student_id = s.user_id
+      WHERE psl.parent_id = ? AND psl.is_active = true
+    `, [req.user.id]);
+
+    res.json({ success: true, parent: parent[0], children, stats: stats[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get children list
+router.get('/children', authenticate, authorize(['parent']), async (req, res) => {
+  try {
+    const [children] = await db.query(`
+      SELECT s.*, u.name, u.email, tc.name as class_name,
+             (SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id) as average_grade,
+             (SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id) as attendance_rate
+      FROM parent_student_links psl
+      JOIN students s ON psl.student_id = s.user_id
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
+      WHERE psl.parent_id = ? AND psl.is_active = true
+    `, [req.user.id]);
+    res.json({ success: true, children });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

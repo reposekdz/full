@@ -343,10 +343,6 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="hidden lg:flex items-center gap-1 bg-gray-100 text-gray-600 border-0">
-              <Sparkles className="w-3 h-3" />
-              AI Powered
-            </Badge>
             <kbd className="hidden xl:inline-flex h-7 items-center gap-1 rounded-lg border-2 border-gray-200 bg-white px-2 text-xs font-semibold text-gray-600">
               <span className="text-sm">⌘</span>K
             </kbd>

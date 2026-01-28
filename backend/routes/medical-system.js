@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { notifyMedicalRecord } = require('../utils/parentNotifications');
 
 router.get('/records', authenticateToken, async (req, res) => {
   try {
@@ -114,6 +115,10 @@ router.post('/records', authenticateToken, requireRole('admin', 'headmaster', 't
       [student_id, record_type, description, treatment, prescribed_by, visit_date, parent_notified ? 1 : 0]
     );
 
+    if (parent_notified) {
+      await notifyMedicalRecord(student_id, { record_type, description, treatment, prescribed_by, visit_date });
+    }
+
     res.status(201).json({ success: true, message: 'Medical record created', id: result.insertId });
   } catch (error) {
     console.error('Create medical record error:', error);
@@ -136,6 +141,10 @@ router.put('/records/:id', authenticateToken, requireRole('admin', 'headmaster',
        WHERE id = ?`,
       [student_id, record_type, description, treatment, prescribed_by, visit_date, parent_notified ? 1 : 0, id]
     );
+
+    if (parent_notified) {
+      await notifyMedicalRecord(student_id, { record_type, description, treatment, prescribed_by, visit_date });
+    }
 
     res.json({ success: true, message: 'Medical record updated successfully' });
   } catch (error) {

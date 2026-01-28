@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Calendar, AlertTriangle, Activity, Users, FileText, TrendingUp, Shield, Home, User, Scale, Mail, FileSpreadsheet, BarChart3, Menu, X } from 'lucide-react';
-import { apiService } from '@/app/services/apiService';
+import { Bell, Calendar, AlertTriangle, Activity, Users, FileText, TrendingUp, Shield, Home, User, Scale, Mail, FileSpreadsheet, BarChart3, Menu, X, Plane } from 'lucide-react';
+import apiService from '@/app/services/apiService';
 
 interface Stats {
   ubutumwa_bushya: number;
@@ -116,6 +116,7 @@ const DODDashboard: React.FC<{ onNavigate: (page: string) => void; onLogout: () 
               { id: 'director-discipline-dashboard', label: 'Dashboard', Icon: Home, active: true },
               { id: 'dod-profile', label: 'Profil', Icon: User },
               { id: 'dod-discipline', label: 'Amakosa', Icon: FileText },
+              { id: 'dod-leave', label: 'Uruhushya', Icon: Plane },
               { id: 'dod-exams', label: 'Ibizamini', Icon: Calendar },
               { id: 'dod-students', label: 'Abanyeshuri', Icon: Users },
               { id: 'dod-reports', label: 'Raporo', Icon: BarChart3 },
@@ -282,14 +283,18 @@ const DODDashboard: React.FC<{ onNavigate: (page: string) => void; onLogout: () 
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <button onClick={() => onNavigate('dod-profile')} className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
-          <Users className="w-8 h-8 mx-auto mb-2" />
+          <User className="w-8 h-8 mx-auto mb-2" />
           <p className="font-semibold text-sm">Profil</p>
         </button>
         <button onClick={() => onNavigate('dod-discipline')} className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
           <FileText className="w-8 h-8 mx-auto mb-2" />
           <p className="font-semibold text-sm">Amakosa</p>
+        </button>
+        <button onClick={() => onNavigate('dod-leave')} className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
+          <Plane className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-semibold text-sm">Uruhushya</p>
         </button>
         <button onClick={() => onNavigate('dod-exams')} className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
           <Calendar className="w-8 h-8 mx-auto mb-2" />
@@ -308,12 +313,8 @@ const DODDashboard: React.FC<{ onNavigate: (page: string) => void; onLogout: () 
           <p className="font-semibold text-sm">Ibihano</p>
         </button>
         <button onClick={() => onNavigate('dod-parent-notifications')} className="p-4 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
-          <Bell className="w-8 h-8 mx-auto mb-2" />
+          <Mail className="w-8 h-8 mx-auto mb-2" />
           <p className="font-semibold text-sm">Ababyeyi</p>
-        </button>
-        <button onClick={() => onNavigate('dod-student-sheets')} className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition">
-          <FileText className="w-8 h-8 mx-auto mb-2" />
-          <p className="font-semibold text-sm">Imbonerahamwe</p>
         </button>
       </div>
         </div>

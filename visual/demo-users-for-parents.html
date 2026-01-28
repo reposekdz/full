@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Users - Garden TVET School Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid #3498db;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .user-card.admin { border-left-color: #e74c3c; }
+        .user-card.teacher { border-left-color: #27ae60; }
+        .user-card.student { border-left-color: #f39c12; }
+        .user-card.parent { border-left-color: #9b59b6; }
+
+        .user-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .user-role {
+            background: #3498db;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .user-role.admin { background: #e74c3c; }
+        .user-role.teacher { background: #27ae60; }
+        .user-role.student { background: #f39c12; }
+        .user-role.parent { background: #9b59b6; }
+
+        .user-details {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .user-details strong {
+            color: #2c3e50;
+        }
+
+        .credentials-box {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .credentials-box h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .credentials-box p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .serial-codes {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .serial-codes h4 {
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+
+        .code-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .code-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-weight: bold;
+            color: #27ae60;
+            border: 1px solid #27ae60;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .user-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏫 Demo Users Directory</h1>
+            <p>Garden TVET School Management System - Complete User Database</p>
+        </div>
+
+        <div class="content">
+            <div class="credentials-box">
+                <h3>🔑 Universal Login Credentials</h3>
+                <p><strong>Default Password for ALL Users:</strong> 2026</p>
+            </div>
+
+            <!-- Admin Staff Section -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span class="icon">👨‍💼</span>
+                    Administrative Staff (8 Users)
+                </h2>
+                <div class="user-grid">
+                    <div class="user-card admin">
+                        <div class="user-name">System Administrator</div>
+                        <div class="user-role admin">Admin</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> admin<br>
+                            <strong>Email:</strong> admin_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100001<br>
+                            <strong>Access:</strong> Full system control
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Jean Paul Nkurunziza</div>
+                        <div class="user-role admin">Headmaster</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> headmaster<br>
+                            <strong>Email:</strong> headmaster_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100002<br>
+                            <strong>Access:</strong> School leadership
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Marie Uwimana</div>
+                        <div class="user-role admin">DOS</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> dos<br>
+                            <strong>Email:</strong> dos_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100003<br>
+                            <strong>Access:</strong> Student affairs
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Eric Mugenzi</div>
+                        <div class="user-role admin">DOD</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> dod<br>
+                            <strong>Email:</strong> dod_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100004<br>
+                            <strong>Access:</strong> Discipline management
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Grace Mukandayisenga</div>
+                        <div class="user-role admin">Accountant</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> accountant<br>
+                            <strong>Email:</strong> accountant_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100005<br>
+                            <strong>Access:</strong> Financial management
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Patrick Habimana</div>
+                        <div class="user-role admin">Stock Manager</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> stockmanager<br>
+                            <strong>Email:</strong> stockmanager_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100006<br>
+                            <strong>Access:</strong> Inventory management
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Rev. James Kalisa</div>
+                        <div class="user-role admin">Patron</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> patron<br>
+                            <strong>Email:</strong> patron_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100007<br>
+                            <strong>Access:</strong> Spiritual guidance
+                        </div>
+                    </div>
+
+                    <div class="user-card admin">
+                        <div class="user-name">Alice Nyiramahirwe</div>
+                        <div class="user-role admin">Advisor</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> advisor<br>
+                            <strong>Email:</strong> advisor_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788100008<br>
+                            <strong>Access:</strong> Student counseling
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teachers Section -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span class="icon">👨‍🏫</span>
+                    Teaching Staff (8 Users)
+                </h2>
+                <div class="user-grid">
+                    <div class="user-card teacher">
+                        <div class="user-name">Emmanuel Mugisha</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_demo<br>
+                            <strong>Email:</strong> teacher_demo_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200001<br>
+                            <strong>Subject:</strong> Mathematics<br>
+                            <strong>Qualification:</strong> MSc Mathematics
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Christine Uwineza</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_physics<br>
+                            <strong>Email:</strong> teacher_physics_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200002<br>
+                            <strong>Subject:</strong> Physics<br>
+                            <strong>Qualification:</strong> BSc Physics
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">David Niyonkuru</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_ict<br>
+                            <strong>Email:</strong> teacher_ict_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200003<br>
+                            <strong>Subject:</strong> ICT & Programming<br>
+                            <strong>Qualification:</strong> BSc Computer Science
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Sarah Keza</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_english<br>
+                            <strong>Email:</strong> teacher_english_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200004<br>
+                            <strong>Subject:</strong> English Language<br>
+                            <strong>Qualification:</strong> BA English Literature
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Jean Claude Bizimana</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_electrical<br>
+                            <strong>Email:</strong> teacher_electrical_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200005<br>
+                            <strong>Subject:</strong> Electrical Engineering<br>
+                            <strong>Qualification:</strong> Diploma Electrical Eng.
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Robert Ndizeye</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_welding<br>
+                            <strong>Email:</strong> teacher_welding_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200006<br>
+                            <strong>Subject:</strong> Welding & Fabrication<br>
+                            <strong>Qualification:</strong> Certificate Welding Tech
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Joseph Nkusi</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_plumbing<br>
+                            <strong>Email:</strong> teacher_plumbing_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200007<br>
+                            <strong>Subject:</strong> Plumbing & Sanitation<br>
+                            <strong>Qualification:</strong> Diploma Plumbing
+                        </div>
+                    </div>
+
+                    <div class="user-card teacher">
+                        <div class="user-name">Francis Nshimiyimana</div>
+                        <div class="user-role teacher">Teacher</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> teacher_carpentry<br>
+                            <strong>Email:</strong> teacher_carpentry_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788200008<br>
+                            <strong>Subject:</strong> Carpentry & Joinery<br>
+                            <strong>Qualification:</strong> Certificate Carpentry
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span class="icon">👨‍🎓</span>
+                    Students (6 Users)
+                </h2>
+                <div class="user-grid">
+                    <div class="user-card student">
+                        <div class="user-name">Janvier Uwamahoro</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo1<br>
+                            <strong>Email:</strong> student1_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300001<br>
+                            <strong>Trade:</strong> SOD Level 4A<br>
+                            <strong>Gender:</strong> Male<br>
+                            <strong>DOB:</strong> 2005-03-15<br>
+                            <strong>Address:</strong> Kigali, Gasabo, Remera
+                        </div>
+                    </div>
+
+                    <div class="user-card student">
+                        <div class="user-name">Diane Ishimwe</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo2<br>
+                            <strong>Email:</strong> student2_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300002<br>
+                            <strong>Trade:</strong> SOD Level 4A<br>
+                            <strong>Gender:</strong> Female<br>
+                            <strong>DOB:</strong> 2006-07-20<br>
+                            <strong>Address:</strong> Kigali, Kicukiro, Niboye
+                        </div>
+                    </div>
+
+                    <div class="user-card student">
+                        <div class="user-name">Patrick Nsengimana</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo3<br>
+                            <strong>Email:</strong> student3_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300003<br>
+                            <strong>Trade:</strong> BDC Level 4A<br>
+                            <strong>Gender:</strong> Male<br>
+                            <strong>DOB:</strong> 2005-11-10<br>
+                            <strong>Address:</strong> Kigali, Nyarugenge, Nyabugogo
+                        </div>
+                    </div>
+
+                    <div class="user-card student">
+                        <div class="user-name">Grace Mukamana</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo4<br>
+                            <strong>Email:</strong> student4_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300004<br>
+                            <strong>Trade:</strong> AUT Level 4A<br>
+                            <strong>Gender:</strong> Female<br>
+                            <strong>DOB:</strong> 2006-01-25<br>
+                            <strong>Address:</strong> Kigali, Gasabo, Kimironko
+                        </div>
+                    </div>
+
+                    <div class="user-card student">
+                        <div class="user-name">Eric Habimana</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo5<br>
+                            <strong>Email:</strong> student5_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300005<br>
+                            <strong>Trade:</strong> ICT Level 1A<br>
+                            <strong>Gender:</strong> Male<br>
+                            <strong>DOB:</strong> 2005-09-05<br>
+                            <strong>Address:</strong> Kigali, Kicukiro, Gikondo
+                        </div>
+                    </div>
+
+                    <div class="user-card student">
+                        <div class="user-name">Yvonne Uwase</div>
+                        <div class="user-role student">Student</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> student_demo6<br>
+                            <strong>Email:</strong> student6_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788300006<br>
+                            <strong>Trade:</strong> SOD Level 5A<br>
+                            <strong>Gender:</strong> Female<br>
+                            <strong>DOB:</strong> 2004-05-18<br>
+                            <strong>Address:</strong> Kigali, Gasabo, Kacyiru
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parents Section -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span class="icon">👪</span>
+                    Parents (4 Users)
+                </h2>
+                <div class="user-grid">
+                    <div class="user-card parent">
+                        <div class="user-name">Jean Uwamahoro</div>
+                        <div class="user-role parent">Parent</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> parent_demo1<br>
+                            <strong>Email:</strong> parent1_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788400001<br>
+                            <strong>Relationship:</strong> Father<br>
+                            <strong>Child:</strong> Janvier Uwamahoro (student_demo1)<br>
+                            <strong>Address:</strong> Kigali, Gasabo, Remera
+                        </div>
+                    </div>
+
+                    <div class="user-card parent">
+                        <div class="user-name">Agnes Ishimwe</div>
+                        <div class="user-role parent">Parent</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> parent_demo2<br>
+                            <strong>Email:</strong> parent2_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788400002<br>
+                            <strong>Relationship:</strong> Mother<br>
+                            <strong>Child:</strong> Diane Ishimwe (student_demo2)<br>
+                            <strong>Address:</strong> Kigali, Kicukiro, Niboye
+                        </div>
+                    </div>
+
+                    <div class="user-card parent">
+                        <div class="user-name">Paul Nsengimana</div>
+                        <div class="user-role parent">Parent</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> parent_demo3<br>
+                            <strong>Email:</strong> parent3_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788400003<br>
+                            <strong>Relationship:</strong> Father<br>
+                            <strong>Child:</strong> Patrick Nsengimana (student_demo3)<br>
+                            <strong>Address:</strong> Kigali, Nyarugenge, Nyabugogo
+                        </div>
+                    </div>
+
+                    <div class="user-card parent">
+                        <div class="user-name">Rose Mukamana</div>
+                        <div class="user-role parent">Parent</div>
+                        <div class="user-details">
+                            <strong>Username:</strong> parent_demo4<br>
+                            <strong>Email:</strong> parent4_2026@gardentvet.rw<br>
+                            <strong>Phone:</strong> +250788400004<br>
+                            <strong>Relationship:</strong> Mother<br>
+                            <strong>Child:</strong> Grace Mukamana (student_demo4)<br>
+                            <strong>Address:</strong> Kigali, Gasabo, Kimironko
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Serial Codes Section -->
+            <div class="serial-codes">
+                <h4>🎟️ Generated Serial Codes for Student Registration</h4>
+                <p>These codes are automatically generated and used during student enrollment:</p>
+                <div class="code-list">
+                    <div class="code-item">SOD4A-XXXX (3 codes)</div>
+                    <div class="code-item">SOD5A-XXXX (2 codes)</div>
+                    <div class="code-item">BDC4A-XXXX (2 codes)</div>
+                    <div class="code-item">AUT4A-XXXX (2 codes)</div>
+                    <div class="code-item">ICT1A-XXXX (2 codes)</div>
+                </div>
+                <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <strong>Note:</strong> XXXX represents randomly generated hex codes. Actual codes are created during setup.
+                </p>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="section">
+                <h2 class="section-title">
+                    <span class="icon">📊</span>
+                    System Summary
+                </h2>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; text-align: center;">
+                        <div>
+                            <h3 style="color: #e74c3c; font-size: 2rem;">8</h3>
+                            <p>Admin Staff</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #27ae60; font-size: 2rem;">8</h3>
+                            <p>Teachers</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #f39c12; font-size: 2rem;">6</h3>
+                            <p>Students</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #9b59b6; font-size: 2rem;">4</h3>
+                            <p>Parents</p>
+                        </div>
+                        <div>
+                            <h3 style="color: #3498db; font-size: 2rem;">26</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 Garden TVET School Management System | Demo Users Database</p>
+            <p>All users created with default password: <strong>2026</strong></p>
+        </div>
+    </div>
+</body>
+</html>

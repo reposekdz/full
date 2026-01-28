@@ -376,6 +376,7 @@ const defaultEvents = [
 const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { t, language } = useLanguage();
   const [newsArticles, setNewsArticles] = useState(defaultNewsArticles);
+  const [displayedNewsCount, setDisplayedNewsCount] = useState(8);
   const [testimonials, setTestimonials] = useState(defaultTestimonials);
   const [schoolStats, setSchoolStats] = useState(defaultSchoolStats);
   const [achievements, setAchievements] = useState(defaultAchievements);
@@ -405,12 +406,24 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     const fetchContent = async () => {
       setLoading(true);
       try {
-        // Fetch news articles from homepage API
+        // Fetch news articles from news API
         try {
-          const newsResponse = await fetch(`${API_BASE}/homepage/news`);
+          const newsResponse = await fetch(`${API_BASE}/news`);
           const newsData = await newsResponse.json();
           if (newsData.success && newsData.articles && newsData.articles.length > 0) {
-            setNewsArticles(newsData.articles);
+            // Transform API data to match component format
+            const transformedArticles = newsData.articles.map((article: any) => ({
+              id: article.id,
+              title: article.title,
+              description: article.description,
+              publish_date: new Date(article.date_published).toLocaleDateString('rw-RW', { year: 'numeric', month: 'long', day: 'numeric' }),
+              category: article.category,
+              image_url: article.image_url,
+              author: article.author,
+              is_active: article.is_active,
+              sort_order: article.id
+            }));
+            setNewsArticles(transformedArticles);
           }
         } catch (error) {
           console.log('News API error, using default:', error);
@@ -656,8 +669,8 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {newsArticles.map((article, index) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {newsArticles.slice(0, displayedNewsCount).map((article, index) => (
               <motion.div
                 key={article.id || index}
                 initial={{ opacity: 0, y: 50 }}
@@ -671,6 +684,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                       src={article.image_url?.startsWith('/uploads') ? `http://localhost:5000${article.image_url}` : article.image_url || article.image} 
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800';
+                      }}
                     />
                     <Badge className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0 text-xs sm:text-sm">
                       {article.category}
@@ -699,6 +716,22 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               </motion.div>
             ))}
           </div>
+
+          {newsArticles.length > displayedNewsCount && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex justify-center mt-8"
+            >
+              <button
+                onClick={() => setDisplayedNewsCount(prev => prev + 8)}
+                className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Tangaza Andi Makuru ({newsArticles.length - displayedNewsCount})
+              </button>
+            </motion.div>
+          )}
         </div>
       </section>
 

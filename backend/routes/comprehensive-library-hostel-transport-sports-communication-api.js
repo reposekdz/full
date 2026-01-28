@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { notifyLibraryBorrow, notifyLibraryReturn, notifyHostelAllocation } = require('../utils/parentNotifications');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -127,6 +128,13 @@ router.post('/library/borrow', async (req, res) => {
       WHERE lb.id = ?
     `, [result.insertId]);
 
+    // Notify parent
+    try {
+      await notifyLibraryBorrow(userId, { title: borrowing[0].title, due_date: dueDate });
+    } catch (notifyError) {
+      console.error('Failed to notify parent about library borrow:', notifyError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Book borrowed successfully',
@@ -164,6 +172,21 @@ router.put('/library/borrowings/:id/return', async (req, res) => {
     await connection.query('UPDATE library_books SET available_quantity = available_quantity + 1 WHERE id = ?', [borrowing[0].book_id]);
 
     await connection.commit();
+
+    // Notify parent
+    try {
+      const [borrowInfo] = await connection.query(`
+        SELECT lb.user_id, b.title 
+        FROM library_borrowings lb
+        JOIN library_books b ON lb.book_id = b.id
+        WHERE lb.id = ?
+      `, [id]);
+      if (borrowInfo.length > 0) {
+        await notifyLibraryReturn(borrowInfo[0].user_id, { title: borrowInfo[0].title });
+      }
+    } catch (notifyError) {
+      console.error('Failed to notify parent about library return:', notifyError);
+    }
 
     const [updated] = await connection.query('SELECT * FROM library_borrowings WHERE id = ?', [id]);
 

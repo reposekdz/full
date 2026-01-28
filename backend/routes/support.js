@@ -5,7 +5,7 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 router.get('/categories', async (req, res) => {
   try {
-    const [categories] = await pool.query(`
+    const [categories] = await pool.execute(`
       SELECT c.*, 
         COUNT(DISTINCT f.id) as faq_count,
         COUNT(DISTINCT r.id) as resource_count
@@ -34,7 +34,7 @@ router.get('/faqs', async (req, res) => {
     }
     
     query += ' ORDER BY sort_order, views DESC';
-    const [faqs] = await pool.query(query, params);
+    const [faqs] = await pool.execute(query, params);
     res.json({ success: true, faqs });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -53,7 +53,7 @@ router.get('/resources', async (req, res) => {
     }
     
     query += ' ORDER BY downloads DESC';
-    const [resources] = await pool.query(query, params);
+    const [resources] = await pool.execute(query, params);
     res.json({ success: true, resources });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -65,9 +65,9 @@ router.post('/tickets', async (req, res) => {
     const { category_id, name, email, phone, subject, message, priority } = req.body;
     const ticket_number = `TKT${Date.now()}`;
     
-    await pool.query(
+    await pool.execute(
       'INSERT INTO support_tickets (ticket_number, category_id, name, email, phone, subject, message, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [ticket_number, category_id, name, email, phone, subject, message, priority || 'medium']
+      [ticket_number, category_id || 1, name || 'Anonymous', email || 'no-email@example.com', phone || '', subject || 'No Subject', message || '', priority || 'medium']
     );
     
     res.json({ success: true, message: 'Ticket created successfully', ticket_number });
@@ -78,7 +78,7 @@ router.post('/tickets', async (req, res) => {
 
 router.put('/faqs/:id/helpful', async (req, res) => {
   try {
-    await pool.query('UPDATE support_faqs SET helpful_count = helpful_count + 1 WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE support_faqs SET helpful_count = helpful_count + 1 WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -87,7 +87,7 @@ router.put('/faqs/:id/helpful', async (req, res) => {
 
 router.put('/faqs/:id/view', async (req, res) => {
   try {
-    await pool.query('UPDATE support_faqs SET views = views + 1 WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE support_faqs SET views = views + 1 WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -96,7 +96,7 @@ router.put('/faqs/:id/view', async (req, res) => {
 
 router.get('/admin/tickets', authenticateToken, requireRole(['admin']), async (req, res) => {
   try {
-    const [tickets] = await pool.query(`
+    const [tickets] = await pool.execute(`
       SELECT t.*, c.name as category_name 
       FROM support_tickets t
       JOIN support_categories c ON t.category_id = c.id
