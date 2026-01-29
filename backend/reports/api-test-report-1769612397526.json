@@ -1,0 +1,3650 @@
+{
+  "total": 335,
+  "passed": 320,
+  "failed": 15,
+  "skipped": 0,
+  "startTime": "2026-01-28T14:57:59.212Z",
+  "endTime": "2026-01-28T14:59:57.403Z",
+  "results": [
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/login",
+      "url": "http://localhost:5000/api/auth/login",
+      "status": "PASSED",
+      "statusCode": 401,
+      "duration": 200,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/register",
+      "url": "http://localhost:5000/api/auth/register",
+      "status": "FAILED",
+      "statusCode": 400,
+      "duration": 12,
+      "message": "Validation errors"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/auth/verify",
+      "url": "http://localhost:5000/api/auth/verify",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 16,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/logout",
+      "url": "http://localhost:5000/api/auth/logout",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 18,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/refresh-token",
+      "url": "http://localhost:5000/api/auth/refresh-token",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "url": "http://localhost:5000/api/auth/forgot-password",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "url": "http://localhost:5000/api/auth/reset-password",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/auth/change-password",
+      "url": "http://localhost:5000/api/auth/change-password",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 12,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/comprehensive-auth/roles",
+      "url": "http://localhost:5000/api/comprehensive-auth/roles",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/role-auth/validate",
+      "url": "http://localhost:5000/api/role-auth/validate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/staff-auth/login",
+      "url": "http://localhost:5000/api/staff-auth/login",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/user-auth/login",
+      "url": "http://localhost:5000/api/user-auth/login",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "POST",
+      "path": "/student-auth/login",
+      "url": "http://localhost:5000/api/student-auth/login",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Authentication",
+      "method": "GET",
+      "path": "/student-auth/profile",
+      "url": "http://localhost:5000/api/student-auth/profile",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "User Management",
+      "method": "GET",
+      "path": "/users",
+      "url": "http://localhost:5000/api/users",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 20,
+      "message": "Success"
+    },
+    {
+      "category": "User Management",
+      "method": "GET",
+      "path": "/users/:id",
+      "url": "http://localhost:5000/api/users/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "User Management",
+      "method": "POST",
+      "path": "/users",
+      "url": "http://localhost:5000/api/users",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "User Management",
+      "method": "PUT",
+      "path": "/users/:id",
+      "url": "http://localhost:5000/api/users/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "User Management",
+      "method": "DELETE",
+      "path": "/users/:id",
+      "url": "http://localhost:5000/api/users/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "User Management",
+      "method": "GET",
+      "path": "/users/profile",
+      "url": "http://localhost:5000/api/users/profile",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "User Management",
+      "method": "PUT",
+      "path": "/users/profile",
+      "url": "http://localhost:5000/api/users/profile",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "User Management",
+      "method": "GET",
+      "path": "/users/statistics",
+      "url": "http://localhost:5000/api/users/statistics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/list",
+      "url": "http://localhost:5000/api/students/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/details/:id",
+      "url": "http://localhost:5000/api/students/details/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/:id/profile",
+      "url": "http://localhost:5000/api/students/1/profile",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "POST",
+      "path": "/students/create",
+      "url": "http://localhost:5000/api/students/create",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "PUT",
+      "path": "/students/update/:id",
+      "url": "http://localhost:5000/api/students/update/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "DELETE",
+      "path": "/students/delete/:id",
+      "url": "http://localhost:5000/api/students/delete/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/statistics",
+      "url": "http://localhost:5000/api/students/statistics",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/dashboard",
+      "url": "http://localhost:5000/api/students/dashboard",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/grades",
+      "url": "http://localhost:5000/api/students/grades",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/attendance",
+      "url": "http://localhost:5000/api/students/attendance",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/students/performance",
+      "url": "http://localhost:5000/api/students/performance",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "POST",
+      "path": "/students/medical/:id",
+      "url": "http://localhost:5000/api/students/medical/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/student-management/students",
+      "url": "http://localhost:5000/api/student-management/students",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "POST",
+      "path": "/student-management/students",
+      "url": "http://localhost:5000/api/student-management/students",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "PUT",
+      "path": "/student-management/students/:id/reset-password",
+      "url": "http://localhost:5000/api/student-management/students/1/reset-password",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/student-sheets/list",
+      "url": "http://localhost:5000/api/student-sheets/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/student-competitions/list",
+      "url": "http://localhost:5000/api/student-competitions/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Student Management",
+      "method": "POST",
+      "path": "/student-competitions/create",
+      "url": "http://localhost:5000/api/student-competitions/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Student Management",
+      "method": "GET",
+      "path": "/student-advanced/analytics",
+      "url": "http://localhost:5000/api/student-advanced/analytics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teachers",
+      "url": "http://localhost:5000/api/teachers",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teachers/:id",
+      "url": "http://localhost:5000/api/teachers/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "POST",
+      "path": "/teachers",
+      "url": "http://localhost:5000/api/teachers",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "PUT",
+      "path": "/teachers/:id",
+      "url": "http://localhost:5000/api/teachers/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "DELETE",
+      "path": "/teachers/:id",
+      "url": "http://localhost:5000/api/teachers/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teacher-portal/dashboard",
+      "url": "http://localhost:5000/api/teacher-portal/dashboard",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teacher-portal/classes",
+      "url": "http://localhost:5000/api/teacher-portal/classes",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teacher-portal/students",
+      "url": "http://localhost:5000/api/teacher-portal/students",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "POST",
+      "path": "/teacher-portal/grades",
+      "url": "http://localhost:5000/api/teacher-portal/grades",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teacher-advanced/analytics",
+      "url": "http://localhost:5000/api/teacher-advanced/analytics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Teacher Management",
+      "method": "GET",
+      "path": "/teacher-advanced/performance",
+      "url": "http://localhost:5000/api/teacher-advanced/performance",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 10,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parents",
+      "url": "http://localhost:5000/api/parents",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parents/:id",
+      "url": "http://localhost:5000/api/parents/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "POST",
+      "path": "/parents",
+      "url": "http://localhost:5000/api/parents",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-dashboard/overview",
+      "url": "http://localhost:5000/api/parent-dashboard/overview",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-dashboard/children",
+      "url": "http://localhost:5000/api/parent-dashboard/children",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 6,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-linking/students",
+      "url": "http://localhost:5000/api/parent-linking/students",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "POST",
+      "path": "/parent-linking/link",
+      "url": "http://localhost:5000/api/parent-linking/link",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-monitoring/grades",
+      "url": "http://localhost:5000/api/parent-monitoring/grades",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-monitoring/attendance",
+      "url": "http://localhost:5000/api/parent-monitoring/attendance",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Parent Management",
+      "method": "GET",
+      "path": "/parent-monitoring/behavior",
+      "url": "http://localhost:5000/api/parent-monitoring/behavior",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff",
+      "url": "http://localhost:5000/api/staff",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff/:id",
+      "url": "http://localhost:5000/api/staff/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "POST",
+      "path": "/staff",
+      "url": "http://localhost:5000/api/staff",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "PUT",
+      "path": "/staff/:id",
+      "url": "http://localhost:5000/api/staff/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "DELETE",
+      "path": "/staff/:id",
+      "url": "http://localhost:5000/api/staff/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff-roles/list",
+      "url": "http://localhost:5000/api/staff-roles/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "POST",
+      "path": "/staff-roles/create",
+      "url": "http://localhost:5000/api/staff-roles/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff-credentials/list",
+      "url": "http://localhost:5000/api/staff-credentials/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff-management/dashboard",
+      "url": "http://localhost:5000/api/staff-management/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/staff-dynamic-sheets/list",
+      "url": "http://localhost:5000/api/staff-dynamic-sheets/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Staff Management",
+      "method": "GET",
+      "path": "/comprehensive-staff/overview",
+      "url": "http://localhost:5000/api/comprehensive-staff/overview",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 13,
+      "message": "Request failed with status code 500"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/academics/overview",
+      "url": "http://localhost:5000/api/academics/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/academics/courses",
+      "url": "http://localhost:5000/api/academics/courses",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/academics/subjects",
+      "url": "http://localhost:5000/api/academics/subjects",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/courses",
+      "url": "http://localhost:5000/api/courses",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 11,
+      "message": "Success"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/courses/:id",
+      "url": "http://localhost:5000/api/courses/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 9,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "POST",
+      "path": "/courses",
+      "url": "http://localhost:5000/api/courses",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/academic-system/dashboard",
+      "url": "http://localhost:5000/api/academic-system/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/academic-system/analytics",
+      "url": "http://localhost:5000/api/academic-system/analytics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/advanced-academics/reports",
+      "url": "http://localhost:5000/api/advanced-academics/reports",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "GET",
+      "path": "/curriculum/list",
+      "url": "http://localhost:5000/api/curriculum/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Academic Management",
+      "method": "POST",
+      "path": "/curriculum/create",
+      "url": "http://localhost:5000/api/curriculum/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "GET",
+      "path": "/attendance",
+      "url": "http://localhost:5000/api/attendance",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "GET",
+      "path": "/attendance/student/:id",
+      "url": "http://localhost:5000/api/attendance/student/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "POST",
+      "path": "/attendance/mark",
+      "url": "http://localhost:5000/api/attendance/mark",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "PUT",
+      "path": "/attendance/:id",
+      "url": "http://localhost:5000/api/attendance/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "GET",
+      "path": "/attendance/report",
+      "url": "http://localhost:5000/api/attendance/report",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "GET",
+      "path": "/attendance/statistics",
+      "url": "http://localhost:5000/api/attendance/statistics",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Attendance Management",
+      "method": "GET",
+      "path": "/attendance/class/:id",
+      "url": "http://localhost:5000/api/attendance/class/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "GET",
+      "path": "/grades",
+      "url": "http://localhost:5000/api/grades",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "GET",
+      "path": "/grades/student/:id",
+      "url": "http://localhost:5000/api/grades/student/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "POST",
+      "path": "/grades",
+      "url": "http://localhost:5000/api/grades",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "PUT",
+      "path": "/grades/:id",
+      "url": "http://localhost:5000/api/grades/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "DELETE",
+      "path": "/grades/:id",
+      "url": "http://localhost:5000/api/grades/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "GET",
+      "path": "/grades/report",
+      "url": "http://localhost:5000/api/grades/report",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "GET",
+      "path": "/grades/analytics",
+      "url": "http://localhost:5000/api/grades/analytics",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "GET",
+      "path": "/ai-grading/analyze",
+      "url": "http://localhost:5000/api/ai-grading/analyze",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Grades & Assessments",
+      "method": "POST",
+      "path": "/ai-grading/grade",
+      "url": "http://localhost:5000/api/ai-grading/grade",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 14,
+      "message": "Unknown column 'submission_file' in 'field list'"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "GET",
+      "path": "/exams",
+      "url": "http://localhost:5000/api/exams",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 34,
+      "message": "Success"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "GET",
+      "path": "/exams/:id",
+      "url": "http://localhost:5000/api/exams/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "POST",
+      "path": "/exams",
+      "url": "http://localhost:5000/api/exams",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "PUT",
+      "path": "/exams/:id",
+      "url": "http://localhost:5000/api/exams/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 14,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "DELETE",
+      "path": "/exams/:id",
+      "url": "http://localhost:5000/api/exams/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "GET",
+      "path": "/exam-scheduling/calendar",
+      "url": "http://localhost:5000/api/exam-scheduling/calendar",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "POST",
+      "path": "/exam-scheduling/schedule",
+      "url": "http://localhost:5000/api/exam-scheduling/schedule",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 28,
+      "message": "Success"
+    },
+    {
+      "category": "Exams & Assessments",
+      "method": "GET",
+      "path": "/exams/results",
+      "url": "http://localhost:5000/api/exams/results",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "GET",
+      "path": "/assignments",
+      "url": "http://localhost:5000/api/assignments",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 7,
+      "message": "Success"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "POST",
+      "path": "/assignments",
+      "url": "http://localhost:5000/api/assignments",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 18,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "GET",
+      "path": "/advanced-assignments/list",
+      "url": "http://localhost:5000/api/advanced-assignments/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "POST",
+      "path": "/advanced-assignments/create",
+      "url": "http://localhost:5000/api/advanced-assignments/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "GET",
+      "path": "/advanced-assignments/submissions",
+      "url": "http://localhost:5000/api/advanced-assignments/submissions",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "POST",
+      "path": "/advanced-assignments/submit",
+      "url": "http://localhost:5000/api/advanced-assignments/submit",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "GET",
+      "path": "/homework",
+      "url": "http://localhost:5000/api/homework",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Assignments & Homework",
+      "method": "POST",
+      "path": "/homework",
+      "url": "http://localhost:5000/api/homework",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "GET",
+      "path": "/timetable",
+      "url": "http://localhost:5000/api/timetable",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "GET",
+      "path": "/timetable/class/:id",
+      "url": "http://localhost:5000/api/timetable/class/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "POST",
+      "path": "/timetable",
+      "url": "http://localhost:5000/api/timetable",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 6,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "PUT",
+      "path": "/timetable/:id",
+      "url": "http://localhost:5000/api/timetable/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "GET",
+      "path": "/timetable-generator/generate",
+      "url": "http://localhost:5000/api/timetable-generator/generate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Timetable Management",
+      "method": "POST",
+      "path": "/timetable-generator/auto-generate",
+      "url": "http://localhost:5000/api/timetable-generator/auto-generate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "GET",
+      "path": "/classes",
+      "url": "http://localhost:5000/api/classes",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 165,
+      "message": "Success"
+    },
+    {
+      "category": "Class Management",
+      "method": "GET",
+      "path": "/classes/:id",
+      "url": "http://localhost:5000/api/classes/1",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 84,
+      "message": "Request failed with status code 500"
+    },
+    {
+      "category": "Class Management",
+      "method": "POST",
+      "path": "/classes",
+      "url": "http://localhost:5000/api/classes",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "PUT",
+      "path": "/classes/:id",
+      "url": "http://localhost:5000/api/classes/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "DELETE",
+      "path": "/classes/:id",
+      "url": "http://localhost:5000/api/classes/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "GET",
+      "path": "/class-management/list",
+      "url": "http://localhost:5000/api/class-management/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "GET",
+      "path": "/class-sheets/list",
+      "url": "http://localhost:5000/api/class-sheets/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Class Management",
+      "method": "GET",
+      "path": "/class-level-sheets/list",
+      "url": "http://localhost:5000/api/class-level-sheets/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/finance",
+      "url": "http://localhost:5000/api/finance",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 4,
+      "message": "Success"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/accountant/dashboard",
+      "url": "http://localhost:5000/api/accountant/dashboard",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/accountant/payments",
+      "url": "http://localhost:5000/api/accountant/payments",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/accountant/payments",
+      "url": "http://localhost:5000/api/accountant/payments",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/accountant/students",
+      "url": "http://localhost:5000/api/accountant/students",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/accountant/reports",
+      "url": "http://localhost:5000/api/accountant/reports",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/financial-system/overview",
+      "url": "http://localhost:5000/api/financial-system/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/financial-system/transactions",
+      "url": "http://localhost:5000/api/financial-system/transactions",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/financial-system/transaction",
+      "url": "http://localhost:5000/api/financial-system/transaction",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/expenses",
+      "url": "http://localhost:5000/api/expenses",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/expenses",
+      "url": "http://localhost:5000/api/expenses",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/salaries",
+      "url": "http://localhost:5000/api/salaries",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/salaries",
+      "url": "http://localhost:5000/api/salaries",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/invoices",
+      "url": "http://localhost:5000/api/invoices",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/invoices",
+      "url": "http://localhost:5000/api/invoices",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "GET",
+      "path": "/budgets",
+      "url": "http://localhost:5000/api/budgets",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Finance & Payments",
+      "method": "POST",
+      "path": "/budgets",
+      "url": "http://localhost:5000/api/budgets",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "GET",
+      "path": "/stock",
+      "url": "http://localhost:5000/api/stock",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "GET",
+      "path": "/stock/:id",
+      "url": "http://localhost:5000/api/stock/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "POST",
+      "path": "/stock",
+      "url": "http://localhost:5000/api/stock",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "PUT",
+      "path": "/stock/:id",
+      "url": "http://localhost:5000/api/stock/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "DELETE",
+      "path": "/stock/:id",
+      "url": "http://localhost:5000/api/stock/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "GET",
+      "path": "/stock/reports",
+      "url": "http://localhost:5000/api/stock/reports",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "GET",
+      "path": "/inventory-management/items",
+      "url": "http://localhost:5000/api/inventory-management/items",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "POST",
+      "path": "/inventory-management/items",
+      "url": "http://localhost:5000/api/inventory-management/items",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Stock & Inventory",
+      "method": "GET",
+      "path": "/inventory-management/low-stock",
+      "url": "http://localhost:5000/api/inventory-management/low-stock",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/messages",
+      "url": "http://localhost:5000/api/messages",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "POST",
+      "path": "/messages",
+      "url": "http://localhost:5000/api/messages",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "POST",
+      "path": "/messages/send",
+      "url": "http://localhost:5000/api/messages/send",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/messages/conversation/:userId",
+      "url": "http://localhost:5000/api/messages/conversation/1",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 2,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/notifications",
+      "url": "http://localhost:5000/api/notifications",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "POST",
+      "path": "/notifications",
+      "url": "http://localhost:5000/api/notifications",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "PUT",
+      "path": "/notifications/:id/read",
+      "url": "http://localhost:5000/api/notifications/1/read",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/messaging/inbox",
+      "url": "http://localhost:5000/api/messaging/inbox",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/messaging/sent",
+      "url": "http://localhost:5000/api/messaging/sent",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/comprehensive-messaging/overview",
+      "url": "http://localhost:5000/api/comprehensive-messaging/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/communication-hub/dashboard",
+      "url": "http://localhost:5000/api/communication-hub/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/automated-notifications/list",
+      "url": "http://localhost:5000/api/automated-notifications/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/realtime-notifications/active",
+      "url": "http://localhost:5000/api/realtime-notifications/active",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 13,
+      "message": "Success"
+    },
+    {
+      "category": "Communication",
+      "method": "POST",
+      "path": "/sms/send",
+      "url": "http://localhost:5000/api/sms/send",
+      "status": "PASSED",
+      "statusCode": 401,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Communication",
+      "method": "GET",
+      "path": "/sms/history",
+      "url": "http://localhost:5000/api/sms/history",
+      "status": "PASSED",
+      "statusCode": 401,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports",
+      "url": "http://localhost:5000/api/sports",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 4,
+      "message": "Success"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports/:id",
+      "url": "http://localhost:5000/api/sports/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "POST",
+      "path": "/sports",
+      "url": "http://localhost:5000/api/sports",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports-players/list",
+      "url": "http://localhost:5000/api/sports-players/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "POST",
+      "path": "/sports-players/register",
+      "url": "http://localhost:5000/api/sports-players/register",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports-management/teams",
+      "url": "http://localhost:5000/api/sports-management/teams",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports-comprehensive/overview",
+      "url": "http://localhost:5000/api/sports-comprehensive/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports-advanced/statistics",
+      "url": "http://localhost:5000/api/sports-advanced/statistics",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 34,
+      "message": "Request failed with status code 500"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/sports-hero/list",
+      "url": "http://localhost:5000/api/sports-hero/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "POST",
+      "path": "/sports-hero/create",
+      "url": "http://localhost:5000/api/sports-hero/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Sports Management",
+      "method": "GET",
+      "path": "/teams",
+      "url": "http://localhost:5000/api/teams",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 71,
+      "message": "Success"
+    },
+    {
+      "category": "Sports Management",
+      "method": "POST",
+      "path": "/teams",
+      "url": "http://localhost:5000/api/teams",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 9,
+      "message": "Success"
+    },
+    {
+      "category": "Discipline Management",
+      "method": "GET",
+      "path": "/discipline/incidents",
+      "url": "http://localhost:5000/api/discipline/incidents",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Discipline Management",
+      "method": "POST",
+      "path": "/discipline/incidents",
+      "url": "http://localhost:5000/api/discipline/incidents",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Discipline Management",
+      "method": "GET",
+      "path": "/discipline/reports",
+      "url": "http://localhost:5000/api/discipline/reports",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Discipline Management",
+      "method": "GET",
+      "path": "/discipline/statistics",
+      "url": "http://localhost:5000/api/discipline/statistics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos/dashboard",
+      "url": "http://localhost:5000/api/dos/dashboard",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos/trades",
+      "url": "http://localhost:5000/api/dos/trades",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "POST",
+      "path": "/dos/trades",
+      "url": "http://localhost:5000/api/dos/trades",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos/classes",
+      "url": "http://localhost:5000/api/dos/classes",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos/statistics",
+      "url": "http://localhost:5000/api/dos/statistics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos-management/overview",
+      "url": "http://localhost:5000/api/dos-management/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/dos-advanced/analytics",
+      "url": "http://localhost:5000/api/dos-advanced/analytics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOS Management",
+      "method": "GET",
+      "path": "/enhanced-dos/reports",
+      "url": "http://localhost:5000/api/enhanced-dos/reports",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "DOD Management",
+      "method": "GET",
+      "path": "/dod-comprehensive/dashboard",
+      "url": "http://localhost:5000/api/dod-comprehensive/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOD Management",
+      "method": "GET",
+      "path": "/dod-comprehensive/cases",
+      "url": "http://localhost:5000/api/dod-comprehensive/cases",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOD Management",
+      "method": "POST",
+      "path": "/dod-comprehensive/cases",
+      "url": "http://localhost:5000/api/dod-comprehensive/cases",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "DOD Management",
+      "method": "GET",
+      "path": "/dod-profile/info",
+      "url": "http://localhost:5000/api/dod-profile/info",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 26,
+      "message": "Success"
+    },
+    {
+      "category": "DOD Management",
+      "method": "GET",
+      "path": "/dod-actions/history",
+      "url": "http://localhost:5000/api/dod-actions/history",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "GET",
+      "path": "/trades",
+      "url": "http://localhost:5000/api/trades",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "GET",
+      "path": "/trades/:id",
+      "url": "http://localhost:5000/api/trades/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 103,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "POST",
+      "path": "/trades",
+      "url": "http://localhost:5000/api/trades",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "PUT",
+      "path": "/trades/:id",
+      "url": "http://localhost:5000/api/trades/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "DELETE",
+      "path": "/trades/:id",
+      "url": "http://localhost:5000/api/trades/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "GET",
+      "path": "/trades-courses/list",
+      "url": "http://localhost:5000/api/trades-courses/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "GET",
+      "path": "/trade-images/list",
+      "url": "http://localhost:5000/api/trade-images/list",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 5,
+      "message": "Success"
+    },
+    {
+      "category": "Trades & Courses",
+      "method": "POST",
+      "path": "/trade-images/upload",
+      "url": "http://localhost:5000/api/trade-images/upload",
+      "status": "FAILED",
+      "statusCode": 400,
+      "duration": 3,
+      "message": "No file uploaded"
+    },
+    {
+      "category": "Services",
+      "method": "GET",
+      "path": "/services",
+      "url": "http://localhost:5000/api/services",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 7,
+      "message": "Success"
+    },
+    {
+      "category": "Services",
+      "method": "GET",
+      "path": "/services/:id",
+      "url": "http://localhost:5000/api/services/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Services",
+      "method": "POST",
+      "path": "/services",
+      "url": "http://localhost:5000/api/services",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Services",
+      "method": "GET",
+      "path": "/services-advanced/list",
+      "url": "http://localhost:5000/api/services-advanced/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Library System",
+      "method": "GET",
+      "path": "/library",
+      "url": "http://localhost:5000/api/library",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 3,
+      "message": "Success"
+    },
+    {
+      "category": "Library System",
+      "method": "GET",
+      "path": "/library-system/books",
+      "url": "http://localhost:5000/api/library-system/books",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 19,
+      "message": "Success"
+    },
+    {
+      "category": "Library System",
+      "method": "POST",
+      "path": "/library-system/books",
+      "url": "http://localhost:5000/api/library-system/books",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 7,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Library System",
+      "method": "GET",
+      "path": "/library-system/borrow",
+      "url": "http://localhost:5000/api/library-system/borrow",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Library System",
+      "method": "POST",
+      "path": "/library-system/borrow",
+      "url": "http://localhost:5000/api/library-system/borrow",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Library System",
+      "method": "POST",
+      "path": "/library-system/return",
+      "url": "http://localhost:5000/api/library-system/return",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 9,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Hostel System",
+      "method": "GET",
+      "path": "/hostel",
+      "url": "http://localhost:5000/api/hostel",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 5,
+      "message": "Success"
+    },
+    {
+      "category": "Hostel System",
+      "method": "GET",
+      "path": "/hostel-system/rooms",
+      "url": "http://localhost:5000/api/hostel-system/rooms",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 135,
+      "message": "Success"
+    },
+    {
+      "category": "Hostel System",
+      "method": "POST",
+      "path": "/hostel-system/rooms",
+      "url": "http://localhost:5000/api/hostel-system/rooms",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Hostel System",
+      "method": "GET",
+      "path": "/hostel-system/allocations",
+      "url": "http://localhost:5000/api/hostel-system/allocations",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 8,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Hostel System",
+      "method": "POST",
+      "path": "/hostel-system/allocate",
+      "url": "http://localhost:5000/api/hostel-system/allocate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Transport System",
+      "method": "GET",
+      "path": "/transport",
+      "url": "http://localhost:5000/api/transport",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 7,
+      "message": "Success"
+    },
+    {
+      "category": "Transport System",
+      "method": "GET",
+      "path": "/transport/routes",
+      "url": "http://localhost:5000/api/transport/routes",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Transport System",
+      "method": "POST",
+      "path": "/transport/routes",
+      "url": "http://localhost:5000/api/transport/routes",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Cafeteria System",
+      "method": "GET",
+      "path": "/cafeteria-system/menu",
+      "url": "http://localhost:5000/api/cafeteria-system/menu",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 60,
+      "message": "Failed to fetch menu"
+    },
+    {
+      "category": "Cafeteria System",
+      "method": "POST",
+      "path": "/cafeteria-system/menu",
+      "url": "http://localhost:5000/api/cafeteria-system/menu",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 9,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Cafeteria System",
+      "method": "GET",
+      "path": "/cafeteria-system/orders",
+      "url": "http://localhost:5000/api/cafeteria-system/orders",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Cafeteria System",
+      "method": "POST",
+      "path": "/cafeteria-system/orders",
+      "url": "http://localhost:5000/api/cafeteria-system/orders",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Medical System",
+      "method": "GET",
+      "path": "/medical-system/records",
+      "url": "http://localhost:5000/api/medical-system/records",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 105,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Medical System",
+      "method": "POST",
+      "path": "/medical-system/records",
+      "url": "http://localhost:5000/api/medical-system/records",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 8,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Medical System",
+      "method": "GET",
+      "path": "/medical-system/appointments",
+      "url": "http://localhost:5000/api/medical-system/appointments",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Medical System",
+      "method": "POST",
+      "path": "/medical-system/appointments",
+      "url": "http://localhost:5000/api/medical-system/appointments",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 10,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Counseling System",
+      "method": "GET",
+      "path": "/counseling-system/sessions",
+      "url": "http://localhost:5000/api/counseling-system/sessions",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Counseling System",
+      "method": "POST",
+      "path": "/counseling-system/sessions",
+      "url": "http://localhost:5000/api/counseling-system/sessions",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Counseling System",
+      "method": "GET",
+      "path": "/counseling-system/cases",
+      "url": "http://localhost:5000/api/counseling-system/cases",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 8,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admission System",
+      "method": "GET",
+      "path": "/admission-system/applications",
+      "url": "http://localhost:5000/api/admission-system/applications",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Admission System",
+      "method": "POST",
+      "path": "/admission-system/applications",
+      "url": "http://localhost:5000/api/admission-system/applications",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 101,
+      "message": "Failed to submit application"
+    },
+    {
+      "category": "Admission System",
+      "method": "PUT",
+      "path": "/admission-system/applications/:id",
+      "url": "http://localhost:5000/api/admission-system/applications/1",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admission System",
+      "method": "GET",
+      "path": "/admissions/list",
+      "url": "http://localhost:5000/api/admissions/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Alumni System",
+      "method": "GET",
+      "path": "/alumni-system/list",
+      "url": "http://localhost:5000/api/alumni-system/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Alumni System",
+      "method": "POST",
+      "path": "/alumni-system/register",
+      "url": "http://localhost:5000/api/alumni-system/register",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Alumni System",
+      "method": "GET",
+      "path": "/alumni/directory",
+      "url": "http://localhost:5000/api/alumni/directory",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 61,
+      "message": "Success"
+    },
+    {
+      "category": "Certificate System",
+      "method": "GET",
+      "path": "/certificate-system/list",
+      "url": "http://localhost:5000/api/certificate-system/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Certificate System",
+      "method": "POST",
+      "path": "/certificate-system/generate",
+      "url": "http://localhost:5000/api/certificate-system/generate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Certificate System",
+      "method": "GET",
+      "path": "/certificates/student/:id",
+      "url": "http://localhost:5000/api/certificates/student/1",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 84,
+      "message": "Success"
+    },
+    {
+      "category": "Workshop System",
+      "method": "GET",
+      "path": "/workshop-system/workshops",
+      "url": "http://localhost:5000/api/workshop-system/workshops",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 67,
+      "message": "Success"
+    },
+    {
+      "category": "Workshop System",
+      "method": "POST",
+      "path": "/workshop-system/workshops",
+      "url": "http://localhost:5000/api/workshop-system/workshops",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 11,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Workshop System",
+      "method": "GET",
+      "path": "/workshop-system/equipment",
+      "url": "http://localhost:5000/api/workshop-system/equipment",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 51,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/content",
+      "url": "http://localhost:5000/api/content",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/content",
+      "url": "http://localhost:5000/api/content",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/homepage",
+      "url": "http://localhost:5000/api/homepage",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/news",
+      "url": "http://localhost:5000/api/news",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 69,
+      "message": "Success"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/news",
+      "url": "http://localhost:5000/api/news",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 107,
+      "message": "Success"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/hero",
+      "url": "http://localhost:5000/api/hero",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 8,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/hero",
+      "url": "http://localhost:5000/api/hero",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/gallery",
+      "url": "http://localhost:5000/api/gallery",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 4,
+      "message": "Success"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/gallery",
+      "url": "http://localhost:5000/api/gallery",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 11,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/testimonials",
+      "url": "http://localhost:5000/api/testimonials",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 48,
+      "message": "Failed to fetch testimonials"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/testimonials",
+      "url": "http://localhost:5000/api/testimonials",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 20,
+      "message": "Failed to create testimonial"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/announcements",
+      "url": "http://localhost:5000/api/announcements",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 67,
+      "message": "Success"
+    },
+    {
+      "category": "Content Management",
+      "method": "POST",
+      "path": "/announcements",
+      "url": "http://localhost:5000/api/announcements",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/cms",
+      "url": "http://localhost:5000/api/cms",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/unified-content/all",
+      "url": "http://localhost:5000/api/unified-content/all",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 80,
+      "message": "Request failed with status code 500"
+    },
+    {
+      "category": "Content Management",
+      "method": "GET",
+      "path": "/content-management/pages",
+      "url": "http://localhost:5000/api/content-management/pages",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Events & Clubs",
+      "method": "GET",
+      "path": "/events",
+      "url": "http://localhost:5000/api/events",
+      "status": "PASSED",
+      "statusCode": 401,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Events & Clubs",
+      "method": "POST",
+      "path": "/events",
+      "url": "http://localhost:5000/api/events",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Events & Clubs",
+      "method": "GET",
+      "path": "/event-management/list",
+      "url": "http://localhost:5000/api/event-management/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Events & Clubs",
+      "method": "GET",
+      "path": "/clubs",
+      "url": "http://localhost:5000/api/clubs",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 25,
+      "message": "Success"
+    },
+    {
+      "category": "Events & Clubs",
+      "method": "POST",
+      "path": "/clubs",
+      "url": "http://localhost:5000/api/clubs",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 29,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "GET",
+      "path": "/knowledge-base/articles",
+      "url": "http://localhost:5000/api/knowledge-base/articles",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 43,
+      "message": "Success"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "POST",
+      "path": "/knowledge-base/articles",
+      "url": "http://localhost:5000/api/knowledge-base/articles",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 149,
+      "message": "Success"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "GET",
+      "path": "/support/tickets",
+      "url": "http://localhost:5000/api/support/tickets",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "POST",
+      "path": "/support/tickets",
+      "url": "http://localhost:5000/api/support/tickets",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 126,
+      "message": "Success"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "GET",
+      "path": "/support-enhanced/dashboard",
+      "url": "http://localhost:5000/api/support-enhanced/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Knowledge Base & Support",
+      "method": "GET",
+      "path": "/contact/messages",
+      "url": "http://localhost:5000/api/contact/messages",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 8,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/analytics/overview",
+      "url": "http://localhost:5000/api/analytics/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 12,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/analytics/students",
+      "url": "http://localhost:5000/api/analytics/students",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/analytics/finance",
+      "url": "http://localhost:5000/api/analytics/finance",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/advanced-analytics/dashboard",
+      "url": "http://localhost:5000/api/advanced-analytics/dashboard",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/advanced-reports/generate",
+      "url": "http://localhost:5000/api/advanced-reports/generate",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/reporting/academic",
+      "url": "http://localhost:5000/api/reporting/academic",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/reports/custom",
+      "url": "http://localhost:5000/api/reports/custom",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Analytics & Reports",
+      "method": "GET",
+      "path": "/smart-analytics/insights",
+      "url": "http://localhost:5000/api/smart-analytics/insights",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Dashboards",
+      "method": "GET",
+      "path": "/dashboards/admin",
+      "url": "http://localhost:5000/api/dashboards/admin",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Dashboards",
+      "method": "GET",
+      "path": "/dashboards/teacher",
+      "url": "http://localhost:5000/api/dashboards/teacher",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Dashboards",
+      "method": "GET",
+      "path": "/dashboards/student",
+      "url": "http://localhost:5000/api/dashboards/student",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Dashboards",
+      "method": "GET",
+      "path": "/admin/dashboard",
+      "url": "http://localhost:5000/api/admin/dashboard",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 18,
+      "message": "Success"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/admin/users",
+      "url": "http://localhost:5000/api/admin/users",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/admin/statistics",
+      "url": "http://localhost:5000/api/admin/statistics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/admin-management/overview",
+      "url": "http://localhost:5000/api/admin-management/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/admin-advanced/logs",
+      "url": "http://localhost:5000/api/admin-advanced/logs",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/system-settings/list",
+      "url": "http://localhost:5000/api/system-settings/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "PUT",
+      "path": "/system-settings/update",
+      "url": "http://localhost:5000/api/system-settings/update",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 6,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/system-updates/check",
+      "url": "http://localhost:5000/api/system-updates/check",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "GET",
+      "path": "/backups/list",
+      "url": "http://localhost:5000/api/backups/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Admin Management",
+      "method": "POST",
+      "path": "/backups/create",
+      "url": "http://localhost:5000/api/backups/create",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 5,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Advisor Management",
+      "method": "GET",
+      "path": "/advisor/dashboard",
+      "url": "http://localhost:5000/api/advisor/dashboard",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 6,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Advisor Management",
+      "method": "GET",
+      "path": "/advisor-staff/list",
+      "url": "http://localhost:5000/api/advisor-staff/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advisor Management",
+      "method": "GET",
+      "path": "/advisor-management/overview",
+      "url": "http://localhost:5000/api/advisor-management/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 11,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advisor Management",
+      "method": "GET",
+      "path": "/advisor-comprehensive/analytics",
+      "url": "http://localhost:5000/api/advisor-comprehensive/analytics",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Leadership",
+      "method": "GET",
+      "path": "/leadership/list",
+      "url": "http://localhost:5000/api/leadership/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 36,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Leadership",
+      "method": "POST",
+      "path": "/leadership/create",
+      "url": "http://localhost:5000/api/leadership/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 5,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "HR Management",
+      "method": "GET",
+      "path": "/hr-management/employees",
+      "url": "http://localhost:5000/api/hr-management/employees",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 15,
+      "message": "Success"
+    },
+    {
+      "category": "HR Management",
+      "method": "POST",
+      "path": "/hr-management/employees",
+      "url": "http://localhost:5000/api/hr-management/employees",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 226,
+      "message": "Success"
+    },
+    {
+      "category": "HR Management",
+      "method": "GET",
+      "path": "/hr-management/attendance",
+      "url": "http://localhost:5000/api/hr-management/attendance",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 9,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "HR Management",
+      "method": "GET",
+      "path": "/hr-management/leaves",
+      "url": "http://localhost:5000/api/hr-management/leaves",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 6,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advanced Features",
+      "method": "GET",
+      "path": "/advanced-features/ai",
+      "url": "http://localhost:5000/api/advanced-features/ai",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advanced Features",
+      "method": "GET",
+      "path": "/intelligent-systems/predictions",
+      "url": "http://localhost:5000/api/intelligent-systems/predictions",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advanced Features",
+      "method": "GET",
+      "path": "/modern-tech/overview",
+      "url": "http://localhost:5000/api/modern-tech/overview",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advanced Features",
+      "method": "GET",
+      "path": "/powerful-apis/list",
+      "url": "http://localhost:5000/api/powerful-apis/list",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Advanced Features",
+      "method": "GET",
+      "path": "/advanced-security/audit",
+      "url": "http://localhost:5000/api/advanced-security/audit",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/collaboration/rooms",
+      "url": "http://localhost:5000/api/collaboration/rooms",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 7,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "POST",
+      "path": "/collaboration/create",
+      "url": "http://localhost:5000/api/collaboration/create",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/live-study/sessions",
+      "url": "http://localhost:5000/api/live-study/sessions",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/peer-review/assignments",
+      "url": "http://localhost:5000/api/peer-review/assignments",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 2,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/quizzes",
+      "url": "http://localhost:5000/api/quizzes",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "POST",
+      "path": "/quizzes",
+      "url": "http://localhost:5000/api/quizzes",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 3,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/adaptive-learning/recommendations",
+      "url": "http://localhost:5000/api/adaptive-learning/recommendations",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Learning Features",
+      "method": "GET",
+      "path": "/gamification/leaderboard",
+      "url": "http://localhost:5000/api/gamification/leaderboard",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 13,
+      "message": "Success"
+    },
+    {
+      "category": "Uploads",
+      "method": "POST",
+      "path": "/uploads/image",
+      "url": "http://localhost:5000/api/uploads/image",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Uploads",
+      "method": "POST",
+      "path": "/uploads/document",
+      "url": "http://localhost:5000/api/uploads/document",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Uploads",
+      "method": "POST",
+      "path": "/uploads/profile",
+      "url": "http://localhost:5000/api/uploads/profile",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Search",
+      "method": "GET",
+      "path": "/search",
+      "url": "http://localhost:5000/api/search",
+      "status": "PASSED",
+      "statusCode": 200,
+      "duration": 3,
+      "message": "Success"
+    },
+    {
+      "category": "Search",
+      "method": "GET",
+      "path": "/advanced-search/query",
+      "url": "http://localhost:5000/api/advanced-search/query",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Emergency Contacts",
+      "method": "GET",
+      "path": "/emergency-contacts/list",
+      "url": "http://localhost:5000/api/emergency-contacts/list",
+      "status": "PASSED",
+      "statusCode": 403,
+      "duration": 4,
+      "message": "Route exists - Auth required/forbidden (expected)"
+    },
+    {
+      "category": "Emergency Contacts",
+      "method": "POST",
+      "path": "/emergency-contacts/add",
+      "url": "http://localhost:5000/api/emergency-contacts/add",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 3,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Forums",
+      "method": "GET",
+      "path": "/forums/topics",
+      "url": "http://localhost:5000/api/forums/topics",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 19,
+      "message": "Unknown column 'created_by' in 'field list'"
+    },
+    {
+      "category": "Forums",
+      "method": "POST",
+      "path": "/forums/topics",
+      "url": "http://localhost:5000/api/forums/topics",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 21,
+      "message": "Unknown column 'is_private' in 'field list'"
+    },
+    {
+      "category": "Forums",
+      "method": "GET",
+      "path": "/forums/posts",
+      "url": "http://localhost:5000/api/forums/posts",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 17,
+      "message": "Unknown column 'fp.parent_post_id' in 'where clause'"
+    },
+    {
+      "category": "Forums",
+      "method": "POST",
+      "path": "/forums/posts",
+      "url": "http://localhost:5000/api/forums/posts",
+      "status": "FAILED",
+      "statusCode": 500,
+      "duration": 18,
+      "message": "Unknown column 'created_by' in 'field list'"
+    },
+    {
+      "category": "Developers",
+      "method": "GET",
+      "path": "/developers/info",
+      "url": "http://localhost:5000/api/developers/info",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 17,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Developers",
+      "method": "GET",
+      "path": "/developers-api/docs",
+      "url": "http://localhost:5000/api/developers-api/docs",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 59,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    },
+    {
+      "category": "Developers",
+      "method": "GET",
+      "path": "/docs",
+      "url": "http://localhost:5000/api/docs",
+      "status": "PASSED",
+      "statusCode": 404,
+      "duration": 4,
+      "message": "Route exists - Resource not found (expected for some endpoints)"
+    }
+  ],
+  "summary": {
+    "Authentication": {
+      "total": 14,
+      "passed": 13,
+      "failed": 1,
+      "skipped": 0
+    },
+    "User Management": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Student Management": {
+      "total": 19,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Teacher Management": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Parent Management": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Staff Management": {
+      "total": 11,
+      "passed": 10,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Academic Management": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Attendance Management": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Grades & Assessments": {
+      "total": 9,
+      "passed": 8,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Exams & Assessments": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Assignments & Homework": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Timetable Management": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Class Management": {
+      "total": 8,
+      "passed": 7,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Finance & Payments": {
+      "total": 17,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Stock & Inventory": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Communication": {
+      "total": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Sports Management": {
+      "total": 12,
+      "passed": 11,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Discipline Management": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "DOS Management": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "DOD Management": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Trades & Courses": {
+      "total": 8,
+      "passed": 7,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Services": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Library System": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Hostel System": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Transport System": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Cafeteria System": {
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Medical System": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Counseling System": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Admission System": {
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0
+    },
+    "Alumni System": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Certificate System": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Workshop System": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Content Management": {
+      "total": 16,
+      "passed": 13,
+      "failed": 3,
+      "skipped": 0
+    },
+    "Events & Clubs": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Knowledge Base & Support": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Analytics & Reports": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Dashboards": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Admin Management": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Advisor Management": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Leadership": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "HR Management": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Advanced Features": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Learning Features": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Uploads": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Search": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Emergency Contacts": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Forums": {
+      "total": 4,
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0
+    },
+    "Developers": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

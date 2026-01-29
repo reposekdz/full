@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/u
 import { Separator } from '@/app/components/ui/separator';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { EnhancedGlobalSearch } from '@/app/components/EnhancedGlobalSearch';
+import { getRouteTitle } from '@/app/config/routes';
 
 interface HeaderProps {
   currentPage: string;
@@ -47,22 +48,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     { key: 'developers', icon: Code, label: language === 'rw' ? 'Abatunganyije' : 'Developers', subItems: [] },
   ];
 
-  const taglines = [
-    "Excellence in Education",
-    "Empowering Future Leaders",
-    "Innovation Through Learning",
-    "Building Tomorrow's Workforce",
-    "Quality Technical Education",
-    "Shaping Skilled Professionals"
-  ];
-  const [currentTaglineIndex, setCurrentTaglineIndex] = useState(0);
+  const [pageTitle, setPageTitle] = useState('');
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTaglineIndex((prevIndex) => (prevIndex + 1) % taglines.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [taglines.length]);
+    const title = getRouteTitle(currentPage, language);
+    setPageTitle(title);
+    document.title = `${title} - Garden TVET School`;
+  }, [currentPage, language]);
 
   const toggleNavItem = (key: string) => {
     setExpandedNavItems(prev =>
@@ -107,16 +99,18 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                 >
                   Garden TVET School
                 </motion.p>
-                <motion.p
-                  key={currentTaglineIndex}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-xs sm:text-sm font-semibold text-green-700 leading-tight truncate"
-                >
-                  {taglines[currentTaglineIndex]}
-                </motion.p>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={pageTitle}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-xs sm:text-sm font-semibold text-green-700 leading-tight truncate"
+                  >
+                    {pageTitle}
+                  </motion.p>
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -245,20 +239,25 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
             {/* Mobile/Tablet - Enhanced Menu Button with School Name */}
             <div className="lg:hidden flex items-center gap-3 flex-1 justify-end">
-              {/* School Name - Mobile/Tablet */}
+              {/* Dynamic Page Title - Mobile/Tablet */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
                 className="flex-1 text-center"
               >
-                <motion.p 
-                  className="text-sm sm:text-base md:text-lg font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight"
-                  animate={{ backgroundPosition: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  Garden TVET School
-                </motion.p>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={pageTitle}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-sm sm:text-base md:text-lg font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight"
+                  >
+                    {pageTitle}
+                  </motion.p>
+                </AnimatePresence>
               </motion.div>
               
               {/* Menu Button */}

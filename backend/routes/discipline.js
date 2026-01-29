@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { notifyConductRemoval, notifyLeaveApproval } = require('../utils/parentNotifications');
+const { sendUniversalMessage } = require('../services/smsService');
 
 const router = express.Router();
 
@@ -99,6 +100,24 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
       removed_by_name: req.user.name 
     }, result.insertId);
 
+    // Send SMS/WhatsApp to parent's phone if registered
+    const [parents] = await pool.execute(
+      'SELECT p.phone, p.has_smartphone, p.preferred_contact_method FROM parent_student_connections psc JOIN users p ON psc.parent_id = p.id WHERE psc.student_id = ? AND psc.status = "approved"',
+      [student_id]
+    );
+    if (parents.length > 0 && parents[0].phone) {
+      const smsMessage = `ISHURI: Umwana wawe ${student.name} yakiriye igihano cya ${conduct_type} (${severity}). Impamvu: ${description}. Igikorwa: ${action_taken}. Hamagara ishuri kuri 0788000000.`;
+      await sendUniversalMessage(parents[0].phone, smsMessage, req.user.userId, {
+        parentId: parents[0].id,
+        hasSmartphone: parents[0].has_smartphone,
+        preferredMethod: parents[0].preferred_contact_method || 'dual',
+        type: 'discipline_conduct'
+      });
+      
+      // Update SMS tracking
+      await pool.execute('UPDATE discipline_records SET sms_sent = true, sms_sent_at = NOW() WHERE id = ?', [result.insertId]);
+    }
+
     // Update discipline record as notified
     await pool.execute('UPDATE discipline_records SET parent_notified = true WHERE id = ?', [result.insertId]);
 
@@ -141,6 +160,24 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
       end_time, 
       approved_by_name: req.user.name 
     }, result.insertId);
+
+    // Send SMS/WhatsApp to parent's phone if registered
+    const [parents] = await pool.execute(
+      'SELECT p.phone, p.has_smartphone, p.preferred_contact_method FROM parent_student_connections psc JOIN users p ON psc.parent_id = p.id WHERE psc.student_id = ? AND psc.status = "approved"',
+      [student_id]
+    );
+    if (parents.length > 0 && parents[0].phone) {
+      const smsMessage = `ISHURI: Umwana wawe ${student.name} yahawe uruhushya rwo ${leave_type}. Impamvu: ${reason}. Kuva ${start_time} kugeza ${end_time}. Hamagara ishuri kuri 0788000000.`;
+      await sendUniversalMessage(parents[0].phone, smsMessage, req.user.userId, {
+        parentId: parents[0].id,
+        hasSmartphone: parents[0].has_smartphone,
+        preferredMethod: parents[0].preferred_contact_method || 'dual',
+        type: 'discipline_leave'
+      });
+      
+      // Update SMS tracking
+      await pool.execute('UPDATE student_leaves SET sms_sent = true, sms_sent_at = NOW() WHERE id = ?', [result.insertId]);
+    }
 
     // Update leave record as notified
     await pool.execute('UPDATE student_leaves SET parent_notified = true WHERE id = ?', [result.insertId]);
@@ -526,6 +563,62 @@ router.delete('/leaves/:id', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Leave deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to delete leave' });
+  }
+});
+
+// Get SMS queue (pending messages)
+router.get('/sms-queue', authenticateToken, async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query;
+    const [messages] = await pool.execute(
+      'SELECT * FROM sms_queue WHERE status = ? ORDER BY created_at DESC LIMIT 100',
+      [status]
+    );
+    res.json({ success: true, messages, count: messages.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch SMS queue' });
+  }
+});
+
+// Mark SMS as sent manually
+router.put('/sms-queue/:id/mark-sent', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute(
+      'UPDATE sms_queue SET status = ?, sent_at = NOW() WHERE id = ?',
+      ['sent', req.params.id]
+    );
+    res.json({ success: true, message: 'SMS marked as sent' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update SMS' });
+  }
+});
+
+// Retry failed SMS
+router.post('/sms-queue/:id/retry', authenticateToken, async (req, res) => {
+  try {
+    const [messages] = await pool.execute('SELECT * FROM sms_queue WHERE id = ?', [req.params.id]);
+    if (messages.length === 0) {
+      return res.status(404).json({ success: false, message: 'SMS not found' });
+    }
+    
+    const msg = messages[0];
+    const result = await sendUniversalMessage(msg.phone_number, msg.message, req.user.userId, { retry: true });
+    
+    if (result.success) {
+      await pool.execute(
+        'UPDATE sms_queue SET status = ?, sent_at = NOW(), error_message = NULL WHERE id = ?',
+        ['sent', req.params.id]
+      );
+      res.json({ success: true, message: 'SMS sent successfully' });
+    } else {
+      await pool.execute(
+        'UPDATE sms_queue SET error_message = ? WHERE id = ?',
+        [result.error || 'Retry failed', req.params.id]
+      );
+      res.json({ success: false, message: 'Failed to send SMS', error: result.error });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to retry SMS' });
   }
 });
 

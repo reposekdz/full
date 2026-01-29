@@ -25,6 +25,31 @@
   - [Admin System Complete](ADMIN_SYSTEM_COMPLETE.md) - Full system guide
   - [Admin System Summary](ADMIN_SYSTEM_SUMMARY.md) - Quick overview
 
+  ## 📱 SMS Notification System
+
+  The system includes a **fully functional, production-ready SMS notification system** with:
+  - 🔔 **Automatic Notifications** - SMS sent when conduct removed or leave approved
+  - 📱 **Multi-Provider Support** - Africa's Talking, Twilio, WhatsApp, HTTP Gateway
+  - 🌐 **Smart Delivery** - WhatsApp for smartphones, SMS for basic phones
+  - 🎛️ **Queue Management** - View, retry, and manage pending/failed messages
+  - 🇷🇼 **Full Kinyarwanda** - All UI and messages in Kinyarwanda
+  - 📊 **Advanced Features** - Templates, bulk messaging, history, statistics
+  - 🔐 **Role-Based Access** - Permissions for different staff roles
+  - ⚡ **Real-Time Updates** - Socket.IO integration for live status
+
+  ### Quick Setup for SMS System
+  ```bash
+  # Automated setup
+  setup-sms-notifications.bat
+  
+  # OR manual setup (3 steps) - see SMS_QUICK_SETUP.md
+  ```
+
+  📖 **Documentation:**
+  - [Quick Setup Guide](SMS_QUICK_SETUP.md) - 3-step manual setup
+  - [Complete Guide](SMS_NOTIFICATION_SYSTEM.md) - Full documentation
+  - [System Ready](SMS_READY.md) - Quick reference
+
   ## 📰 News Article Management System
 
   The system now includes a **fully functional, dynamic news article management system** with:

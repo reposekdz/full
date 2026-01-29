@@ -75,7 +75,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
       case 'logs':
         return <LogsPage />;
       case 'staff-management':
-        return user?.role === 'admin' ? <AdminStaffManagement /> : <StaffManagementPage />;
+        return user?.role === 'admin' ? <AdminStaffManagement /> : <StaffManagementPage onNavigate={handleNavigate} />;
       case 'content-management':
         return <ContentManagementPage />;
       case 'comprehensive-content':

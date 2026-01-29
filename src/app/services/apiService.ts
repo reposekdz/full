@@ -267,6 +267,289 @@ class ApiService {
     });
   }
 
+  async getTeacherClassesMarks() {
+    return this.request('/marks-management/teacher/classes');
+  }
+
+  async getAssessmentCategories() {
+    return this.request('/marks-management/assessment-categories');
+  }
+
+  async getClassMarks(classId: number, subjectId: number, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/marks-management/class/${classId}/subject/${subjectId}/marks?${query}`);
+  }
+
+  async addMarks(marksData: any) {
+    return this.request('/marks-management/marks/add', {
+      method: 'POST',
+      body: JSON.stringify(marksData)
+    });
+  }
+
+  async updateMark(markId: number, markData: { obtained_marks: number; remarks?: string }) {
+    return this.request(`/marks-management/marks/${markId}`, {
+      method: 'PUT',
+      body: JSON.stringify(markData)
+    });
+  }
+
+  async deleteMark(markId: number) {
+    return this.request(`/marks-management/marks/${markId}`, { method: 'DELETE' });
+  }
+
+  async getStudentReport(studentId: number, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/marks-management/reports/student/${studentId}?${query}`);
+  }
+
+  async getParentHelpRequests() {
+    return this.request('/parent-linking/help-requests');
+  }
+
+  async respondToParentHelpRequest(requestId: number, responseData: { student_code?: string; response_message: string }) {
+    return this.request(`/parent-linking/help-requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(responseData)
+    });
+  }
+
+  // Advisor Dashboard
+  async getAdvisorOverview() {
+    return this.request('/staff/advisor/overview');
+  }
+
+  async getAdvisorStudents() {
+    return this.request('/staff/advisor/students');
+  }
+
+  async createStudentCase(caseData: any) {
+    return this.request('/staff/advisor/cases/create', {
+      method: 'POST',
+      body: JSON.stringify(caseData)
+    });
+  }
+
+  async getAdvisorMeetings() {
+    return this.request('/staff/advisor/meetings');
+  }
+
+  async scheduleMeeting(meetingData: any) {
+    return this.request('/staff/advisor/meetings/schedule', {
+      method: 'POST',
+      body: JSON.stringify(meetingData)
+    });
+  }
+
+  // Accountant Dashboard
+  async getAccountantOverview() {
+    return this.request('/staff/accountant/overview');
+  }
+
+  async getAccountantStudents() {
+    return this.request('/staff/accountant/students');
+  }
+
+  async recordPayment(paymentData: any) {
+    return this.request('/staff/accountant/payments/record', {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+  }
+
+  async getFinancialSummary(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/staff/accountant/reports/summary?${query}`);
+  }
+
+  // DOD Dashboard
+  async getDODOverview() {
+    return this.request('/staff/dod/overview');
+  }
+
+  async getDODStudents() {
+    return this.request('/staff/dod/students');
+  }
+
+  async createIncident(incidentData: any) {
+    return this.request('/staff/dod/incidents/create', {
+      method: 'POST',
+      body: JSON.stringify(incidentData)
+    });
+  }
+
+  async getDisciplineStatistics() {
+    return this.request('/staff/dod/reports/statistics');
+  }
+
+  // DOS Dashboard
+  async getDOSOverview() {
+    return this.request('/staff/dos/overview');
+  }
+
+  async getSubjectPerformance() {
+    return this.request('/staff/dos/performance/subjects');
+  }
+
+  async getDOSTeachers() {
+    return this.request('/staff/dos/teachers');
+  }
+
+  async assignTeacher(assignmentData: any) {
+    return this.request('/staff/dos/assignments/assign-teacher', {
+      method: 'POST',
+      body: JSON.stringify(assignmentData)
+    });
+  }
+
+  // Headmaster Dashboard
+  async getHeadmasterOverview() {
+    return this.request('/staff/headmaster/overview');
+  }
+
+  async getComprehensiveReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/staff/headmaster/reports/comprehensive?${query}`);
+  }
+
+  // Stock Manager Dashboard
+  async getStockOverview() {
+    return this.request('/staff/stock/overview');
+  }
+
+  async getInventoryItems(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/staff/stock/items?${query}`);
+  }
+
+  async addInventoryItem(itemData: any) {
+    return this.request('/staff/stock/items/add', {
+      method: 'POST',
+      body: JSON.stringify(itemData)
+    });
+  }
+
+  async recordStockTransaction(transactionData: any) {
+    return this.request('/staff/stock/transactions/record', {
+      method: 'POST',
+      body: JSON.stringify(transactionData)
+    });
+  }
+
+  // Comprehensive Management APIs
+  async getTeachers(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/teachers?${query}`);
+  }
+
+  async getTeacherDetails(id: number) {
+    return this.request(`/management/teachers/${id}`);
+  }
+
+  async createTeacher(teacherData: any) {
+    return this.request('/management/teachers/create', {
+      method: 'POST',
+      body: JSON.stringify(teacherData)
+    });
+  }
+
+  async updateTeacher(id: number, teacherData: any) {
+    return this.request(`/management/teachers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(teacherData)
+    });
+  }
+
+  async deleteTeacher(id: number) {
+    return this.request(`/management/teachers/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async assignTeacherToSubject(assignmentData: any) {
+    return this.request('/management/teachers/assign', {
+      method: 'POST',
+      body: JSON.stringify(assignmentData)
+    });
+  }
+
+  async removeTeacherAssignment(assignmentId: number) {
+    return this.request(`/management/teachers/assignments/${assignmentId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getTeacherAnalytics(teacherId: number) {
+    return this.request(`/management/teachers/${teacherId}/analytics`);
+  }
+
+  async getStudents(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/students?${query}`);
+  }
+
+  async getStudentDetails(id: number) {
+    return this.request(`/management/students/${id}`);
+  }
+
+  async createStudent(studentData: any) {
+    return this.request('/management/students/create', {
+      method: 'POST',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async updateStudent(id: number, studentData: any) {
+    return this.request(`/management/students/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async transferStudent(id: number, transferData: any) {
+    return this.request(`/management/students/${id}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify(transferData)
+    });
+  }
+
+  async bulkStudentAction(actionData: any) {
+    return this.request('/management/students/bulk-action', {
+      method: 'POST',
+      body: JSON.stringify(actionData)
+    });
+  }
+
+  async getParents(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/parents?${query}`);
+  }
+
+  async getParentDetails(id: number) {
+    return this.request(`/management/parents/${id}`);
+  }
+
+  async linkParentToStudent(linkData: any) {
+    return this.request('/management/parents/link-student', {
+      method: 'POST',
+      body: JSON.stringify(linkData)
+    });
+  }
+
+  async getClasses(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/classes?${query}`);
+  }
+
+  async getSubjects(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/subjects?${query}`);
+  }
+
+  async getAcademicYears() {
+    return this.request('/management/academic-years');
+  }
+
   async registerParent(parentData: any) {
     const response = await fetch(`${API_BASE}/auth/register/parent`, {
       method: 'POST',
@@ -773,14 +1056,113 @@ class ApiService {
     return this.request(`/stock/procurement?${query}`);
   }
 
+  async createStockProcurementOrder(orderData: any) {
+    return this.request('/stock/procurement', {
+      method: 'POST',
+      body: JSON.stringify(orderData)
+    });
+  }
+
   async getStockRequisitions(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/stock/requisitions?${query}`);
   }
 
+  async createStockRequisition(requisitionData: any) {
+    return this.request('/stock/requisitions', {
+      method: 'POST',
+      body: JSON.stringify(requisitionData)
+    });
+  }
+
+  async updateStockRequisition(id: number, requisitionData: any) {
+    return this.request(`/stock/requisitions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(requisitionData)
+    });
+  }
+
   async getStockSuppliers(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/stock/suppliers?${query}`);
+  }
+
+  async createStockSupplier(supplierData: any) {
+    return this.request('/stock/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(supplierData)
+    });
+  }
+
+  async getStockStats() {
+    return this.request('/stock/stats');
+  }
+
+  async getStockNotifications() {
+    return this.request('/stock/notifications');
+  }
+
+  // Accountant - Stock Expenses
+  async getAccountantStockExpenses() {
+    return this.request('/accountant/stock-expenses');
+  }
+
+  // Accountant - Global Students Financial
+  async getAccountantStudentsFinancial(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/accountant/students-financial?${query}`);
+  }
+
+  async createCustomStudentFee(studentId: number, feeData: any) {
+    return this.request(`/accountant/students/${studentId}/custom-fee`, {
+      method: 'POST',
+      body: JSON.stringify(feeData)
+    });
+  }
+
+  async createBulkStudentFees(feeData: any) {
+    return this.request('/accountant/students/bulk-fees', {
+      method: 'POST',
+      body: JSON.stringify(feeData)
+    });
+  }
+
+  // Payment Proofs
+  async submitPaymentProof(formData: FormData) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/payment-proofs/submit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    return response.json();
+  }
+
+  async getMyPaymentProofs(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/payment-proofs/my-submissions?${query}`);
+  }
+
+  async getAllPaymentProofs(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/payment-proofs/all?${query}`);
+  }
+
+  async getPaymentProofDetails(id: number) {
+    return this.request(`/payment-proofs/${id}`);
+  }
+
+  async verifyPaymentProof(id: number, verificationData: any) {
+    return this.request(`/payment-proofs/${id}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify(verificationData)
+    });
+  }
+
+  async getPaymentProofStats() {
+    return this.request('/payment-proofs/stats/summary');
   }
 
   async getDOSStudentDetails(studentId: number) {
@@ -1337,6 +1719,94 @@ class ApiService {
     return this.request('/announcements/broadcast', {
       method: 'POST',
       body: JSON.stringify(broadcastData)
+    });
+  }
+
+  // Dynamic Column Management (Accountant)
+  async getTrades() {
+    return this.request('/management/trades');
+  }
+
+  async getLevels() {
+    return this.request('/management/levels');
+  }
+
+  async getLevelSheetColumns(tradeId: number, levelId: number) {
+    return this.request(`/management/columns/${tradeId}/${levelId}`);
+  }
+
+  async createLevelSheetColumn(columnData: any) {
+    return this.request('/management/columns', {
+      method: 'POST',
+      body: JSON.stringify(columnData)
+    });
+  }
+
+  async updateLevelSheetColumn(columnId: number, columnData: any) {
+    return this.request(`/management/columns/${columnId}`, {
+      method: 'PUT',
+      body: JSON.stringify(columnData)
+    });
+  }
+
+  async deleteLevelSheetColumn(columnId: number) {
+    return this.request(`/management/columns/${columnId}`, { method: 'DELETE' });
+  }
+
+  async getStudentsByTradeLevel(tradeId: number, levelId: number) {
+    return this.request(`/management/students/${tradeId}/${levelId}`);
+  }
+
+  async updateStudentColumnValue(studentId: number, columnId: number, value: string) {
+    return this.request(`/management/students/${studentId}/columns/${columnId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ column_value: value })
+    });
+  }
+
+  // Student Management (DOS/Headmaster)
+  async addStudent(studentData: any) {
+    return this.request('/management/students', {
+      method: 'POST',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async updateStudentInfo(studentId: number, studentData: any) {
+    return this.request(`/management/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async getStudentFullDetails(studentId: number) {
+    return this.request(`/management/students/${studentId}/details`);
+  }
+
+  // Parent Connection System
+  async searchStudentsForConnection(query: string, tradeId?: number, levelId?: number) {
+    const params: any = { query };
+    if (tradeId) params.trade_id = tradeId;
+    if (levelId) params.level_id = levelId;
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/management/students/search?${queryString}`);
+  }
+
+  async requestParentConnection(studentId: number, relationship: string) {
+    return this.request('/management/parent/connect', {
+      method: 'POST',
+      body: JSON.stringify({ student_id: studentId, relationship })
+    });
+  }
+
+  async getParentConnectionRequests() {
+    return this.request('/management/parent/connections');
+  }
+
+  async approveParentConnection(connectionId: number, status: 'approved' | 'rejected') {
+    return this.request(`/management/parent/connections/${connectionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
     });
   }
 }

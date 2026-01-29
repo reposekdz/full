@@ -125,12 +125,18 @@ const routes = {
   // Student Features
   studentManagement: loadRoute('./routes/student-management', 'Student Management'),
   studentSheets: loadRoute('./routes/student-sheets', 'Student Sheets'),
+  globalStudentSheets: loadRoute('./routes/global-student-sheets', 'Global Student Sheets'),
   studentCompetitions: loadRoute('./routes/student-competitions', 'Student Competitions'),
   studentAdvanced: loadRoute('./routes/student-advanced', 'Student Advanced'),
   
   // Teacher Features
   teacherPortal: loadRoute('./routes/teacher-portal', 'Teacher Portal'),
   teacherAdvanced: loadRoute('./routes/teacher-advanced', 'Teacher Advanced'),
+  marksManagement: loadRoute('./routes/marks-management', 'Marks Management'),
+  
+  // Staff Features
+  staffDashboard: loadRoute('./routes/staff-dashboard', 'Staff Dashboard'),
+  comprehensiveManagement: loadRoute('./routes/comprehensive-management', 'Comprehensive Management'),
   
   // Communication
   messages: loadRoute('./routes/messages', 'Messages'),
@@ -208,6 +214,7 @@ const routes = {
   paymentAnalytics: loadRoute('./routes/paymentAnalytics', 'Payment Analytics'),
   accountantManagement: loadRoute('./routes/accountantManagement', 'Accountant Management'),
   accountantAdvanced: loadRoute('./routes/accountant-advanced', 'Accountant Advanced'),
+  paymentProofs: loadRoute('./routes/payment-proofs', 'Payment Proofs'),
   classes: loadRoute('./routes/classes', 'Classes'),
   docs: loadRoute('./routes/docs', 'Documentation'),
   
@@ -271,6 +278,9 @@ const routes = {
   dodProfile: loadRoute('./routes/dod-profile', 'DOD Profile'),
   dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
   staffManagement: loadRoute('./routes/staff-management', 'Staff Management'),
+  
+  // DOS Comprehensive Management
+  dosComprehensiveManagement: loadRoute('./routes/dos-comprehensive-management', 'DOS Comprehensive Management'),
   
   // NEW MISSING ROUTES - Full Feature Set
   curriculum: loadRoute('./routes/curriculum', 'Curriculum'),
@@ -362,12 +372,18 @@ if (routes.classSheetsApi) { app.use('/api/class-sheets-api', routes.classSheets
 
 // Student Features
 if (routes.studentManagement) { app.use('/api/student-management', routes.studentManagement); mountedRoutes++; }
+app.use('/api/management', require('./routes/student-management')); mountedRoutes++;
 if (routes.studentSheets) { app.use('/api/student-sheets', routes.studentSheets); mountedRoutes++; }
+if (routes.globalStudentSheets) { app.use('/api/global-sheets', routes.globalStudentSheets); mountedRoutes++; }
 if (routes.studentCompetitions) { app.use('/api/student-competitions', routes.studentCompetitions); mountedRoutes++; }
 if (routes.studentAdvanced) { app.use('/api/student-advanced', routes.studentAdvanced); mountedRoutes++; }
 
 // Teacher Features
 if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal); mountedRoutes++; }
+if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
+if (routes.marksManagement) { app.use('/api/marks-management', routes.marksManagement); mountedRoutes++; }
+if (routes.staffDashboard) { app.use('/api/staff', routes.staffDashboard); mountedRoutes++; }
+if (routes.comprehensiveManagement) { app.use('/api/management', routes.comprehensiveManagement); mountedRoutes++; }
 
 // Communication
 if (routes.messages) { app.use('/api/messages', routes.messages(io)); mountedRoutes++; }
@@ -456,6 +472,7 @@ if (routes.studentPayments) { app.use('/api/accountant', routes.studentPayments)
 if (routes.paymentAnalytics) { app.use('/api/accountant', routes.paymentAnalytics); mountedRoutes++; }
 if (routes.accountantManagement) { app.use('/api/accountant', routes.accountantManagement); mountedRoutes++; }
 if (routes.accountantAdvanced) { app.use('/api/accountant-advanced', routes.accountantAdvanced); mountedRoutes++; }
+if (routes.paymentProofs) { app.use('/api/payment-proofs', routes.paymentProofs); mountedRoutes++; }
 if (routes.classes) { app.use('/api/classes', routes.classes); mountedRoutes++; }
 if (routes.docs) { app.use('/api/docs', routes.docs); mountedRoutes++; }
 
@@ -519,6 +536,9 @@ if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodCompr
 if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
 if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
 if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManagement); mountedRoutes++; }
+
+// DOS Comprehensive Management
+if (routes.dosComprehensiveManagement) { app.use('/api/dos-management', routes.dosComprehensiveManagement); mountedRoutes++; }
 
 // NEW MISSING ROUTES - Full Feature Set
 if (routes.curriculum) { app.use('/api/curriculum', routes.curriculum); mountedRoutes++; }

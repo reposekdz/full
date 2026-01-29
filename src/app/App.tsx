@@ -48,9 +48,13 @@ import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
-import ComprehensiveParentDashboard from '@/app/pages/parent/ComprehensiveParentDashboard';
+import ModernParentDashboard from '@/app/pages/dashboards/ModernParentDashboard';
+import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
+import DOSDashboard from '@/app/pages/dashboards/DOSDashboard';
+import ModernHeadmasterDashboard from '@/app/pages/dashboards/ModernHeadmasterDashboard';
+import ModernStockManagerDashboard from '@/app/pages/dashboards/ModernStockManagerDashboard';
 import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';
 import DODLeavePage from '@/app/pages/dod/DODLeavePage';
 import DODExamsPage from '@/app/pages/dod/DODExamsPage';
@@ -96,6 +100,7 @@ import NYTArticleViewPage from '@/app/pages/NYTArticleViewPage';
 import AdminArticleManagementPage from '@/app/pages/AdminArticleManagementPage';
 import Footer from '@/app/components/Footer';
 import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
+import StaffManagementPage from '@/app/pages/StaffManagementPage';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -175,9 +180,9 @@ const AppContent: React.FC = () => {
       case 'student':
         return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
-        return <ComprehensiveParentDashboard />;
+        return <ModernParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'advisor':
-        return <ComprehensiveAdvisorPortal onNavigate={handleNavigate} onLogout={logout} />;
+        return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_discipline':
@@ -193,7 +198,7 @@ const AppContent: React.FC = () => {
         if (currentPage === 'dod-notifications') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
         return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'headmaster':
-        return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
         if (currentPage === 'profile') return <TeacherProfilePage onNavigate={handleNavigate} />;
         if (currentPage === 'search') return <TeacherSearchPage onNavigate={handleNavigate} />;
@@ -214,7 +219,7 @@ const AppContent: React.FC = () => {
         }
         return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'stock_manager':
-        return <StockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
       default:
         return null;
     }
@@ -237,14 +242,15 @@ const AppContent: React.FC = () => {
     // Check for dashboard routes first
     if (currentPage === 'admin' && user?.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-student' && user?.role === 'student') return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ComprehensiveParentDashboard />;
-    if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <ComprehensiveAdvisorPortal onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ModernParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-dos' && user?.role === 'director_study') return <DOSDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-director-discipline' && user?.role === 'director_discipline') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <HeadMasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <StockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
 
     // Check for dynamic routes first (works for all users)
     if (currentPage.startsWith('article/')) {
@@ -298,6 +304,7 @@ const AppContent: React.FC = () => {
       if (currentPage === 'library-system') return <LibraryManagementSystem />;
       if (currentPage === 'exam-management') return <ExamManagementSystem />;
       if (currentPage === 'hostel-management') return <HostelManagementSystem />;
+      if (currentPage === 'staff-management') return <StaffManagementPage onNavigate={handleNavigate} />;
       
       // Role selection pages
       if (currentPage === 'role-selection') {

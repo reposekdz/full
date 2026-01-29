@@ -74,13 +74,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
           admin: 'admin',
           headmaster: 'dashboard-headmaster',
           advisor: 'dashboard-advisor',
-          director_study: 'dashboard-director-study',
-          director_discipline: 'dashboard-director-discipline',
+          dos: 'dashboard-dos',
+          dod: 'dashboard-dod',
           accountant: 'dashboard-accountant',
           stock_manager: 'dashboard-stock'
         };
         const dashboardPage = dashboardMap[role] || 'dashboard';
-        window.location.href = `/${dashboardPage}`;
+        
+        // Call onLogin to update app state
+        onLogin(data.user);
+        
+        // Navigate to dashboard
+        setTimeout(() => {
+          onNavigate(dashboardPage);
+        }, 500);
       } else {
         setError(data.message || 'Kwinjira ntibyakunze. Gerageza ukundi.');
       }

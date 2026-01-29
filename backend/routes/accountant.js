@@ -387,4 +387,199 @@ router.get('/reports/cashflow', authenticateToken, async (req, res) => {
   }
 });
 
+// Get stock expenses for accountant
+router.get('/stock-expenses', authenticateToken, async (req, res) => {
+  try {
+    const [stockExpenses] = await pool.execute(`
+      SELECT 
+        st.id,
+        st.transaction_date,
+        st.transaction_type,
+        si.item_name,
+        si.category,
+        st.quantity,
+        st.unit_price,
+        st.total_value,
+        st.reference_number,
+        st.department,
+        u.first_name as issued_by_name,
+        u.last_name as issued_by_lastname
+      FROM stock_transactions st
+      LEFT JOIN stock_items si ON st.item_id = si.id
+      LEFT JOIN users u ON st.issued_by = u.id
+      WHERE st.transaction_type IN ('purchase', 'damage', 'loss')
+      ORDER BY st.transaction_date DESC
+      LIMIT 100
+    `);
+
+    const [summary] = await pool.execute(`
+      SELECT 
+        SUM(CASE WHEN transaction_type = 'purchase' THEN total_value ELSE 0 END) as total_purchases,
+        SUM(CASE WHEN transaction_type = 'damage' THEN total_value ELSE 0 END) as total_damages,
+        SUM(CASE WHEN transaction_type = 'loss' THEN total_value ELSE 0 END) as total_losses,
+        SUM(total_value) as total_stock_expenses
+      FROM stock_transactions
+      WHERE transaction_type IN ('purchase', 'damage', 'loss')
+        AND YEAR(transaction_date) = YEAR(CURDATE())
+    `);
+
+    res.json({ success: true, stockExpenses, summary: summary[0] });
+  } catch (error) {
+    console.error('Stock expenses error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock expenses' });
+  }
+});
+
+// Get global students with financial data
+router.get('/students-financial', authenticateToken, async (req, res) => {
+  try {
+    const { trade, level, payment_status, search } = req.query;
+    
+    let query = `
+      SELECT 
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone,
+        u.student_code,
+        u.trade,
+        u.level,
+        u.status,
+        COALESCE(SUM(CASE WHEN fp.status = 'completed' THEN fp.amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(inv.total_amount), 0) as total_invoiced,
+        COALESCE(SUM(inv.total_amount), 0) - COALESCE(SUM(CASE WHEN fp.status = 'completed' THEN fp.amount ELSE 0 END), 0) as balance
+      FROM users u
+      LEFT JOIN fee_payments fp ON u.id = fp.student_id
+      LEFT JOIN invoices inv ON u.id = inv.student_id
+      WHERE u.role = 'student'
+    `;
+    
+    const params = [];
+    if (trade) { query += ' AND u.trade = ?'; params.push(trade); }
+    if (level) { query += ' AND u.level = ?'; params.push(level); }
+    if (search) { 
+      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.student_code LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    
+    query += ' GROUP BY u.id ORDER BY u.first_name, u.last_name';
+    
+    const [students] = await pool.execute(query, params);
+    
+    // Add payment status
+    const studentsWithStatus = students.map(s => ({
+      ...s,
+      payment_status: s.balance === 0 ? 'paid' : s.total_paid === 0 ? 'unpaid' : 'partial',
+      percentage_paid: s.total_invoiced > 0 ? Math.round((s.total_paid / s.total_invoiced) * 100) : 0
+    }));
+    
+    // Filter by payment status if requested
+    const filtered = payment_status 
+      ? studentsWithStatus.filter(s => s.payment_status === payment_status)
+      : studentsWithStatus;
+    
+    res.json({ success: true, students: filtered });
+  } catch (error) {
+    console.error('Students financial error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch students' });
+  }
+});
+
+// Create custom financial column for student
+router.post('/students/:studentId/custom-fee', authenticateToken, async (req, res) => {
+  try {
+    const { fee_type, amount, due_date, description } = req.body;
+    const studentId = req.params.studentId;
+    
+    const [student] = await pool.execute(
+      'SELECT student_code, CONCAT(first_name, " ", last_name) as name FROM users WHERE id = ?',
+      [studentId]
+    );
+    
+    if (!student.length) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const invoiceNumber = `INV${Date.now()}`;
+    const [result] = await pool.execute(
+      `INSERT INTO invoices (
+        invoice_number, student_id, student_code, student_name,
+        total_amount, balance, due_date, status, created_by, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'sent', ?, ?)`,
+      [
+        invoiceNumber,
+        studentId,
+        student[0].student_code,
+        student[0].name,
+        amount,
+        amount,
+        due_date,
+        req.user.userId,
+        `${fee_type}: ${description || ''}`
+      ]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'Custom fee created', 
+      invoiceId: result.insertId,
+      invoiceNumber 
+    });
+  } catch (error) {
+    console.error('Custom fee error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create custom fee' });
+  }
+});
+
+// Bulk update fees
+router.post('/students/bulk-fees', authenticateToken, async (req, res) => {
+  try {
+    const { student_ids, fee_type, amount, due_date, description } = req.body;
+    
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Student IDs required' });
+    }
+    
+    const results = [];
+    for (const studentId of student_ids) {
+      const [student] = await pool.execute(
+        'SELECT student_code, CONCAT(first_name, " ", last_name) as name FROM users WHERE id = ?',
+        [studentId]
+      );
+      
+      if (student.length) {
+        const invoiceNumber = `INV${Date.now()}_${studentId}`;
+        const [result] = await pool.execute(
+          `INSERT INTO invoices (
+            invoice_number, student_id, student_code, student_name,
+            total_amount, balance, due_date, status, created_by, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'sent', ?, ?)`,
+          [
+            invoiceNumber,
+            studentId,
+            student[0].student_code,
+            student[0].name,
+            amount,
+            amount,
+            due_date,
+            req.user.userId,
+            `${fee_type}: ${description || ''}`
+          ]
+        );
+        results.push({ studentId, invoiceId: result.insertId, invoiceNumber });
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Fees created for ${results.length} students`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk fees error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create bulk fees' });
+  }
+});
+
 module.exports = router;

@@ -24,13 +24,32 @@ const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx|txt|jpg|jpeg|png|gif|zip|rar/;
+    const allowedTypes = /pdf|doc|docx|txt|jpg|jpeg|png|gif|zip|rar|ppt|pptx|xls|xlsx/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    if (extname) {
       return cb(null, true);
     }
-    cb(new Error('Invalid file type'));
+    cb(new Error('Invalid file type. Allowed: PDF, DOC, DOCX, TXT, Images, ZIP, PPT, XLS'));
+  }
+});
+
+// Get teacher's classes
+router.get('/teacher/:teacherId/classes', async (req, res) => {
+  try {
+    const [classes] = await pool.query(`
+      SELECT DISTINCT c.id, c.name, c.trade_id, c.level_id, t.name as trade_name, l.level_number
+      FROM dos_classes c
+      LEFT JOIN trades t ON c.trade_id = t.id
+      LEFT JOIN levels l ON c.level_id = l.id
+      WHERE c.teacher_id = ? OR c.id IN (
+        SELECT class_id FROM teacher_class_assignments WHERE teacher_id = ?
+      )
+      ORDER BY t.name, l.level_number
+    `, [req.params.teacherId, req.params.teacherId]);
+    res.json(classes);
+  } catch (error) {
+    console.error('Error fetching teacher classes:', error);
+    res.status(500).json({ message: 'Error fetching classes' });
   }
 });
 

@@ -34,6 +34,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
     parentPhone: '',
     course: '',
     level: '',
+    // Parent-specific: Student connection
+    studentFirstName: '',
+    studentLastName: '',
+    studentTrade: '',
+    studentLevel: '',
+    studentId: '',
+    relationshipType: '',
     // Terms
     agreeTerms: false
   });
@@ -75,6 +82,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         if (!formData.level) errors.level = 'Hitamo urwego';
         if (!formData.parentName) errors.parentName = 'Izina ry\'umubyeyi rirakenewe';
         if (!formData.parentPhone) errors.parentPhone = 'Telefoni y\'umubyeyi irakenewe';
+      }
+      if (formData.role === 'parent') {
+        if (!formData.studentFirstName) errors.studentFirstName = 'Izina ry\'umwana rirakenewe';
+        if (!formData.studentLastName) errors.studentLastName = 'Izina ryukuri ry\'umwana rirakenewe';
+        if (!formData.studentTrade) errors.studentTrade = 'Hitamo umwuga w\'umwana';
+        if (!formData.studentLevel) errors.studentLevel = 'Hitamo urwego rw\'umwana';
+        if (!formData.relationshipType) errors.relationshipType = 'Hitamo isano';
       }
       if (!formData.agreeTerms) errors.agreeTerms = 'Ugomba kwemera amabwiriza';
     }
@@ -119,7 +133,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           address: formData.address,
           date_of_birth: formData.dateOfBirth,
           gender: formData.gender,
-          national_id: formData.nationalId
+          national_id: formData.nationalId,
+          student_first_name: formData.studentFirstName,
+          student_last_name: formData.studentLastName,
+          student_trade: formData.studentTrade,
+          student_level: formData.studentLevel,
+          student_id: formData.studentId,
+          relationship_type: formData.relationshipType
         };
       } else if (formData.role === 'student') {
         endpoint = 'http://localhost:5000/api/auth/register/student';
@@ -166,7 +186,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         // Redirect to appropriate dashboard immediately
         const dashboardPage = getRoleDashboard(formData.role);
         setTimeout(() => {
-          window.location.href = `/${dashboardPage}`;
+          onNavigate(dashboardPage);
         }, 1500);
       } else {
         setError(data.message || 'Kwiyandikisha ntibyakunze. Gerageza ukundi.');
@@ -510,6 +530,95 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                             className="h-12"
                           />
                           {validationErrors.parentPhone && <p className="text-red-600 text-xs mt-1">{validationErrors.parentPhone}</p>}
+                        </div>
+                      </>
+                    )}
+
+                    {formData.role === 'parent' && (
+                      <>
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl mb-4">
+                          <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                            <GraduationCap className="w-5 h-5 text-blue-600" />
+                            Amakuru y'Umwana Wiga
+                          </h3>
+                          <p className="text-sm text-gray-600">Injiza amakuru y'umwana wawe wiga muri Garden TVET School</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Izina ry'Umwana</label>
+                            <Input
+                              value={formData.studentFirstName}
+                              onChange={(e) => setFormData({ ...formData, studentFirstName: e.target.value })}
+                              placeholder="Marie"
+                              className="h-12"
+                            />
+                            {validationErrors.studentFirstName && <p className="text-red-600 text-xs mt-1">{validationErrors.studentFirstName}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Izina Ryukuri</label>
+                            <Input
+                              value={formData.studentLastName}
+                              onChange={(e) => setFormData({ ...formData, studentLastName: e.target.value })}
+                              placeholder="UWASE"
+                              className="h-12"
+                            />
+                            {validationErrors.studentLastName && <p className="text-red-600 text-xs mt-1">{validationErrors.studentLastName}</p>}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Umwuga w'Umwana</label>
+                            <select
+                              value={formData.studentTrade}
+                              onChange={(e) => setFormData({ ...formData, studentTrade: e.target.value })}
+                              className="w-full h-12 border rounded-lg px-3"
+                            >
+                              <option value="">Hitamo umwuga</option>
+                              {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            {validationErrors.studentTrade && <p className="text-red-600 text-xs mt-1">{validationErrors.studentTrade}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Urwego rw'Umwana</label>
+                            <select
+                              value={formData.studentLevel}
+                              onChange={(e) => setFormData({ ...formData, studentLevel: e.target.value })}
+                              className="w-full h-12 border rounded-lg px-3"
+                            >
+                              <option value="">Hitamo urwego</option>
+                              {levels.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                            {validationErrors.studentLevel && <p className="text-red-600 text-xs mt-1">{validationErrors.studentLevel}</p>}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Nimero y'Umwana (Optional)</label>
+                          <Input
+                            value={formData.studentId}
+                            onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                            placeholder="SWD0012026"
+                            className="h-12"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Niba uzi nimero y'umwana, yinjize hano</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Isano n'Umwana</label>
+                          <select
+                            value={formData.relationshipType}
+                            onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value })}
+                            className="w-full h-12 border rounded-lg px-3"
+                          >
+                            <option value="">Hitamo isano</option>
+                            <option value="father">Data</option>
+                            <option value="mother">Mama</option>
+                            <option value="guardian">Umurezi</option>
+                            <option value="other">Ikindi</option>
+                          </select>
+                          {validationErrors.relationshipType && <p className="text-red-600 text-xs mt-1">{validationErrors.relationshipType}</p>}
                         </div>
                       </>
                     )}

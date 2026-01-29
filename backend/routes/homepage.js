@@ -35,9 +35,9 @@ router.get('/stats', async (req, res) => {
     // Get total awards/achievements from achievements table
     const [achievements] = await db.query('SELECT COUNT(*) as count FROM achievements WHERE is_active = true');
     
-    // Get sports achievements count
+    // Get sports achievements count (without is_active check)
     const [sportsAchievements] = await db.query(`
-      SELECT COUNT(*) as count FROM sports_achievements WHERE is_active = true
+      SELECT COUNT(*) as count FROM sports_achievements
     `);
     
     // Get academic awards from news articles tagged as awards
@@ -113,7 +113,7 @@ router.get('/news', async (req, res) => {
         DATE_FORMAT(date_published, '%Y-%m-%d') as publish_date,
         is_featured, is_active
       FROM news_articles 
-      WHERE is_active = true 
+      WHERE is_active = true AND title IS NOT NULL AND title != '' AND title != 'Untitled'
       ORDER BY date_published DESC, sort_order ASC
       LIMIT 6
     `);
@@ -228,7 +228,7 @@ router.get('/trades', async (req, res) => {
 // NEWS ARTICLES CRUD
 router.get('/admin/news', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
   try {
-    const [news] = await db.query('SELECT * FROM news_articles ORDER BY created_at DESC');
+    const [news] = await db.query('SELECT * FROM news_articles WHERE title IS NOT NULL AND title != "" AND title != "Untitled" ORDER BY created_at DESC');
     res.json({ success: true, news });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -265,6 +265,16 @@ router.delete('/admin/news/:id', authenticateToken, requireRole(['admin', 'headm
   try {
     await db.query('DELETE FROM news_articles WHERE id=?', [req.params.id]);
     res.json({ success: true, message: 'News article deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete untitled articles
+router.delete('/admin/news/cleanup/untitled', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  try {
+    await db.query('DELETE FROM news_articles WHERE title IS NULL OR title = "" OR title = "Untitled"');
+    res.json({ success: true, message: 'Untitled articles deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -53,10 +53,15 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showTransactionDialog, setShowTransactionDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
   const [procurementOrders, setProcurementOrders] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -65,18 +70,21 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [itemsData, transData, ordersData, reqData, suppData] = await Promise.all([
-        apiService.getStockItems(),
-        apiService.getStockTransactions({ limit: 10 }),
-        apiService.getStockProcurementOrders(),
-        apiService.getStockRequisitions(),
-        apiService.getStockSuppliers()
+      const [itemsRes, transRes, statsRes, procRes, reqRes, suppRes] = await Promise.all([
+        apiService.getStockItems({ limit: 100 }),
+        apiService.getStockTransactions({ limit: 20 }),
+        apiService.getStockStats(),
+        apiService.getStockProcurementOrders({ limit: 50 }),
+        apiService.getStockRequisitions({ limit: 50 }),
+        apiService.getStockSuppliers({})
       ]);
-      setItems(itemsData.items || []);
-      setTransactions(transData.transactions || []);
-      setProcurementOrders(ordersData.orders || []);
-      setRequisitions(reqData.requisitions || []);
-      setSuppliers(suppData.suppliers || []);
+      
+      if (itemsRes.success) setItems(itemsRes.items || []);
+      if (transRes.success) setTransactions(transRes.transactions || []);
+      if (statsRes.success) setStats(statsRes);
+      if (procRes.success) setProcurementOrders(procRes.orders || []);
+      if (reqRes.success) setRequisitions(reqRes.requisitions || []);
+      if (suppRes.success) setSuppliers(suppRes.suppliers || []);
     } catch (error) {
       console.error('Error fetching stock data:', error);
     } finally {
@@ -84,67 +92,65 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
     }
   };
 
+  const handleAddItem = async () => {
+    try {
+      const res = await apiService.createStockItem(formData);
+      if (res.success) {
+        setShowAddDialog(false);
+        setFormData({});
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error adding item:', error);
+    }
+  };
+
+  const handleRecordTransaction = async () => {
+    try {
+      const res = await apiService.createStockTransaction(formData);
+      if (res.success) {
+        setShowTransactionDialog(false);
+        setFormData({});
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error recording transaction:', error);
+    }
+  };
+
   const getStats = () => {
-    const totalItems = items.length;
-    const lowStock = items.filter(i => i.status === 'low_stock').length;
-    const outOfStock = items.filter(i => i.status === 'out_of_stock').length;
-    const totalValue = items.reduce((acc, item) => acc + (item.quantity * (item.unit_price || 0)), 0);
+    if (!stats) {
+      return [
+        { title: 'Ibintu Byose', value: items.length.toLocaleString(), change: '+8.2%', trend: 'up', icon: Package, color: 'from-blue-500 to-indigo-500', bgColor: 'bg-blue-50' },
+        { title: 'Ibicye / Nibishize', value: items.filter(i => i.quantity <= (i.reorder_level || 10)).length.toString(), change: '+12%', trend: 'up', icon: AlertTriangle, color: 'from-red-500 to-orange-500', bgColor: 'bg-red-50' },
+        { title: 'Ibikorwa', value: transactions.length.toString(), change: '-5.3%', trend: 'down', icon: ShoppingCart, color: 'from-yellow-500 to-amber-500', bgColor: 'bg-yellow-50' },
+        { title: 'Agaciro k\'Ibikoresho', value: `RWF ${Math.round(items.reduce((acc, i) => acc + (i.quantity * (i.unit_price || 0)), 0)/1000000)}M`, change: '+15.8%', trend: 'up', icon: TrendingUp, color: 'from-green-500 to-teal-500', bgColor: 'bg-green-50' }
+      ];
+    }
 
     return [
-      {
-        title: 'Ibintu Byose',
-        value: totalItems.toLocaleString(),
-        change: '+8.2%',
-        trend: 'up',
-        icon: Package,
-        color: 'from-blue-500 to-indigo-500',
-        bgColor: 'bg-blue-50'
-      },
-      {
-        title: 'Ibicye / Nibishize',
-        value: (lowStock + outOfStock).toString(),
-        change: '+12%',
-        trend: 'up',
-        icon: AlertTriangle,
-        color: 'from-red-500 to-orange-500',
-        bgColor: 'bg-red-50'
-      },
-      {
-        title: 'Ibisabwa',
-        value: '23',
-        change: '-5.3%',
-        trend: 'down',
-        icon: ShoppingCart,
-        color: 'from-yellow-500 to-amber-500',
-        bgColor: 'bg-yellow-50'
-      },
-      {
-        title: 'Agaciro k\'Ibikoresho',
-        value: `RWF ${Math.round(totalValue/1000000)}M`,
-        change: '+15.8%',
-        trend: 'up',
-        icon: TrendingUp,
-        color: 'from-green-500 to-teal-500',
-        bgColor: 'bg-green-50'
-      },
+      { title: 'Ibintu Byose', value: stats.totals?.total_items?.toLocaleString() || '0', change: '+8.2%', trend: 'up', icon: Package, color: 'from-blue-500 to-indigo-500', bgColor: 'bg-blue-50' },
+      { title: 'Ibicye / Nibishize', value: (stats.alerts?.low_stock_count + stats.alerts?.out_of_stock_count).toString(), change: '+12%', trend: 'up', icon: AlertTriangle, color: 'from-red-500 to-orange-500', bgColor: 'bg-red-50' },
+      { title: 'Ibikorwa', value: transactions.length.toString(), change: '-5.3%', trend: 'down', icon: ShoppingCart, color: 'from-yellow-500 to-amber-500', bgColor: 'bg-yellow-50' },
+      { title: 'Agaciro k\'Ibikoresho', value: `RWF ${Math.round((stats.totals?.total_value || 0)/1000000)}M`, change: '+15.8%', trend: 'up', icon: TrendingUp, color: 'from-green-500 to-teal-500', bgColor: 'bg-green-50' }
     ];
   };
 
-  const stats = getStats();
+  const statsData = getStats();
 
-  const recentActivities = transactions.map(t => ({
-    action: t.action_details || `${t.quantity} ${t.unit || ''} ${t.item_name} ${t.type === 'in' ? 'byinjiye' : 'byasohotse'}`,
-    category: t.category || 'General',
-    user: t.user_name || 'System',
+  const recentActivities = transactions.slice(0, 10).map(t => ({
+    action: `${t.transaction_type === 'purchase' ? 'Byaguze' : t.transaction_type === 'issue' ? 'Byatanzwe' : 'Byasubijwe'}: ${t.quantity} ${t.item_name || ''}`,
+    category: t.department || 'General',
+    user: t.issued_by_name ? `${t.issued_by_name} ${t.issued_by_lastname || ''}` : 'System',
     time: new Date(t.transaction_date || t.created_at).toLocaleDateString(),
-    type: t.type === 'in' ? 'stock_in' : 'stock_out',
-    priority: t.priority || 'normal'
+    type: t.transaction_type === 'purchase' ? 'stock_in' : 'stock_out',
+    priority: 'normal'
   }));
 
-  const stockAlerts = items.filter(i => (i.quantity <= (i.min_quantity || 10))).map(i => ({
-    item: i.name,
+  const stockAlerts = items.filter(i => (i.quantity <= (i.reorder_level || 10))).slice(0, 10).map(i => ({
+    item: i.item_name,
     quantity: i.quantity,
-    threshold: i.min_quantity || 10,
+    threshold: i.reorder_level || 10,
     status: i.quantity === 0 ? 'critical' : 'low',
     category: i.category
   }));
@@ -165,19 +171,26 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
                 <p className="text-gray-600">Gukurikirana ibikoresho n'ibintu by'ishuri</p>
               </div>
               <div className="flex items-center space-x-3">
-                <Button className="bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:from-yellow-600 hover:to-green-600 border-0">
+                <Button 
+                  onClick={() => setShowAddDialog(true)}
+                  className="bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:from-yellow-600 hover:to-green-600 border-0"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Ongeraho
                 </Button>
-                <Button variant="outline" className="border-2 border-yellow-200 hover:bg-yellow-50">
+                <Button 
+                  onClick={() => setShowTransactionDialog(true)}
+                  variant="outline" 
+                  className="border-2 border-yellow-200 hover:bg-yellow-50"
+                >
                   <Download className="h-4 w-4 mr-2" />
-                  Raporo
+                  Ibikorwa
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => {
+              {statsData.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
                   <motion.div
@@ -749,6 +762,125 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
           </div>
         </div>
       </div>
+
+      {/* Add Item Dialog */}
+      {showAddDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Ongeraho Ikintu Gishya</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Izina</label>
+                  <Input value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Kode</label>
+                  <Input value={formData.item_code || ''} onChange={(e) => setFormData({...formData, item_code: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Icyiciro</label>
+                  <select className="w-full h-10 border rounded px-3" value={formData.category || ''} onChange={(e) => setFormData({...formData, category: e.target.value})}>
+                    <option value="">Hitamo</option>
+                    <option value="furniture">Ibikoresho</option>
+                    <option value="electronics">Elektronike</option>
+                    <option value="stationery">Ibikoresho byo Kwandika</option>
+                    <option value="sports">Siporo</option>
+                    <option value="other">Ibindi</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Umubare</label>
+                  <Input type="number" value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Igipimo</label>
+                  <Input value={formData.unit || 'pcs'} onChange={(e) => setFormData({...formData, unit: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Igiciro</label>
+                  <Input type="number" value={formData.unit_price || ''} onChange={(e) => setFormData({...formData, unit_price: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Urwego rwo Gusaba</label>
+                  <Input type="number" value={formData.reorder_level || ''} onChange={(e) => setFormData({...formData, reorder_level: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Aho Biri</label>
+                  <Input value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-2">Ibisobanuro</label>
+                <textarea className="w-full border rounded p-2" rows={3} value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAddItem} className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500">Bika</Button>
+                <Button onClick={() => { setShowAddDialog(false); setFormData({}); }} variant="outline" className="flex-1">Hagarika</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Record Transaction Dialog */}
+      {showTransactionDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle>Andika Igikorwa</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Ikintu</label>
+                  <select className="w-full h-10 border rounded px-3" value={formData.item_id || ''} onChange={(e) => setFormData({...formData, item_id: e.target.value})}>
+                    <option value="">Hitamo ikintu</option>
+                    {items.map(item => <option key={item.id} value={item.id}>{item.item_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Ubwoko</label>
+                  <select className="w-full h-10 border rounded px-3" value={formData.transaction_type || ''} onChange={(e) => setFormData({...formData, transaction_type: e.target.value})}>
+                    <option value="">Hitamo ubwoko</option>
+                    <option value="purchase">Kugura</option>
+                    <option value="issue">Gutanga</option>
+                    <option value="return">Gusubiza</option>
+                    <option value="damage">Kwangirika</option>
+                    <option value="loss">Gutakaza</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Umubare</label>
+                  <Input type="number" value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Igiciro</label>
+                  <Input type="number" value={formData.unit_price || ''} onChange={(e) => setFormData({...formData, unit_price: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Itariki</label>
+                  <Input type="date" value={formData.transaction_date || ''} onChange={(e) => setFormData({...formData, transaction_date: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Nimero</label>
+                  <Input value={formData.reference_number || ''} onChange={(e) => setFormData({...formData, reference_number: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-2">Impamvu</label>
+                <textarea className="w-full border rounded p-2" rows={2} value={formData.purpose || ''} onChange={(e) => setFormData({...formData, purpose: e.target.value})} />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleRecordTransaction} className="flex-1 bg-gradient-to-r from-yellow-500 to-green-500">Bika</Button>
+                <Button onClick={() => { setShowTransactionDialog(false); setFormData({}); }} variant="outline" className="flex-1">Hagarika</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

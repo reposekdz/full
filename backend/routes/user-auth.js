@@ -69,10 +69,9 @@ router.post('/student/login', async (req, res) => {
     const { username, password } = req.body;
     
     const [users] = await pool.execute(`
-      SELECT u.*, r.name as role_name
-      FROM users u
-      JOIN roles r ON u.role_id = r.id
-      WHERE (u.username = ? OR u.email = ? OR u.student_id = ?) AND r.name = 'student' AND u.is_active = true
+      SELECT *
+      FROM users
+      WHERE (username = ? OR email = ? OR student_id = ?) AND role = 'student' AND is_active = true
     `, [username, username, username]);
     
     if (users.length === 0) {
@@ -119,32 +118,43 @@ router.post('/parent/register', async (req, res) => {
   try {
     await connection.beginTransaction();
     
-    const { first_name, last_name, email, phone, password, address, occupation, relationship } = req.body;
+    const { 
+      first_name, last_name, email, phone, password, address, date_of_birth, gender, national_id,
+      student_first_name, student_last_name, student_trade, student_level, student_id, relationship_type
+    } = req.body;
     
-    const [existingUsers] = await connection.execute('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUsers.length > 0) {
-      return res.status(400).json({ success: false, message: 'Email already exists' });
+    const [existingEmail] = await connection.execute('SELECT id FROM users WHERE email = ?', [email]);
+    if (existingEmail.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email already registered' });
+    }
+    
+    const [existingPhone] = await connection.execute('SELECT id FROM users WHERE phone = ?', [phone]);
+    if (existingPhone.length > 0) {
+      return res.status(400).json({ success: false, message: 'Phone number already registered' });
     }
     
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [parentRole] = await connection.execute('SELECT id FROM roles WHERE name = "parent"');
-    
     const username = `parent_${Date.now()}`;
     
     const [result] = await connection.execute(`
-      INSERT INTO users (username, email, password_hash, first_name, last_name, phone, address, role_id, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, true)
-    `, [username, email, hashedPassword, first_name, last_name, phone, address, parentRole[0].id]);
+      INSERT INTO users (username, email, password_hash, first_name, last_name, phone, address, date_of_birth, gender, national_id, role, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'parent', true, NOW())
+    `, [username, email, hashedPassword, first_name, last_name, phone, address, date_of_birth, gender, national_id]);
     
-    await connection.execute(`
-      INSERT INTO parent_details (user_id, occupation, relationship)
-      VALUES (?, ?, ?)
-    `, [result.insertId, occupation, relationship]);
+    const parentId = result.insertId;
+    
+    // Store student connection request
+    if (student_first_name && student_last_name && student_trade && student_level) {
+      await connection.execute(`
+        INSERT INTO parent_student_requests (parent_id, student_first_name, student_last_name, student_trade, student_level, student_id, relationship_type, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      `, [parentId, student_first_name, student_last_name, student_trade, student_level, student_id || null, relationship_type]);
+    }
     
     await connection.commit();
     
     const token = jwt.sign(
-      { userId: result.insertId, username, role: 'parent' },
+      { userId: parentId, username, role: 'parent' },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
@@ -153,7 +163,7 @@ router.post('/parent/register', async (req, res) => {
       success: true,
       message: 'Parent registration successful',
       token,
-      user: { id: result.insertId, username, email, first_name, last_name, role: 'parent' }
+      user: { id: parentId, username, email, first_name, last_name, role: 'parent' }
     });
   } catch (error) {
     await connection.rollback();
@@ -166,24 +176,24 @@ router.post('/parent/register', async (req, res) => {
 // Parent Login
 router.post('/parent/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
+    const identifier = email || phone;
     
     const [users] = await pool.execute(`
-      SELECT u.*, r.name as role_name
-      FROM users u
-      JOIN roles r ON u.role_id = r.id
-      WHERE (u.email = ? OR u.phone = ?) AND r.name = 'parent' AND u.is_active = true
-    `, [email, email]);
+      SELECT *
+      FROM users
+      WHERE (email = ? OR phone = ?) AND role = 'parent' AND is_active = true
+    `, [identifier, identifier]);
     
     if (users.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
     }
     
     const user = users[0];
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid phone number or password' });
     }
     
     const token = jwt.sign(
@@ -194,7 +204,7 @@ router.post('/parent/login', async (req, res) => {
     
     await pool.execute('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
     
-    const [children] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE parent_id = ?', [user.id]);
+    const [children] = await pool.execute('SELECT COUNT(*) as count FROM parent_student WHERE parent_id = ?', [user.id]);
     
     res.json({
       success: true,
@@ -226,6 +236,23 @@ router.get('/trades', async (req, res) => {
       ORDER BY trade_code
     `);
     res.json({ success: true, trades });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get all parents
+router.get('/parents', async (req, res) => {
+  try {
+    const [parents] = await pool.execute(`
+      SELECT 
+        id, username, email, phone, first_name, last_name, 
+        address, is_active, created_at, last_login
+      FROM users
+      WHERE role = 'parent'
+      ORDER BY created_at DESC
+    `);
+    res.json({ success: true, parents });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -48,14 +48,9 @@ async function setupTradesAndLevels() {
       console.log('\n📝 Inserting sample trades...');
       
       const sampleTrades = [
-        ['ELE', 'Electrical Installation', 'Training in electrical systems, wiring, and installations', 36, 500000],
-        ['MCT', 'Mechanical Technology', 'Training in mechanical systems, engines, and machinery', 36, 500000],
-        ['CON', 'Construction', 'Training in building construction and masonry', 36, 450000],
-        ['PLU', 'Plumbing', 'Training in water systems and plumbing installations', 36, 450000],
-        ['WEL', 'Welding', 'Training in metal welding and fabrication', 36, 480000],
-        ['CAR', 'Carpentry', 'Training in woodworking and furniture making', 36, 420000],
-        ['AUT', 'Automotive', 'Training in vehicle mechanics and repair', 36, 550000],
-        ['ICT', 'Information Technology', 'Training in computer systems and networking', 36, 600000]
+        ['SOD', 'SOD Trade', 'SOD trade program', 36, 500000],
+        ['BDC', 'BDC Trade', 'BDC trade program', 36, 500000],
+        ['AUT', 'AUT Trade', 'AUT trade program', 36, 550000]
       ];
 
       for (const trade of sampleTrades) {
@@ -72,19 +67,41 @@ async function setupTradesAndLevels() {
     // Insert sample levels if table is empty
     const [existingLevels] = await connection.query('SELECT COUNT(*) as count FROM trades_levels');
     if (existingLevels[0].count === 0) {
-      console.log('\n📝 Inserting sample levels for all trades...');
+      console.log('\n📝 Inserting levels for all trades...');
       
-      const [allTrades] = await connection.query('SELECT code FROM courses WHERE is_active = true');
-      
-      for (const trade of allTrades) {
-        for (let level = 1; level <= 4; level++) {
+      // SOD and BDC: Level 3, 4, 5
+      for (const tradeCode of ['SOD', 'BDC']) {
+        for (let level = 3; level <= 5; level++) {
           await connection.query(
             'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
-            [trade.code, level, '', `Level ${level} for ${trade.code}`]
+            [tradeCode, level, '', `Level ${level} for ${tradeCode}`]
           );
         }
-        console.log(`   ✓ Added levels 1-4 for trade: ${trade.code}`);
+        console.log(`   ✓ Added levels 3-5 for trade: ${tradeCode}`);
       }
+      
+      // AUT: Level 3, 4A, 4B, 5A, 5B
+      await connection.query(
+        'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
+        ['AUT', 3, '', 'Level 3 for AUT']
+      );
+      await connection.query(
+        'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
+        ['AUT', 4, 'A', 'Level 4 A for AUT']
+      );
+      await connection.query(
+        'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
+        ['AUT', 4, 'B', 'Level 4 B for AUT']
+      );
+      await connection.query(
+        'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
+        ['AUT', 5, 'A', 'Level 5 A for AUT']
+      );
+      await connection.query(
+        'INSERT INTO trades_levels (trade_code, level_number, level_suffix, description) VALUES (?, ?, ?, ?)',
+        ['AUT', 5, 'B', 'Level 5 B for AUT']
+      );
+      console.log('   ✓ Added levels 3, 4A, 4B, 5A, 5B for trade: AUT');
     } else {
       console.log(`\n✅ Found ${existingLevels[0].count} existing levels`);
     }

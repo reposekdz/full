@@ -55,6 +55,7 @@ import {
 } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
 import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
+import DOSManagementDashboard from '@/app/components/dos/DOSManagementDashboard';
 
 interface DirectorStudyDashboardProps {
   onNavigate: (page: string) => void;
@@ -107,7 +108,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       setLoading(true);
       const [analyticsData, tradesData, teachersData, examsData, curriculumData, statsResponse] = await Promise.all([
         apiService.getDOSAnalytics(),
-        apiService.getDOSTrades(),
+        apiService.getTradesWithLevels(),
         apiService.getDOSTeachers(),
         apiService.getDOSExams(),
         apiService.getDOSCurriculum(),
@@ -115,7 +116,9 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       ]);
       
       setAnalytics(analyticsData.analytics || analyticsData.data);
-      setTrades(Array.isArray(tradesData) ? tradesData : tradesData.data || []);
+      const tradesResult = tradesData.success ? tradesData.trades : (Array.isArray(tradesData) ? tradesData : tradesData.data || []);
+      setTrades(tradesResult);
+      console.log('Loaded trades:', tradesResult);
       setTeachers(Array.isArray(teachersData) ? teachersData : teachersData.teachers || teachersData.data || []);
       setExams(examsData.exams || examsData.data || []);
       setCurriculum(curriculumData.curriculum || curriculumData.data || []);
@@ -148,12 +151,36 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
   const handleCreateStudent = async (studentData: any) => {
     try {
-      await apiService.dosCreateStudent(studentData);
-      setIsAddDialogOpen(false);
-      loadStudents();
-      loadDashboardData(); // Refresh analytics
+      // Auto-generate student code based on trade and level
+      const trade = trades.find(t => t.id.toString() === studentData.trade_id);
+      const year = new Date().getFullYear().toString().slice(-2);
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const studentCode = `${trade?.code || 'STD'}${studentData.level}${year}${randomNum}`;
+      
+      const payload = {
+        ...studentData,
+        student_code: studentCode,
+        enrollment_status: 'active'
+      };
+      
+      const res = await apiService.dosCreateStudent(payload);
+      if (res.success) {
+        alert(`✅ Student added successfully!\nStudent Code: ${studentCode}`);
+        setIsAddDialogOpen(false);
+        setNewStudent({
+          first_name: '',
+          last_name: '',
+          email: '',
+          trade_id: '',
+          level: '',
+          parent_phone: ''
+        });
+        loadStudents();
+        loadDashboardData();
+      }
     } catch (error) {
       console.error('Error creating student:', error);
+      alert('Failed to create student');
     }
   };
 
@@ -348,7 +375,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 bg-white border-2 border-yellow-200 p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 bg-white border-2 border-yellow-200 p-1 gap-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
               </TabsTrigger>
@@ -367,8 +394,11 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
               <TabsTrigger value="curriculum" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Gahunda
               </TabsTrigger>
+              <TabsTrigger value="management" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Gucunga
+              </TabsTrigger>
               <TabsTrigger value="class-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
-                Class Sheets
+                Imbonerahamwe
               </TabsTrigger>
             </TabsList>
 
@@ -526,12 +556,23 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo umwuga" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                  {trades.map((trade) => (
-                                    <SelectItem key={trade.id} value={trade.id.toString()}>
-                                      {trade.name} ({trade.code})
-                                    </SelectItem>
-                                  ))}
+                                <SelectContent className="max-h-[300px]">
+                                  {trades.length === 0 ? (
+                                    <div className="p-4 text-center text-gray-500">Nta myuga ihari</div>
+                                  ) : (
+                                    trades.map((trade) => (
+                                      <SelectItem 
+                                        key={trade.id || trade.trade_id || trade.code || trade.trade_code} 
+                                        value={(trade.id || trade.trade_id || trade.code || trade.trade_code).toString()}
+                                        className="cursor-pointer hover:bg-yellow-50"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-semibold">{trade.name || trade.trade_name}</span>
+                                          <span className="text-xs text-gray-500">({trade.code || trade.trade_code})</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))
+                                  )}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1060,6 +1101,10 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   </ScrollArea>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="management">
+              <DOSManagementDashboard />
             </TabsContent>
 
             <TabsContent value="class-sheets">

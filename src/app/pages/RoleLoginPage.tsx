@@ -282,6 +282,9 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
         if (result.token) {
           localStorage.setItem('token', result.token);
         }
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        }
         
         if (data.rememberMe) {
           localStorage.setItem('rememberedEmail', data.email);
@@ -294,7 +297,7 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                           selectedRole === 'parent' ? 'dashboard-parent' : 
                           getRoleDashboard(selectedRole);
           onNavigate(dashboard);
-        }, 1500);
+        }, 1000);
       } else {
         setMessage({ type: 'error', text: result.message || 'Invalid credentials. Please try again.' });
       }
@@ -337,9 +340,20 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
       if (result.success) {
         setMessage({ type: 'success', text: 'Account created successfully! Redirecting...' });
         
+        // Store token and user
+        if (result.token) {
+          localStorage.setItem('token', result.token);
+        }
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        }
+        
         setTimeout(() => {
-          onNavigate((result as { success: boolean; dashboardPage?: string }).dashboardPage || getRoleDashboard(selectedRole));
-        }, 1500);
+          const dashboard = selectedRole === 'parent' ? 'dashboard-parent' : 
+                          selectedRole === 'student' ? 'dashboard-student' : 
+                          getRoleDashboard(selectedRole);
+          onNavigate(dashboard);
+        }, 1000);
       } else {
         setMessage({ type: 'error', text: (result as { success: boolean; message?: string }).message || 'Registration failed. Please try again.' });
       }
@@ -352,14 +366,23 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
 
   // Load remembered email or set default
   useEffect(() => {
+    // Clear any previous messages
+    setMessage(null);
+    
     const rememberedEmail = localStorage.getItem('rememberedEmail');
     if (rememberedEmail) {
       loginForm.setValue('email', rememberedEmail);
       loginForm.setValue('rememberMe', true);
-    } else if (selectedRole !== 'student' && selectedRole !== 'parent') {
-      // Set default credentials for management roles
-      loginForm.setValue('email', 'reponsekdz06@gmail.com');
+    } else {
+      // Clear form for new role
+      loginForm.setValue('email', '');
       loginForm.setValue('password', '');
+      loginForm.setValue('rememberMe', false);
+      
+      // Set default credentials only for management roles
+      if (selectedRole && selectedRole !== 'student' && selectedRole !== 'parent') {
+        loginForm.setValue('email', 'reponsekdz06@gmail.com');
+      }
     }
   }, [selectedRole]);
 

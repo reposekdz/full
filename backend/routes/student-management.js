@@ -1,392 +1,390 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
 const db = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-const smsService = require('../services/smsService');
+const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
-// Generate unique serial code based on trade and class
-async function generateSerialCode(tradeCode, classId) {
-  const year = new Date().getFullYear();
-  let serialCode;
-  let isUnique = false;
-  
-  while (!isUnique) {
-    const random = Math.floor(1000 + Math.random() * 9000);
-    serialCode = `${tradeCode}${year}${classId}${random}`;
-    const [existing] = await db.query('SELECT id FROM users WHERE serial_code = ?', [serialCode]);
-    if (existing.length === 0) isUnique = true;
-  }
-  
-  return serialCode;
-}
-
-// Get all students
-router.get('/students', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+// Get all trades
+router.get('/trades', authenticateToken, async (req, res) => {
   try {
-    const [students] = await db.query(`
-      SELECT u.id, u.serial_code, u.student_id, u.parent_phone, u.address, u.is_active, u.created_at,
-             c.name as class_name, co.name as course_name, co.code as trade_code
-      FROM users u
-      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN classes c ON e.class_id = c.id
-      LEFT JOIN courses co ON c.course_id = co.id
-      WHERE u.role_id = (SELECT id FROM roles WHERE name = 'student')
-      ORDER BY u.created_at DESC
-    `);
-    res.json({ success: true, students });
+    const [trades] = await db.query('SELECT * FROM trades ORDER BY name');
+    res.json(trades);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get student by ID
-router.get('/students/:id', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+// Get all levels
+router.get('/levels', authenticateToken, async (req, res) => {
   try {
-    const [students] = await db.query(`
-      SELECT u.*, c.name as class_name, co.name as course_name, co.code as trade_code
-      FROM users u
-      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN classes c ON e.class_id = c.id
-      LEFT JOIN courses co ON c.course_id = co.id
-      WHERE u.id = ? AND u.role_id = (SELECT id FROM roles WHERE name = 'student')
-    `, [req.params.id]);
-    
-    if (students.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-    
-    res.json({ success: true, student: students[0] });
+    const [levels] = await db.query('SELECT * FROM levels ORDER BY level_number');
+    res.json(levels);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Add new student to class (auto-generates serial code and adds to sheet)
-router.post('/students', authenticateToken, requireRole(['admin', 'headmaster', 'dos', 'dod']), async (req, res) => {
+// Get columns for specific trade and level
+router.get('/columns/:tradeId/:levelId', authenticateToken, async (req, res) => {
   try {
-    const { class_id, first_name, last_name, parent_phone, location, date_of_birth, gender, default_password } = req.body;
-
-    if (!class_id || !first_name || !last_name || !parent_phone || !location) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Class ID, first name, last name, parent phone, and location are required' 
-      });
-    }
-
-    // Get class and trade info
-    const [classes] = await db.query(`
-      SELECT c.id, c.name, co.code as trade_code, co.name as course_name
-      FROM classes c
-      JOIN courses co ON c.course_id = co.id
-      WHERE c.id = ?
-    `, [class_id]);
-
-    if (classes.length === 0) {
-      return res.status(404).json({ success: false, message: 'Class not found' });
-    }
-
-    const classInfo = classes[0];
-    
-    // Generate unique serial code
-    const serialCode = await generateSerialCode(classInfo.trade_code, class_id);
-
-    // Hash default password
-    const password = default_password || serialCode;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Get student role ID
-    const [roleResult] = await db.query('SELECT id FROM roles WHERE name = ?', ['student']);
-    const roleId = roleResult[0].id;
-
-    // Create user account
-    const [userResult] = await db.query(
-      `INSERT INTO users (serial_code, first_name, last_name, password_hash, parent_phone, address, date_of_birth, gender, role_id, is_active) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)`,
-      [serialCode, first_name, last_name, hashedPassword, parent_phone, location, date_of_birth, gender, roleId]
+    const [columns] = await db.query(
+      `SELECT lsc.*, u.username as created_by_name
+       FROM level_sheet_columns lsc
+       LEFT JOIN users u ON lsc.created_by = u.id
+       WHERE lsc.trade_id = ? AND lsc.level_id = ?
+       ORDER BY lsc.display_order, lsc.id`,
+      [req.params.tradeId, req.params.levelId]
     );
+    res.json(columns);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const studentId = userResult.insertId;
+// Create new column (Accountant only)
+router.post('/columns', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { trade_id, level_id, column_name, column_type, is_required, default_value, display_order } = req.body;
+    
+    const [result] = await db.query(
+      `INSERT INTO level_sheet_columns 
+       (trade_id, level_id, column_name, column_type, is_required, default_value, display_order, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [trade_id, level_id, column_name, column_type || 'text', is_required || false, default_value, display_order || 0, req.user.id]
+    );
+    
+    res.json({ message: 'Column created successfully', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    // Get current academic year
-    const [academicYear] = await db.query('SELECT id FROM academic_years WHERE is_active = true LIMIT 1');
-    const academicYearId = academicYear[0]?.id;
+// Update column
+router.put('/columns/:id', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { column_name, column_type, is_required, default_value, display_order } = req.body;
+    
+    await db.query(
+      `UPDATE level_sheet_columns 
+       SET column_name = ?, column_type = ?, is_required = ?, default_value = ?, display_order = ?
+       WHERE id = ?`,
+      [column_name, column_type, is_required, default_value, display_order, req.params.id]
+    );
+    
+    res.json({ message: 'Column updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    // Enroll student in class
-    if (academicYearId) {
-      await db.query(
-        `INSERT INTO enrollments (student_id, class_id, academic_year_id, enrollment_date, status) 
-         VALUES (?, ?, ?, CURDATE(), 'active')`,
-        [studentId, class_id, academicYearId]
+// Delete column
+router.delete('/columns/:id', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    await db.query('DELETE FROM level_sheet_columns WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Column deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get students by trade and level with custom column values
+router.get('/students/:tradeId/:levelId', authenticateToken, async (req, res) => {
+  try {
+    const [students] = await db.query(
+      `SELECT s.*, t.name as trade_name, l.level_number, l.name as level_name
+       FROM students s
+       JOIN trades t ON s.trade_id = t.id
+       JOIN levels l ON s.level_id = l.id
+       WHERE s.trade_id = ? AND s.level_id = ?
+       ORDER BY s.first_name, s.last_name`,
+      [req.params.tradeId, req.params.levelId]
+    );
+    
+    // Get custom columns
+    const [columns] = await db.query(
+      'SELECT * FROM level_sheet_columns WHERE trade_id = ? AND level_id = ? ORDER BY display_order',
+      [req.params.tradeId, req.params.levelId]
+    );
+    
+    // Get column values for all students
+    const studentIds = students.map(s => s.id);
+    let values = [];
+    if (studentIds.length > 0) {
+      [values] = await db.query(
+        'SELECT * FROM student_column_values WHERE student_id IN (?)',
+        [studentIds]
       );
     }
-
-    // Get next sheet number for this class
-    const [sheetCount] = await db.query(
-      'SELECT COUNT(*) as count FROM class_sheets WHERE class_id = ?',
-      [class_id]
-    );
-    const sheetNumber = sheetCount[0].count + 1;
-
-    // Add to class sheet
-    await db.query(
-      `INSERT INTO class_sheets (class_id, student_id, sheet_number, serial_code, first_name, last_name, 
-        parent_phone, location, date_of_birth, gender, enrollment_date, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'active')`,
-      [class_id, studentId, sheetNumber, serialCode, first_name, last_name, parent_phone, location, date_of_birth, gender]
-    );
-
-    // Update class enrollment count
-    await db.query(
-      'UPDATE classes SET current_enrollment = current_enrollment + 1 WHERE id = ?',
-      [class_id]
-    );
-
-    // Send WhatsApp notification to parent
-    const welcomeMessage = `Muraho! Umwana wanyu ${first_name} ${last_name} yanditswe neza muri Garden TVET School, mu ishuri rya ${classInfo.name}. Serial Code ye ni: ${serialCode}. Mushobora kuyikoresha nka 'password' mwinjira bwa mbere.`;
     
-    smsService.sendUniversalMessage(parent_phone, welcomeMessage, 0, {
-      type: 'student_registration_admin',
-      studentId: studentId,
-      preferredMethod: 'whatsapp'
-    }).catch(err => console.error('Failed to send welcome message:', err));
-
-    res.json({ 
-      success: true, 
-      message: 'Student added successfully and added to class sheet',
-      student: {
-        id: studentId,
-        sheet_number: sheetNumber,
-        serial_code: serialCode,
-        first_name,
-        last_name,
-        default_password: password,
-        class_name: classInfo.name,
-        course_name: classInfo.course_name,
-        parent_phone,
-        location
-      }
+    // Attach column values to students
+    students.forEach(student => {
+      student.custom_values = {};
+      columns.forEach(col => {
+        const value = values.find(v => v.student_id === student.id && v.column_id === col.id);
+        student.custom_values[col.id] = value ? value.column_value : col.default_value;
+      });
     });
-
+    
+    res.json({ students, columns });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update student column value
+router.put('/students/:studentId/columns/:columnId', authenticateToken, authorizeRoles('accountant', 'dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { column_value } = req.body;
+    
+    await db.query(
+      `INSERT INTO student_column_values (student_id, column_id, column_value, updated_by)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE column_value = ?, updated_by = ?`,
+      [req.params.studentId, req.params.columnId, column_value, req.user.id, column_value, req.user.id]
+    );
+    
+    res.json({ message: 'Value updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add new student (DOS/Headmaster)
+router.post('/students', authenticateToken, authorizeRoles('dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { 
+      student_id, first_name, last_name, email, phone, 
+      date_of_birth, gender, trade_id, level_id, 
+      enrollment_date, guardian_name, guardian_phone, guardian_email 
+    } = req.body;
+    
+    // Get trade code for serial generation
+    const [trades] = await db.query('SELECT code FROM trades WHERE id = ?', [trade_id]);
+    const tradeCode = trades[0]?.code || 'STD';
+    const year = new Date().getFullYear();
+    
+    // Insert student
+    const [result] = await db.query(
+      `INSERT INTO students 
+       (student_id, first_name, last_name, email, phone, date_of_birth, gender, 
+        trade_id, level_id, enrollment_date, guardian_name, guardian_phone, guardian_email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [student_id, first_name, last_name, email, phone, date_of_birth, gender, 
+       trade_id, level_id, enrollment_date || new Date(), guardian_name, guardian_phone, guardian_email]
+    );
+    
+    // Auto-generate serial code
+    const serialCode = `${tradeCode}-${year}-${String(result.insertId).padStart(4, '0')}`;
+    await db.query(
+      `INSERT INTO serial_codes (serial_code, trade_id, level_id, student_id, academic_year, status)
+       VALUES (?, ?, ?, ?, ?, 'used')`,
+      [serialCode, trade_id, level_id, result.insertId, year.toString()]
+    );
+    
+    // Create notification
+    await db.query(
+      `INSERT INTO notifications (user_id, title, message, type, priority)
+       SELECT id, 'New Student Added', ?, 'student', 'medium'
+       FROM users WHERE role IN ('accountant', 'admin', 'super_admin')`,
+      [`${first_name} ${last_name} added to ${tradeCode} with serial ${serialCode}`]
+    );
+    
+    res.json({ message: 'Student added successfully', id: result.insertId, serial_code: serialCode });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Update student
-router.put('/students/:id', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+router.put('/students/:id', authenticateToken, authorizeRoles('dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
-    const { parent_phone, location, is_active } = req.body;
-
+    const { 
+      student_id, first_name, last_name, email, phone, 
+      date_of_birth, gender, trade_id, level_id, 
+      guardian_name, guardian_phone, guardian_email, status 
+    } = req.body;
+    
     await db.query(
-      'UPDATE users SET parent_phone = ?, address = ?, is_active = ? WHERE id = ?',
-      [parent_phone, location, is_active, req.params.id]
+      `UPDATE students 
+       SET student_id = ?, first_name = ?, last_name = ?, email = ?, phone = ?,
+           date_of_birth = ?, gender = ?, trade_id = ?, level_id = ?,
+           guardian_name = ?, guardian_phone = ?, guardian_email = ?, status = ?
+       WHERE id = ?`,
+      [student_id, first_name, last_name, email, phone, date_of_birth, gender, 
+       trade_id, level_id, guardian_name, guardian_phone, guardian_email, status, req.params.id]
     );
-
-    res.json({ success: true, message: 'Student updated successfully' });
+    
+    res.json({ message: 'Student updated successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Transfer student to another class
-router.put('/students/:id/transfer', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+// Get full student details
+router.get('/students/:id/details', authenticateToken, async (req, res) => {
   try {
-    const { new_class_id } = req.body;
-
-    if (!new_class_id) {
-      return res.status(400).json({ success: false, message: 'New class ID is required' });
-    }
-
-    // Get current enrollment
-    const [currentEnrollment] = await db.query(
-      'SELECT class_id FROM enrollments WHERE student_id = ? AND status = "active"',
+    const [students] = await db.query(
+      `SELECT s.*, t.name as trade_name, l.level_number, l.name as level_name
+       FROM students s
+       LEFT JOIN trades t ON s.trade_id = t.id
+       LEFT JOIN levels l ON s.level_id = l.id
+       WHERE s.id = ?`,
       [req.params.id]
     );
-
-    if (currentEnrollment.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student enrollment not found' });
-    }
-
-    const oldClassId = currentEnrollment[0].class_id;
-
-    // Update enrollment
-    await db.query(
-      'UPDATE enrollments SET class_id = ? WHERE student_id = ? AND status = "active"',
-      [new_class_id, req.params.id]
-    );
-
-    // Update class counts
-    await db.query('UPDATE classes SET current_enrollment = current_enrollment - 1 WHERE id = ?', [oldClassId]);
-    await db.query('UPDATE classes SET current_enrollment = current_enrollment + 1 WHERE id = ?', [new_class_id]);
-
-    res.json({ success: true, message: 'Student transferred successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Delete student (soft delete)
-router.delete('/students/:id', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
-  try {
-    await db.query('UPDATE users SET is_active = false WHERE id = ?', [req.params.id]);
-    await db.query('UPDATE enrollments SET status = "dropped" WHERE student_id = ? AND status = "active"', [req.params.id]);
-    
-    res.json({ success: true, message: 'Student deactivated successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Reset student password
-router.put('/students/:id/reset-password', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
-  try {
-    const { new_password } = req.body;
-
-    // Get student serial code
-    const [students] = await db.query('SELECT serial_code FROM users WHERE id = ?', [req.params.id]);
     
     if (students.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
+      return res.status(404).json({ error: 'Student not found' });
     }
-
-    // Use provided password or serial code as default
-    const password = new_password || students[0].serial_code;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, req.params.id]);
-
-    res.json({ 
-      success: true, 
-      message: 'Password reset successfully',
-      new_password: password
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get students by class
-router.get('/classes/:classId/students', authenticateToken, requireRole(['admin', 'headmaster', 'dos', 'teacher']), async (req, res) => {
-  try {
-    const [students] = await db.query(`
-      SELECT u.id, u.serial_code, u.parent_phone, u.address, u.is_active, e.enrollment_date
-      FROM users u
-      JOIN enrollments e ON u.id = e.student_id
-      WHERE e.class_id = ? AND e.status = 'active'
-      ORDER BY u.serial_code ASC
-    `, [req.params.classId]);
-
-    res.json({ success: true, students, count: students.length });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get students by trade/course
-router.get('/courses/:courseId/students', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
-  try {
-    const [students] = await db.query(`
-      SELECT u.id, u.serial_code, u.parent_phone, u.address, u.is_active, 
-             c.name as class_name, e.enrollment_date
-      FROM users u
-      JOIN enrollments e ON u.id = e.student_id
-      JOIN classes c ON e.class_id = c.id
-      WHERE c.course_id = ? AND e.status = 'active'
-      ORDER BY c.name, u.serial_code ASC
-    `, [req.params.courseId]);
-
-    res.json({ success: true, students, count: students.length });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Bulk add students
-router.post('/students/bulk', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
-  try {
-    const { class_id, students } = req.body;
-
-    if (!class_id || !students || !Array.isArray(students)) {
-      return res.status(400).json({ success: false, message: 'Class ID and students array required' });
-    }
-
-    // Get class info
-    const [classes] = await db.query(`
-      SELECT c.id, co.code as trade_code FROM classes c
-      JOIN courses co ON c.course_id = co.id
-      WHERE c.id = ?
-    `, [class_id]);
-
-    if (classes.length === 0) {
-      return res.status(404).json({ success: false, message: 'Class not found' });
-    }
-
-    const classInfo = classes[0];
-    const [roleResult] = await db.query('SELECT id FROM roles WHERE name = ?', ['student']);
-    const roleId = roleResult[0].id;
-    const [academicYear] = await db.query('SELECT id FROM academic_years WHERE is_active = true LIMIT 1');
-    const academicYearId = academicYear[0]?.id;
-
-    const addedStudents = [];
-
-    for (const student of students) {
-      const { parent_phone, location, first_name, last_name } = student;
-      
-      if (!parent_phone || !location) continue;
-
-      const serialCode = await generateSerialCode(classInfo.trade_code, class_id);
-      const hashedPassword = await bcrypt.hash(serialCode, 10);
-
-      const [userResult] = await db.query(
-        `INSERT INTO users (serial_code, first_name, last_name, password_hash, parent_phone, address, role_id, is_active) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, true)`,
-        [serialCode, first_name || '', last_name || '', hashedPassword, parent_phone, location, roleId]
-      );
-
-      const studentId = userResult.insertId;
-
-      if (academicYearId) {
-        await db.query(
-          `INSERT INTO enrollments (student_id, class_id, academic_year_id, enrollment_date, status) 
-           VALUES (?, ?, ?, CURDATE(), 'active')`,
-          [studentId, class_id, academicYearId]
-        );
-      }
-
-      // Send WhatsApp notification
-      const welcomeMessage = `Muraho! Umwana wanyu ${first_name || ''} ${last_name || ''} yanditswe neza muri Garden TVET School. Serial Code ye ni: ${serialCode}.`;
-      smsService.sendUniversalMessage(parent_phone, welcomeMessage, 0, {
-        type: 'student_registration_bulk',
-        studentId: studentId,
-        preferredMethod: 'whatsapp'
-      }).catch(err => console.error('Failed to send bulk welcome message:', err));
-
-      addedStudents.push({
-        id: studentId,
-        serial_code: serialCode,
-        default_password: serialCode,
-        parent_phone,
-        location,
-        first_name,
-        last_name
-      });
-    }
-
-    // Update class enrollment count
-    await db.query(
-      'UPDATE classes SET current_enrollment = current_enrollment + ? WHERE id = ?',
-      [addedStudents.length, class_id]
+    
+    const student = students[0];
+    
+    // Get custom column values
+    const [columnValues] = await db.query(
+      `SELECT scv.*, lsc.column_name, lsc.column_type
+       FROM student_column_values scv
+       JOIN level_sheet_columns lsc ON scv.column_id = lsc.id
+       WHERE scv.student_id = ?`,
+      [req.params.id]
     );
-
-    res.json({ 
-      success: true, 
-      message: `${addedStudents.length} students added successfully`,
-      students: addedStudents
-    });
-
+    
+    // Get financial info
+    const [financial] = await db.query(
+      `SELECT 
+         COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.amount ELSE 0 END), 0) as total_paid,
+         COALESCE(SUM(i.amount), 0) as total_invoiced,
+         COALESCE(SUM(CASE WHEN i.status != 'paid' THEN i.amount ELSE 0 END), 0) as balance
+       FROM invoices i WHERE i.student_id = ?`,
+      [req.params.id]
+    );
+    
+    // Get recent payments
+    const [payments] = await db.query(
+      `SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC LIMIT 5`,
+      [req.params.id]
+    );
+    
+    student.custom_values = columnValues;
+    student.financial = financial[0];
+    student.recent_payments = payments;
+    
+    res.json(student);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Parent: Request connection to student
+router.post('/parent/connect', authenticateToken, authorizeRoles('parent'), async (req, res) => {
+  try {
+    const { student_id, relationship } = req.body;
+    
+    const [result] = await db.query(
+      `INSERT INTO parent_student_connections (parent_id, student_id, relationship)
+       VALUES (?, ?, ?)`,
+      [req.user.id, student_id, relationship || 'parent']
+    );
+    
+    // Notify admins
+    await db.query(
+      `INSERT INTO notifications (user_id, title, message, type, priority)
+       SELECT id, 'Parent Connection Request', ?, 'connection', 'medium'
+       FROM users WHERE role IN ('dos', 'headmaster', 'admin', 'super_admin')`,
+      [`Parent ${req.user.username} requested connection to student ID ${student_id}`]
+    );
+    
+    res.json({ message: 'Connection request submitted', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get parent connection requests
+router.get('/parent/connections', authenticateToken, authorizeRoles('dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const [connections] = await db.query(
+      `SELECT psc.*, u.username as parent_name, u.email as parent_email,
+              s.first_name, s.last_name, s.student_id, t.name as trade_name, l.level_number
+       FROM parent_student_connections psc
+       JOIN users u ON psc.parent_id = u.id
+       JOIN students s ON psc.student_id = s.id
+       LEFT JOIN trades t ON s.trade_id = t.id
+       LEFT JOIN levels l ON s.level_id = l.id
+       WHERE psc.status = 'pending'
+       ORDER BY psc.requested_at DESC`
+    );
+    
+    res.json(connections);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve/Reject parent connection
+router.put('/parent/connections/:id', authenticateToken, authorizeRoles('dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { status } = req.body; // 'approved' or 'rejected'
+    
+    await db.query(
+      `UPDATE parent_student_connections 
+       SET status = ?, approved_by = ?, approved_at = NOW()
+       WHERE id = ?`,
+      [status, req.user.id, req.params.id]
+    );
+    
+    // Notify parent
+    const [connection] = await db.query(
+      'SELECT parent_id FROM parent_student_connections WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (connection.length > 0) {
+      await db.query(
+        `INSERT INTO notifications (user_id, title, message, type, priority)
+         VALUES (?, 'Connection Request ${status}', ?, 'connection', 'high')`,
+        [connection[0].parent_id, `Your connection request has been ${status}`]
+      );
+    }
+    
+    res.json({ message: `Connection ${status} successfully` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search students for parent connection
+router.get('/students/search', authenticateToken, async (req, res) => {
+  try {
+    const { query, trade_id, level_id } = req.query;
+    
+    let sql = `
+      SELECT s.*, t.name as trade_name, l.level_number
+      FROM students s
+      LEFT JOIN trades t ON s.trade_id = t.id
+      LEFT JOIN levels l ON s.level_id = l.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (query) {
+      sql += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.student_id LIKE ?)`;
+      params.push(`%${query}%`, `%${query}%`, `%${query}%`);
+    }
+    
+    if (trade_id) {
+      sql += ` AND s.trade_id = ?`;
+      params.push(trade_id);
+    }
+    
+    if (level_id) {
+      sql += ` AND s.level_id = ?`;
+      params.push(level_id);
+    }
+    
+    sql += ` ORDER BY s.first_name, s.last_name LIMIT 50`;
+    
+    const [students] = await db.query(sql, params);
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

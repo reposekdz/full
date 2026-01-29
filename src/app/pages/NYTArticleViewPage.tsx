@@ -15,11 +15,7 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [likes, setLikes] = useState(0);
-  const [comments, setComments] = useState<any[]>([
-    { id: 1, author: 'Jean Mugisha', avatar: 'JM', text: 'Excellent article! Very well researched and informative.', time: '2 hours ago', likes: 24, replies: 3 },
-    { id: 2, author: 'Marie Uwase', avatar: 'MU', text: 'Thank you for sharing this valuable information with the community.', time: '5 hours ago', likes: 18, replies: 1 },
-    { id: 3, author: 'Patrick Nkurunziza', avatar: 'PN', text: 'This is exactly what we needed to hear. Great work!', time: '1 day ago', likes: 32, replies: 5 },
-  ]);
+  const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [fontSize, setFontSize] = useState(18);
   const [isReading, setIsReading] = useState(false);
@@ -27,12 +23,14 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showComments, setShowComments] = useState(true);
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
   const articleRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
 
   useEffect(() => {
     fetchArticle();
     trackView();
+    fetchRelatedArticles();
     const saved = localStorage.getItem(`bookmarked_${articleId}`);
     setBookmarked(saved === 'true');
   }, [articleId]);
@@ -54,11 +52,30 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
       if (data.success) {
         setArticle(data.article);
         setLikes(data.article.likes || 0);
+        // Fetch comments
+        const commentsRes = await fetch(`http://localhost:5000/api/article-interactions/comments/${articleId}`);
+        const commentsData = await commentsRes.json();
+        if (commentsData.success) {
+          setComments(commentsData.comments || []);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRelatedArticles = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/homepage/news');
+      const data = await res.json();
+      if (data.success) {
+        const filtered = data.news.filter((n: any) => n.id !== parseInt(articleId)).slice(0, 6);
+        setRelatedArticles(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching related:', error);
     }
   };
 
@@ -99,10 +116,22 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handlePostComment = () => {
+  const handlePostComment = async () => {
     if (newComment.trim()) {
-      setComments([{ id: Date.now(), author: 'You', avatar: 'YO', text: newComment, time: 'Just now', likes: 0, replies: 0 }, ...comments]);
-      setNewComment('');
+      try {
+        const res = await fetch(`http://localhost:5000/api/article-interactions/comments/${articleId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment: newComment, author: 'Anonymous' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setComments([{ id: Date.now(), author: 'You', avatar: 'YO', comment: newComment, created_at: new Date().toISOString(), likes: 0 }, ...comments]);
+          setNewComment('');
+        }
+      } catch (error) {
+        console.error('Error posting comment:', error);
+      }
     }
   };
 
@@ -118,11 +147,13 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
     }
   };
 
-  const relatedArticles = [
-    { id: 10, title: 'Ikipe y\'Ikigo', image: '/uploads/news/team yikigo.jpg', category: 'Sports', time: '3h ago' },
-    { id: 12, title: 'Inama Nyishi', image: '/uploads/news/inama nyishi.jpg', category: 'Leadership', time: '1d ago' },
-    { id: 13, title: 'Kuganirizwa n\'Abayobozi', image: '/uploads/news/kuganirizwa nabayobozi.jpg', category: 'Education', time: '2d ago' },
-  ];
+  const getTimeAgo = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   if (loading) {
     return (
@@ -137,7 +168,7 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
   if (!article) return null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
       {/* Progress Bar */}
       <motion.div className="fixed top-0 left-0 right-0 h-0.5 bg-gray-900 z-50 origin-left" style={{ scaleX: scrollYProgress }} />
 
@@ -145,24 +176,24 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
       <motion.div 
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200"
+        className="sticky top-0 z-40 bg-gradient-to-r from-yellow-500 via-green-500 to-teal-500 backdrop-blur-sm shadow-lg"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <button onClick={() => onNavigate('home')} className="flex items-center gap-2 text-gray-900 hover:text-gray-600 font-medium transition-colors">
+          <button onClick={() => onNavigate('home')} className="flex items-center gap-2 text-white hover:text-yellow-200 font-bold transition-colors">
             <ArrowLeft className="w-5 h-5" />
             <span className="hidden sm:inline">Back to Home</span>
           </button>
           <div className="flex items-center gap-3">
-            <button onClick={handleLike} className={`p-2 rounded-full transition-all ${liked ? 'bg-red-50 text-red-600' : 'hover:bg-gray-100'}`}>
+            <button onClick={handleLike} className={`p-2 rounded-full transition-all ${liked ? 'bg-white/30 text-white' : 'bg-white/20 hover:bg-white/30 text-white'}`}>
               <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
             </button>
-            <button onClick={handleBookmark} className={`p-2 rounded-full transition-all ${bookmarked ? 'bg-yellow-50 text-yellow-600' : 'hover:bg-gray-100'}`}>
+            <button onClick={handleBookmark} className={`p-2 rounded-full transition-all ${bookmarked ? 'bg-white/30 text-white' : 'bg-white/20 hover:bg-white/30 text-white'}`}>
               {bookmarked ? <BookmarkCheck className="w-5 h-5 fill-current" /> : <Bookmark className="w-5 h-5" />}
             </button>
-            <button onClick={() => setShowShareMenu(!showShareMenu)} className="p-2 hover:bg-gray-100 rounded-full transition-all">
+            <button onClick={() => setShowShareMenu(!showShareMenu)} className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-full transition-all">
               <Share2 className="w-5 h-5" />
             </button>
-            <button onClick={readAloud} className={`p-2 rounded-full transition-all ${isReading ? 'bg-green-50 text-green-600' : 'hover:bg-gray-100'}`}>
+            <button onClick={readAloud} className={`p-2 rounded-full transition-all ${isReading ? 'bg-white/30 text-white' : 'bg-white/20 hover:bg-white/30 text-white'}`}>
               {isReading ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
           </div>
@@ -195,11 +226,11 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
       <article className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Category */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-900 border-l-4 border-gray-900 pl-3">{article.category}</span>
+          <span className="text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-yellow-500 to-green-500 text-white px-4 py-2 rounded-full">{article.category}</span>
         </motion.div>
 
         {/* Title */}
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-gray-900 mb-6 leading-tight">
+        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-green-600 to-teal-600 bg-clip-text text-transparent mb-6 leading-tight">
           {article.title}
         </motion.h1>
 
@@ -287,16 +318,13 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
                         <span className="font-semibold text-gray-900">{comment.author}</span>
                         <span className="text-sm text-gray-500">{comment.time}</span>
                       </div>
-                      <p className="text-gray-800 mb-3">{comment.text}</p>
+                      <p className="text-gray-800 mb-3">{comment.comment || comment.text}</p>
                       <div className="flex items-center gap-4 text-sm">
                         <button className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors">
                           <ThumbsUp className="w-4 h-4" />
-                          <span>{comment.likes}</span>
+                          <span>{comment.likes || 0}</span>
                         </button>
-                        <button className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors">
-                          <Reply className="w-4 h-4" />
-                          <span>Reply ({comment.replies})</span>
-                        </button>
+                        <span className="text-gray-500">{new Date(comment.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -308,18 +336,73 @@ const NYTArticleViewPage: React.FC<ArticleViewPageProps> = ({ articleId, onNavig
       </article>
 
       {/* Related Articles Sidebar */}
-      <aside className="border-t border-gray-200 bg-gray-50 py-12">
+      <aside className="border-t border-gray-200 bg-gradient-to-br from-yellow-50 via-green-50 to-teal-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-serif font-bold text-gray-900 mb-8">More from Garden TVET</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {relatedArticles.map((related) => (
-              <motion.article key={related.id} whileHover={{ y: -4 }} onClick={() => onNavigate(`article/${related.id}`)} className="group cursor-pointer">
-                <div className="aspect-video mb-4 overflow-hidden rounded-sm">
-                  <img src={`http://localhost:5000${related.image}`} alt={related.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <div className="flex items-center gap-3 mb-10">
+            <Sparkles className="w-7 h-7 text-yellow-600" />
+            <h2 className="text-3xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-green-600 to-teal-600 bg-clip-text text-transparent">More from Garden TVET</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {relatedArticles.map((related, idx) => (
+              <motion.article 
+                key={related.id} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -8, scale: 1.02 }} 
+                onClick={() => onNavigate(`article/${related.id}`)} 
+                className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="relative aspect-video overflow-hidden">
+                  <img 
+                    src={related.image_url?.startsWith('/uploads') ? `http://localhost:5000${related.image_url}` : related.image_url} 
+                    alt={related.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute top-3 left-3">
+                    <span className="text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-yellow-500 via-green-500 to-teal-500 text-white px-3 py-1.5 rounded-full shadow-lg">
+                      {related.category}
+                    </span>
+                  </div>
+                  {related.is_featured && (
+                    <div className="absolute top-3 right-3">
+                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-2 rounded-full shadow-lg">
+                        <TrendingUp className="w-4 h-4" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <Eye className="w-3 h-3" />
+                      {related.views || 0}
+                    </span>
+                    <span className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <Heart className="w-3 h-3" />
+                      {related.likes || 0}
+                    </span>
+                    <span className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <MessageCircle className="w-3 h-3" />
+                      {related.comments || 0}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 block">{related.category}</span>
-                <h3 className="text-lg font-serif font-bold text-gray-900 group-hover:text-gray-600 transition-colors mb-2">{related.title}</h3>
-                <span className="text-sm text-gray-500">{related.time}</span>
+                <div className="p-5">
+                  <h3 className="text-lg font-serif font-bold text-gray-900 group-hover:bg-gradient-to-r group-hover:from-yellow-600 group-hover:via-green-600 group-hover:to-teal-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300 mb-2 line-clamp-2">
+                    {related.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{related.description}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {getTimeAgo(related.date_published)}
+                    </span>
+                    <span className="flex items-center gap-1 text-yellow-600 font-semibold group-hover:gap-2 transition-all">
+                      Read More
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
               </motion.article>
             ))}
           </div>

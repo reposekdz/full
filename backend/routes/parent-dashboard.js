@@ -1,322 +1,558 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
-const { authenticate, authorize } = require('../middleware/auth');
+const { pool } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 
-// Get parent's linked children
-router.get('/my-children', authenticate, authorize(['parent']), async (req, res) => {
+// Get student linked to parent (one student only)
+router.get('/student', authenticateToken, async (req, res) => {
   try {
-    const [children] = await db.query(`
-      SELECT s.*, u.name, u.email, tc.name as trade_name, tc.level,
-             (SELECT COUNT(*) FROM student_medals WHERE student_id = s.user_id) as total_medals,
-             (SELECT COALESCE(SUM(points), 0) FROM student_points WHERE student_id = s.user_id) as total_points
-      FROM parent_student_links psl
-      JOIN students s ON psl.student_id = s.user_id
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
-      WHERE psl.parent_id = ? AND psl.is_active = true
-    `, [req.user.id]);
-    res.json(children);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    const parentId = req.user.userId;
 
-// Get child's complete academic performance
-router.get('/child/:studentId/academics', authenticate, authorize(['parent']), async (req, res) => {
-  try {
-    // Verify parent-child link
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
-
-    const [performance] = await db.query(`
-      SELECT ap.*, s.name as subject_name, tc.name as class_name
-      FROM academic_performance ap
-      JOIN subjects s ON ap.subject_id = s.id
-      LEFT JOIN trade_classes tc ON ap.class_id = tc.id
-      WHERE ap.student_id = ?
-      ORDER BY ap.term DESC, s.name
-    `, [req.params.studentId]);
-
-    const [summary] = await db.query(`
+    const [students] = await pool.execute(`
       SELECT 
-        AVG(quiz_marks + midterm_marks + final_marks) as average_marks,
-        COUNT(*) as total_subjects,
-        AVG(CASE 
-          WHEN (quiz_marks + midterm_marks + final_marks) >= 90 THEN 4.0
-          WHEN (quiz_marks + midterm_marks + final_marks) >= 80 THEN 3.0
-          WHEN (quiz_marks + midterm_marks + final_marks) >= 70 THEN 2.0
-          WHEN (quiz_marks + midterm_marks + final_marks) >= 60 THEN 1.0
-          ELSE 0.0
-        END) as gpa
-      FROM academic_performance
-      WHERE student_id = ?
-    `, [req.params.studentId]);
-
-    res.json({ performance, summary: summary[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get child's attendance
-router.get('/child/:studentId/attendance', authenticate, authorize(['parent']), async (req, res) => {
-  try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
-
-    const [attendance] = await db.query(`
-      SELECT sa.*, s.name as subject_name
-      FROM student_attendance sa
-      LEFT JOIN subjects s ON sa.subject_id = s.id
-      WHERE sa.student_id = ?
-      ORDER BY sa.date DESC
-      LIMIT 100
-    `, [req.params.studentId]);
-
-    const [summary] = await db.query(`
-      SELECT 
-        COUNT(*) as total_days,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days,
-        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late_days,
-        ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as attendance_percentage
-      FROM student_attendance
-      WHERE student_id = ?
-    `, [req.params.studentId]);
-
-    res.json({ attendance, summary: summary[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get child's discipline records
-router.get('/child/:studentId/discipline', authenticate, authorize(['parent']), async (req, res) => {
-  try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
-
-    const [records] = await db.query(`
-      SELECT dr.*, u.name as reported_by_name
-      FROM discipline_records dr
-      LEFT JOIN users u ON dr.reported_by = u.id
-      WHERE dr.student_id = ?
-      ORDER BY dr.incident_date DESC
-    `, [req.params.studentId]);
-
-    const [conduct] = await db.query(`
-      SELECT conduct_score, last_updated
-      FROM student_conduct_tracking
-      WHERE student_id = ?
-      ORDER BY last_updated DESC
+        u.id, u.first_name, u.last_name, u.email, u.phone, u.student_id,
+        gss.trade_id, gss.level, t.trade_name
+      FROM parent_student ps
+      JOIN users u ON ps.student_id = u.id
+      LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_code
+      LEFT JOIN trades t ON gss.trade_id = t.id
+      WHERE ps.parent_id = ? AND u.is_active = true
       LIMIT 1
-    `, [req.params.studentId]);
+    `, [parentId]);
 
-    res.json({ records, conduct_score: conduct[0]?.conduct_score || 100 });
+    if (students.length === 0) {
+      return res.json({ success: false, message: 'No student linked to this parent' });
+    }
+
+    res.json({ success: true, student: students[0] });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching student:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get child's fee payments
-router.get('/child/:studentId/fees', authenticate, authorize(['parent']), async (req, res) => {
+// Get student grades
+router.get('/student/:studentId/grades', authenticateToken, async (req, res) => {
   try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
 
-    const [payments] = await db.query(`
-      SELECT * FROM fee_payments
-      WHERE student_id = ?
-      ORDER BY payment_date DESC
-    `, [req.params.studentId]);
+    // Verify parent owns this student
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
 
-    const [summary] = await db.query(`
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [grades] = await pool.execute(`
       SELECT 
-        COALESCE(SUM(amount_paid), 0) as total_paid,
-        COALESCE(SUM(balance), 0) as total_balance
-      FROM fee_payments
-      WHERE student_id = ?
-    `, [req.params.studentId]);
+        g.id, g.score, g.grade, g.exam_date, g.remarks,
+        s.subject_name as subject,
+        et.exam_type_name as exam_type
+      FROM grades g
+      LEFT JOIN subjects s ON g.subject_id = s.id
+      LEFT JOIN exam_types et ON g.exam_type_id = et.id
+      WHERE g.student_id = ?
+      ORDER BY g.exam_date DESC
+      LIMIT 20
+    `, [studentId]);
 
-    res.json({ payments, summary: summary[0] });
+    res.json({ success: true, grades });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching grades:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get child's competitions
-router.get('/child/:studentId/competitions', authenticate, authorize(['parent']), async (req, res) => {
+// Get student attendance
+router.get('/student/:studentId/attendance', authenticateToken, async (req, res) => {
   try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
 
-    const [competitions] = await db.query(`
-      SELECT cp.*, c.title, c.description, cc.name as category_name
-      FROM competition_participants cp
-      JOIN competitions c ON cp.competition_id = c.id
-      LEFT JOIN competition_categories cc ON c.category_id = cc.id
-      WHERE cp.student_id = ?
-      ORDER BY cp.joined_at DESC
-    `, [req.params.studentId]);
+    // Verify parent owns this student
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
 
-    const [medals] = await db.query(`
-      SELECT medal_type, COUNT(*) as count
-      FROM student_medals
-      WHERE student_id = ?
-      GROUP BY medal_type
-    `, [req.params.studentId]);
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
 
-    res.json({ competitions, medals });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get child's assignments
-router.get('/child/:studentId/assignments', authenticate, authorize(['parent']), async (req, res) => {
-  try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
-
-    const [assignments] = await db.query(`
-      SELECT a.*, asub.marks_obtained, asub.status as submission_status, s.name as subject_name
-      FROM assignments a
-      LEFT JOIN assignment_submissions asub ON a.id = asub.assignment_id AND asub.student_id = ?
-      LEFT JOIN subjects s ON a.subject_id = s.id
-      WHERE a.trade_class_id IN (SELECT trade_id FROM students WHERE user_id = ?)
-      ORDER BY a.due_date DESC
-      LIMIT 50
-    `, [req.params.studentId, req.params.studentId]);
-
-    res.json(assignments);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get child's complete dashboard
-router.get('/child/:studentId/dashboard', authenticate, authorize(['parent']), async (req, res) => {
-  try {
-    const [link] = await db.query('SELECT * FROM parent_student_links WHERE parent_id = ? AND student_id = ?', [req.user.id, req.params.studentId]);
-    if (!link.length) return res.status(403).json({ error: 'Access denied' });
-
-    const [student] = await db.query(`
-      SELECT s.*, u.name, u.email, tc.name as trade_name, tc.level
-      FROM students s
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
-      WHERE s.user_id = ?
-    `, [req.params.studentId]);
-
-    const [academics] = await db.query(`
-      SELECT AVG(quiz_marks + midterm_marks + final_marks) as average_marks
-      FROM academic_performance WHERE student_id = ?
-    `, [req.params.studentId]);
-
-    const [attendance] = await db.query(`
+    const [attendance] = await pool.execute(`
       SELECT 
-        ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as percentage
-      FROM student_attendance WHERE student_id = ?
-    `, [req.params.studentId]);
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
+        COUNT(*) as total
+      FROM attendance
+      WHERE student_id = ?
+    `, [studentId]);
 
-    const [conduct] = await db.query(`
-      SELECT conduct_score FROM student_conduct_tracking WHERE student_id = ? ORDER BY last_updated DESC LIMIT 1
-    `, [req.params.studentId]);
-
-    const [fees] = await db.query(`
-      SELECT COALESCE(SUM(balance), 0) as balance FROM fee_payments WHERE student_id = ?
-    `, [req.params.studentId]);
-
-    const [medals] = await db.query(`
-      SELECT 
-        COUNT(CASE WHEN medal_type = 'diamond' THEN 1 END) as diamond,
-        COUNT(CASE WHEN medal_type = 'gold' THEN 1 END) as gold,
-        COUNT(CASE WHEN medal_type = 'silver' THEN 1 END) as silver,
-        COUNT(CASE WHEN medal_type = 'bronze' THEN 1 END) as bronze
-      FROM student_medals WHERE student_id = ?
-    `, [req.params.studentId]);
-
-    res.json({
-      student: student[0],
-      average_marks: academics[0]?.average_marks || 0,
-      attendance_percentage: attendance[0]?.percentage || 0,
-      conduct_score: conduct[0]?.conduct_score || 100,
-      fee_balance: fees[0]?.balance || 0,
-      medals: medals[0]
+    res.json({ 
+      success: true, 
+      attendance: attendance[0] || { present: 0, absent: 0, late: 0, total: 0 }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching attendance:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student fees
+router.get('/student/:studentId/fees', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    // Verify parent owns this student
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [fees] = await pool.execute(`
+      SELECT 
+        SUM(amount) as total,
+        SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid,
+        SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as balance
+      FROM student_fees
+      WHERE student_id = ?
+    `, [studentId]);
+
+    res.json({ 
+      success: true, 
+      fees: fees[0] || { total: 0, paid: 0, balance: 0 }
+    });
+  } catch (error) {
+    console.error('Error fetching fees:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get parent messages
+router.get('/messages', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [messages] = await pool.execute(`
+      SELECT 
+        m.id, m.message, m.created_at as time,
+        CONCAT(u.first_name, ' ', u.last_name) as sender
+      FROM messages m
+      LEFT JOIN users u ON m.sender_id = u.id
+      WHERE m.recipient_id = ? AND m.recipient_type = 'parent'
+      ORDER BY m.created_at DESC
+      LIMIT 10
+    `, [parentId]);
+
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
 // Get parent notifications
-router.get('/notifications', authenticate, authorize(['parent']), async (req, res) => {
+router.get('/notifications', authenticateToken, async (req, res) => {
   try {
-    const [notifications] = await db.query(`
-      SELECT pn.*, s.student_code, u.name as student_name
-      FROM parent_notifications pn
-      JOIN students s ON pn.student_id = s.user_id
-      JOIN users u ON s.user_id = u.id
-      WHERE pn.parent_id = ?
-      ORDER BY pn.created_at DESC
-      LIMIT 50
-    `, [req.user.id]);
+    const parentId = req.user.userId;
 
-    res.json(notifications);
+    const [notifications] = await pool.execute(`
+      SELECT id, message, created_at as time, is_read
+      FROM notifications
+      WHERE user_id = ? AND user_type = 'parent'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [parentId]);
+
+    res.json({ success: true, notifications });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get parent overview
-router.get('/overview', authenticate, authorize(['parent']), async (req, res) => {
+// Send message to teacher
+router.post('/message/send', authenticateToken, async (req, res) => {
   try {
-    const [parent] = await db.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
-    const [children] = await db.query(`
-      SELECT s.*, u.name, u.email, tc.name as class_name,
-             (SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id) as average_grade,
-             (SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id) as attendance_rate
-      FROM parent_student_links psl
-      JOIN students s ON psl.student_id = s.user_id
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
-      WHERE psl.parent_id = ? AND psl.is_active = true
-    `, [req.user.id]);
-    
-    const [stats] = await db.query(`
+    const parentId = req.user.userId;
+    const { recipientId, message } = req.body;
+
+    await pool.execute(`
+      INSERT INTO messages (sender_id, sender_type, recipient_id, recipient_type, message)
+      VALUES (?, 'parent', ?, 'teacher', ?)
+    `, [parentId, recipientId, message]);
+
+    res.json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student report card
+router.get('/student/:studentId/report-card', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [grades] = await pool.execute(`
       SELECT 
-        COUNT(DISTINCT s.user_id) as total_children,
-        AVG((SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id)) as average_grade,
-        AVG((SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id)) as attendance_rate,
-        SUM((SELECT COALESCE(SUM(balance), 0) FROM fee_payments WHERE student_id = s.user_id)) as pending_fees
-      FROM parent_student_links psl
-      JOIN students s ON psl.student_id = s.user_id
-      WHERE psl.parent_id = ? AND psl.is_active = true
-    `, [req.user.id]);
+        s.subject_name, g.score, g.grade, g.remarks,
+        et.exam_type_name, g.exam_date
+      FROM grades g
+      LEFT JOIN subjects s ON g.subject_id = s.id
+      LEFT JOIN exam_types et ON g.exam_type_id = et.id
+      WHERE g.student_id = ?
+      ORDER BY g.exam_date DESC
+    `, [studentId]);
 
-    res.json({ success: true, parent: parent[0], children, stats: stats[0] });
+    const [student] = await pool.execute(
+      'SELECT first_name, last_name, student_id FROM users WHERE id = ?',
+      [studentId]
+    );
+
+    res.json({ success: true, reportCard: { student: student[0], grades } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error fetching report card:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// Get children list
-router.get('/children', authenticate, authorize(['parent']), async (req, res) => {
+// Get student assignments
+router.get('/student/:studentId/assignments', authenticateToken, async (req, res) => {
   try {
-    const [children] = await db.query(`
-      SELECT s.*, u.name, u.email, tc.name as class_name,
-             (SELECT AVG(quiz_marks + midterm_marks + final_marks) FROM academic_performance WHERE student_id = s.user_id) as average_grade,
-             (SELECT ROUND((SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) FROM student_attendance WHERE student_id = s.user_id) as attendance_rate
-      FROM parent_student_links psl
-      JOIN students s ON psl.student_id = s.user_id
-      JOIN users u ON s.user_id = u.id
-      LEFT JOIN trade_classes tc ON s.trade_id = tc.id
-      WHERE psl.parent_id = ? AND psl.is_active = true
-    `, [req.user.id]);
-    res.json({ success: true, children });
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [assignments] = await pool.execute(`
+      SELECT 
+        a.id, a.title, a.description, a.due_date, a.status,
+        s.subject_name, a.score, a.submitted_at
+      FROM assignments a
+      LEFT JOIN subjects s ON a.subject_id = s.id
+      WHERE a.student_id = ?
+      ORDER BY a.due_date DESC
+      LIMIT 20
+    `, [studentId]);
+
+    res.json({ success: true, assignments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error fetching assignments:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student timetable
+router.get('/student/:studentId/timetable', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [timetable] = await pool.execute(`
+      SELECT 
+        t.id, t.day_of_week, t.start_time, t.end_time,
+        s.subject_name, CONCAT(u.first_name, ' ', u.last_name) as teacher,
+        t.room
+      FROM timetable t
+      LEFT JOIN subjects s ON t.subject_id = s.id
+      LEFT JOIN users u ON t.teacher_id = u.id
+      WHERE t.class_id = (SELECT class_id FROM enrollments WHERE student_id = ? LIMIT 1)
+      ORDER BY FIELD(t.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'), t.start_time
+    `, [studentId]);
+
+    res.json({ success: true, timetable });
+  } catch (error) {
+    console.error('Error fetching timetable:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student behavior/discipline records
+router.get('/student/:studentId/behavior', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [behavior] = await pool.execute(`
+      SELECT 
+        d.id, d.incident_type, d.description, d.action_taken,
+        d.incident_date, d.severity,
+        CONCAT(u.first_name, ' ', u.last_name) as reported_by
+      FROM discipline_records d
+      LEFT JOIN users u ON d.reported_by = u.id
+      WHERE d.student_id = ?
+      ORDER BY d.incident_date DESC
+      LIMIT 10
+    `, [studentId]);
+
+    res.json({ success: true, behavior });
+  } catch (error) {
+    console.error('Error fetching behavior:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student attendance details
+router.get('/student/:studentId/attendance-details', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [attendance] = await pool.execute(`
+      SELECT 
+        a.id, a.date, a.status, a.remarks,
+        s.subject_name,
+        CONCAT(u.first_name, ' ', u.last_name) as marked_by
+      FROM attendance a
+      LEFT JOIN subjects s ON a.subject_id = s.id
+      LEFT JOIN users u ON a.marked_by = u.id
+      WHERE a.student_id = ?
+      ORDER BY a.date DESC
+      LIMIT 30
+    `, [studentId]);
+
+    res.json({ success: true, attendanceDetails: attendance });
+  } catch (error) {
+    console.error('Error fetching attendance details:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get teachers list for messaging
+router.get('/student/:studentId/teachers', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [teachers] = await pool.execute(`
+      SELECT DISTINCT
+        u.id, u.first_name, u.last_name, u.email, u.phone,
+        s.subject_name
+      FROM users u
+      JOIN timetable t ON u.id = t.teacher_id
+      LEFT JOIN subjects s ON t.subject_id = s.id
+      WHERE t.class_id = (SELECT class_id FROM enrollments WHERE student_id = ? LIMIT 1)
+      AND u.role = 'teacher'
+    `, [studentId]);
+
+    res.json({ success: true, teachers });
+  } catch (error) {
+    console.error('Error fetching teachers:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get all messages with conversation threads
+router.get('/messages/all', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [messages] = await pool.execute(`
+      SELECT 
+        m.id, m.message, m.created_at, m.is_read,
+        m.sender_type, m.recipient_type,
+        CONCAT(sender.first_name, ' ', sender.last_name) as sender_name,
+        CONCAT(recipient.first_name, ' ', recipient.last_name) as recipient_name
+      FROM messages m
+      LEFT JOIN users sender ON m.sender_id = sender.id
+      LEFT JOIN users recipient ON m.recipient_id = recipient.id
+      WHERE (m.sender_id = ? AND m.sender_type = 'parent') 
+         OR (m.recipient_id = ? AND m.recipient_type = 'parent')
+      ORDER BY m.created_at DESC
+      LIMIT 50
+    `, [parentId, parentId]);
+
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error('Error fetching all messages:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Mark notification as read
+router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const parentId = req.user.userId;
+
+    await pool.execute(
+      'UPDATE notifications SET is_read = true WHERE id = ? AND user_id = ? AND user_type = "parent"',
+      [id, parentId]
+    );
+
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student exam schedule
+router.get('/student/:studentId/exams', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const parentId = req.user.userId;
+
+    const [verify] = await pool.execute(
+      'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ?',
+      [parentId, studentId]
+    );
+
+    if (verify.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const [exams] = await pool.execute(`
+      SELECT 
+        e.id, e.exam_name, e.exam_date, e.start_time, e.end_time,
+        s.subject_name, e.room, e.duration, e.total_marks
+      FROM exams e
+      LEFT JOIN subjects s ON e.subject_id = s.id
+      WHERE e.class_id = (SELECT class_id FROM enrollments WHERE student_id = ? LIMIT 1)
+      AND e.exam_date >= CURDATE()
+      ORDER BY e.exam_date, e.start_time
+    `, [studentId]);
+
+    res.json({ success: true, exams });
+  } catch (error) {
+    console.error('Error fetching exams:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Send SMS notification
+router.post('/sms/send', authenticateToken, async (req, res) => {
+  try {
+    const { phone, message } = req.body;
+    const smsService = require('../services/smsService');
+    
+    await smsService.sendUniversalMessage(phone, message, 0, {
+      type: 'parent_notification',
+      userId: req.user.userId
+    });
+
+    res.json({ success: true, message: 'SMS sent' });
+  } catch (error) {
+    console.error('Error sending SMS:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Request student linking help
+router.post('/request-linking', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { student_name, message, preferred_contact } = req.body;
+
+    if (!student_name || !message) {
+      return res.status(400).json({ success: false, message: 'Uzuza ibibazwa byose' });
+    }
+
+    // Get parent info
+    const [parent] = await pool.execute(
+      'SELECT first_name, last_name, email, phone FROM users WHERE id = ?',
+      [parentId]
+    );
+
+    if (parent.length === 0) {
+      return res.status(404).json({ success: false, message: 'Parent not found' });
+    }
+
+    const parentInfo = parent[0];
+
+    // Insert into parent_linking_requests table
+    const [result] = await pool.execute(
+      'INSERT INTO parent_linking_requests (parent_id, student_name, message, preferred_contact, status, created_at) VALUES (?, ?, ?, ?, "pending", NOW())',
+      [parentId, student_name, message, preferred_contact]
+    );
+
+    // Create notification for admin, headmaster, and director_study
+    const notificationMessage = `STUDENT LINKING REQUEST - Parent: ${parentInfo.first_name} ${parentInfo.last_name} (${parentInfo.email}, ${parentInfo.phone}) - Student Name: ${student_name} - Message: ${message} - Preferred Contact: ${preferred_contact}`;
+
+    // Get admin, headmaster, and director_study users
+    const [admins] = await pool.execute(
+      "SELECT id FROM users WHERE role IN ('admin', 'headmaster', 'director_study') AND is_active = true"
+    );
+
+    // Insert notifications for all admins
+    for (const admin of admins) {
+      await pool.execute(
+        'INSERT INTO notifications (user_id, user_type, message, created_at) VALUES (?, ?, ?, NOW())',
+        [admin.id, 'admin', notificationMessage]
+      );
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Ubutumwa bwawe bwoherejwe neza. Uzasubizwa vuba.' 
+    });
+  } catch (error) {
+    console.error('Error requesting linking:', error);
+    res.status(500).json({ success: false, message: 'Byanze kohereza. Gerageza ukundi.' });
   }
 });
 

@@ -1,38 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Award, AlertCircle, Home, User, FileText, Calendar, BarChart3, Scale, Mail, FileSpreadsheet, Menu, X } from 'lucide-react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:5000/api';
+import { Users, Search, Award, AlertCircle, Home, User, FileText, Calendar, BarChart3, Scale, Mail, FileSpreadsheet, Menu, X, Filter } from 'lucide-react';
+import apiService from '@/app/services/apiService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 
 interface Student {
   id: number;
-  name: string;
+  first_name: string;
+  last_name: string;
   student_id: string;
-  trade_name: string;
-  total_cases: number;
-  good_points: number;
-  bad_points: number;
+  trade_code: string;
+  trade_name?: string;
+  level_number: number;
+  level_suffix?: string;
+  total_cases?: number;
+  good_points?: number;
+  bad_points?: number;
 }
 
 const DODStudentsPage: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
   const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTrade, setSelectedTrade] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    loadStudents();
+    loadData();
   }, []);
 
-  useEffect(() => {
-    filterStudents();
-  }, [searchTerm, students]);
-
-  const loadStudents = async () => {
+  const loadData = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/dod-comprehensive/students`);
-      setStudents(response.data.students);
+      setLoading(true);
+      const [studentsRes, tradesRes] = await Promise.all([
+        apiService.getDisciplineStudents(),
+        apiService.getTradesWithLevels()
+      ]);
+      
+      if (studentsRes.success) setStudents(studentsRes.students || []);
+      if (tradesRes.success) setTrades(tradesRes.trades || []);
     } catch (error) {
       console.error('Ikosa:', error);
     } finally {
@@ -40,16 +47,15 @@ const DODStudentsPage: React.FC<{ onNavigate: (page: string) => void }> = ({ onN
     }
   };
 
-  const filterStudents = () => {
-    let filtered = [...students];
-    if (searchTerm) {
-      filtered = filtered.filter(s =>
-        s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.student_id?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    setFilteredStudents(filtered);
-  };
+  const filteredStudents = students.filter(s => {
+    const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      fullName.includes(searchTerm.toLowerCase()) ||
+      s.student_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTrade = !selectedTrade || s.trade_code === selectedTrade;
+    const matchesLevel = !selectedLevel || s.level_number?.toString() === selectedLevel;
+    return matchesSearch && matchesTrade && matchesLevel;
+  });
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">
@@ -98,15 +104,47 @@ const DODStudentsPage: React.FC<{ onNavigate: (page: string) => void }> = ({ onN
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Shakisha umunyeshuri..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Shakisha umunyeshuri..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <Select value={selectedTrade} onValueChange={setSelectedTrade}>
+            <SelectTrigger>
+              <SelectValue placeholder="Hitamo Umwuga" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Imyuga Yose</SelectItem>
+              {trades.map(trade => (
+                <SelectItem key={trade.code} value={trade.code}>
+                  {trade.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+            <SelectTrigger>
+              <SelectValue placeholder="Hitamo Urwego" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Inzego Zose</SelectItem>
+              {selectedTrade && trades.find(t => t.code === selectedTrade)?.levels?.map((level: any) => (
+                <SelectItem key={`${level.level_number}${level.level_suffix || ''}`} value={level.level_number.toString()}>
+                  Level {level.level_number}{level.level_suffix || ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+          <Filter className="w-4 h-4" />
+          <span>Abanyeshuri {filteredStudents.length} kuri {students.length}</span>
         </div>
       </div>
 
@@ -115,17 +153,17 @@ const DODStudentsPage: React.FC<{ onNavigate: (page: string) => void }> = ({ onN
           <div key={student.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                {student.name?.charAt(0)}
+                {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900">{student.name}</h3>
+                <h3 className="font-bold text-gray-900">{student.first_name} {student.last_name}</h3>
                 <p className="text-sm text-gray-600">{student.student_id}</p>
               </div>
             </div>
 
             <div className="space-y-2 mb-4">
               <div className="text-sm text-gray-600">
-                <span className="font-medium">Umwuga:</span> {student.trade_name || 'N/A'}
+                <span className="font-medium">Umwuga:</span> {student.trade_code} - Level {student.level_number}{student.level_suffix || ''}
               </div>
               
               <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">

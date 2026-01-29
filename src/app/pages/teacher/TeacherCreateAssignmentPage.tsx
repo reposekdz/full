@@ -32,6 +32,8 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
     is_published: false
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     fetchClasses();
@@ -40,7 +42,10 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
 
   const fetchClasses = async () => {
     try {
-      const data = await apiService.getDOSClasses();
+      const response = await fetch(`http://localhost:5000/api/advanced-assignments/teacher/${teacherId}/classes`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
       setClasses(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -58,8 +63,19 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
     }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleClassSelection = (classId: string) => {
+    setSelectedClasses(prev => 
+      prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,11 +108,16 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
         submitData.append('files', file);
       });
 
-      const response = await apiService.createAssignment(submitData);
+      const response = await fetch('http://localhost:5000/api/advanced-assignments/assignments', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: submitData
+      });
 
-      if (response.success || response.id) {
+      const result = await response.json();
+
+      if (response.ok) {
         alert('Igikorwa cyashyizweho neza!');
-        // Reset form
         setFormData({
           class_id: '',
           course_id: '',
@@ -112,8 +133,9 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
           is_published: false
         });
         setFiles([]);
+        onNavigate('teacher-assignments');
       } else {
-        alert('Ikosa ryabaye');
+        alert(result.message || 'Ikosa ryabaye');
       }
     } catch (error) {
       console.error('Error creating assignment:', error);
@@ -150,12 +172,14 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
                   <select
                     value={formData.class_id}
                     onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-                    className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg"
+                    className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg font-semibold"
                     required
                   >
                     <option value="">Hitamo ishuri</option>
                     {classes.map(cls => (
-                      <option key={cls.id} value={cls.id}>{cls.name}</option>
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} {cls.trade_name && `- ${cls.trade_name}`} {cls.level_number && `Level ${cls.level_number}`}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -318,19 +342,34 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
                   <p className="text-sm text-gray-500 mt-2">PDF, DOCX, TXT, Images, ZIP (Max 50MB each)</p>
                 </label>
               </div>
-              {files.length > 0 && (
-                <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2">
+                  <p className="text-sm font-bold text-gray-700 mb-2">{files.length} Dosiye Yashyizweho:</p>
                   {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-blue-50 rounded-lg p-3">
+                    <motion.div 
+                      key={index} 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border-2 border-blue-200"
+                    >
                       <div className="flex items-center space-x-3">
                         <FileText className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm font-semibold text-gray-900">{file.name}</span>
+                        <div>
+                          <span className="text-sm font-bold text-gray-900">{file.name}</span>
+                          <p className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                    </div>
+                      <Button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-100"
+                      >
+                        ✕
+                      </Button>
+                    </motion.div>
                   ))}
                 </div>
-              )}
             </CardContent>
           </Card>
 

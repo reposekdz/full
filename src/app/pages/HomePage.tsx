@@ -717,19 +717,29 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             ))}
           </div>
 
-          {newsArticles.length > displayedNewsCount && (
+          {newsArticles.length > 8 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="flex justify-center mt-8"
+              className="flex justify-center mt-8 gap-4"
             >
-              <button
-                onClick={() => setDisplayedNewsCount(prev => prev + 8)}
-                className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
-              >
-                Tangaza Andi Makuru ({newsArticles.length - displayedNewsCount})
-              </button>
+              {displayedNewsCount < newsArticles.length && (
+                <button
+                  onClick={() => setDisplayedNewsCount(prev => prev + 8)}
+                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                >
+                  Tangaza Andi Makuru ({newsArticles.length - displayedNewsCount})
+                </button>
+              )}
+              {displayedNewsCount > 8 && (
+                <button
+                  onClick={() => setDisplayedNewsCount(8)}
+                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
+                >
+                  Garagaza Bike
+                </button>
+              )}
             </motion.div>
           )}
         </div>

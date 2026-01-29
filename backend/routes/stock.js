@@ -466,6 +466,32 @@ router.get('/stats', [
       WHERE quantity = 0
     `);
 
+    // Create notifications for low stock
+    for (const item of lowStock) {
+      await pool.execute(`
+        INSERT IGNORE INTO notifications (user_id, title, message, type, priority, created_at)
+        SELECT u.id, ?, ?, 'stock_alert', 'high', NOW()
+        FROM users u
+        WHERE u.role IN ('stock_manager', 'admin', 'super_admin', 'accountant')
+      `, [
+        `Low Stock: ${item.item_name}`,
+        `${item.item_name} (${item.item_code}) has only ${item.quantity} units. Reorder level: ${item.reorder_level}`
+      ]);
+    }
+
+    // Create critical notifications for out of stock
+    for (const item of outOfStock) {
+      await pool.execute(`
+        INSERT IGNORE INTO notifications (user_id, title, message, type, priority, created_at)
+        SELECT u.id, ?, ?, 'stock_alert', 'critical', NOW()
+        FROM users u
+        WHERE u.role IN ('stock_manager', 'admin', 'super_admin', 'accountant')
+      `, [
+        `CRITICAL: Out of Stock - ${item.item_name}`,
+        `${item.item_name} (${item.item_code}) is out of stock. Immediate action required!`
+      ]);
+    }
+
     res.json({
       success: true,
       totals,
@@ -482,6 +508,413 @@ router.get('/stats', [
     res.status(500).json({
       success: false,
       message: 'Failed to fetch stock statistics'
+    });
+  }
+});
+
+// Get stock requisitions
+router.get('/requisitions', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT sr.*, 
+        u1.first_name as requested_by_name, u1.last_name as requested_by_lastname,
+        u2.first_name as approved_by_name, u2.last_name as approved_by_lastname
+      FROM stock_requisitions sr
+      LEFT JOIN users u1 ON sr.requested_by = u1.id
+      LEFT JOIN users u2 ON sr.approved_by = u2.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status) {
+      query += ' AND sr.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY sr.request_date DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+
+    const [requisitions] = await pool.execute(query, params);
+
+    // Get items for each requisition
+    for (let req of requisitions) {
+      const [items] = await pool.execute(`
+        SELECT sri.*, si.item_name, si.item_code, si.unit
+        FROM stock_requisition_items sri
+        LEFT JOIN stock_items si ON sri.item_id = si.id
+        WHERE sri.requisition_id = ?
+      `, [req.id]);
+      req.items = items;
+    }
+
+    res.json({
+      success: true,
+      requisitions
+    });
+  } catch (error) {
+    console.error('Get requisitions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch requisitions'
+    });
+  }
+});
+
+// Create stock requisition
+router.post('/requisitions', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager', 'teacher', 'staff')
+], async (req, res) => {
+  try {
+    const {
+      department,
+      required_date,
+      items,
+      notes
+    } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one item is required'
+      });
+    }
+
+    const requisition_number = `REQ${Date.now()}`;
+    const request_date = new Date().toISOString().split('T')[0];
+
+    const [result] = await pool.execute(`
+      INSERT INTO stock_requisitions (
+        requisition_number, requested_by, department, request_date,
+        required_date, notes
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      requisition_number,
+      req.user.id,
+      department,
+      request_date,
+      required_date,
+      notes
+    ]);
+
+    const requisitionId = result.insertId;
+
+    // Insert requisition items
+    for (let item of items) {
+      await pool.execute(`
+        INSERT INTO stock_requisition_items (
+          requisition_id, item_id, quantity_requested, purpose
+        ) VALUES (?, ?, ?, ?)
+      `, [requisitionId, item.item_id, item.quantity, item.purpose]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Requisition created successfully',
+      requisition: {
+        id: requisitionId,
+        requisition_number
+      }
+    });
+  } catch (error) {
+    console.error('Create requisition error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create requisition'
+    });
+  }
+});
+
+// Update requisition status
+router.put('/requisitions/:id', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, items } = req.body;
+
+    await pool.execute(`
+      UPDATE stock_requisitions SET
+        status = ?,
+        approved_by = ?,
+        approval_date = ?
+      WHERE id = ?
+    `, [status, req.user.id, new Date().toISOString().split('T')[0], id]);
+
+    // Update approved quantities if provided
+    if (items && Array.isArray(items)) {
+      for (let item of items) {
+        await pool.execute(`
+          UPDATE stock_requisition_items SET
+            quantity_approved = ?
+          WHERE id = ?
+        `, [item.quantity_approved, item.id]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Requisition updated successfully'
+    });
+  } catch (error) {
+    console.error('Update requisition error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update requisition'
+    });
+  }
+});
+
+// Get procurement orders
+router.get('/procurement', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT po.*, 
+        u1.first_name as ordered_by_name, u1.last_name as ordered_by_lastname,
+        u2.first_name as received_by_name, u2.last_name as received_by_lastname
+      FROM procurement_orders po
+      LEFT JOIN users u1 ON po.ordered_by = u1.id
+      LEFT JOIN users u2 ON po.received_by = u2.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status) {
+      query += ' AND po.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY po.order_date DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+
+    const [orders] = await pool.execute(query, params);
+
+    // Get items for each order
+    for (let order of orders) {
+      const [items] = await pool.execute(`
+        SELECT poi.*, si.item_code, si.unit
+        FROM procurement_order_items poi
+        LEFT JOIN stock_items si ON poi.item_id = si.id
+        WHERE poi.order_id = ?
+      `, [order.id]);
+      order.items = items;
+    }
+
+    res.json({
+      success: true,
+      orders
+    });
+  } catch (error) {
+    console.error('Get procurement orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch procurement orders'
+    });
+  }
+});
+
+// Create procurement order
+router.post('/procurement', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const {
+      supplier,
+      supplier_contact,
+      expected_delivery_date,
+      items,
+      notes
+    } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one item is required'
+      });
+    }
+
+    const order_number = `PO${Date.now()}`;
+    const order_date = new Date().toISOString().split('T')[0];
+    const total_amount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+    const [result] = await pool.execute(`
+      INSERT INTO procurement_orders (
+        order_number, supplier, supplier_contact, order_date,
+        expected_delivery_date, total_amount, ordered_by, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      order_number,
+      supplier,
+      supplier_contact,
+      order_date,
+      expected_delivery_date,
+      total_amount,
+      req.user.id,
+      notes
+    ]);
+
+    const orderId = result.insertId;
+
+    // Insert order items
+    for (let item of items) {
+      await pool.execute(`
+        INSERT INTO procurement_order_items (
+          order_id, item_id, item_name, quantity_ordered,
+          unit_price, total_price
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `, [
+        orderId,
+        item.item_id,
+        item.item_name,
+        item.quantity,
+        item.unit_price,
+        item.quantity * item.unit_price
+      ]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Procurement order created successfully',
+      order: {
+        id: orderId,
+        order_number,
+        total_amount
+      }
+    });
+  } catch (error) {
+    console.error('Create procurement order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create procurement order'
+    });
+  }
+});
+
+// Get suppliers
+router.get('/suppliers', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const { status, category } = req.query;
+
+    let query = 'SELECT * FROM stock_suppliers WHERE 1=1';
+    const params = [];
+
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
+    }
+
+    query += ' ORDER BY supplier_name';
+
+    const [suppliers] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      suppliers
+    });
+  } catch (error) {
+    console.error('Get suppliers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch suppliers'
+    });
+  }
+});
+
+// Create supplier
+router.post('/suppliers', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager')
+], async (req, res) => {
+  try {
+    const {
+      supplier_name,
+      contact_person,
+      phone,
+      email,
+      address,
+      category,
+      notes
+    } = req.body;
+
+    if (!supplier_name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Supplier name is required'
+      });
+    }
+
+    const [result] = await pool.execute(`
+      INSERT INTO stock_suppliers (
+        supplier_name, contact_person, phone, email,
+        address, category, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      supplier_name,
+      contact_person,
+      phone,
+      email,
+      address,
+      category,
+      notes
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Supplier created successfully',
+      supplier: {
+        id: result.insertId,
+        supplier_name
+      }
+    });
+  } catch (error) {
+    console.error('Create supplier error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create supplier'
+    });
+  }
+});
+
+// Get stock notifications
+router.get('/notifications', [
+  authenticateToken,
+  requireRole('admin', 'super_admin', 'stock_manager', 'accountant')
+], async (req, res) => {
+  try {
+    const [notifications] = await pool.execute(`
+      SELECT * FROM notifications
+      WHERE user_id = ? AND type = 'stock_alert'
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, [req.user.id]);
+
+    res.json({ success: true, notifications });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
     });
   }
 });
