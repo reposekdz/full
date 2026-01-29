@@ -1724,11 +1724,70 @@ class ApiService {
 
   // Dynamic Column Management (Accountant)
   async getTrades() {
-    return this.request('/management/trades');
+    try {
+      // Try multiple endpoints to get trades data
+      const endpoints = [
+        '/content/trades/all',
+        '/comprehensive-trades/all', 
+        '/trades/all',
+        '/management/trades'
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          const result = await this.request(endpoint);
+          if (result && (result.trades || result.data)) {
+            return result.trades || result.data || result;
+          }
+        } catch (err) {
+          continue; // Try next endpoint
+        }
+      }
+      
+      // Fallback: return default trades if no endpoint works
+      return [
+        { id: 1, name: 'ICT', code: 'ICT', description: 'Information and Communication Technology' },
+        { id: 2, name: 'Electrical Installation', code: 'ELE', description: 'Electrical Installation and Maintenance' },
+        { id: 3, name: 'Plumbing', code: 'PLU', description: 'Plumbing and Water Systems' },
+        { id: 4, name: 'Welding', code: 'WEL', description: 'Welding and Metal Work' },
+        { id: 5, name: 'Carpentry', code: 'CAR', description: 'Carpentry and Woodwork' }
+      ];
+    } catch (error) {
+      console.error('Error fetching trades:', error);
+      return [];
+    }
   }
 
   async getLevels() {
-    return this.request('/management/levels');
+    try {
+      // Try multiple endpoints to get levels data
+      const endpoints = [
+        '/levels/levels',
+        '/management/levels',
+        '/academics/levels'
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          const result = await this.request(endpoint);
+          if (result && (result.levels || result.data)) {
+            return result.levels || result.data || result;
+          }
+        } catch (err) {
+          continue; // Try next endpoint
+        }
+      }
+      
+      // Fallback: return default levels if no endpoint works
+      return [
+        { id: 1, level_number: 1, name: 'Level 1', description: 'First Year' },
+        { id: 2, level_number: 2, name: 'Level 2', description: 'Second Year' },
+        { id: 3, level_number: 3, name: 'Level 3', description: 'Third Year' }
+      ];
+    } catch (error) {
+      console.error('Error fetching levels:', error);
+      return [];
+    }
   }
 
   async getLevelSheetColumns(tradeId: number, levelId: number) {

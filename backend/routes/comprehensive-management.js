@@ -693,4 +693,196 @@ router.get('/academic-years', authenticateToken, async (req, res) => {
   }
 });
 
+// ==========================================
+// TRADES & LEVELS MANAGEMENT
+// ==========================================
+
+// Get all trades
+router.get('/trades', authenticateToken, async (req, res) => {
+  try {
+    const [trades] = await pool.execute('SELECT * FROM trades ORDER BY code');
+    res.json(trades);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get all levels
+router.get('/levels', authenticateToken, async (req, res) => {
+  try {
+    const [levels] = await pool.execute('SELECT * FROM levels ORDER BY level_number');
+    res.json(levels);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get students by trade and level
+router.get('/students/:tradeId/:levelId', authenticateToken, async (req, res) => {
+  try {
+    const { tradeId, levelId } = req.params;
+    const [students] = await pool.execute(`
+      SELECT s.*, t.name as trade_name, l.level_number
+      FROM students s
+      LEFT JOIN trades t ON s.trade_id = t.id
+      LEFT JOIN levels l ON s.level_id = l.id
+      WHERE s.trade_id = ? AND s.level_id = ?
+      ORDER BY s.last_name, s.first_name
+    `, [tradeId, levelId]);
+    
+    res.json({ success: true, students });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get level sheet columns
+router.get('/columns/:tradeId/:levelId', authenticateToken, async (req, res) => {
+  try {
+    const { tradeId, levelId } = req.params;
+    const [columns] = await pool.execute(`
+      SELECT * FROM level_sheet_columns
+      WHERE trade_id = ? AND level_id = ?
+      ORDER BY display_order, id
+    `, [tradeId, levelId]);
+    
+    res.json(columns);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Create level sheet column
+router.post('/columns', authenticateToken, requireRole('dos', 'headmaster', 'admin', 'accountant', 'dod', 'advisor'), async (req, res) => {
+  try {
+    const { trade_id, level_id, column_name, column_type, is_required, default_value, display_order } = req.body;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO level_sheet_columns (trade_id, level_id, column_name, column_type, is_required, default_value, display_order, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [trade_id, level_id, column_name, column_type || 'text', is_required || false, default_value || '', display_order || 0, req.user.userId]);
+    
+    res.json({ success: true, message: 'Column created', id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update level sheet column
+router.put('/columns/:columnId', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
+  try {
+    const { columnId } = req.params;
+    const { column_name, column_type, is_required, default_value, display_order } = req.body;
+    
+    await pool.execute(`
+      UPDATE level_sheet_columns
+      SET column_name = ?, column_type = ?, is_required = ?, default_value = ?, display_order = ?
+      WHERE id = ?
+    `, [column_name, column_type, is_required, default_value, display_order, columnId]);
+    
+    res.json({ success: true, message: 'Column updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete level sheet column
+router.delete('/columns/:columnId', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
+  try {
+    const { columnId } = req.params;
+    await pool.execute('DELETE FROM level_sheet_columns WHERE id = ?', [columnId]);
+    res.json({ success: true, message: 'Column deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update student column value
+router.put('/students/:studentId/columns/:columnId', authenticateToken, async (req, res) => {
+  try {
+    const { studentId, columnId } = req.params;
+    const { column_value } = req.body;
+    
+    await pool.execute(`
+      INSERT INTO student_column_values (student_id, column_id, column_value)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE column_value = ?, updated_at = NOW()
+    `, [studentId, columnId, column_value, column_value]);
+    
+    res.json({ success: true, message: 'Value updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Add student (DOS/Headmaster)
+router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, date_of_birth, gender, trade_id, level_id, guardian_name, guardian_phone, guardian_email } = req.body;
+    
+    // Generate student_id
+    const [trade] = await pool.execute('SELECT code FROM trades WHERE id = ?', [trade_id]);
+    const [level] = await pool.execute('SELECT level_number FROM levels WHERE id = ?', [level_id]);
+    const [count] = await pool.execute('SELECT COUNT(*) as total FROM students WHERE trade_id = ? AND level_id = ?', [trade_id, level_id]);
+    const student_id = `${trade[0].code}${level[0].level_number}${String(count[0].total + 1).padStart(3, '0')}`;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO students (student_id, first_name, last_name, email, phone, date_of_birth, gender, trade_id, level_id, guardian_name, guardian_phone, guardian_email, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+    `, [student_id, first_name, last_name, email, phone, date_of_birth, gender, trade_id, level_id, guardian_name, guardian_phone, guardian_email]);
+    
+    res.json({ success: true, message: 'Student added', id: result.insertId, student_id });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update student info
+router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { first_name, last_name, email, phone, date_of_birth, gender, trade_id, level_id, guardian_name, guardian_phone, guardian_email } = req.body;
+    
+    await pool.execute(`
+      UPDATE students
+      SET first_name = ?, last_name = ?, email = ?, phone = ?, date_of_birth = ?, gender = ?, trade_id = ?, level_id = ?, guardian_name = ?, guardian_phone = ?, guardian_email = ?
+      WHERE id = ?
+    `, [first_name, last_name, email, phone, date_of_birth, gender, trade_id, level_id, guardian_name, guardian_phone, guardian_email, studentId]);
+    
+    res.json({ success: true, message: 'Student updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get student full details
+router.get('/students/:studentId/details', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    
+    const [students] = await pool.execute(`
+      SELECT s.*, t.name as trade_name, t.code as trade_code, l.level_number, l.name as level_name
+      FROM students s
+      LEFT JOIN trades t ON s.trade_id = t.id
+      LEFT JOIN levels l ON s.level_id = l.id
+      WHERE s.id = ?
+    `, [studentId]);
+    
+    if (!students[0]) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const [customValues] = await pool.execute(`
+      SELECT cv.*, lsc.column_name, lsc.column_type
+      FROM student_column_values cv
+      JOIN level_sheet_columns lsc ON cv.column_id = lsc.id
+      WHERE cv.student_id = ?
+    `, [studentId]);
+    
+    res.json({ success: true, ...students[0], custom_values: customValues });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
