@@ -32,7 +32,7 @@ cron.schedule('0 8 * * 1-5', async () => {
   console.log('Running daily attendance reminder...');
   try {
     const [teachers] = await pool.query(
-      'SELECT id, name, phone, email FROM users WHERE role = "teacher"'
+      'SELECT id, first_name, last_name, phone, email FROM users WHERE role = "teacher"'
     );
     
     for (const teacher of teachers) {
@@ -56,7 +56,7 @@ cron.schedule('0 18 * * *', async () => {
   console.log('Running assignment deadline reminder...');
   try {
     const [assignments] = await pool.query(`
-      SELECT a.*, u.id as student_id, u.name, u.phone, u.email 
+      SELECT a.*, u.id as student_id, u.first_name, u.last_name, u.phone, u.email 
       FROM assignments a
       JOIN student_assignments sa ON a.id = sa.assignment_id
       JOIN users u ON sa.student_id = u.id
@@ -85,7 +85,7 @@ cron.schedule('0 7 * * *', async () => {
   console.log('Running exam preparation reminder...');
   try {
     const [exams] = await pool.query(`
-      SELECT e.*, u.id as student_id, u.name, u.phone, u.email
+      SELECT e.*, u.id as student_id, u.first_name, u.last_name, u.phone, u.email
       FROM exams e
       JOIN student_exams se ON e.id = se.exam_id
       JOIN users u ON se.student_id = u.id
@@ -119,7 +119,7 @@ cron.schedule('0 9 1 * *', async () => {
   console.log('Running monthly fee reminder...');
   try {
     const [students] = await pool.query(`
-      SELECT u.id, u.name, u.phone, u.email, p.amount_due
+      SELECT u.id, u.first_name, u.last_name, u.phone, u.email, p.amount_due
       FROM users u
       JOIN student_payments p ON u.id = p.student_id
       WHERE u.role = 'student' AND p.status = 'pending'
@@ -146,7 +146,7 @@ cron.schedule('0 17 * * 5', async () => {
   console.log('Running weekly parent report...');
   try {
     const [parents] = await pool.query(`
-      SELECT DISTINCT p.id, p.name, p.phone, p.email, s.id as student_id, s.name as student_name
+      SELECT DISTINCT p.id, p.first_name, p.last_name, p.phone, p.email, s.id as student_id, s.first_name as student_first, s.last_name as student_last
       FROM users p
       JOIN parent_student_link psl ON p.id = psl.parent_id
       JOIN users s ON psl.student_id = s.id
@@ -160,6 +160,7 @@ cron.schedule('0 17 * * 5', async () => {
       );
       
       const presentDays = attendance[0]?.present || 0;
+      const studentName = `${parent.student_first} ${parent.student_last}`;
       
       await createNotification(
         parent.id,
@@ -181,7 +182,7 @@ cron.schedule('0 15 * * 1,3,5', async () => {
   console.log('Running sports practice reminder...');
   try {
     const [players] = await pool.query(`
-      SELECT u.id, u.name, u.phone, u.email, st.name as team_name
+      SELECT u.id, u.first_name, u.last_name, u.phone, u.email, st.name as team_name
       FROM sports_players sp
       JOIN users u ON sp.student_id = u.id
       JOIN sports_teams st ON sp.team_id = st.id

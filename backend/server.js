@@ -108,6 +108,7 @@ const routes = {
   
   // Discipline & DOS
   discipline: loadRoute('./routes/discipline', 'Discipline'),
+  disciplineManagement: loadRoute('./routes/discipline-management', 'Discipline Management'),
   dos: loadRoute('./routes/dos', 'Director of Studies'),
   dosAdvanced: loadRoute('./routes/dos-advanced', 'DOS Advanced'),
   dosManagement: loadRoute('./routes/dos-management', 'DOS Management'),
@@ -356,6 +357,7 @@ if (routes.stock) { app.use('/api/stock', routes.stock); mountedRoutes++; }
 
 // Discipline & DOS
 if (routes.discipline) { app.use('/api/discipline', routes.discipline); mountedRoutes++; }
+if (routes.disciplineManagement) { app.use('/api/discipline-management', routes.disciplineManagement); mountedRoutes++; }
 if (routes.dos) { app.use('/api/dos', routes.dos); mountedRoutes++; }
 if (routes.dosAdvanced) { app.use('/api/dos-advanced', routes.dosAdvanced); mountedRoutes++; }
 if (routes.dosManagement) { app.use('/api/dos-management', routes.dosManagement); mountedRoutes++; }
@@ -611,6 +613,7 @@ const startServer = (port) => {
     console.log('   /api/comprehensive-staff     - Staff Management');
     console.log('   /api/system-updates          - System Management');
     console.log('   /api/advisor                 - Advisor Dashboard');
+    console.log('   /api/discipline-management   - DOD/Matron/Patron Management');
     console.log('\n✅ All systems operational - Unified Integration Active');
     console.log('='.repeat(80) + '\n');
   }).on('error', (err) => {
