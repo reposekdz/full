@@ -24,6 +24,25 @@ class ApiService {
     return response.json();
   }
 
+  // User Profile Management
+  async updateProfile(profileData: any) {
+    return this.request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+  }
+
+  async getProfile() {
+    return this.request('/users/profile');
+  }
+
+  async changePassword(passwordData: { current_password: string; new_password: string }) {
+    return this.request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(passwordData)
+    });
+  }
+
   // User Management
   async getUsers(params = {}) {
     const query = new URLSearchParams(params).toString();
@@ -980,10 +999,122 @@ class ApiService {
     return this.request(`/discipline/leave/history?${query}`);
   }
 
-  async updateLeaveStatus(id: number, status: string) {
-    return this.request(`/discipline/leave/status/${id}`, {
+  async updateLeaveStatus(id: number, statusData: any) {
+    return this.request(`/discipline/leaves/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(statusData)
+    });
+  }
+
+  async getDisciplineRecords(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/discipline/records?${query}`);
+  }
+
+  async getDisciplineLeaves(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/discipline/leaves?${query}`);
+  }
+
+  async removeConductRecord(conductData: any) {
+    return this.request('/discipline/conduct/remove', {
+      method: 'POST',
+      body: JSON.stringify(conductData)
+    });
+  }
+
+  async addStudentLeave(leaveData: any) {
+    return this.request('/discipline/leave/add', {
+      method: 'POST',
+      body: JSON.stringify(leaveData)
+    });
+  }
+
+  async updateDisciplineRecordStatus(id: number, status: string) {
+    return this.request(`/discipline/records/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ status })
+    });
+  }
+
+  async deleteDisciplineRecord(id: number) {
+    return this.request(`/discipline/records/${id}`, { method: 'DELETE' });
+  }
+
+  async getParentNotifications(parentId: number) {
+    return this.request(`/discipline/parent/notifications/${parentId}`);
+  }
+
+  async markParentNotificationRead(id: number) {
+    return this.request(`/discipline/parent/notifications/${id}/read`, { method: 'PUT' });
+  }
+
+  async bulkUpdateDisciplineRecords(recordIds: number[], status: string) {
+    return this.request('/discipline/records/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ record_ids: recordIds, status })
+    });
+  }
+
+  async getDisciplineTrades() {
+    return this.request('/discipline/trades');
+  }
+
+  async getDisciplineClasses() {
+    return this.request('/discipline/classes');
+  }
+
+  async getDODOverview() {
+    return this.request('/dod-comprehensive/dashboard/stats');
+  }
+
+  async getDODStudents() {
+    return this.request('/dod-comprehensive/students');
+  }
+
+  async getDisciplineStatistics() {
+    return this.request('/discipline/analytics');
+  }
+
+  async createIncident(incidentData: any) {
+    return this.request('/dod-comprehensive/discipline/cases', {
+      method: 'POST',
+      body: JSON.stringify(incidentData)
+    });
+  }
+
+  async sendParentMessage(parentId: number, messageData: any) {
+    return this.request('/dod-actions/message-parent', {
+      method: 'POST',
+      body: JSON.stringify({ parent_id: parentId, ...messageData })
+    });
+  }
+
+  async sendBulkParentMessage(messageData: any) {
+    return this.request('/dod-actions/bulk-message', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  async getAllParents(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/users?role=parent&${query}`);
+  }
+
+  async getParentDetailsWithChildren(parentId: number) {
+    return this.request(`/users/${parentId}/children-details`);
+  }
+
+  async getLeaveRequests(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/discipline/leaves?${query}`);
+  }
+
+  async createLeaveRequest(leaveData: any) {
+    return this.request('/discipline/leave/add', {
+      method: 'POST',
+      body: JSON.stringify(leaveData)
     });
   }
 
@@ -1866,6 +1997,132 @@ class ApiService {
     return this.request(`/management/parent/connections/${connectionId}`, {
       method: 'PUT',
       body: JSON.stringify({ status })
+    });
+  }
+
+  // DOD - Parent Management
+  async getAllParents(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/dod/parents?${query}`);
+  }
+
+  async getParentDetailsWithChildren(parentId: number) {
+    return this.request(`/management/dod/parents/${parentId}`);
+  }
+
+  async sendParentMessage(parentId: number, messageData: { subject: string; message: string; priority?: string; send_sms?: boolean }) {
+    return this.request(`/management/dod/parents/${parentId}/message`, {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  async sendBulkParentMessage(messageData: { parent_ids: number[]; subject: string; message: string; priority?: string; send_sms?: boolean }) {
+    return this.request('/management/dod/parents/bulk-message', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  // DOD - Leave Management
+  async getLeaveRequests(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/dod/leave-requests?${query}`);
+  }
+
+  async createLeaveRequest(leaveData: { student_id: number; leave_type: string; reason: string; start_date: string; end_date: string }) {
+    return this.request('/management/dod/leave-requests', {
+      method: 'POST',
+      body: JSON.stringify(leaveData)
+    });
+  }
+
+  async updateLeaveStatus(leaveId: number, statusData: { status: string; notes?: string }) {
+    return this.request(`/management/dod/leave-requests/${leaveId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(statusData)
+    });
+  }
+
+  // DOD - Enhanced Discipline Management
+  async getDisciplineRecords(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/dod/discipline-records?${query}`);
+  }
+
+  async createDisciplineRecord(disciplineData: { student_id: number; incident_type: string; incident_date?: string; description: string; severity?: string; action_taken?: string; notify_parent?: boolean }) {
+    return this.request('/management/dod/discipline-records', {
+      method: 'POST',
+      body: JSON.stringify(disciplineData)
+    });
+  }
+
+  async updateDisciplineRecord(recordId: number, updateData: { incident_type?: string; description?: string; severity?: string; action_taken?: string; status?: string }) {
+    return this.request(`/management/dod/discipline-records/${recordId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData)
+    });
+  }
+
+  async deleteDisciplineRecord(recordId: number, permanent: boolean = false) {
+    return this.request(`/management/dod/discipline-records/${recordId}?permanent=${permanent}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getDODDisciplineStatistics(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/dod/discipline-statistics?${query}`);
+  }
+
+  // Legacy DOD methods (for backward compatibility)
+  async getDODDisciplineCases() {
+    return this.getDisciplineRecords();
+  }
+
+  async updateDODDisciplineCase(id: number, data: any) {
+    return this.updateDisciplineRecord(id, data);
+  }
+
+  async deleteDODDisciplineCase(id: number) {
+    return this.deleteDisciplineRecord(id, false);
+  }
+
+  async notifyParentMarkLoss(studentId: number, marks: number, description: string) {
+    return this.createDisciplineRecord({
+      student_id: studentId,
+      incident_type: 'Marks Deduction',
+      description: `${description} - Marks Lost: ${marks}`,
+      severity: 'medium',
+      notify_parent: true
+    });
+  }
+
+  // Universal Profile Management (All Roles)
+  async getMyProfile() {
+    return this.request('/management/profile/me');
+  }
+
+  async updateMyProfile(profileData: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    date_of_birth?: string;
+    gender?: string;
+    address?: string;
+    profile_image?: string;
+  }) {
+    return this.request('/management/profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+  }
+
+  async changeMyPassword(passwordData: { current_password: string; new_password: string }) {
+    return this.request('/management/profile/change-password', {
+      method: 'PUT',
+      body: JSON.stringify(passwordData)
     });
   }
 }

@@ -110,32 +110,93 @@ router.post('/staff-login', async (req, res) => {
 router.put('/update-profile/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { first_name, last_name, phone, current_password, new_password } = req.body;
+    const { first_name, last_name, phone, email, current_password, new_password } = req.body;
     
+    // Get current user data
+    const [users] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = users[0];
+    let updateFields = [];
+    let updateValues = [];
+
+    // Update basic info
+    if (first_name) {
+      updateFields.push('first_name = ?');
+      updateValues.push(first_name);
+    }
+    if (last_name) {
+      updateFields.push('last_name = ?');
+      updateValues.push(last_name);
+    }
+    if (phone) {
+      updateFields.push('phone = ?');
+      updateValues.push(phone);
+    }
+    if (email) {
+      updateFields.push('email = ?');
+      updateValues.push(email);
+    }
+
+    // Handle password change
     if (new_password && current_password) {
-      const [users] = await pool.execute('SELECT password FROM users WHERE id = ?', [userId]);
-      
-      if (users.length === 0) {
-        return res.status(404).json({ success: false, message: 'User not found' });
-      }
-      
-      const passwordMatch = await bcrypt.compare(current_password, users[0].password);
-      
+      const passwordMatch = await bcrypt.compare(current_password, user.password_hash || user.password);
       if (!passwordMatch) {
-        return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        return res.status(400).json({ success: false, message: 'Current password is incorrect' });
       }
-      
       const hashedPassword = await bcrypt.hash(new_password, 10);
-      
-      await pool.execute(
-        'UPDATE users SET first_name = ?, last_name = ?, phone = ?, password = ?, updated_at = NOW() WHERE id = ?',
-        [first_name, last_name, phone, hashedPassword, userId]
-      );
-    } else {
-      await pool.execute(
-        'UPDATE users SET first_name = ?, last_name = ?, phone = ?, updated_at = NOW() WHERE id = ?',
-        [first_name, last_name, phone, userId]
-      );
+      updateFields.push('password_hash = ?');
+      updateValues.push(hashedPassword);
+    }
+
+    if (updateFields.length > 0) {
+      updateFields.push('updated_at = CURRENT_TIMESTAMP');
+      updateValues.push(userId);
+
+      const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
+      await pool.execute(query, updateValues);
+    }
+
+    // Also update admin_users table if user is admin
+    if (['admin', 'super_admin', 'headmaster', 'director_study', 'director_discipline', 'accountant', 'stock_manager', 'patron', 'advisor'].includes(user.role)) {
+      try {
+        let adminUpdateFields = [];
+        let adminUpdateValues = [];
+        
+        if (first_name) {
+          adminUpdateFields.push('first_name = ?');
+          adminUpdateValues.push(first_name);
+        }
+        if (last_name) {
+          adminUpdateFields.push('last_name = ?');
+          adminUpdateValues.push(last_name);
+        }
+        if (phone) {
+          adminUpdateFields.push('phone = ?');
+          adminUpdateValues.push(phone);
+        }
+        if (email) {
+          adminUpdateFields.push('email = ?');
+          adminUpdateValues.push(email);
+        }
+        if (new_password && current_password) {
+          const hashedPassword = await bcrypt.hash(new_password, 10);
+          adminUpdateFields.push('password = ?');
+          adminUpdateValues.push(hashedPassword);
+        }
+        
+        if (adminUpdateFields.length > 0) {
+          adminUpdateFields.push('updated_at = CURRENT_TIMESTAMP');
+          adminUpdateValues.push(user.email);
+          
+          const adminQuery = `UPDATE admin_users SET ${adminUpdateFields.join(', ')} WHERE email = ?`;
+          await pool.execute(adminQuery, adminUpdateValues);
+        }
+      } catch (adminError) {
+        console.log('Admin table update failed (non-critical):', adminError.message);
+      }
     }
     
     res.json({ success: true, message: 'Profile updated successfully' });

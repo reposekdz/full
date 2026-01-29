@@ -64,6 +64,9 @@ import DODReportsPage from '@/app/pages/dod/DODReportsPage';
 import DODPunishmentsPage from '@/app/pages/dod/DODPunishmentsPage';
 import DODParentNotificationsPage from '@/app/pages/dod/DODParentNotificationsPage';
 import DODStudentSheetsPage from '@/app/pages/dod/DODStudentSheetsPage';
+import DODParentManagementPage from '@/app/pages/dod/DODParentManagementPage';
+import DODLeaveManagementPage from '@/app/pages/dod/DODLeaveManagementPage';
+import UniversalProfilePage from '@/app/pages/common/UniversalProfilePage';
 import HeadMasterDashboard from '@/app/pages/dashboards/HeadMasterDashboard';
 import TeacherDashboard from '@/app/pages/teacher/TeacherDashboard';
 import TeacherGradingPage from '@/app/pages/teacher/TeacherGradingPage';
@@ -176,21 +179,29 @@ const AppContent: React.FC = () => {
     switch (user.role) {
       case 'admin':
       case 'super_admin':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="admin" />;
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'student':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-student" />;
         return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
         return <ModernParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'advisor':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-advisor" />;
         return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-director-study" />;
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
+      case 'dod':
       case 'director_discipline':
+        if (currentPage === 'profile' || currentPage === 'dod-profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-director-discipline" />;
         if (currentPage === 'dod-discipline') return <DODDisciplinePage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-leave') return <DODLeavePage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-leave-management') return <DODLeaveManagementPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-parent-management') return <DODParentManagementPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-exams') return <DODExamsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-students') return <DODStudentsPage onNavigate={handleNavigate} />;
-        if (currentPage === 'dod-profile') return <DODProfilePage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-reports') return <DODReportsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-punishments') return <DODPunishmentsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-parent-notifications') return <DODParentNotificationsPage onNavigate={handleNavigate} />;
@@ -198,9 +209,10 @@ const AppContent: React.FC = () => {
         if (currentPage === 'dod-notifications') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
         return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'headmaster':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-headmaster" />;
         return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
-        if (currentPage === 'profile') return <TeacherProfilePage onNavigate={handleNavigate} />;
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-teacher" />;
         if (currentPage === 'search') return <TeacherSearchPage onNavigate={handleNavigate} />;
         if (currentPage === 'notifications') return <TeacherNotificationsPage onNavigate={handleNavigate} />;
         if (currentPage === 'classes') return <TeacherClassesPage onNavigate={handleNavigate} />;
@@ -214,11 +226,13 @@ const AppContent: React.FC = () => {
         if (currentPage === 'teacher-create-assignment') return <TeacherCreateAssignmentPage teacherId={user.id} onNavigate={handleNavigate} />;
         return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'accountant':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-accountant" />;
         if (currentPage.startsWith('payments-') || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
           return null;
         }
         return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'stock_manager':
+        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-stock" />;
         return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
       default:
         return null;
