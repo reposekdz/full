@@ -21,6 +21,8 @@ const DISCIPLINE_ROLES = ['dod', 'matron', 'patron', 'admin'];
 
 router.get('/overview', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
   try {
+    const userId = req.user.id;
+    
     const [totalIncidents] = await pool.execute(`
       SELECT COUNT(*) as total FROM student_conduct_records 
       WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
@@ -40,6 +42,34 @@ router.get('/overview', authenticateToken, requireRole(...DISCIPLINE_ROLES), asy
     const [pendingFollowUps] = await pool.execute(`
       SELECT COUNT(*) as total FROM student_conduct_records 
       WHERE follow_up_required = TRUE AND follow_up_date <= CURDATE() AND status = 'active'
+    `);
+    
+    const [myHandledCases] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_conduct_records WHERE handled_by = ?
+    `, [userId]);
+    
+    const [dormitoryInspections] = await pool.execute(`
+      SELECT COUNT(*) as total FROM dormitory_inspections 
+      WHERE inspection_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    `);
+    
+    const [counselingSessions] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_counseling_sessions 
+      WHERE session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    `);
+    
+    const [wellnessChecks] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_wellness_tracking 
+      WHERE tracking_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    `);
+    
+    const [pendingAppeals] = await pool.execute(`
+      SELECT COUNT(*) as total FROM discipline_appeals WHERE decision = 'pending'
+    `);
+    
+    const [positiveRecognitions] = await pool.execute(`
+      SELECT COUNT(*) as total FROM positive_recognition 
+      WHERE award_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     `);
     
     const [recentIncidents] = await pool.execute(`
@@ -79,6 +109,12 @@ router.get('/overview', authenticateToken, requireRole(...DISCIPLINE_ROLES), asy
         active_warnings: activeWarnings[0].total,
         active_suspensions: suspensions[0].total,
         pending_followups: pendingFollowUps[0].total,
+        my_handled_cases: myHandledCases[0].total,
+        dormitory_inspections_30days: dormitoryInspections[0].total,
+        counseling_sessions_30days: counselingSessions[0].total,
+        wellness_checks_7days: wellnessChecks[0].total,
+        pending_appeals: pendingAppeals[0].total,
+        positive_recognitions_30days: positiveRecognitions[0].total,
         recent_incidents: recentIncidents,
         severity_stats: severityStats,
         monthly_trend: monthlyTrend
@@ -621,6 +657,272 @@ router.get('/actions', authenticateToken, requireRole(...DISCIPLINE_ROLES), asyn
   try {
     const [actions] = await pool.execute('SELECT * FROM discipline_actions WHERE is_active = TRUE ORDER BY action_type, name');
     res.json({ success: true, actions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+module.exports = router;
+
+
+// ==========================================
+// WELLNESS TRACKING
+// ==========================================
+
+router.post('/wellness/track', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { student_id, mood_rating, stress_level, sleep_quality, social_interaction, academic_stress, personal_issues, notes, follow_up_required } = req.body;
+    const trackedBy = req.user.id;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO student_wellness_tracking (student_id, tracked_by, tracking_date, mood_rating, stress_level, sleep_quality, social_interaction, academic_stress, personal_issues, notes, follow_up_required)
+      VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [student_id, trackedBy, mood_rating, stress_level, sleep_quality, social_interaction, academic_stress, personal_issues, notes, follow_up_required]);
+    
+    res.json({ success: true, message: 'Wellness tracking recorded', tracking_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/wellness/:student_id', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const [records] = await pool.execute(`
+      SELECT swt.*, u.first_name, u.last_name
+      FROM student_wellness_tracking swt
+      JOIN users u ON swt.tracked_by = u.id
+      WHERE swt.student_id = ?
+      ORDER BY swt.tracking_date DESC
+    `, [req.params.student_id]);
+    
+    res.json({ success: true, wellness_records: records });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// INCIDENT WITNESSES
+// ==========================================
+
+router.post('/incidents/:id/witnesses', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { witness_id, witness_name, witness_type, statement } = req.body;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO incident_witnesses (conduct_record_id, witness_id, witness_name, witness_type, statement)
+      VALUES (?, ?, ?, ?, ?)
+    `, [req.params.id, witness_id, witness_name, witness_type, statement]);
+    
+    res.json({ success: true, message: 'Witness added', witness_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/incidents/:id/witnesses', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const [witnesses] = await pool.execute(`
+      SELECT iw.*, u.first_name, u.last_name
+      FROM incident_witnesses iw
+      LEFT JOIN users u ON iw.witness_id = u.id
+      WHERE iw.conduct_record_id = ?
+    `, [req.params.id]);
+    
+    res.json({ success: true, witnesses });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// DISCIPLINE APPEALS
+// ==========================================
+
+router.post('/appeals/create', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { conduct_record_id, appeal_reason, supporting_documents } = req.body;
+    const appealedBy = req.user.id;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO discipline_appeals (conduct_record_id, appealed_by, appeal_reason, supporting_documents)
+      VALUES (?, ?, ?, ?)
+    `, [conduct_record_id, appealedBy, appeal_reason, JSON.stringify(supporting_documents || [])]);
+    
+    await pool.execute(`UPDATE student_conduct_records SET status = 'appealed' WHERE id = ?`, [conduct_record_id]);
+    
+    res.json({ success: true, message: 'Appeal submitted', appeal_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/appeals/:id/review', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { decision, decision_notes } = req.body;
+    const reviewedBy = req.user.id;
+    
+    await pool.execute(`
+      UPDATE discipline_appeals 
+      SET reviewed_by = ?, review_date = NOW(), decision = ?, decision_notes = ?
+      WHERE id = ?
+    `, [reviewedBy, decision, decision_notes, req.params.id]);
+    
+    res.json({ success: true, message: 'Appeal reviewed' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/appeals', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { decision } = req.query;
+    
+    let query = `
+      SELECT da.*, 
+        s.first_name as student_first, s.last_name as student_last,
+        a.first_name as appealed_first, a.last_name as appealed_last,
+        r.first_name as reviewer_first, r.last_name as reviewer_last,
+        scr.incident_type, scr.severity
+      FROM discipline_appeals da
+      JOIN student_conduct_records scr ON da.conduct_record_id = scr.id
+      JOIN users s ON scr.student_id = s.id
+      JOIN users a ON da.appealed_by = a.id
+      LEFT JOIN users r ON da.reviewed_by = r.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (decision) {
+      query += ' AND da.decision = ?';
+      params.push(decision);
+    }
+    
+    query += ' ORDER BY da.appeal_date DESC';
+    
+    const [appeals] = await pool.execute(query, params);
+    res.json({ success: true, appeals });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// DORMITORY ASSIGNMENTS
+// ==========================================
+
+router.post('/dormitory/assign', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { student_id, dormitory_name, room_number, bed_number, assigned_date } = req.body;
+    const assignedBy = req.user.id;
+    
+    await pool.execute(`UPDATE dormitory_assignments SET is_active = FALSE WHERE student_id = ?`, [student_id]);
+    
+    const [result] = await pool.execute(`
+      INSERT INTO dormitory_assignments (student_id, dormitory_name, room_number, bed_number, assigned_date, assigned_by, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, TRUE)
+    `, [student_id, dormitory_name, room_number, bed_number, assigned_date, assignedBy]);
+    
+    res.json({ success: true, message: 'Dormitory assigned', assignment_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/dormitory/assignments', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { dormitory, is_active } = req.query;
+    
+    let query = `
+      SELECT da.*, u.first_name, u.last_name, u.student_id, tc.class_name
+      FROM dormitory_assignments da
+      JOIN users u ON da.student_id = u.id
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
+      LEFT JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (dormitory) {
+      query += ' AND da.dormitory_name = ?';
+      params.push(dormitory);
+    }
+    if (is_active) {
+      query += ' AND da.is_active = ?';
+      params.push(is_active === 'true');
+    }
+    
+    query += ' ORDER BY da.dormitory_name, da.room_number, da.bed_number';
+    
+    const [assignments] = await pool.execute(query, params);
+    res.json({ success: true, assignments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// POSITIVE RECOGNITION
+// ==========================================
+
+router.post('/recognition/award', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const { student_id, recognition_type, title, description, award_date, points_awarded, certificate_issued } = req.body;
+    const awardedBy = req.user.id;
+    
+    const [result] = await connection.execute(`
+      INSERT INTO positive_recognition (student_id, recognition_type, title, description, awarded_by, award_date, points_awarded, certificate_issued)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [student_id, recognition_type, title, description, awardedBy, award_date, points_awarded || 0, certificate_issued || false]);
+    
+    if (points_awarded > 0) {
+      await connection.execute(`
+        INSERT INTO student_behavior_points (student_id, points, point_type, reason, awarded_by)
+        VALUES (?, ?, 'positive', ?, ?)
+      `, [student_id, points_awarded, `Recognition: ${title}`, awardedBy]);
+    }
+    
+    await connection.commit();
+    res.json({ success: true, message: 'Recognition awarded', recognition_id: result.insertId });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+router.get('/recognition', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
+  try {
+    const { student_id, recognition_type } = req.query;
+    
+    let query = `
+      SELECT pr.*, 
+        s.first_name as student_first, s.last_name as student_last, s.student_id as student_number,
+        a.first_name as awarded_first, a.last_name as awarded_last
+      FROM positive_recognition pr
+      JOIN users s ON pr.student_id = s.id
+      JOIN users a ON pr.awarded_by = a.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (student_id) {
+      query += ' AND pr.student_id = ?';
+      params.push(student_id);
+    }
+    if (recognition_type) {
+      query += ' AND pr.recognition_type = ?';
+      params.push(recognition_type);
+    }
+    
+    query += ' ORDER BY pr.award_date DESC';
+    
+    const [recognitions] = await pool.execute(query, params);
+    res.json({ success: true, recognitions });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

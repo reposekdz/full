@@ -244,34 +244,100 @@ router.get('/accountant/reports/summary', authenticateToken, requireRole('accoun
 });
 
 // ==========================================
-// DOD (Director of Discipline) DASHBOARD
+// DOD (Director of Discipline) DASHBOARD - ENHANCED
 // ==========================================
 
-router.get('/dod/overview', authenticateToken, requireRole('dod', 'admin'), async (req, res) => {
+router.get('/dod/overview', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
   try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
     const [totalIncidents] = await pool.execute(`
-      SELECT COUNT(*) as total FROM student_discipline_records 
+      SELECT COUNT(*) as total FROM student_conduct_records 
       WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     `);
     
     const [activeWarnings] = await pool.execute(`
-      SELECT COUNT(*) as total FROM student_discipline_records 
-      WHERE action_taken = 'warning' AND status = 'active'
+      SELECT COUNT(*) as total FROM student_conduct_records 
+      WHERE status = 'active' AND severity IN ('minor', 'moderate')
     `);
     
     const [suspensions] = await pool.execute(`
-      SELECT COUNT(*) as total FROM student_discipline_records 
-      WHERE action_taken LIKE '%suspend%' AND DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      SELECT COUNT(*) as total FROM student_conduct_records scr
+      JOIN discipline_actions da ON scr.action_id = da.id
+      WHERE da.action_type = 'suspension' AND scr.status = 'active'
+    `);
+    
+    const [pendingFollowUps] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_conduct_records 
+      WHERE follow_up_required = TRUE AND follow_up_date <= CURDATE() AND status = 'active'
+    `);
+    
+    const [myHandledCases] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_conduct_records WHERE handled_by = ?
+    `, [userId]);
+    
+    const [dormitoryInspections] = await pool.execute(`
+      SELECT COUNT(*) as total FROM dormitory_inspections 
+      WHERE inspection_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    `);
+    
+    const [counselingSessions] = await pool.execute(`
+      SELECT COUNT(*) as total FROM student_counseling_sessions 
+      WHERE session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     `);
     
     const [recentIncidents] = await pool.execute(`
-      SELECT sdr.*, u.first_name, u.last_name, u.student_id, tc.class_name
-      FROM student_discipline_records sdr
-      JOIN users u ON sdr.student_id = u.id
+      SELECT scr.*, u.first_name, u.last_name, u.student_id, 
+        tc.class_name, dc.name as category_name, da.name as action_name,
+        reporter.first_name as reporter_first, reporter.last_name as reporter_last
+      FROM student_conduct_records scr
+      JOIN users u ON scr.student_id = u.id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
       LEFT JOIN trade_classes tc ON e.class_id = tc.id
-      ORDER BY sdr.incident_date DESC
+      LEFT JOIN discipline_categories dc ON scr.category_id = dc.id
+      LEFT JOIN discipline_actions da ON scr.action_id = da.id
+      LEFT JOIN users reporter ON scr.reported_by = reporter.id
+      ORDER BY scr.incident_date DESC
       LIMIT 20
+    `);
+    
+    const [severityStats] = await pool.execute(`
+      SELECT severity, COUNT(*) as count
+      FROM student_conduct_records
+      WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      GROUP BY severity
+    `);
+    
+    const [categoryStats] = await pool.execute(`
+      SELECT dc.name, COUNT(*) as count
+      FROM student_conduct_records scr
+      JOIN discipline_categories dc ON scr.category_id = dc.id
+      WHERE DATE(scr.incident_date) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      GROUP BY dc.id
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+    
+    const [monthlyTrend] = await pool.execute(`
+      SELECT DATE_FORMAT(incident_date, '%Y-%m') as month, COUNT(*) as count
+      FROM student_conduct_records
+      WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+      GROUP BY month
+      ORDER BY month
+    `);
+    
+    const [topOffenders] = await pool.execute(`
+      SELECT u.id, u.first_name, u.last_name, u.student_id, tc.class_name,
+        COUNT(*) as incident_count
+      FROM student_conduct_records scr
+      JOIN users u ON scr.student_id = u.id
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
+      LEFT JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE DATE(scr.incident_date) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      GROUP BY u.id
+      ORDER BY incident_count DESC
+      LIMIT 10
     `);
     
     res.json({
@@ -279,8 +345,17 @@ router.get('/dod/overview', authenticateToken, requireRole('dod', 'admin'), asyn
       data: {
         total_incidents_30days: totalIncidents[0].total,
         active_warnings: activeWarnings[0].total,
-        recent_suspensions: suspensions[0].total,
-        recent_incidents: recentIncidents
+        active_suspensions: suspensions[0].total,
+        pending_followups: pendingFollowUps[0].total,
+        my_handled_cases: myHandledCases[0].total,
+        dormitory_inspections_30days: dormitoryInspections[0].total,
+        counseling_sessions_30days: counselingSessions[0].total,
+        recent_incidents: recentIncidents,
+        severity_stats: severityStats,
+        category_stats: categoryStats,
+        monthly_trend: monthlyTrend,
+        top_offenders: topOffenders,
+        user_role: userRole
       }
     });
   } catch (error) {
@@ -289,71 +364,206 @@ router.get('/dod/overview', authenticateToken, requireRole('dod', 'admin'), asyn
   }
 });
 
-router.get('/dod/students', authenticateToken, requireRole('dod', 'admin'), async (req, res) => {
+router.get('/dod/profile', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
   try {
-    const [students] = await pool.execute(`
+    const [user] = await pool.execute(`
+      SELECT id, first_name, last_name, email, phone, role, profile_image, 
+        bio, department, office_location, created_at
+      FROM users WHERE id = ?
+    `, [req.user.id]);
+    
+    if (!user.length) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const [stats] = await pool.execute(`
+      SELECT 
+        (SELECT COUNT(*) FROM student_conduct_records WHERE handled_by = ?) as total_cases,
+        (SELECT COUNT(*) FROM student_conduct_records WHERE handled_by = ? AND status = 'active') as active_cases,
+        (SELECT COUNT(*) FROM dormitory_inspections WHERE inspector_id = ?) as total_inspections,
+        (SELECT COUNT(*) FROM student_counseling_sessions WHERE counselor_id = ?) as total_sessions
+    `, [req.user.id, req.user.id, req.user.id, req.user.id]);
+    
+    res.json({ success: true, profile: user[0], stats: stats[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/dod/profile', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
+  try {
+    const { first_name, last_name, phone, bio, department, office_location } = req.body;
+    
+    await pool.execute(`
+      UPDATE users 
+      SET first_name = ?, last_name = ?, phone = ?, bio = ?, department = ?, office_location = ?
+      WHERE id = ?
+    `, [first_name, last_name, phone, bio, department, office_location, req.user.id]);
+    
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/dod/students', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
+  try {
+    const { class_id, severity, has_incidents } = req.query;
+    
+    let query = `
       SELECT u.id, u.first_name, u.last_name, u.student_id, u.phone,
         tc.class_name, tl.trade_name, tl.level_number,
-        (SELECT COUNT(*) FROM student_discipline_records WHERE student_id = u.id) as total_incidents,
-        (SELECT COUNT(*) FROM student_discipline_records WHERE student_id = u.id AND DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as recent_incidents,
-        (SELECT incident_date FROM student_discipline_records WHERE student_id = u.id ORDER BY incident_date DESC LIMIT 1) as last_incident
+        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = u.id) as total_incidents,
+        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = u.id AND DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as recent_incidents,
+        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = u.id AND point_type = 'negative') as negative_points,
+        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = u.id AND point_type = 'positive') as positive_points,
+        (SELECT incident_date FROM student_conduct_records WHERE student_id = u.id ORDER BY incident_date DESC LIMIT 1) as last_incident
       FROM users u
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
       LEFT JOIN trade_classes tc ON e.class_id = tc.id
       LEFT JOIN trade_levels tl ON tc.trade_level_id = tl.id
       WHERE u.role = 'student' AND u.is_active = TRUE
-      HAVING total_incidents > 0
-      ORDER BY recent_incidents DESC, total_incidents DESC
-    `);
+    `;
     
+    const params = [];
+    if (class_id) {
+      query += ' AND tc.id = ?';
+      params.push(class_id);
+    }
+    if (has_incidents === 'true') {
+      query += ' HAVING total_incidents > 0';
+    }
+    
+    query += ' ORDER BY recent_incidents DESC, total_incidents DESC';
+    
+    const [students] = await pool.execute(query, params);
     res.json({ success: true, students });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-router.post('/dod/incidents/create', authenticateToken, requireRole('dod', 'admin'), async (req, res) => {
+router.post('/dod/incidents/create', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const { student_id, incident_type, description, severity, action_taken, reported_by } = req.body;
-    const dodId = req.user.id;
+    await connection.beginTransaction();
     
-    const [result] = await pool.execute(`
-      INSERT INTO student_discipline_records (student_id, incident_type, description, severity, action_taken, reported_by, handled_by, incident_date, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'active', NOW())
-    `, [student_id, incident_type, description, severity || 'medium', action_taken, reported_by, dodId]);
+    const { 
+      student_id, incident_type, category_id, description, location, 
+      severity, action_id, action_taken, action_start_date, action_end_date,
+      parent_notified, follow_up_required, follow_up_date, reported_by 
+    } = req.body;
     
+    const handlerId = req.user.id;
+    
+    const [result] = await connection.execute(`
+      INSERT INTO student_conduct_records (
+        student_id, incident_type, category_id, description, location, severity,
+        reported_by, handled_by, action_id, action_taken, action_start_date, action_end_date,
+        parent_notified, follow_up_required, follow_up_date, status, incident_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+    `, [
+      student_id, incident_type, category_id, description, location, severity || 'moderate',
+      reported_by || handlerId, handlerId, action_id, action_taken, action_start_date, action_end_date,
+      parent_notified || false, follow_up_required || false, follow_up_date
+    ]);
+    
+    const pointsMap = { minor: 5, moderate: 10, major: 20, severe: 30 };
+    await connection.execute(`
+      INSERT INTO student_behavior_points (student_id, points, point_type, reason, awarded_by, conduct_record_id)
+      VALUES (?, ?, 'negative', ?, ?, ?)
+    `, [student_id, pointsMap[severity] || 10, `Incident: ${incident_type}`, handlerId, result.insertId]);
+    
+    if (parent_notified) {
+      const [student] = await connection.execute('SELECT first_name, last_name FROM users WHERE id = ?', [student_id]);
+      const studentName = `${student[0].first_name} ${student[0].last_name}`;
+      
+      await connection.execute(`
+        INSERT INTO parent_notifications (student_id, notification_type, subject, message, sent_by, conduct_record_id)
+        VALUES (?, 'discipline', ?, ?, ?, ?)
+      `, [
+        student_id, 
+        `Discipline Notice - ${incident_type}`,
+        `Dear Parent, ${studentName} was involved in a ${severity} incident: ${description}. Action taken: ${action_taken}`,
+        handlerId,
+        result.insertId
+      ]);
+    }
+    
+    await connection.commit();
     res.json({ success: true, message: 'Incident recorded successfully', incident_id: result.insertId });
   } catch (error) {
+    await connection.rollback();
     res.status(500).json({ success: false, message: error.message });
+  } finally {
+    connection.release();
   }
 });
 
-router.get('/dod/reports/statistics', authenticateToken, requireRole('dod', 'admin'), async (req, res) => {
+router.get('/dod/reports/statistics', authenticateToken, requireRole('dod', 'matron', 'patron', 'admin'), async (req, res) => {
   try {
-    const [byType] = await pool.execute(`
-      SELECT incident_type, COUNT(*) as count
-      FROM student_discipline_records
-      WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
-      GROUP BY incident_type
+    const { start_date, end_date } = req.query;
+    
+    const [byCategory] = await pool.execute(`
+      SELECT dc.name, dc.severity_level, COUNT(*) as count
+      FROM student_conduct_records scr
+      JOIN discipline_categories dc ON scr.category_id = dc.id
+      WHERE scr.incident_date BETWEEN ? AND ?
+      GROUP BY dc.id
       ORDER BY count DESC
-    `);
+    `, [start_date || '2024-01-01', end_date || new Date()]);
+    
+    const [byAction] = await pool.execute(`
+      SELECT da.name, da.action_type, COUNT(*) as count
+      FROM student_conduct_records scr
+      JOIN discipline_actions da ON scr.action_id = da.id
+      WHERE scr.incident_date BETWEEN ? AND ?
+      GROUP BY da.id
+      ORDER BY count DESC
+    `, [start_date || '2024-01-01', end_date || new Date()]);
     
     const [bySeverity] = await pool.execute(`
       SELECT severity, COUNT(*) as count
-      FROM student_discipline_records
-      WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+      FROM student_conduct_records
+      WHERE incident_date BETWEEN ? AND ?
       GROUP BY severity
-    `);
+    `, [start_date || '2024-01-01', end_date || new Date()]);
     
-    const [byMonth] = await pool.execute(`
-      SELECT DATE_FORMAT(incident_date, '%Y-%m') as month, COUNT(*) as count
-      FROM student_discipline_records
-      WHERE DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-      GROUP BY month
-      ORDER BY month
-    `);
+    const [byClass] = await pool.execute(`
+      SELECT tc.class_name, tl.trade_name, COUNT(*) as count
+      FROM student_conduct_records scr
+      JOIN users u ON scr.student_id = u.id
+      JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
+      JOIN trade_classes tc ON e.class_id = tc.id
+      JOIN trade_levels tl ON tc.trade_level_id = tl.id
+      WHERE scr.incident_date BETWEEN ? AND ?
+      GROUP BY tc.id
+      ORDER BY count DESC
+    `, [start_date || '2024-01-01', end_date || new Date()]);
     
-    res.json({ success: true, statistics: { by_type: byType, by_severity: bySeverity, by_month: byMonth } });
+    const [repeatOffenders] = await pool.execute(`
+      SELECT u.id, u.first_name, u.last_name, u.student_id, tc.class_name,
+        COUNT(*) as total_incidents,
+        SUM(CASE WHEN scr.severity = 'severe' THEN 1 ELSE 0 END) as severe_incidents
+      FROM student_conduct_records scr
+      JOIN users u ON scr.student_id = u.id
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
+      LEFT JOIN trade_classes tc ON e.class_id = tc.id
+      WHERE scr.incident_date BETWEEN ? AND ?
+      GROUP BY u.id
+      HAVING total_incidents >= 3
+      ORDER BY total_incidents DESC
+      LIMIT 20
+    `, [start_date || '2024-01-01', end_date || new Date()]);
+    
+    res.json({ 
+      success: true, 
+      statistics: { 
+        by_category: byCategory, 
+        by_action: byAction, 
+        by_severity: bySeverity,
+        by_class: byClass,
+        repeat_offenders: repeatOffenders
+      } 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -8,13 +8,16 @@ ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE AFTER supplier;
 -- Fix users table (ensure proper columns exist)
 ALTER TABLE users 
 ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) AFTER id,
-ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) AFTER first_name;
+ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) AFTER first_name,
+ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone,
+ADD COLUMN IF NOT EXISTS department VARCHAR(100) AFTER bio,
+ADD COLUMN IF NOT EXISTS office_location VARCHAR(255) AFTER department;
 
 -- Update existing users with name split if needed
 UPDATE users 
 SET first_name = SUBSTRING_INDEX(name, ' ', 1),
     last_name = SUBSTRING_INDEX(name, ' ', -1)
-WHERE first_name IS NULL OR first_name = '';
+WHERE (first_name IS NULL OR first_name = '') AND name IS NOT NULL;
 
 -- Ensure inventory_items has all required columns
 ALTER TABLE inventory_items
@@ -40,14 +43,12 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
   transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE,
-  FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_item_id (item_id),
   INDEX idx_transaction_type (transaction_type),
   INDEX idx_transaction_date (transaction_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- DOD Management Tables
+-- DOD Management Tables (without foreign keys first)
 CREATE TABLE IF NOT EXISTS discipline_categories (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
@@ -98,11 +99,6 @@ CREATE TABLE IF NOT EXISTS student_conduct_records (
   attachments JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (category_id) REFERENCES discipline_categories(id) ON DELETE SET NULL,
-  FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (action_id) REFERENCES discipline_actions(id) ON DELETE SET NULL,
   INDEX idx_student_id (student_id),
   INDEX idx_incident_date (incident_date),
   INDEX idx_severity (severity),
@@ -121,9 +117,6 @@ CREATE TABLE IF NOT EXISTS student_behavior_points (
   academic_year VARCHAR(20),
   term VARCHAR(20),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (awarded_by) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (conduct_record_id) REFERENCES student_conduct_records(id) ON DELETE SET NULL,
   INDEX idx_student_id (student_id),
   INDEX idx_point_type (point_type),
   INDEX idx_academic_year (academic_year)
@@ -147,7 +140,6 @@ CREATE TABLE IF NOT EXISTS dormitory_inspections (
   follow_up_required BOOLEAN DEFAULT FALSE,
   follow_up_date DATE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (inspector_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_dormitory (dormitory_name),
   INDEX idx_inspection_date (inspection_date),
   INDEX idx_status (status)
@@ -168,8 +160,6 @@ CREATE TABLE IF NOT EXISTS student_counseling_sessions (
   confidential BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (counselor_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_student_id (student_id),
   INDEX idx_counselor_id (counselor_id),
   INDEX idx_session_date (session_date),
@@ -191,17 +181,13 @@ CREATE TABLE IF NOT EXISTS parent_notifications (
   response_date TIMESTAMP NULL,
   conduct_record_id INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (conduct_record_id) REFERENCES student_conduct_records(id) ON DELETE SET NULL,
   INDEX idx_student_id (student_id),
   INDEX idx_notification_type (notification_type),
   INDEX idx_delivery_status (delivery_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default discipline categories
-INSERT INTO discipline_categories (name, description, severity_level, default_action) VALUES
+INSERT IGNORE INTO discipline_categories (name, description, severity_level, default_action) VALUES
 ('Late Coming', 'Student arrives late to school or class', 'minor', 'Warning'),
 ('Uniform Violation', 'Improper uniform or dress code violation', 'minor', 'Warning'),
 ('Disrespect', 'Disrespectful behavior towards staff or students', 'moderate', 'Detention'),
@@ -211,11 +197,10 @@ INSERT INTO discipline_categories (name, description, severity_level, default_ac
 ('Substance Abuse', 'Use or possession of prohibited substances', 'severe', 'Suspension'),
 ('Vandalism', 'Damage to school property', 'major', 'Community Service'),
 ('Truancy', 'Unauthorized absence from school', 'moderate', 'Parent Meeting'),
-('Cheating', 'Academic dishonesty', 'moderate', 'Detention')
-ON DUPLICATE KEY UPDATE name=name;
+('Cheating', 'Academic dishonesty', 'moderate', 'Detention');
 
 -- Insert default discipline actions
-INSERT INTO discipline_actions (name, description, action_type, duration_days, requires_approval) VALUES
+INSERT IGNORE INTO discipline_actions (name, description, action_type, duration_days, requires_approval) VALUES
 ('Verbal Warning', 'Verbal warning given to student', 'warning', 0, FALSE),
 ('Written Warning', 'Written warning documented in file', 'warning', 0, FALSE),
 ('Lunch Detention', 'Student stays during lunch break', 'detention', 1, FALSE),
@@ -226,48 +211,7 @@ INSERT INTO discipline_actions (name, description, action_type, duration_days, r
 ('Community Service', 'Student performs community service', 'community_service', 0, FALSE),
 ('Counseling Session', 'Mandatory counseling session', 'counseling', 0, FALSE),
 ('Parent Conference', 'Meeting with parents required', 'parent_meeting', 0, FALSE),
-('Expulsion', 'Permanent removal from school', 'expulsion', 0, TRUE)
-ON DUPLICATE KEY UPDATE name=name;
-
--- Ensure student_discipline_records compatibility
-ALTER TABLE student_discipline_records
-ADD COLUMN IF NOT EXISTS category_id INT AFTER incident_type,
-ADD COLUMN IF NOT EXISTS action_id INT AFTER handled_by,
-ADD COLUMN IF NOT EXISTS parent_notified BOOLEAN DEFAULT FALSE AFTER action_taken,
-ADD COLUMN IF NOT EXISTS follow_up_required BOOLEAN DEFAULT FALSE AFTER parent_notified;
-
--- Add foreign keys if they don't exist
-SET @exist := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS 
-WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'student_discipline_records' 
-AND CONSTRAINT_NAME = 'fk_discipline_category');
-
-SET @sqlstmt := IF(@exist = 0, 
-'ALTER TABLE student_discipline_records ADD CONSTRAINT fk_discipline_category FOREIGN KEY (category_id) REFERENCES discipline_categories(id) ON DELETE SET NULL',
-'SELECT ''Constraint already exists''');
-
-PREPARE stmt FROM @sqlstmt;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @exist := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS 
-WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'student_discipline_records' 
-AND CONSTRAINT_NAME = 'fk_discipline_action');
-
-SET @sqlstmt := IF(@exist = 0, 
-'ALTER TABLE student_discipline_records ADD CONSTRAINT fk_discipline_action FOREIGN KEY (action_id) REFERENCES discipline_actions(id) ON DELETE SET NULL',
-'SELECT ''Constraint already exists''');
-
-PREPARE stmt FROM @sqlstmt;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_student_conduct_student ON student_conduct_records(student_id);
-CREATE INDEX IF NOT EXISTS idx_student_conduct_date ON student_conduct_records(incident_date);
-CREATE INDEX IF NOT EXISTS idx_student_conduct_status ON student_conduct_records(status);
-CREATE INDEX IF NOT EXISTS idx_behavior_points_student ON student_behavior_points(student_id);
-CREATE INDEX IF NOT EXISTS idx_counseling_student ON student_counseling_sessions(student_id);
-CREATE INDEX IF NOT EXISTS idx_parent_notifications_student ON parent_notifications(student_id);
+('Expulsion', 'Permanent removal from school', 'expulsion', 0, TRUE);
 
 -- Success message
 SELECT '✅ Database schema fixed successfully!' as Status;

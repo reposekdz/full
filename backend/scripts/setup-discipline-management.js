@@ -20,9 +20,9 @@ async function setupDisciplineManagement() {
     console.log('✅ Connected to database');
     
     // Read and execute the fix SQL script
-    console.log('📝 Reading fix script...');
+    console.log('📝 Reading schema script...');
     const sqlScript = await fs.readFile(
-      path.join(__dirname, 'fix-database-errors.sql'),
+      path.join(__dirname, 'complete-discipline-schema.sql'),
       'utf8'
     );
     
@@ -62,7 +62,12 @@ async function setupDisciplineManagement() {
       'student_behavior_points',
       'dormitory_inspections',
       'student_counseling_sessions',
-      'parent_notifications'
+      'parent_notifications',
+      'student_wellness_tracking',
+      'incident_witnesses',
+      'discipline_appeals',
+      'dormitory_assignments',
+      'positive_recognition'
     ];
     
     for (const table of tables) {
