@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Pause, Code, Building2, Car, Sparkles, ArrowRight, Users, Trophy, GraduationCap, Star, Clock, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Code, Building2, Car, Sparkles, ArrowRight, Users, Trophy, GraduationCap, Star, Clock, TrendingUp, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useContent } from '@/app/contexts/ContentContext';
@@ -15,65 +15,14 @@ interface HeroProps {
   onNavigate?: (page: string) => void;
 }
 
-const skillCards = [
-  {
-    id: 'sod',
-    titleKey: 'softwareDevelopment',
-    titleRw: 'Iterambere rya Porogaramu',
-    code: 'SOD',
-    icon: Code,
-    image: sodSlide,
-    gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-    glowColor: 'shadow-blue-500/50',
-    bgGradient: 'from-blue-500/20 to-indigo-500/20',
-    description: 'Kwiga gukora porogaramu z\'ikoranabuhanga',
-    descriptionEn: 'Learn modern software development',
-    students: 156,
-    duration: '2 Years',
-    rating: 4.9,
-    page: 'trade-sod'
-  },
-  {
-    id: 'bdc',
-    titleKey: 'buildingConstruction',
-    titleRw: 'Ubwubatsi bw\'Inyubako',
-    code: 'BDC',
-    icon: Building2,
-    image: bdcSlide,
-    gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-    glowColor: 'shadow-orange-500/50',
-    bgGradient: 'from-orange-500/20 to-amber-500/20',
-    description: 'Kwiga ubwubatsi bw\'amazu n\'inyubako',
-    descriptionEn: 'Master construction techniques',
-    students: 124,
-    duration: '2 Years',
-    rating: 4.8,
-    page: 'trade-bdc'
-  },
-  {
-    id: 'auto',
-    titleKey: 'automobileTechnology',
-    titleRw: 'Ikoranabuhanga ry\'Imodoka',
-    code: 'AUTO',
-    icon: Car,
-    image: autSlide,
-    gradient: 'from-green-500 via-emerald-500 to-teal-500',
-    glowColor: 'shadow-green-500/50',
-    bgGradient: 'from-green-500/20 to-emerald-500/20',
-    description: 'Kwiga ikoranabuhanga ry\'imodoka',
-    descriptionEn: 'Automotive technology expertise',
-    students: 98,
-    duration: '2 Years',
-    rating: 4.7,
-    page: 'trade-aut'
-  }
-];
-
 const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [stats, setStats] = useState({ students: 1248, teachers: 84, employmentRate: '95%', awards: 25 });
+  const [slides, setSlides] = useState([]);
+  const [skillCards, setSkillCards] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { t, language } = useLanguage();
 
   const defaultSlides = [
@@ -82,42 +31,149 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
     { id: 3, title: 'Automobile Technology', title_rw: 'Ikoranabuhanga ry\'Imodoka', image_url: autSlide, trade_code: 'AUT' }
   ];
 
+  const defaultSkillCards = [
+    {
+      id: 'sod',
+      titleKey: 'softwareDevelopment',
+      titleRw: 'Iterambere rya Porogaramu',
+      code: 'SOD',
+      icon: Code,
+      image: sodSlide,
+      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
+      glowColor: 'shadow-blue-500/50',
+      bgGradient: 'from-blue-500/20 to-indigo-500/20',
+      description: 'Kwiga gukora porogaramu z\'ikoranabuhanga',
+      descriptionEn: 'Learn modern software development',
+      students: 156,
+      duration: '2 Years',
+      rating: 4.9,
+      page: 'trade-sod'
+    },
+    {
+      id: 'bdc',
+      titleKey: 'buildingConstruction',
+      titleRw: 'Ubwubatsi bw\'Inyubako',
+      code: 'BDC',
+      icon: Building2,
+      image: bdcSlide,
+      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
+      glowColor: 'shadow-orange-500/50',
+      bgGradient: 'from-orange-500/20 to-amber-500/20',
+      description: 'Kwiga ubwubatsi bw\'amazu n\'inyubako',
+      descriptionEn: 'Master construction techniques',
+      students: 124,
+      duration: '2 Years',
+      rating: 4.8,
+      page: 'trade-bdc'
+    },
+    {
+      id: 'auto',
+      titleKey: 'automobileTechnology',
+      titleRw: 'Ikoranabuhanga ry\'Imodoka',
+      code: 'AUTO',
+      icon: Car,
+      image: autSlide,
+      gradient: 'from-green-500 via-emerald-500 to-teal-500',
+      glowColor: 'shadow-green-500/50',
+      bgGradient: 'from-green-500/20 to-emerald-500/20',
+      description: 'Kwiga ikoranabuhanga ry\'imodoka',
+      descriptionEn: 'Automotive technology expertise',
+      students: 98,
+      duration: '2 Years',
+      rating: 4.7,
+      page: 'trade-aut'
+    }
+  ];
+
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchHeroData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch('http://localhost:5000/api/homepage/stats');
-        const data = await response.json();
-        if (data.success) {
+        // Fetch stats
+        const statsResponse = await fetch('http://localhost:5000/api/homepage/stats');
+        const statsData = await statsResponse.json();
+        if (statsData.success) {
           setStats({
-            students: data.students,
-            teachers: data.teachers,
-            employmentRate: data.employmentRate,
-            awards: data.awards
+            students: statsData.students,
+            teachers: statsData.teachers,
+            employmentRate: statsData.employmentRate,
+            awards: statsData.awards
           });
         }
+
+        // Fetch slides
+        const slidesResponse = await fetch('http://localhost:5000/api/homepage/hero-slides');
+        const slidesData = await slidesResponse.json();
+        if (slidesData.success && slidesData.slides && slidesData.slides.length > 0) {
+          setSlides(slidesData.slides);
+        } else {
+          setSlides(defaultSlides);
+        }
+
+        // Fetch trades for skill cards
+        const tradesResponse = await fetch('http://localhost:5000/api/homepage/trades');
+        const tradesData = await tradesResponse.json();
+        if (tradesData.success && tradesData.trades && tradesData.trades.length > 0) {
+          // Transform trades to skill cards format
+          const transformedCards = tradesData.trades.slice(0, 3).map((trade: any, index: number) => {
+            const defaultCard = defaultSkillCards[index] || defaultSkillCards[0];
+            return {
+              ...defaultCard,
+              id: trade.code?.toLowerCase() || defaultCard.id,
+              titleKey: trade.name,
+              titleRw: trade.name,
+              code: trade.code || defaultCard.code,
+              description: trade.description || defaultCard.description,
+              descriptionEn: trade.description || defaultCard.descriptionEn,
+              page: `trade-${trade.code?.toLowerCase() || defaultCard.id}`
+            };
+          });
+          setSkillCards(transformedCards);
+        } else {
+          setSkillCards(defaultSkillCards);
+        }
       } catch (error) {
-        console.log('Using default stats');
+        console.log('Using default hero data:', error);
+        setSlides(defaultSlides);
+        setSkillCards(defaultSkillCards);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStats();
+    
+    fetchHeroData();
   }, []);
+
+  const activeSlides = slides.length > 0 ? slides : defaultSlides;
+  const activeSkillCards = skillCards.length > 0 ? skillCards : defaultSkillCards;
 
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % defaultSlides.length);
+      setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, activeSlides.length]);
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % defaultSlides.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + defaultSlides.length) % defaultSlides.length);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
 
   const handleCardClick = (page: string) => {
     if (onNavigate) {
       onNavigate(page);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="relative h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
+          <p className="text-xl font-semibold">Loading Hero Content...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -132,9 +188,13 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           className="absolute inset-0"
         >
           <img
-            src={defaultSlides[currentSlide % defaultSlides.length].image_url}
-            alt={defaultSlides[currentSlide % defaultSlides.length].title}
+            src={activeSlides[currentSlide % activeSlides.length]?.image_url || defaultSlides[0].image_url}
+            alt={activeSlides[currentSlide % activeSlides.length]?.title || defaultSlides[0].title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = defaultSlides[currentSlide % defaultSlides.length]?.image_url || sodSlide;
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
@@ -292,7 +352,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 {language === 'rw' ? 'Amahugurwa Yacu' : 'Our Trades'}
               </motion.h2>
 
-              {skillCards.map((card, index) => {
+              {activeSkillCards.map((card, index) => {
                 const Icon = card.icon;
                 const isHovered = hoveredCard === card.id;
                 
@@ -420,7 +480,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       {/* Navigation Controls */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-4">
         <div className="flex space-x-2">
-          {defaultSlides.map((_, index) => (
+          {activeSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}

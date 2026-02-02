@@ -73,8 +73,8 @@ const requirePermission = (permission) => {
     }
 
     try {
-      // Admin and headmaster have all permissions
-      if (['admin', 'headmaster', 'patron'].includes(req.user.role)) {
+      // School owner, admin, headmaster, and patron have all permissions
+      if (['school_owner', 'admin', 'headmaster', 'patron'].includes(req.user.role)) {
         return next();
       }
 

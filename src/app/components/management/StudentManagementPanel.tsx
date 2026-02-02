@@ -9,6 +9,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Checkbox } from '@/app/components/ui/checkbox';
+import { PowerfulStudentSelector } from '@/app/components/PowerfulStudentSelector';
 import apiService from '@/app/services/apiService';
 
 interface Student {
@@ -318,22 +319,24 @@ export default function StudentManagementPanel() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label>Class *</Label>
-                  <Select
-                    value={newStudent.trade_class_id.toString()}
-                    onValueChange={(value) => setNewStudent({ ...newStudent, trade_class_id: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select class" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id.toString()}>
-                          {cls.class_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <PowerfulStudentSelector
+                    value=""
+                    onChange={(id, data) => {
+                      if (data) {
+                        setNewStudent({ 
+                          ...newStudent, 
+                          trade_class_id: parseInt(id) 
+                        });
+                      }
+                    }}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={false}
+                  />
                 </div>
               </div>
               <DialogFooter>

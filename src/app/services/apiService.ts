@@ -24,6 +24,19 @@ class ApiService {
     return response.json();
   }
 
+  // Public request method for external use
+  async request(endpoint: string, options: any = {}) {
+    const isFormData = options.body instanceof FormData;
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        ...this.getAuthHeaders(isFormData),
+        ...options.headers
+      }
+    });
+    return response.json();
+  }
+
   // User Profile Management
   async updateProfile(profileData: any) {
     return this.request('/users/profile', {
@@ -2124,6 +2137,596 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(passwordData)
     });
+  }
+
+  // ==================== UNIVERSAL STAFF MANAGEMENT ====================
+  
+  // Dynamic Column Management
+  async getCustomColumns(entityType: string) {
+    return this.request(`/universal-management/columns/${entityType}`);
+  }
+
+  async createCustomColumn(columnData: {
+    entity_type: string;
+    column_name: string;
+    column_label: string;
+    column_type: string;
+    data_type: string;
+    is_required?: boolean;
+    is_searchable?: boolean;
+    is_sortable?: boolean;
+    is_filterable?: boolean;
+    default_value?: string;
+    validation_rules?: any;
+    options?: any;
+    display_order?: number;
+    description?: string;
+    group_name?: string;
+  }) {
+    return this.request('/universal-management/columns', {
+      method: 'POST',
+      body: JSON.stringify(columnData)
+    });
+  }
+
+  async updateCustomColumn(id: number, columnData: any) {
+    return this.request(`/universal-management/columns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(columnData)
+    });
+  }
+
+  async deleteCustomColumn(id: number, permanent: boolean = false) {
+    return this.request(`/universal-management/columns/${id}?permanent=${permanent}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Universal Entity Management
+  async getEntities(entityType: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/universal-management/entities/${entityType}?${query}`);
+  }
+
+  async getEntity(entityType: string, id: number) {
+    return this.request(`/universal-management/entities/${entityType}/${id}`);
+  }
+
+  async updateEntityCustomFields(entityType: string, id: number, customFields: any) {
+    return this.request(`/universal-management/entities/${entityType}/${id}/custom-fields`, {
+      method: 'PUT',
+      body: JSON.stringify({ custom_fields: customFields })
+    });
+  }
+
+  async bulkUpdateCustomFields(entityType: string, data: any) {
+    return this.request(`/universal-management/entities/${entityType}/bulk-update-fields`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async exportEntities(entityType: string, format: string = 'csv') {
+    return this.request(`/universal-management/entities/${entityType}/export?format=${format}`);
+  }
+
+  // ==================== ADMIN DASHBOARD ADVANCED ====================
+  
+  async getAdminDashboardOverview(timeframe: string = '30d') {
+    return this.request(`/admin-dashboard-advanced/overview?timeframe=${timeframe}`);
+  }
+
+  async getEnrollmentTrends(period: string = 'monthly', months: number = 12) {
+    return this.request(`/admin-dashboard-advanced/analytics/enrollment-trends?period=${period}&months=${months}`);
+  }
+
+  async getFinancialAnalytics(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return this.request(`/admin-dashboard-advanced/analytics/financial?${params}`);
+  }
+
+  async getAcademicPerformanceAnalytics(academicYear?: string, term?: string) {
+    const params = new URLSearchParams();
+    if (academicYear) params.append('academicYear', academicYear);
+    if (term) params.append('term', term);
+    return this.request(`/admin-dashboard-advanced/analytics/academic-performance?${params}`);
+  }
+
+  async getAttendanceAnalytics(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return this.request(`/admin-dashboard-advanced/analytics/attendance?${params}`);
+  }
+
+  async getAdminUsers(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin-dashboard-advanced/users?${query}`);
+  }
+
+  async createAdminUser(userData: any) {
+    return this.request('/admin-dashboard-advanced/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  }
+
+  async bulkActivateUsers(userIds: number[]) {
+    return this.request('/admin-dashboard-advanced/users/bulk-activate', {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds })
+    });
+  }
+
+  async bulkDeactivateUsers(userIds: number[]) {
+    return this.request('/admin-dashboard-advanced/users/bulk-deactivate', {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds })
+    });
+  }
+
+  async getSystemSettings(category?: string) {
+    const params = category ? `?category=${category}` : '';
+    return this.request(`/admin-dashboard-advanced/settings${params}`);
+  }
+
+  async updateSystemSetting(key: string, value: any) {
+    return this.request(`/admin-dashboard-advanced/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ setting_value: value })
+    });
+  }
+
+  async getActivityLogs(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/admin-dashboard-advanced/activity-logs?${query}`);
+  }
+
+  // ==================== ACCOUNTANT COMPREHENSIVE ====================
+  
+  async getFeeStructures(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/accountant-comprehensive/fee-structures?${query}`);
+  }
+
+  async createFeeStructure(feeData: any) {
+    return this.request('/accountant-comprehensive/fee-structures', {
+      method: 'POST',
+      body: JSON.stringify(feeData)
+    });
+  }
+
+  async updateFeeStructure(id: number, feeData: any) {
+    return this.request(`/accountant-comprehensive/fee-structures/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(feeData)
+    });
+  }
+
+  async getPayments(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/accountant-comprehensive/payments?${query}`);
+  }
+
+  async recordPayment(paymentData: any) {
+    return this.request('/accountant-comprehensive/payments', {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+  }
+
+  async getStudentBalance(studentId: string) {
+    return this.request(`/accountant-comprehensive/students/${studentId}/balance`);
+  }
+
+  async getReceipt(receiptNumber: string) {
+    return this.request(`/accountant-comprehensive/receipts/${receiptNumber}`);
+  }
+
+  async getReceiptByPayment(paymentId: number) {
+    return this.request(`/accountant-comprehensive/receipts/payment/${paymentId}`);
+  }
+
+  async getOutstandingBalances(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/accountant-comprehensive/reports/outstanding-balances?${query}`);
+  }
+
+  async getDailyRevenue(date: string) {
+    return this.request(`/accountant-comprehensive/reports/daily-revenue?date=${date}`);
+  }
+
+  async getMonthlyRevenue(month: string) {
+    return this.request(`/accountant-comprehensive/reports/monthly-revenue?month=${month}`);
+  }
+
+  async getCollectionEfficiency(academicYear: string) {
+    return this.request(`/accountant-comprehensive/reports/collection-efficiency?academicYear=${academicYear}`);
+  }
+
+  async getBudgets(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/accountant-comprehensive/budgets?${query}`);
+  }
+
+  async createBudget(budgetData: any) {
+    return this.request('/accountant-comprehensive/budgets', {
+      method: 'POST',
+      body: JSON.stringify(budgetData)
+    });
+  }
+
+  async updateBudget(id: number, budgetData: any) {
+    return this.request(`/accountant-comprehensive/budgets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(budgetData)
+    });
+  }
+
+  async recordExpense(expenseData: any) {
+    return this.request('/accountant-comprehensive/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expenseData)
+    });
+  }
+
+  async getExpenseReports(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/accountant-comprehensive/expenses/reports?${query}`);
+  }
+
+  // ==================== STOCK MANAGEMENT ADVANCED ====================
+  
+  async getInventory(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/stock-advanced/inventory?${query}`);
+  }
+
+  async getInventoryItem(id: number) {
+    return this.request(`/stock-advanced/inventory/${id}`);
+  }
+
+  async addInventoryItem(itemData: any) {
+    return this.request('/stock-advanced/inventory', {
+      method: 'POST',
+      body: JSON.stringify(itemData)
+    });
+  }
+
+  async updateInventoryItem(id: number, itemData: any) {
+    return this.request(`/stock-advanced/inventory/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(itemData)
+    });
+  }
+
+  async getSuppliers(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/stock-advanced/suppliers?${query}`);
+  }
+
+  async createSupplier(supplierData: any) {
+    return this.request('/stock-advanced/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(supplierData)
+    });
+  }
+
+  async getSupplierPerformance(id: number) {
+    return this.request(`/stock-advanced/suppliers/${id}/performance`);
+  }
+
+  async recordPurchase(purchaseData: any) {
+    return this.request('/stock-advanced/transactions/purchase', {
+      method: 'POST',
+      body: JSON.stringify(purchaseData)
+    });
+  }
+
+  async recordStockAdjustment(adjustmentData: any) {
+    return this.request('/stock-advanced/transactions/adjustment', {
+      method: 'POST',
+      body: JSON.stringify(adjustmentData)
+    });
+  }
+
+  async recordDistribution(distributionData: any) {
+    return this.request('/stock-advanced/distributions', {
+      method: 'POST',
+      body: JSON.stringify(distributionData)
+    });
+  }
+
+  async recordReturn(id: number, returnData: any) {
+    return this.request(`/stock-advanced/distributions/${id}/return`, {
+      method: 'PUT',
+      body: JSON.stringify(returnData)
+    });
+  }
+
+  async getInventoryValuation(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/stock-advanced/reports/valuation?${query}`);
+  }
+
+  async getStockMovement(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/stock-advanced/reports/movement?${query}`);
+  }
+
+  async getLowStockAlerts() {
+    return this.request('/stock-advanced/reports/low-stock-alerts');
+  }
+
+  async getExpiringItems(days: number = 30) {
+    return this.request(`/stock-advanced/reports/expiring-items?days=${days}`);
+  }
+
+  async getStockAuditReport(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/stock-advanced/reports/audit?${query}`);
+  }
+
+  // ==================== TEACHER PORTAL ADVANCED ====================
+  
+  async getTeacherDashboard() {
+    return this.request('/teacher-portal-advanced/dashboard');
+  }
+
+  async getTeacherClasses(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/teacher-portal-advanced/classes?${query}`);
+  }
+
+  async getClassStudents(classId: number) {
+    return this.request(`/teacher-portal-advanced/classes/${classId}/students`);
+  }
+
+  async markAttendance(attendanceData: any) {
+    return this.request('/teacher-portal-advanced/attendance', {
+      method: 'POST',
+      body: JSON.stringify(attendanceData)
+    });
+  }
+
+  async bulkMarkAttendance(attendanceData: any) {
+    return this.request('/teacher-portal-advanced/attendance/bulk', {
+      method: 'POST',
+      body: JSON.stringify(attendanceData)
+    });
+  }
+
+  async getAttendanceReport(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/teacher-portal-advanced/attendance/report?${query}`);
+  }
+
+  async recordGrades(gradesData: any) {
+    return this.request('/teacher-portal-advanced/grades', {
+      method: 'POST',
+      body: JSON.stringify(gradesData)
+    });
+  }
+
+  async updateGrade(id: number, gradeData: any) {
+    return this.request(`/teacher-portal-advanced/grades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(gradeData)
+    });
+  }
+
+  async getClassPerformance(classId: number, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/teacher-portal-advanced/classes/${classId}/performance?${query}`);
+  }
+
+  async createAssignment(assignmentData: any) {
+    return this.request('/teacher-portal-advanced/assignments', {
+      method: 'POST',
+      body: JSON.stringify(assignmentData)
+    });
+  }
+
+  async getAssignmentSubmissions(assignmentId: number) {
+    return this.request(`/teacher-portal-advanced/assignments/${assignmentId}/submissions`);
+  }
+
+  async gradeSubmission(submissionId: number, gradeData: any) {
+    return this.request(`/teacher-portal-advanced/assignments/submissions/${submissionId}/grade`, {
+      method: 'PUT',
+      body: JSON.stringify(gradeData)
+    });
+  }
+
+  async getStudentPerformanceReport(studentId: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/teacher-portal-advanced/analytics/student/${studentId}/performance?${query}`);
+  }
+
+  async getClassAnalytics(classId: number) {
+    return this.request(`/teacher-portal-advanced/analytics/class/${classId}/statistics`);
+  }
+
+  // ==================== STUDENT PORTAL COMPREHENSIVE ====================
+  
+  async getStudentDashboard() {
+    return this.request('/student-portal-comprehensive/dashboard');
+  }
+
+  async getStudentMarks(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/student-portal-comprehensive/academic/marks?${query}`);
+  }
+
+  async getStudentAttendance(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/student-portal-comprehensive/academic/attendance?${query}`);
+  }
+
+  async getStudentTimetable() {
+    return this.request('/student-portal-comprehensive/academic/timetable');
+  }
+
+  async getStudentAssignments(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/student-portal-comprehensive/assignments?${query}`);
+  }
+
+  async submitAssignment(assignmentId: number, submissionData: any) {
+    return this.request(`/student-portal-comprehensive/assignments/${assignmentId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(submissionData)
+    });
+  }
+
+  async getAssignmentFeedback(assignmentId: number) {
+    return this.request(`/student-portal-comprehensive/assignments/${assignmentId}/feedback`);
+  }
+
+  async getStudentConduct() {
+    return this.request('/student-portal-comprehensive/conduct/records');
+  }
+
+  async getStudentAchievements() {
+    return this.request('/student-portal-comprehensive/achievements');
+  }
+
+  async getStudentFeeStatement(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/student-portal-comprehensive/fees/statement?${query}`);
+  }
+
+  async getStudentReceipts() {
+    return this.request('/student-portal-comprehensive/fees/receipts');
+  }
+
+  async getStudentProfile() {
+    return this.request('/student-portal-comprehensive/profile');
+  }
+
+  async updateStudentProfile(profileData: any) {
+    return this.request('/student-portal-comprehensive/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    });
+  }
+
+  async getStudentMessages(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/student-portal-comprehensive/messages?${query}`);
+  }
+
+  async sendStudentMessage(messageData: any) {
+    return this.request('/student-portal-comprehensive/messages', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  // ==================== PARENT PORTAL COMPREHENSIVE ====================
+  
+  async getParentDashboard() {
+    return this.request('/parent-portal-comprehensive/dashboard');
+  }
+
+  async getChildAcademicPerformance(studentId: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/academic?${query}`);
+  }
+
+  async getChildAttendance(studentId: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/attendance?${query}`);
+  }
+
+  async getChildDiscipline(studentId: string) {
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/discipline`);
+  }
+
+  async getChildAssignments(studentId: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/assignments?${query}`);
+  }
+
+  async getChildFeeStatement(studentId: string) {
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/statement`);
+  }
+
+  async submitPaymentProof(studentId: string, proofData: any) {
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/payment-proof`, {
+      method: 'POST',
+      body: JSON.stringify(proofData)
+    });
+  }
+
+  async getChildReceipts(studentId: string) {
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/receipts`);
+  }
+
+  async sendMessageToTeacher(messageData: any) {
+    return this.request('/parent-portal-comprehensive/messages/teacher', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  async sendMessageToAdmin(messageData: any) {
+    return this.request('/parent-portal-comprehensive/messages/admin', {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  async getParentMessages(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/messages?${query}`);
+  }
+
+  async getParentNotifications(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/notifications?${query}`);
+  }
+
+  async markNotificationAsRead(id: number) {
+    return this.request(`/parent-portal-comprehensive/notifications/${id}/read`, {
+      method: 'PUT'
+    });
+  }
+
+  async getChildComprehensiveReport(studentId: string, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-portal-comprehensive/children/${studentId}/report?${query}`);
+  }
+
+  // ==================== GLOBAL STUDENT SHEETS ====================
+  
+  async getGlobalStudentSheets(tradeCode: string, levelNumber: number, levelSuffix: string = '') {
+    return this.request(`/global-sheets/sheets/${tradeCode}/${levelNumber}?level_suffix=${levelSuffix}`);
+  }
+
+  async getGlobalStudent(studentId: string) {
+    return this.request(`/global-sheets/students/${studentId}`);
+  }
+
+  async createGlobalStudent(studentData: any) {
+    return this.request('/global-sheets/students', {
+      method: 'POST',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async updateGlobalStudent(studentId: string, studentData: any) {
+    return this.request(`/global-sheets/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(studentData)
+    });
+  }
+
+  async getGlobalStudents(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/global-sheets/students?${query}`);
   }
 }
 

@@ -1,276 +1,950 @@
-# School Management System - Complete API Documentation
+# Comprehensive Advanced School Management System - API Documentation
 
-## Overview
-This is a comprehensive, production-ready backend API for a powerful school management system with full functionality for all roles.
+## Table of Contents
+1. [Universal Staff Management](#universal-staff-management)
+2. [Admin Dashboard Advanced](#admin-dashboard-advanced)
+3. [Accountant Comprehensive](#accountant-comprehensive)
+4. [Stock Management Advanced](#stock-management-advanced)
+5. [Teacher Portal Advanced](#teacher-portal-advanced)
+6. [Student Portal Comprehensive](#student-portal-comprehensive)
+7. [Parent Portal Comprehensive](#parent-portal-comprehensive)
 
-## Features
-- ✅ Complete user management for all roles
-- ✅ Academic management (courses, subjects, classes)
-- ✅ Exam management with results tracking
-- ✅ Attendance tracking and analytics
-- ✅ Grade management and performance analytics
-- ✅ Timetable management with conflict detection
-- ✅ Fee management and payment tracking
-- ✅ Stock/inventory management
-- ✅ Sports teams, events, and achievements
-- ✅ Messaging system between users
-- ✅ Notifications system
-- ✅ Parent-student linking
-- ✅ Management teams
-- ✅ Advanced analytics and reporting
+---
 
-## Setup
+## Universal Staff Management
 
-### 1. Install Dependencies
-```bash
-cd backend
-npm install
+**Base URL**: `/api/universal-management`
+
+### Dynamic Column Management
+
+#### Get Custom Columns
+```
+GET /columns/:entityType
+```
+**Description**: Get all custom columns for a specific entity type
+
+**Parameters**:
+- `entityType` (path): Entity type (students, teachers, staff, parents)
+
+**Response**:
+```json
+{
+  "success": true,
+  "columns": [
+    {
+      "id": 1,
+      "entity_type": "students",
+      "column_name": "blood_type",
+      "column_label": "Blood Type",
+      "column_type": "select",
+      "options": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+    }
+  ]
+}
 ```
 
-### 2. Configure Environment
-Create `.env` file:
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=school_management
-DB_PORT=3306
-PORT=5000
-JWT_SECRET=your_jwt_secret_key_here
-NODE_ENV=development
+#### Create Custom Column
+```
+POST /columns
+```
+**Authorization**: Admin, Headmaster
+
+**Body**:
+```json
+{
+  "entity_type": "students",
+  "column_name": "blood_type",
+  "column_label": "Blood Type",
+  "column_type": "select",
+  "data_type": "string",
+  "is_required": 0,
+  "is_searchable": 1,
+  "options": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+}
 ```
 
-### 3. Initialize Database
-```bash
-node scripts/init-complete-database.js
+#### Update Custom Column
+```
+PUT /columns/:id
+```
+**Authorization**: Admin, Headmaster
+
+#### Delete Custom Column
+```
+DELETE /columns/:id?permanent=false
+```
+**Authorization**: Admin, Headmaster
+
+**Query Parameters**:
+- `permanent`: true/false (soft delete by default)
+
+### Universal Entity Management
+
+#### Get All Entities
+```
+GET /entities/:entityType
+```
+**Description**: Get all entities with dynamic columns and advanced filtering
+
+**Query Parameters**:
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 50)
+- `search`: Search term
+- `sortBy`: Sort field (default: created_at)
+- `sortOrder`: ASC/DESC (default: DESC)
+- `filters`: JSON string of custom field filters
+
+**Response**:
+```json
+{
+  "success": true,
+  "entities": [...],
+  "customColumns": [...],
+  "pagination": {
+    "total": 150,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 3
+  }
+}
 ```
 
-### 4. Start Server
-```bash
-npm start
-# or for development
-npm run dev
+#### Get Single Entity
+```
+GET /entities/:entityType/:id
 ```
 
-## Default Admin Credentials
-- **Username:** admin
-- **Password:** admin123
-- **Email:** admin@school.com
+#### Update Entity Custom Fields
+```
+PUT /entities/:entityType/:id/custom-fields
+```
 
-## API Endpoints
+**Body**:
+```json
+{
+  "custom_fields": {
+    "blood_type": "A+",
+    "emergency_contact": "0788888888"
+  }
+}
+```
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user info
+#### Bulk Update Custom Fields
+```
+POST /entities/:entityType/bulk-update-fields
+```
 
-### Users Management
-- `GET /api/users` - Get all users (with filters)
-- `GET /api/users/:id` - Get user by ID
-- `POST /api/users` - Create new user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
-- `GET /api/users/roles/list` - Get all roles
+#### Export Entities
+```
+GET /entities/:entityType/export?format=csv
+```
 
-### Courses Management
-- `GET /api/courses` - Get all courses
-- `GET /api/courses/:id` - Get course by ID
-- `POST /api/courses` - Create course
-- `PUT /api/courses/:id` - Update course
-- `DELETE /api/courses/:id` - Delete course
-- `GET /api/courses/:id/statistics` - Get course statistics
+---
 
-### Exams Management
-- `GET /api/exams` - Get all exams (with filters)
-- `GET /api/exams/:id` - Get exam by ID
-- `POST /api/exams` - Create exam
-- `PUT /api/exams/:id` - Update exam
-- `DELETE /api/exams/:id` - Delete exam
-- `POST /api/exams/:id/register` - Register student for exam
-- `POST /api/exams/:id/results` - Submit exam results
-- `GET /api/exams/:id/results` - Get exam results
+## Admin Dashboard Advanced
+
+**Base URL**: `/api/admin-dashboard-advanced`
+
+### Dashboard Overview
+
+#### Get Comprehensive Statistics
+```
+GET /overview?timeframe=30d
+```
+**Authorization**: Admin, Headmaster
+
+**Query Parameters**:
+- `timeframe`: 7d, 30d, 90d, 1y
+
+**Response**:
+```json
+{
+  "success": true,
+  "statistics": {
+    "students": {
+      "total": 1500,
+      "active": 1450,
+      "suspended": 50,
+      "new_this_period": 120
+    },
+    "financial": {
+      "total_revenue": 45000000,
+      "pending_payments": 5000000,
+      "overdue_payments": 2000000
+    },
+    "attendance": {
+      "total_records": 30000,
+      "attendance_rate": 92.5
+    }
+  }
+}
+```
+
+### Analytics
+
+#### Enrollment Trends
+```
+GET /analytics/enrollment-trends?period=monthly&months=12
+```
+
+#### Financial Analytics
+```
+GET /analytics/financial?startDate=2024-01-01&endDate=2024-12-31
+```
+
+#### Academic Performance
+```
+GET /analytics/academic-performance?academicYear=2024-2025&term=Term1
+```
+
+#### Attendance Analytics
+```
+GET /analytics/attendance?startDate=2024-01-01&endDate=2024-12-31
+```
+
+### User Management
+
+#### Get All Users
+```
+GET /users?role=teacher&status=active&page=1&limit=50
+```
+
+#### Create User
+```
+POST /users
+```
+
+#### Bulk Operations
+```
+POST /users/bulk-activate
+POST /users/bulk-deactivate
+POST /users/bulk-role-update
+```
+
+### System Settings
+
+#### Get All Settings
+```
+GET /settings?category=general
+```
+
+#### Update Settings
+```
+PUT /settings/:key
+```
+
+### Activity Logs
+
+#### Get Activity Logs
+```
+GET /activity-logs?userId=123&action=login&startDate=2024-01-01
+```
+
+---
+
+## Accountant Comprehensive
+
+**Base URL**: `/api/accountant-comprehensive`
+
+### Fee Structure Management
+
+#### Get Fee Structures
+```
+GET /fee-structures?academicYear=2024-2025&tradeCode=ICT
+```
+
+#### Create Fee Structure
+```
+POST /fee-structures
+```
+
+**Body**:
+```json
+{
+  "academic_year": "2024-2025",
+  "term": "Term 1",
+  "trade_code": "ICT",
+  "trade_name": "Information Technology",
+  "level_number": 3,
+  "fee_type": "Tuition",
+  "fee_category": "Academic",
+  "amount": 150000,
+  "currency": "RWF",
+  "due_date": "2024-09-30",
+  "installment_allowed": 1,
+  "installment_count": 3
+}
+```
+
+### Payment Management
+
+#### Get All Payments
+```
+GET /payments?status=paid&startDate=2024-01-01&studentId=STU2024001
+```
+
+#### Record Payment
+```
+POST /payments
+```
+
+**Body**:
+```json
+{
+  "student_id": "STU2024001",
+  "fee_type": "Tuition",
+  "amount": 50000,
+  "payment_method": "Mobile Money",
+  "payment_reference": "MM123456789",
+  "payment_date": "2024-02-01"
+}
+```
+
+#### Get Student Balance
+```
+GET /students/:studentId/balance
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "student_id": "STU2024001",
+  "total_fees": 450000,
+  "total_paid": 300000,
+  "balance": 150000,
+  "payment_history": [...]
+}
+```
+
+### Receipt Management
+
+#### Get Receipt
+```
+GET /receipts/:receiptNumber
+GET /receipts/payment/:paymentId
+```
+
+#### Generate Receipt (PDF)
+```
+GET /receipts/:receiptNumber/pdf
+```
+
+### Financial Reports
+
+#### Outstanding Balances
+```
+GET /reports/outstanding-balances?tradeCode=ICT&level=3
+```
+
+#### Daily Revenue
+```
+GET /reports/daily-revenue?date=2024-02-01
+```
+
+#### Monthly Revenue
+```
+GET /reports/monthly-revenue?month=2024-02
+```
+
+#### Collection Efficiency
+```
+GET /reports/collection-efficiency?academicYear=2024-2025
+```
+
+### Budget Management
+
+#### Get Budgets
+```
+GET /budgets?academicYear=2024-2025&category=Operations
+```
+
+#### Create Budget
+```
+POST /budgets
+```
+
+#### Update Budget
+```
+PUT /budgets/:id
+```
+
+### Expense Management
+
+#### Record Expense
+```
+POST /expenses
+```
+
+**Body**:
+```json
+{
+  "category": "Utilities",
+  "subcategory": "Electricity",
+  "amount": 500000,
+  "expense_date": "2024-02-01",
+  "description": "Monthly electricity bill",
+  "vendor": "EUCL",
+  "payment_method": "Bank Transfer"
+}
+```
+
+#### Get Expense Reports
+```
+GET /expenses/reports?startDate=2024-01-01&endDate=2024-12-31
+```
+
+---
+
+## Stock Management Advanced
+
+**Base URL**: `/api/stock-advanced`
+
+### Inventory Management
+
+#### Get All Stock Items
+```
+GET /inventory?category=Electronics&lowStock=true&page=1
+```
+
+**Query Parameters**:
+- `category`: Filter by category
+- `status`: available, low_stock, out_of_stock
+- `search`: Search term
+- `lowStock`: true/false
+- `supplier`: Supplier ID
+- `location`: Storage location
+
+#### Get Single Item
+```
+GET /inventory/:id
+```
+
+**Response**: Includes transaction history and distribution records
+
+#### Add Stock Item
+```
+POST /inventory
+```
+
+**Body**:
+```json
+{
+  "item_code": "LAP-001",
+  "item_name": "HP Laptop",
+  "category": "Electronics",
+  "unit_of_measure": "piece",
+  "quantity": 50,
+  "unit_price": 800000,
+  "reorder_level": 10,
+  "supplier_id": 1,
+  "storage_location": "Warehouse A"
+}
+```
+
+#### Update Stock Item
+```
+PUT /inventory/:id
+```
+
+### Supplier Management
+
+#### Get All Suppliers
+```
+GET /suppliers?status=active
+```
+
+#### Create Supplier
+```
+POST /suppliers
+```
+
+#### Get Supplier Performance
+```
+GET /suppliers/:id/performance
+```
+
+### Transaction Management
+
+#### Record Purchase
+```
+POST /transactions/purchase
+```
+
+**Body**:
+```json
+{
+  "item_id": 1,
+  "quantity": 100,
+  "unit_price": 800000,
+  "supplier_id": 1,
+  "purchase_order_number": "PO-2024-001",
+  "transaction_date": "2024-02-01"
+}
+```
+
+#### Record Adjustment
+```
+POST /transactions/adjustment
+```
+
+### Distribution Management
+
+#### Record Distribution
+```
+POST /distributions
+```
+
+**Body**:
+```json
+{
+  "item_id": 1,
+  "quantity": 5,
+  "distributed_to": "ICT Department",
+  "distributed_to_type": "department",
+  "purpose": "New semester equipment",
+  "distribution_date": "2024-02-01",
+  "return_expected": 0
+}
+```
+
+#### Record Return
+```
+PUT /distributions/:id/return
+```
+
+### Stock Reports
+
+#### Inventory Valuation
+```
+GET /reports/valuation?category=Electronics
+```
+
+#### Stock Movement
+```
+GET /reports/movement?itemId=1&startDate=2024-01-01
+```
+
+#### Low Stock Alerts
+```
+GET /reports/low-stock-alerts
+```
+
+#### Expiring Items
+```
+GET /reports/expiring-items?days=30
+```
+
+#### Audit Report
+```
+GET /reports/audit?startDate=2024-01-01&endDate=2024-12-31
+```
+
+---
+
+## Teacher Portal Advanced
+
+**Base URL**: `/api/teacher-portal-advanced`
+
+### Dashboard
+
+#### Get Teacher Dashboard
+```
+GET /dashboard
+```
+**Authorization**: Teacher
+
+**Response**:
+```json
+{
+  "success": true,
+  "dashboard": {
+    "classes": [...],
+    "todaySchedule": [...],
+    "pendingGrading": 25,
+    "attendanceStats": {...}
+  }
+}
+```
+
+### Class Management
+
+#### Get Teacher's Classes
+```
+GET /classes?academicYear=2024-2025&term=Term1
+```
+
+#### Get Class Students
+```
+GET /classes/:classId/students
+```
 
 ### Attendance Management
-- `POST /api/attendance` - Mark attendance
-- `POST /api/attendance/bulk` - Bulk mark attendance
-- `GET /api/attendance` - Get attendance records
-- `GET /api/attendance/statistics` - Get attendance statistics
-- `GET /api/attendance/class-report/:classId` - Get class attendance report
-- `DELETE /api/attendance/:id` - Delete attendance record
 
-### Grades Management
-- `POST /api/grades` - Submit grade
-- `POST /api/grades/bulk` - Bulk submit grades
-- `GET /api/grades` - Get grades
-- `GET /api/grades/student-summary/:studentId` - Get student performance summary
-- `GET /api/grades/class-performance/:classId` - Get class performance
-- `PUT /api/grades/:id` - Update grade
-- `DELETE /api/grades/:id` - Delete grade
-- `GET /api/grades/analytics` - Get grade analytics
+#### Mark Attendance
+```
+POST /attendance
+```
 
-### Timetable Management
-- `GET /api/timetable` - Get timetable entries
-- `GET /api/timetable/student/:studentId` - Get student timetable
-- `GET /api/timetable/teacher/:teacherId` - Get teacher timetable
-- `POST /api/timetable` - Create timetable entry
-- `PUT /api/timetable/:id` - Update timetable entry
-- `DELETE /api/timetable/:id` - Delete timetable entry
-- `GET /api/timetable/conflicts` - Get timetable conflicts
+**Body**:
+```json
+{
+  "class_id": 1,
+  "attendance_date": "2024-02-01",
+  "attendance_records": [
+    {"student_id": "STU001", "status": "present"},
+    {"student_id": "STU002", "status": "absent", "reason": "Sick"}
+  ]
+}
+```
+
+#### Bulk Mark Attendance
+```
+POST /attendance/bulk
+```
+
+#### Get Attendance Report
+```
+GET /attendance/report?classId=1&startDate=2024-01-01
+```
+
+### Grade Management
+
+#### Record Marks
+```
+POST /grades
+```
+
+**Body**:
+```json
+{
+  "class_id": 1,
+  "subject_id": 5,
+  "academic_year": "2024-2025",
+  "term": "Term 1",
+  "marks": [
+    {
+      "student_id": "STU001",
+      "cat_marks": 15,
+      "exam_marks": 65,
+      "final_marks": 80
+    }
+  ]
+}
+```
+
+#### Update Marks
+```
+PUT /grades/:id
+```
+
+#### Get Class Performance
+```
+GET /classes/:classId/performance?term=Term1
+```
+
+### Assignment Management
+
+#### Create Assignment
+```
+POST /assignments
+```
+
+**Body**:
+```json
+{
+  "class_id": 1,
+  "subject_id": 5,
+  "title": "JavaScript Basics",
+  "description": "Complete exercises 1-10",
+  "due_date": "2024-02-15",
+  "total_marks": 20,
+  "assignment_type": "homework"
+}
+```
+
+#### Get Assignment Submissions
+```
+GET /assignments/:id/submissions
+```
+
+#### Grade Submission
+```
+PUT /assignments/submissions/:id/grade
+```
+
+**Body**:
+```json
+{
+  "grade": "A",
+  "graded_marks": 18,
+  "feedback": "Excellent work!"
+}
+```
+
+### Performance Analytics
+
+#### Student Performance Report
+```
+GET /analytics/student/:studentId/performance?classId=1
+```
+
+#### Class Analytics
+```
+GET /analytics/class/:classId/statistics
+```
+
+---
+
+## Student Portal Comprehensive
+
+**Base URL**: `/api/student-portal-comprehensive`
+
+### Dashboard
+
+#### Get Student Dashboard
+```
+GET /dashboard
+```
+**Authorization**: Student
+
+**Response**:
+```json
+{
+  "success": true,
+  "dashboard": {
+    "profile": {...},
+    "academicStats": {...},
+    "attendanceStats": {...},
+    "pendingAssignments": [...],
+    "feeBalance": 150000
+  }
+}
+```
+
+### Academic Records
+
+#### Get Marks/Grades
+```
+GET /academic/marks?academicYear=2024-2025&term=Term1
+```
+
+#### Get Attendance Records
+```
+GET /academic/attendance?startDate=2024-01-01&endDate=2024-12-31
+```
+
+#### Get Timetable
+```
+GET /academic/timetable
+```
+
+### Assignments
+
+#### Get All Assignments
+```
+GET /assignments?status=pending
+```
+
+#### Submit Assignment
+```
+POST /assignments/:id/submit
+```
+
+**Body**:
+```json
+{
+  "submission_text": "My assignment solution...",
+  "submission_files": ["file1.pdf", "file2.docx"]
+}
+```
+
+#### View Assignment Feedback
+```
+GET /assignments/:id/feedback
+```
+
+### Conduct & Achievements
+
+#### Get Conduct Records
+```
+GET /conduct/records
+```
+
+#### Get Achievements
+```
+GET /achievements
+```
+
+### Fee Management
+
+#### Get Fee Statement
+```
+GET /fees/statement?academicYear=2024-2025
+```
+
+#### Get Payment Receipts
+```
+GET /fees/receipts
+```
+
+#### Get Receipt PDF
+```
+GET /fees/receipts/:receiptNumber/pdf
+```
+
+### Profile Management
+
+#### Get Profile
+```
+GET /profile
+```
+
+#### Update Profile
+```
+PUT /profile
+```
+
+### Communication
+
+#### Get Messages
+```
+GET /messages?type=teacher
+```
+
+#### Send Message
+```
+POST /messages
+```
+
+---
+
+## Parent Portal Comprehensive
+
+**Base URL**: `/api/parent-portal-comprehensive`
+
+### Dashboard
+
+#### Get Parent Dashboard
+```
+GET /dashboard
+```
+**Authorization**: Parent
+
+**Response**:
+```json
+{
+  "success": true,
+  "dashboard": {
+    "children": [
+      {
+        "student": {...},
+        "academicStats": {...},
+        "attendanceStats": {...},
+        "feeBalance": 150000
+      }
+    ],
+    "totalFeeBalance": 300000
+  }
+}
+```
+
+### Child Monitoring
+
+#### Get Child's Academic Performance
+```
+GET /children/:studentId/academic?academicYear=2024-2025
+```
+
+#### Get Child's Attendance
+```
+GET /children/:studentId/attendance?startDate=2024-01-01
+```
+
+#### Get Child's Discipline Records
+```
+GET /children/:studentId/discipline
+```
+
+#### Get Child's Assignments
+```
+GET /children/:studentId/assignments?status=pending
+```
+
+### Fee Management
+
+#### Get Child's Fee Statement
+```
+GET /children/:studentId/fees/statement
+```
+
+#### Submit Payment Proof
+```
+POST /children/:studentId/fees/payment-proof
+```
+
+**Body**:
+```json
+{
+  "amount": 50000,
+  "payment_method": "Mobile Money",
+  "transaction_reference": "MM123456789",
+  "payment_date": "2024-02-01",
+  "proof_document": "receipt.jpg"
+}
+```
+
+#### Get Payment Receipts
+```
+GET /children/:studentId/fees/receipts
+```
+
+### Communication
+
+#### Send Message to Teacher
+```
+POST /messages/teacher
+```
+
+#### Send Message to Admin
+```
+POST /messages/admin
+```
+
+#### Get Messages
+```
+GET /messages?studentId=STU001
+```
 
 ### Notifications
-- `GET /api/notifications` - Get user notifications
-- `POST /api/notifications` - Create notification
-- `POST /api/notifications/broadcast` - Broadcast to multiple users
-- `POST /api/notifications/broadcast-role` - Broadcast to role
-- `PUT /api/notifications/:id/read` - Mark as read
-- `PUT /api/notifications/read-all` - Mark all as read
-- `DELETE /api/notifications/:id` - Delete notification
-- `DELETE /api/notifications/clear-read` - Clear read notifications
 
-### Messages
-- `GET /api/messages` - Get user messages
-- `GET /api/messages/conversation/:userId` - Get conversation
-- `POST /api/messages` - Send message
-- `PUT /api/messages/:id/read` - Mark message as read
-- `DELETE /api/messages/:id` - Delete message
-- `GET /api/messages/statistics` - Get message statistics
-- `GET /api/messages/contacts` - Get recent contacts
+#### Get Notifications
+```
+GET /notifications?studentId=STU001&unreadOnly=true
+```
 
-### Sports Management
-- `GET /api/sports/teams` - Get all sports teams
-- `GET /api/sports/teams/:id` - Get sports team by ID
-- `POST /api/sports/teams` - Create sports team
-- `PUT /api/sports/teams/:id` - Update sports team
-- `DELETE /api/sports/teams/:id` - Delete sports team
-- `GET /api/sports/events` - Get all sports events
-- `GET /api/sports/events/:id` - Get sports event by ID
-- `POST /api/sports/events` - Create sports event
-- `PUT /api/sports/events/:id` - Update sports event
-- `DELETE /api/sports/events/:id` - Delete sports event
-- `GET /api/sports/achievements` - Get all achievements
-- `POST /api/sports/achievements` - Create achievement
-- `PUT /api/sports/achievements/:id` - Update achievement
-- `DELETE /api/sports/achievements/:id` - Delete achievement
+#### Mark as Read
+```
+PUT /notifications/:id/read
+```
 
-### Teams (Management Teams)
-- `GET /api/teams` - Get all teams
-- `GET /api/teams/:id` - Get team by ID
-- `POST /api/teams` - Create team
-- `PUT /api/teams/:id` - Update team
-- `DELETE /api/teams/:id` - Delete team
+### Reports
 
-### Finance Management
-- `GET /api/finance/payments` - Get payments
-- `POST /api/finance/payments` - Create payment
-- `GET /api/finance/students/:id/fee-summary` - Get student fee summary
-- `GET /api/finance/reports/summary` - Get financial summary
+#### Get Comprehensive Child Report
+```
+GET /children/:studentId/report?academicYear=2024-2025&term=Term1
+```
 
-### Stock Management
-- `GET /api/stock/items` - Get stock items
-- `POST /api/stock/items` - Create stock item
-- `PUT /api/stock/items/:id` - Update stock item
-- `DELETE /api/stock/items/:id` - Delete stock item
-- `GET /api/stock/movements` - Get stock movements
-- `POST /api/stock/movements` - Create stock movement
+---
 
-### Parent Management
-- `POST /api/parents/register` - Register parent
-- `GET /api/parents/children` - Get parent's children
-- `POST /api/parents/link-child` - Link child to parent
-- `GET /api/parents/children/:id/grades` - Get child grades
-- `GET /api/parents/children/:id/attendance` - Get child attendance
-- `GET /api/parents/children/:id/fees` - Get child fees
-
-### Teacher Management
-- `GET /api/teachers/classes` - Get teacher's classes
-- `GET /api/teachers/classes/:id/students` - Get class students
-- `POST /api/teachers/grades/bulk` - Submit bulk grades
-- `POST /api/teachers/attendance/bulk` - Mark bulk attendance
-- `GET /api/teachers/statistics` - Get teacher statistics
-
-### Student Management
-- `GET /api/students/dashboard` - Get student dashboard
-- `GET /api/students/grades` - Get student grades
-- `GET /api/students/attendance` - Get student attendance
-- `GET /api/students/timetable` - Get student timetable
-- `GET /api/students/performance` - Get student performance
-
-## User Roles
-
-### Super Admin
-- Full system access
-- User management
-- System configuration
-
-### Admin
-- School-wide management
-- Content management
-- User management (limited)
-
-### Headmaster
-- Overall school oversight
-- Staff management
-- Strategic decisions
-
-### Director of Studies
-- Academic management
-- Curriculum oversight
-- Teacher coordination
-
-### Director of Discipline
-- Student conduct
-- Attendance monitoring
-- Disciplinary actions
-
-### Teacher
-- Class management
-- Grade submission
-- Attendance marking
-
-### Student
-- View grades
-- View timetable
-- View attendance
-
-### Parent
-- View children's performance
-- Communication with teachers
-- Fee payment tracking
-
-### Accountant
-- Financial management
-- Fee collection
-- Financial reporting
-
-### Stock Manager
-- Inventory management
-- Stock tracking
-- Purchase orders
-
-## Query Parameters
-
-### Common Filters
-- `trade` - Filter by trade (SOD, BDC, AUT, General)
-- `level` - Filter by level (Level 3, Level 4, Level 5)
-- `search` - Search by name, code, etc.
-- `status` - Filter by status
-- `limit` - Limit results
-- `offset` - Pagination offset
-
-### Date Filters
-- `start_date` - Start date for range
-- `end_date` - End date for range
-- `date` - Specific date
-
-## Response Format
+## Common Response Formats
 
 ### Success Response
 ```json
 {
   "success": true,
-  "data": {},
-  "message": "Operation successful"
+  "message": "Operation successful",
+  "data": {...}
 }
 ```
 
@@ -279,105 +953,106 @@ npm run dev
 {
   "success": false,
   "message": "Error description",
-  "error": "Detailed error (development only)"
+  "errors": [...]
 }
 ```
 
+### Pagination Response
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "total": 150,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 3
+  }
+}
+```
+
+---
+
 ## Authentication
-All protected endpoints require JWT token in Authorization header:
+
+All endpoints require JWT authentication unless specified otherwise.
+
+**Authorization Header**:
 ```
-Authorization: Bearer <token>
+Authorization: Bearer <jwt_token>
 ```
 
-## Database Schema
+**Role-Based Access Control**:
+- Admin/Headmaster: Full system access
+- Accountant: Financial and fee management
+- Teacher: Class, attendance, grades, assignments
+- Student: Personal academic records
+- Parent: Children's records and monitoring
+- Stock Manager: Inventory and stock management
 
-### Main Tables
-- `users` - All system users
-- `academic_years` - Academic year management
-- `trade_courses` - Trade-specific courses
-- `subjects` - Subject definitions
-- `classes` - Class management
-- `enrollments` - Student-class relationships
-- `exams` - Exam definitions
-- `exam_registrations` - Student exam registrations
-- `exam_results` - Exam results
-- `grades` - Grade records
-- `attendance` - Attendance records
-- `timetable_entries` - Timetable management
-- `fee_structures` - Fee definitions
-- `fee_payments` - Payment records
-- `stock_items` - Inventory items
-- `stock_movements` - Stock transactions
-- `messages` - User messages
-- `notifications` - System notifications
-- `sports_teams` - Sports teams
-- `sports_events` - Sports events
-- `sports_achievements` - Sports achievements
-- `teams` - Management teams
-- `parent_student_links` - Parent-student relationships
+---
 
-## Advanced Features
+## Database Migration
 
-### 1. Conflict Detection
-- Timetable conflict detection
-- Room booking conflicts
-- Teacher schedule conflicts
+To set up the database for these advanced features, run:
 
-### 2. Analytics
-- Student performance analytics
-- Class performance comparison
-- Attendance analytics
-- Financial analytics
-
-### 3. Bulk Operations
-- Bulk grade submission
-- Bulk attendance marking
-- Bulk notifications
-
-### 4. Real-time Features
-- Notification system
-- Messaging system
-- Live updates
-
-## Security Features
-- JWT authentication
-- Password hashing (bcrypt)
-- Role-based access control
-- Input validation
-- SQL injection prevention
-- XSS protection
-
-## Performance Optimizations
-- Database indexing
-- Query optimization
-- Connection pooling
-- Caching strategies
-
-## Error Handling
-- Comprehensive error messages
-- Logging system
-- Error tracking
-- Graceful degradation
-
-## Testing
 ```bash
-# Run tests
-npm test
-
-# Test specific endpoint
-npm run test:endpoint
+mysql -u root -p school_management < backend/migrations/comprehensive_advanced_features.sql
 ```
 
-## Deployment
-1. Set production environment variables
-2. Run database migrations
-3. Build and deploy
-4. Configure reverse proxy (nginx)
-5. Set up SSL certificates
-6. Configure monitoring
+This will create all necessary tables for:
+- Custom columns system
+- Fee structures and payments
+- Stock management
+- Budgets and expenses
+- Assignments and submissions
+- Discipline records
+- Achievements
+- Parent links
+- Activity logs
+- And more...
+
+---
+
+## API Testing
+
+### Using cURL
+
+```bash
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+
+# Get custom columns
+curl http://localhost:5000/api/universal-management/columns/students \
+  -H "Authorization: Bearer <token>"
+
+# Create payment
+curl -X POST http://localhost:5000/api/accountant-comprehensive/payments \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"student_id":"STU001","amount":50000,...}'
+```
+
+### Using Postman
+
+Import the collection file (if available) or manually create requests following the API documentation above.
+
+---
+
+## Notes
+
+1. **All dates** should be in `YYYY-MM-DD` format
+2. **All amounts** are in the smallest currency unit (e.g., RWF)
+3. **Pagination** defaults to page 1, limit 50
+4. **Soft deletes** are used where applicable
+5. **Transactions** are used for critical operations
+6. **Activity logging** tracks all important actions
+7. **Custom fields** can be added dynamically without code changes
+
+---
 
 ## Support
-For issues or questions, contact the development team.
 
-## License
-Proprietary - All rights reserved
+For issues or questions, contact the development team or refer to the main project documentation.

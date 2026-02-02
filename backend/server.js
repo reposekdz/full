@@ -11,9 +11,8 @@ require('./services/cronJobs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
-});
+const { initializeSocket } = require('./services/socketService');
+const io = initializeSocket(server);
 
 // Import middleware
 const { generalLimiter, authLimiter, apiLimiter } = require('./middleware/rateLimiter');
@@ -298,6 +297,35 @@ const routes = {
   events: loadRoute('./routes/events', 'Events'),
   forums: loadRoute('./routes/forums', 'Forums'),
   advancedRoleFeatures: loadRoute('./routes/advanced-role-features', 'Advanced Role Features'),
+  
+  // COMPREHENSIVE ADVANCED FEATURES
+  universalStaffManagement: loadRoute('./routes/universal-staff-management', 'Universal Staff Management'),
+  adminDashboardAdvanced: loadRoute('./routes/admin-dashboard-advanced', 'Admin Dashboard Advanced'),
+  accountantComprehensive: loadRoute('./routes/accountant-comprehensive', 'Accountant Comprehensive'),
+  stockManagementAdvanced: loadRoute('./routes/stock-management-advanced', 'Stock Management Advanced'),
+  teacherPortalAdvanced: loadRoute('./routes/teacher-portal-advanced', 'Teacher Portal Advanced'),
+  studentPortalComprehensive: loadRoute('./routes/student-portal-comprehensive', 'Student Portal Comprehensive'),
+  parentPortalComprehensive: loadRoute('./routes/parent-portal-comprehensive', 'Parent Portal Comprehensive'),
+  
+  // NEW COMPREHENSIVE GLOBAL SYSTEM
+  globalStudentManagement: loadRoute('./routes/global-student-management', 'Global Student Management'),
+  comprehensiveStaffActions: loadRoute('./routes/comprehensive-staff-actions', 'Comprehensive Staff Actions'),
+  analyticsAISystem: loadRoute('./routes/analytics-ai-system', 'Analytics AI System'),
+  
+  // SCHOOL OWNER - Supreme Access
+  schoolOwner: loadRoute('./routes/school-owner', 'School Owner'),
+  patronMatronComprehensive: loadRoute('./routes/patron-matron-comprehensive', 'Patron Matron Comprehensive'),
+  
+  // ULTRA-COMPREHENSIVE STAFF PORTALS (Full-Featured)
+  parentPortalUltra: loadRoute('./routes/parent-portal-ultra', 'Parent Portal Ultra'),
+  studentPortalUltra: loadRoute('./routes/student-portal-ultra', 'Student Portal Ultra'),
+  accountantUltra: loadRoute('./routes/accountant-ultra', 'Accountant Ultra'),
+  teacherPortalUltra: loadRoute('./routes/teacher-portal-ultra', 'Teacher Portal Ultra'),
+  adminHeadmasterUltra: loadRoute('./routes/admin-headmaster-ultra', 'Admin Headmaster Ultra'),
+  stockManagerUltra: loadRoute('./routes/stock-manager-ultra', 'Stock Manager Ultra'),
+  advisorUltra: loadRoute('./routes/advisor-ultra', 'Advisor Ultra'),
+  dosUltra: loadRoute('./routes/dos-ultra', 'DOS Ultra'),
+  dodUltra: loadRoute('./routes/dod-ultra', 'DOD Ultra'),
 };
 
 // Mount routes
@@ -358,6 +386,7 @@ if (routes.stock) { app.use('/api/stock', routes.stock); mountedRoutes++; }
 // Discipline & DOS
 if (routes.discipline) { app.use('/api/discipline', routes.discipline); mountedRoutes++; }
 if (routes.disciplineManagement) { app.use('/api/discipline-management', routes.disciplineManagement); mountedRoutes++; }
+app.use('/api/discipline-management/leave', require('./routes/leave-management')); mountedRoutes++;
 if (routes.dos) { app.use('/api/dos', routes.dos); mountedRoutes++; }
 if (routes.dosAdvanced) { app.use('/api/dos-advanced', routes.dosAdvanced); mountedRoutes++; }
 if (routes.dosManagement) { app.use('/api/dos-management', routes.dosManagement); mountedRoutes++; }
@@ -374,7 +403,7 @@ if (routes.classSheetsApi) { app.use('/api/class-sheets-api', routes.classSheets
 
 // Student Features
 if (routes.studentManagement) { app.use('/api/student-management', routes.studentManagement); mountedRoutes++; }
-app.use('/api/management', require('./routes/student-management')); mountedRoutes++;
+app.use('/api/management', require('./routes/student-sheets-advanced')); mountedRoutes++;
 if (routes.studentSheets) { app.use('/api/student-sheets', routes.studentSheets); mountedRoutes++; }
 if (routes.globalStudentSheets) { app.use('/api/global-sheets', routes.globalStudentSheets); mountedRoutes++; }
 if (routes.studentCompetitions) { app.use('/api/student-competitions', routes.studentCompetitions); mountedRoutes++; }
@@ -418,6 +447,7 @@ if (routes.trades) { app.use('/api/trades', routes.trades); mountedRoutes++; }
 if (routes.tradesCourses) { app.use('/api/trades-courses', routes.tradesCourses); mountedRoutes++; }
 if (routes.tradeImages) { app.use('/api/trade-images', routes.tradeImages); mountedRoutes++; }
 if (routes.levels) { app.use('/api/levels', routes.levels); mountedRoutes++; }
+app.use('/api/trades-levels', require('./routes/trades-levels')); mountedRoutes++;
 if (routes.services) { app.use('/api/services', routes.services); mountedRoutes++; }
 if (routes.servicesAdvanced) { app.use('/api/services-advanced', routes.servicesAdvanced); mountedRoutes++; }
 
@@ -557,6 +587,30 @@ if (routes.invoices) { app.use('/api/invoices', routes.invoices); mountedRoutes+
 if (routes.events) { app.use('/api/events', routes.events); mountedRoutes++; }
 if (routes.forums) { app.use('/api/forums', routes.forums); mountedRoutes++; }
 if (routes.advancedRoleFeatures) { app.use('/api/advanced-role-features', routes.advancedRoleFeatures); mountedRoutes++; }
+
+// COMPREHENSIVE ADVANCED FEATURES
+if (routes.universalStaffManagement) { app.use('/api/universal-management', routes.universalStaffManagement); mountedRoutes++; }
+if (routes.adminDashboardAdvanced) { app.use('/api/admin-dashboard-advanced', routes.adminDashboardAdvanced); mountedRoutes++; }
+if (routes.accountantComprehensive) { app.use('/api/accountant-comprehensive', routes.accountantComprehensive); mountedRoutes++; }
+if (routes.stockManagementAdvanced) { app.use('/api/stock-advanced', routes.stockManagementAdvanced); mountedRoutes++; }
+if (routes.teacherPortalAdvanced) { app.use('/api/teacher-portal-advanced', routes.teacherPortalAdvanced); mountedRoutes++; }
+if (routes.studentPortalComprehensive) { app.use('/api/student-portal-comprehensive', routes.studentPortalComprehensive); mountedRoutes++; }
+if (routes.parentPortalComprehensive) { app.use('/api/parent-portal-comprehensive', routes.parentPortalComprehensive); mountedRoutes++; }
+
+// SCHOOL OWNER - Supreme Access
+if (routes.schoolOwner) { app.use('/api/school-owner', routes.schoolOwner); mountedRoutes++; }
+if (routes.patronMatronComprehensive) { app.use('/api/patron-matron', routes.patronMatronComprehensive); mountedRoutes++; }
+
+// ULTRA-COMPREHENSIVE STAFF PORTALS (Full-Featured, Database-Integrated)
+if (routes.parentPortalUltra) { app.use('/api/parent-portal-ultra', routes.parentPortalUltra); mountedRoutes++; }
+if (routes.studentPortalUltra) { app.use('/api/student-portal-ultra', routes.studentPortalUltra); mountedRoutes++; }
+if (routes.accountantUltra) { app.use('/api/accountant-ultra', routes.accountantUltra); mountedRoutes++; }
+if (routes.teacherPortalUltra) { app.use('/api/teacher-portal-ultra', routes.teacherPortalUltra); mountedRoutes++; }
+if (routes.adminHeadmasterUltra) { app.use('/api/admin-headmaster-ultra', routes.adminHeadmasterUltra); mountedRoutes++; }
+if (routes.stockManagerUltra) { app.use('/api/stock-manager-ultra', routes.stockManagerUltra); mountedRoutes++; }
+if (routes.advisorUltra) { app.use('/api/advisor-ultra', routes.advisorUltra); mountedRoutes++; }
+if (routes.dosUltra) { app.use('/api/dos-ultra', routes.dosUltra); mountedRoutes++; }
+if (routes.dodUltra) { app.use('/api/dod-ultra', routes.dodUltra); mountedRoutes++; }
 
 // Health check
 app.get('/api/health', (req, res) => {

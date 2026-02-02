@@ -91,6 +91,33 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 object-contain rounded-2xl shadow-2xl ring-2 ring-yellow-300 group-hover:ring-4 group-hover:ring-yellow-400 transition-all"
                 />
               </motion.div>
+              {/* Mobile School Name - Between Icon and Logo */}
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="sm:hidden min-w-0 flex-shrink-0"
+              >
+                <motion.p
+                  className="text-sm font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight whitespace-nowrap"
+                  animate={{ 
+                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                  style={{
+                    backgroundSize: '200% 200%'
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Garden TVET School
+                </motion.p>
+              </motion.div>
+              {/* Desktop School Name */}
               <div className="hidden sm:block min-w-0">
                 <motion.p 
                   className="text-base sm:text-lg md:text-2xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight truncate"

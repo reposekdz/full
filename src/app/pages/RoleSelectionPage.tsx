@@ -12,7 +12,8 @@ import {
   User,
   ArrowRight,
   Sparkles,
-  UserCog
+  UserCog,
+  Crown
 } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -28,6 +29,24 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   const roles = [
+    {
+      role: 'school_owner' as UserRole,
+      title: 'Umuyobozi w\'Ishuri',
+      subtitle: 'School Owner',
+      description: 'Ubuyobozi bukomeye bw\'ishuri - Amafaranga, Imikorere, Ibikoresho, Analytics',
+      icon: Crown,
+      color: 'from-yellow-500 to-orange-600',
+      bgGradient: 'from-yellow-50 to-orange-50',
+      features: [
+        'Supreme Access',
+        'Complete Financial Control',
+        'School Performance Analytics',
+        'Stock Management',
+        'Real-time Reports',
+        'All Staff & Student Data'
+      ],
+      badge: 'SUPREME'
+    },
     {
       role: 'student' as UserRole,
       title: 'Umunyeshuri',
@@ -197,6 +216,13 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
                   <CardContent className="p-6">
                     {/* Icon Section */}
                     <div className="relative mb-4">
+                      {roleData.badge && (
+                        <div className="absolute -top-2 -left-2 z-10">
+                          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold animate-pulse">
+                            {roleData.badge}
+                          </Badge>
+                        </div>
+                      )}
                       <motion.div
                         className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${roleData.color} flex items-center justify-center shadow-lg`}
                         whileHover={{ rotate: 360 }}

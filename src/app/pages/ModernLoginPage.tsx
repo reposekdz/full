@@ -82,7 +82,9 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
             localStorage.setItem('token', result.token);
             localStorage.setItem('user', JSON.stringify(result.user));
           }
-          window.location.href = `/${getRoleDashboard(selectedRole)}`;
+          setTimeout(() => {
+            window.location.href = `/${getRoleDashboard(selectedRole)}`;
+          }, 500);
         } else {
           setError(result.message || 'Invalid serial code or password');
         }
@@ -100,7 +102,9 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
             localStorage.setItem('token', result.token);
             localStorage.setItem('user', JSON.stringify(result.user));
           }
-          window.location.href = '/dashboard-parent';
+          setTimeout(() => {
+            window.location.href = '/dashboard-parent';
+          }, 500);
         } else {
           setError(result.message || 'Invalid phone or password');
         }

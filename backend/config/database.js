@@ -27,7 +27,14 @@ const testConnection = async () => {
   }
 };
 
-module.exports = {
-  pool: promisePool,
-  testConnection
+// Create db object with query method for compatibility
+const db = {
+  query: (...args) => promisePool.query(...args),
+  execute: (...args) => promisePool.execute(...args),
+  getConnection: () => promisePool.getConnection(),
+  pool: promisePool
 };
+
+module.exports = db;
+module.exports.pool = promisePool;
+module.exports.testConnection = testConnection;

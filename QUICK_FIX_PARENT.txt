@@ -1,0 +1,34 @@
+╔═══════════════════════════════════════════════════════════╗
+║  QUICK FIX: Parent Dashboard Redirect                    ║
+╚═══════════════════════════════════════════════════════════╝
+
+PROBLEM: Parent redirects to admin dashboard
+CAUSE: Role is "student" instead of "parent" in database
+
+═══════════════════════════════════════════════════════════
+
+🚀 FASTEST FIX (Copy & Paste):
+
+1. Open MySQL (phpMyAdmin, Workbench, or command line)
+
+2. Select database: garden_tvet_school
+
+3. Run this ONE command:
+
+UPDATE users SET role = 'parent' WHERE phone = '0796329328';
+
+4. Restart backend server
+
+5. Login again → Should go to Parent Dashboard! ✅
+
+═══════════════════════════════════════════════════════════
+
+📋 VERIFY IT WORKED:
+
+SELECT role FROM users WHERE phone = '0796329328';
+
+Should return: parent
+
+═══════════════════════════════════════════════════════════
+
+That's it! Just one SQL command! 🎉

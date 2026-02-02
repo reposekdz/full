@@ -238,63 +238,105 @@ router.post('/login/parent', [
     }
 
     const { phone, password } = req.body;
+    let parent = null;
+    let isValidPassword = false;
 
-    // Find parent by phone in parents table
+    // First try parents table
     const [parents] = await pool.execute(`
       SELECT * FROM parents WHERE phone = ? AND is_active = true
     `, [phone]);
 
-    if (parents.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid phone number or password'
-      });
-    }
+    if (parents.length > 0) {
+      parent = parents[0];
+      isValidPassword = await bcrypt.compare(password, parent.password_hash);
+      
+      if (isValidPassword) {
+        const token = jwt.sign(
+          { userId: parent.id, username: parent.username, role: 'parent' },
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRE }
+        );
 
-    const parent = parents[0];
-    const isValidPassword = await bcrypt.compare(password, parent.password_hash);
+        await pool.execute(
+          'UPDATE parents SET last_login = NOW() WHERE id = ?',
+          [parent.id]
+        );
 
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid phone number or password'
-      });
-    }
+        const [children] = await pool.execute(
+          'SELECT COUNT(*) as count FROM parent_student WHERE parent_id = ?',
+          [parent.id]
+        );
 
-    // Generate token
-    const token = jwt.sign(
-      { userId: parent.id, username: parent.username, role: 'parent' },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE }
-    );
-
-    // Update last login
-    await pool.execute(
-      'UPDATE parents SET last_login = NOW() WHERE id = ?',
-      [parent.id]
-    );
-
-    // Get children count
-    const [children] = await pool.execute(
-      'SELECT COUNT(*) as count FROM parent_student WHERE parent_id = ?',
-      [parent.id]
-    );
-
-    res.json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: parent.id,
-        username: parent.username,
-        email: parent.email,
-        phone: parent.phone,
-        first_name: parent.first_name,
-        last_name: parent.last_name,
-        profile_image: parent.profile_image,
-        role: 'parent',
-        children_count: children[0].count
+        return res.json({
+          success: true,
+          message: 'Login successful',
+          token,
+          user: {
+            id: parent.id,
+            username: parent.username,
+            email: parent.email,
+            phone: parent.phone,
+            first_name: parent.first_name,
+            last_name: parent.last_name,
+            profile_image: parent.profile_image,
+            role: 'parent',
+            children_count: children[0].count
+          }
+        });
       }
+    }
+
+    // If not found in parents table, try users table with parent role
+    const [users] = await pool.execute(`
+      SELECT u.*, r.name as role_name 
+      FROM users u 
+      LEFT JOIN roles r ON u.role_id = r.id 
+      WHERE u.phone = ? AND (r.name = 'parent' OR u.role = 'parent') AND u.is_active = true
+    `, [phone]);
+
+    if (users.length > 0) {
+      parent = users[0];
+      isValidPassword = await bcrypt.compare(password, parent.password_hash);
+      
+      if (isValidPassword) {
+        const token = jwt.sign(
+          { userId: parent.id, username: parent.username, role: 'parent' },
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRE }
+        );
+
+        await pool.execute(
+          'UPDATE users SET last_login = NOW() WHERE id = ?',
+          [parent.id]
+        );
+
+        const [children] = await pool.execute(
+          'SELECT COUNT(*) as child_count FROM parent_student WHERE parent_id = ?',
+          [parent.id]
+        );
+
+        return res.json({
+          success: true,
+          message: 'Parent login successful',
+          token,
+          user: {
+            id: parent.id,
+            username: parent.username,
+            email: parent.email,
+            phone: parent.phone,
+            role: 'parent',
+            first_name: parent.first_name,
+            last_name: parent.last_name,
+            user_type: 'parent',
+            linked_children: children[0].child_count
+          }
+        });
+      }
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid phone number or password'
     });
 
   } catch (error) {

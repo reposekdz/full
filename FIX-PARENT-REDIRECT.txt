@@ -1,0 +1,53 @@
+╔═══════════════════════════════════════════════════════════╗
+║  FIX: Parent Redirects to Admin Dashboard                ║
+║  Database: school_management                              ║
+╚═══════════════════════════════════════════════════════════╝
+
+WHY THIS HAPPENS:
+When you register as a parent, the system creates a user with:
+- username: parent_XXXXXXXXXX
+- BUT role is set to "student" or empty instead of "parent"
+
+This causes the system to redirect to admin dashboard.
+
+═══════════════════════════════════════════════════════════
+
+🚀 COMPLETE FIX (Fixes ALL parents at once):
+
+1. Open MySQL (phpMyAdmin, Workbench, or command line)
+
+2. Select database: school_management
+
+3. Run this script (copy ALL lines):
+
+-- Fix all parent users
+UPDATE users SET role = 'parent' WHERE username LIKE 'parent_%';
+UPDATE users SET role = 'parent' WHERE phone = '0796329328';
+
+-- Update role_id
+UPDATE users u
+JOIN roles r ON r.name = 'parent'
+SET u.role_id = r.id
+WHERE u.role = 'parent';
+
+4. Restart backend server
+
+5. Login again → Parent Dashboard! ✅
+
+═══════════════════════════════════════════════════════════
+
+📋 VERIFY IT WORKED:
+
+SELECT username, phone, role FROM users WHERE username LIKE 'parent_%';
+
+All should show role = 'parent'
+
+═══════════════════════════════════════════════════════════
+
+🔧 ALTERNATIVE: Run the complete script
+
+mysql -u root school_management < FIX-ALL-PARENTS.sql
+
+═══════════════════════════════════════════════════════════
+
+This fixes ALL parent accounts, not just one! 🎉

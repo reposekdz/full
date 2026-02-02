@@ -11,7 +11,7 @@ interface RegisterPageProps {
 }
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
-  const { getRoleDashboard } = useAuth();
+  const { setAuthFromRegistration } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
@@ -175,19 +175,15 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       if (data.success) {
         setSuccess('Kwiyandikisha byagenze neza! Urakwiye kwinjira.');
         
-        // Store token and user data for automatic login
-        if (data.token) {
-          localStorage.setItem('token', data.token);
+        // Automatically set authentication and redirect to dashboard
+        if (data.token && data.user) {
+          const dashboardPage = setAuthFromRegistration(data.token, data.user);
+          
+          // Redirect after a short delay to show success message
+          setTimeout(() => {
+            onNavigate(dashboardPage);
+          }, 1000);
         }
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-        }
-        
-        // Redirect to appropriate dashboard immediately
-        const dashboardPage = getRoleDashboard(formData.role);
-        setTimeout(() => {
-          onNavigate(dashboardPage);
-        }, 1500);
       } else {
         setError(data.message || 'Kwiyandikisha ntibyakunze. Gerageza ukundi.');
       }

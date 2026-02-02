@@ -16,18 +16,32 @@ const calcConduct = (i) => {
 // GET: All students (with filters) - Uses unified students table
 router.get('/students', authenticateToken, async (req, res) => {
   try {
-    const { trade_id, level_id, status, academic_year } = req.query;
-    let q = `SELECT s.*, t.name as trade_name, t.code as trade_code, l.level_number, l.name as level_name
-             FROM students s
-             LEFT JOIN trades t ON s.trade_id = t.id
-             LEFT JOIN levels l ON s.level_id = l.id
+    const { trade_code, level_number, status, academic_year } = req.query;
+    let q = `SELECT s.*, s.student_id, s.username, s.first_name, s.last_name, s.trade_code, s.trade_name, s.level_number
+             FROM global_student_sheets s
              WHERE 1=1`;
     const p = [];
-    if (trade_id) { q += ' AND s.trade_id = ?'; p.push(trade_id); }
-    if (level_id) { q += ' AND s.level_id = ?'; p.push(level_id); }
+    if (trade_code) { q += ' AND s.trade_code = ?'; p.push(trade_code); }
+    if (level_number) { q += ' AND s.level_number = ?'; p.push(level_number); }
     if (status) { q += ' AND s.status = ?'; p.push(status); }
-    q += ' ORDER BY t.code, l.level_number, s.last_name, s.first_name';
+    if (academic_year) { q += ' AND s.academic_year = ?'; p.push(academic_year); }
+    q += ' ORDER BY s.trade_code, s.level_number, s.last_name, s.first_name';
     const [students] = await pool.execute(q, p);
+    res.json({ success: true, students, total: students.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET: All students for embedded selector
+router.get('/all-students', authenticateToken, async (req, res) => {
+  try {
+    const [students] = await pool.execute(`
+      SELECT id, student_id, username, first_name, last_name, trade_code, trade_name, level_number, level_suffix, class_name, status
+      FROM global_student_sheets 
+      WHERE status = 'active'
+      ORDER BY trade_code, level_number, last_name, first_name
+    `);
     res.json({ success: true, students, total: students.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -246,6 +260,94 @@ router.post('/students/:studentId/custom-values', authenticateToken, async (req,
   }
 });
 
+// GET: Custom values for student
+router.get('/students/:studentId/custom-values', authenticateToken, async (req, res) => {
+  try {
+    const [values] = await pool.execute(`
+      SELECT cv.*, cc.column_name, cc.column_label, cc.column_type
+      FROM student_sheet_custom_values cv
+      JOIN student_sheet_custom_columns cc ON cv.column_id = cc.id
+      WHERE cv.student_id = ? AND cc.is_active = 1
+      ORDER BY cc.display_order
+    `, [req.params.studentId]);
+    res.json({ success: true, custom_values: values });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT: Update custom column
+router.put('/custom-columns/:columnId', authenticateToken, async (req, res) => {
+  try {
+    const { column_label, column_type, select_options, visible_to_roles, editable_by_roles, display_order, is_required, is_active } = req.body;
+    
+    await pool.execute(`
+      UPDATE student_sheet_custom_columns 
+      SET column_label=?, column_type=?, select_options=?, visible_to_roles=?, editable_by_roles=?, display_order=?, is_required=?, is_active=?, updated_at=NOW()
+      WHERE id=?
+    `, [column_label, column_type, JSON.stringify(select_options), JSON.stringify(visible_to_roles), JSON.stringify(editable_by_roles), display_order, is_required, is_active, req.params.columnId]);
+    
+    res.json({ success: true, message: 'Custom column updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE: Remove custom column
+router.delete('/custom-columns/:columnId', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('UPDATE student_sheet_custom_columns SET is_active=0, updated_at=NOW() WHERE id=?', [req.params.columnId]);
+    res.json({ success: true, message: 'Custom column deactivated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST: Bulk update custom values for multiple students
+router.post('/custom-values/bulk-update', authenticateToken, async (req, res) => {
+  try {
+    const { column_id, student_ids, value_text, value_number, value_date, value_boolean } = req.body;
+    
+    const results = { updated: 0, failed: 0 };
+    
+    for (const studentId of student_ids) {
+      try {
+        const [sheet] = await pool.execute('SELECT id FROM global_student_sheets WHERE student_id = ?', [studentId]);
+        if (sheet[0]) {
+          await pool.execute(`
+            INSERT INTO student_sheet_custom_values 
+            (sheet_id, student_id, column_id, value_text, value_number, value_date, value_boolean, updated_by, updated_by_role) 
+            VALUES (?,?,?,?,?,?,?,?,?) 
+            ON DUPLICATE KEY UPDATE value_text=VALUES(value_text), value_number=VALUES(value_number), value_date=VALUES(value_date), value_boolean=VALUES(value_boolean), updated_by=VALUES(updated_by), updated_by_role=VALUES(updated_by_role), updated_at=NOW()
+          `, [sheet[0].id, studentId, column_id, value_text, value_number, value_date, value_boolean, req.user.userId, req.user.role]);
+          results.updated++;
+        }
+      } catch (error) {
+        results.failed++;
+      }
+    }
+    
+    res.json({ success: true, message: `${results.updated} students updated`, results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST: Reorder custom columns
+router.post('/custom-columns/reorder', authenticateToken, async (req, res) => {
+  try {
+    const { column_orders } = req.body;
+    
+    for (const order of column_orders) {
+      await pool.execute('UPDATE student_sheet_custom_columns SET display_order=? WHERE id=?', [order.display_order, order.column_id]);
+    }
+    
+    res.json({ success: true, message: 'Columns reordered' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // POST: Generate term report
 router.post('/students/:studentId/generate-report', authenticateToken, async (req, res) => {
   try {
@@ -263,6 +365,40 @@ router.post('/students/:studentId/generate-report', authenticateToken, async (re
       [sheet[0].id, req.params.studentId, term, academic_year, subjects[0].count, subjects[0].total, subjects[0].avg, subjects[0].gpa, grade, attendance[0].rate, attendance[0].present, attendance[0].absent, attendance[0].late, conduct[0]?.final_score || 100, conduct[0]?.conduct_grade || 'A', sheet[0].total_incidents, class_teacher_comment, dos_comment, principal_comment]);
     
     res.json({ success: true, message: 'Report generated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET: Quick student search
+router.get('/search', authenticateToken, async (req, res) => {
+  try {
+    const { q, trade_code, level_number, limit = 10 } = req.query;
+    let query = `SELECT id, student_id, username, first_name, last_name, trade_code, trade_name, level_number, class_name
+                 FROM global_student_sheets WHERE status = 'active'`;
+    const params = [];
+    
+    if (q) {
+      query += ` AND (first_name LIKE ? OR last_name LIKE ? OR student_id LIKE ? OR username LIKE ? OR CONCAT(first_name, ' ', last_name) LIKE ?)`;
+      const searchTerm = `%${q}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (trade_code) {
+      query += ' AND trade_code = ?';
+      params.push(trade_code);
+    }
+    
+    if (level_number) {
+      query += ' AND level_number = ?';
+      params.push(level_number);
+    }
+    
+    query += ' ORDER BY last_name, first_name LIMIT ?';
+    params.push(parseInt(limit));
+    
+    const [students] = await pool.execute(query, params);
+    res.json({ success: true, students, total: students.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

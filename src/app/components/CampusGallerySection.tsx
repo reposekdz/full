@@ -1,60 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { X, ChevronLeft, ChevronRight, Camera, ZoomIn, ZoomOut, Download, Share2, Maximize2, Building2, Laptop, BookOpen, Trophy, RotateCw } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Camera, ZoomIn, ZoomOut, Download, Share2, Maximize2, Building2, Laptop, BookOpen, Trophy, RotateCw, Loader2 } from 'lucide-react';
 import schoolImg1 from '@/assets/school view/1.jpg';
 import schoolImg2 from '@/assets/school view/2.jpg';
 import schoolImg3 from '@/assets/school view/3.jpg';
 import schoolImg4 from '@/assets/school view/4.jpg';
-
-const campusImages = [
-  {
-    id: 1,
-    src: schoolImg1,
-    title: 'Main Administration Building',
-    title_rw: 'Inyubako y\'Ubuyobozi',
-    description: 'Modern administrative offices and reception area',
-    description_rw: 'Ibiro by\'ubuyobozi n\'ahantu ho kwakira',
-    icon: Building2,
-    color: 'from-blue-500 to-indigo-600'
-  },
-  {
-    id: 2,
-    src: schoolImg2,
-    title: 'Classrooms & Learning Spaces',
-    title_rw: 'Amaklasi n\'Ahantu ho Kwiga',
-    description: 'Well-equipped classrooms with modern teaching facilities',
-    description_rw: 'Amaklasi afite ibikoresho bigezweho byo kwigisha',
-    icon: BookOpen,
-    color: 'from-green-500 to-teal-600'
-  },
-  {
-    id: 3,
-    src: schoolImg3,
-    title: 'Computer Labs & Technology Center',
-    title_rw: 'Laboratoire za Mudasobwa',
-    description: 'State-of-the-art computer labs for practical training',
-    description_rw: 'Laboratoire zigezweho zo kwiga ikoranabuhanga',
-    icon: Laptop,
-    color: 'from-yellow-500 to-orange-600'
-  },
-  {
-    id: 4,
-    src: schoolImg4,
-    title: 'Sports & Recreation Facilities',
-    title_rw: 'Ibikoresho bya Siporo',
-    description: 'Modern sports fields and recreational areas',
-    description_rw: 'Terrain ya siporo n\'ahantu ho kwidagadura',
-    icon: Trophy,
-    color: 'from-pink-500 to-rose-600'
-  }
-];
 
 const CampusGallerySection: React.FC = () => {
   const { language } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [campusImages, setCampusImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const defaultImages = [
+    {
+      id: 1,
+      src: schoolImg1,
+      image_url: schoolImg1,
+      title: 'Main Administration Building',
+      title_rw: 'Inyubako y\'Ubuyobozi',
+      description: 'Modern administrative offices and reception area',
+      description_rw: 'Ibiro by\'ubuyobozi n\'ahantu ho kwakira',
+      icon: Building2,
+      color: 'from-blue-500 to-indigo-600',
+      category: 'buildings'
+    },
+    {
+      id: 2,
+      src: schoolImg2,
+      image_url: schoolImg2,
+      title: 'Classrooms & Learning Spaces',
+      title_rw: 'Amaklasi n\'Ahantu ho Kwiga',
+      description: 'Well-equipped classrooms with modern teaching facilities',
+      description_rw: 'Amaklasi afite ibikoresho bigezweho byo kwigisha',
+      icon: BookOpen,
+      color: 'from-green-500 to-teal-600',
+      category: 'classrooms'
+    },
+    {
+      id: 3,
+      src: schoolImg3,
+      image_url: schoolImg3,
+      title: 'Computer Labs & Technology Center',
+      title_rw: 'Laboratoire za Mudasobwa',
+      description: 'State-of-the-art computer labs for practical training',
+      description_rw: 'Laboratoire zigezweho zo kwiga ikoranabuhanga',
+      icon: Laptop,
+      color: 'from-yellow-500 to-orange-600',
+      category: 'labs'
+    },
+    {
+      id: 4,
+      src: schoolImg4,
+      image_url: schoolImg4,
+      title: 'Sports & Recreation Facilities',
+      title_rw: 'Ibikoresho bya Siporo',
+      description: 'Modern sports fields and recreational areas',
+      description_rw: 'Terrain ya siporo n\'ahantu ho kwidagadura',
+      icon: Trophy,
+      color: 'from-pink-500 to-rose-600',
+      category: 'sports'
+    }
+  ];
+
+  const iconMap = {
+    Building2,
+    BookOpen,
+    Laptop,
+    Trophy,
+    Camera
+  };
+
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/gallery/campus');
+        const data = await response.json();
+        
+        if (data.success && data.images && data.images.length > 0) {
+          // Transform API data to match component format
+          const transformedImages = data.images.map((img: any) => ({
+            id: img.id,
+            src: img.image_url?.startsWith('/uploads') ? `http://localhost:5000${img.image_url}` : img.image_url,
+            image_url: img.image_url?.startsWith('/uploads') ? `http://localhost:5000${img.image_url}` : img.image_url,
+            title: img.title,
+            title_rw: img.title_rw || img.title,
+            description: img.description,
+            description_rw: img.description_rw || img.description,
+            icon: iconMap[img.icon] || Camera,
+            color: img.color || 'from-blue-500 to-indigo-600',
+            category: img.category || 'general'
+          }));
+          setCampusImages(transformedImages);
+        } else {
+          setCampusImages(defaultImages);
+        }
+      } catch (error) {
+        console.log('Gallery API error, using default images:', error);
+        setCampusImages(defaultImages);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGalleryImages();
+  }, []);
+
   const displayImages = campusImages.slice(0, 4);
   const remainingCount = Math.max(0, campusImages.length - 4);
 
@@ -92,6 +147,20 @@ const CampusGallerySection: React.FC = () => {
       link.click();
     }
   };
+
+  if (loading) {
+    return (
+      <section className="py-20 bg-gradient-to-br from-yellow-50 via-white to-green-50 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-green-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Campus Gallery...</h2>
+            <p className="text-gray-600">Fetching campus images from database...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>

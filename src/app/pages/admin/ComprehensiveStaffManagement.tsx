@@ -57,7 +57,7 @@ const ComprehensiveStaffManagement: React.FC = () => {
     image: null as File | null
   });
 
-  const roles = ['Teacher', 'Instructor', 'Administrator', 'Accountant', 'Librarian', 'Security', 'Maintenance', 'Other'];
+  const roles = ['Umuyobozi w\'Ishuri (Owner)', 'Umwarimu', 'DOS', 'DOD', 'Umujyanama', 'Umuyobozi Mukuru', 'Umubare', 'Ububiko', 'Admin', 'Teacher', 'Instructor', 'Administrator', 'Accountant', 'Librarian', 'Security', 'Maintenance', 'Other'];
   const levels = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6'];
 
   useEffect(() => {

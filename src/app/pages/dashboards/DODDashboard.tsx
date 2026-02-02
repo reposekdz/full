@@ -1,1007 +1,967 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  AlertTriangle, TrendingDown, Users, BarChart3, Plus, Search, Filter, Shield, 
-  FileText, Calendar, XCircle, Mail, Plane, UserCircle, Clock, CheckCircle, 
-  Bell, Send, Trash2, Eye, Edit, MessageSquare, UserX, Ban, Home, Activity,
-  TrendingUp, Award, AlertCircleIcon, Loader2, Download, MoreVertical
+  Users, TrendingUp, AlertTriangle, Calendar, Award, FileText, 
+  BarChart3, Clock, CheckCircle, XCircle, Activity, Target,
+  UserCheck, Heart, Shield, Bell, Download, Filter, Search,
+  Ban, Plane, Mail, MessageSquare, RefreshCw, Loader2, Plus, Eye, Edit, Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import apiService from '@/app/services/apiService';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
+import { PowerfulStudentSelector } from '@/app/components/PowerfulStudentSelector';
+import sodImage from '@/assets/image slides/SOD slides.png';
+import bdcImage from '@/assets/image slides/BDC slides.jpg';
+import autImage from '@/assets/image slides/AUT slides.png';
 
 interface DODDashboardProps {
   onNavigate: (page: string) => void;
-  onLogout: () => void;
 }
 
-export default function DODDashboard({ onNavigate, onLogout }: DODDashboardProps) {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [overview, setOverview] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
-  const [disciplineRecords, setDisciplineRecords] = useState<any[]>([]);
-  const [leaveRecords, setLeaveRecords] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    activeIncidents: 0,
+    pendingCases: 0,
+    counselingSessions: 0,
+    attendanceRate: 0,
+    disciplineScore: 0,
+    activeLeaves: 0,
+    conductRemoved: 0
+  });
+  const [incidents, setIncidents] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [conducts, setConducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
-  const [selectedRecords, setSelectedRecords] = useState<number[]>([]);
+  const [filterStatus, setFilterStatus] = useState('all');
+  
   const [showConductModal, setShowConductModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [filterSeverity, setFilterSeverity] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [showCounselingModal, setShowCounselingModal] = useState(false);
+  const [showRecognitionModal, setShowRecognitionModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  
+  const [newConduct, setNewConduct] = useState({ student_id: '', conduct_type: 'warning', description: '', action_taken: '' });
+  const [newLeave, setNewLeave] = useState({ student_id: '', leave_type: 'sick', reason: '', start_time: '', end_time: '', approved_by: 'dod', approved_by_name: '' });
+  const [newIncident, setNewIncident] = useState({ student_id: '', incident_type: 'behavioral', description: '', severity: 'medium', location: '' });
+  const [messageForm, setMessageForm] = useState({ subject: '', message: '', send_via: 'sms', student_ids: [] });
+  const [newCounseling, setNewCounseling] = useState({ student_id: '', session_type: 'individual', notes: '', scheduled_date: '' });
+  const [newRecognition, setNewRecognition] = useState({ student_id: '', award_type: 'excellence', description: '', date_awarded: '' });
+  const [attendanceForm, setAttendanceForm] = useState({ student_id: '', attendance_date: new Date().toISOString().split('T')[0], status: 'present', subject: '', period: '', remarks: '' });
 
-  const [newConduct, setNewConduct] = useState({
-    student_id: '',
-    conduct_type: 'warning',
-    severity: 'medium',
-    description: '',
-    action_taken: '',
-    lesson_missed: ''
-  });
-
-  const [newLeave, setNewLeave] = useState({
-    student_id: '',
-    leave_type: 'sick',
-    reason: '',
-    lesson_missed: '',
-    start_time: '',
-    end_time: ''
-  });
-
-  const [newIncident, setNewIncident] = useState({
-    student_id: '',
-    case_type: '',
-    description: '',
-    severity: 'medium',
-    reported_by: ''
-  });
-
-  const [messageForm, setMessageForm] = useState({
-    subject: '',
-    message: '',
-    priority: 'normal'
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [
-        overviewData, 
-        studentsData, 
-        statsData, 
-        recordsData, 
-        leavesData,
-        activitiesData,
-        notificationsData
-      ] = await Promise.all([
-        apiService.getDODStats(),
-        apiService.getDisciplineStudents(),
-        apiService.getDisciplineAnalytics(),
-        apiService.getDisciplineRecords(),
-        apiService.getDisciplineLeaves({ status: 'ongoing' }),
-        apiService.getDODRecentActivities(),
-        apiService.getDODNotifications({ is_read: 'false' })
-      ]);
-      
-      setOverview(overviewData.stats || {});
-      setStudents(studentsData.students || []);
-      setStatistics(statsData.analytics || {});
-      setDisciplineRecords(recordsData.records || []);
-      setLeaveRecords(leavesData.leaves || []);
-      setRecentActivities(activitiesData.activities || []);
-      setNotifications(notificationsData.notifications || []);
-    } catch (error) {
-      console.error('Failed to fetch DOD data:', error);
-      setOverview({});
-      setStatistics({});
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveConduct = async () => {
-    if (!newConduct.student_id || !newConduct.description) {
-      alert('Please fill all required fields');
-      return;
-    }
-
+  const handleMarkAttendance = async () => {
+    if (!attendanceForm.student_id || !attendanceForm.attendance_date) return alert('Uzuza ibisabwa byose');
     try {
       setProcessing(true);
-      await apiService.removeConductRecord(newConduct);
-      showSuccessMsg('Conduct removed and parent notified successfully!');
-      setShowConductModal(false);
-      setNewConduct({
-        student_id: '',
-        conduct_type: 'warning',
-        severity: 'medium',
-        description: '',
-        action_taken: '',
-        lesson_missed: ''
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${attendanceForm.student_id}/attendance`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(attendanceForm)
       });
-      fetchData();
-    } catch (error: any) {
-      alert('Failed to remove conduct: ' + (error.message || 'Unknown error'));
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Kwitabira kwanditswe neza!');
+        setShowAttendanceModal(false);
+        setAttendanceForm({ student_id: '', attendance_date: new Date().toISOString().split('T')[0], status: 'present', subject: '', period: '', remarks: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze kwandika kwitabira');
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleAddLeave = async () => {
-    if (!newLeave.student_id || !newLeave.reason || !newLeave.start_time || !newLeave.end_time) {
-      alert('Please fill all required fields');
-      return;
-    }
+  const fetchAttendanceData = async () => {
+    // This will refresh the students data which includes attendance info
+    await fetchDashboardData();
+  };
 
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const [statsRes, incidentsRes, studentsRes, leavesRes, conductsRes] = await Promise.all([
+        fetch('http://localhost:5000/api/discipline-management/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:5000/api/discipline-management/incidents/all', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:5000/api/global-student-sheets/students', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:5000/api/discipline-management/leave/all', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:5000/api/discipline-management/conduct/all', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      
+      const statsData = await statsRes.json();
+      const incidentsData = await incidentsRes.json();
+      const studentsData = await studentsRes.json();
+      const leavesData = await leavesRes.json();
+      const conductsData = await conductsRes.json();
+      
+      if (statsData.success) setStats(statsData.stats);
+      if (incidentsData.success) setIncidents(incidentsData.incidents || []);
+      if (studentsData.success) setStudents(studentsData.students || []);
+      if (leavesData.success) setLeaves(leavesData.leaves || []);
+      if (conductsData.success) setConducts(conductsData.conducts || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+    setLoading(false);
+  };
+
+  const handleRemoveConduct = async () => {
+    if (!newConduct.student_id || !newConduct.description) return alert('Uzuza ibisabwa byose');
     try {
       setProcessing(true);
-      await apiService.addStudentLeave(newLeave);
-      showSuccessMsg('Leave granted and parent notified successfully!');
-      setShowLeaveModal(false);
-      setNewLeave({
-        student_id: '',
-        leave_type: 'sick',
-        reason: '',
-        lesson_missed: '',
-        start_time: '',
-        end_time: ''
+      const token = localStorage.getItem('token');
+      // Add discipline record to global student sheets
+      const disciplineData = {
+        incident_date: new Date().toISOString().split('T')[0],
+        incident_type: newConduct.conduct_type,
+        severity: 'medium',
+        category: 'conduct_removal',
+        description: newConduct.description,
+        action_taken: newConduct.action_taken,
+        location: 'DOD Office'
+      };
+      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newConduct.student_id}/discipline`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(disciplineData)
       });
-      fetchData();
-    } catch (error: any) {
-      alert('Failed to add leave: ' + (error.message || 'Unknown error'));
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Imyitwarire yarakuweho neza!');
+        setShowConductModal(false);
+        setNewConduct({ student_id: '', conduct_type: 'warning', description: '', action_taken: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze gukuraho imyitwarire');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleGrantLeave = async () => {
+    if (!newLeave.student_id || !newLeave.start_time) return alert('Uzuza ibisabwa byose');
+    try {
+      setProcessing(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/discipline-management/leave/grant', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLeave)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Uruhushya rwatanzwe neza!');
+        setShowLeaveModal(false);
+        setNewLeave({ student_id: '', leave_type: 'sick', reason: '', start_time: '', end_time: '', approved_by: 'dod', approved_by_name: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze gutanga uruhushya');
     } finally {
       setProcessing(false);
     }
   };
 
   const handleCreateIncident = async () => {
-    if (!newIncident.student_id || !newIncident.description) {
-      alert('Please fill all required fields');
-      return;
-    }
-
+    if (!newIncident.student_id || !newIncident.description) return alert('Uzuza ibisabwa byose');
     try {
       setProcessing(true);
-      await apiService.createIncident(newIncident);
-      showSuccessMsg('Incident recorded successfully!');
-      setShowIncidentModal(false);
-      setNewIncident({
-        student_id: '',
-        case_type: '',
-        description: '',
-        severity: 'medium',
-        reported_by: ''
+      const token = localStorage.getItem('token');
+      // Add incident to global student sheets
+      const incidentData = {
+        incident_date: new Date().toISOString().split('T')[0],
+        incident_type: newIncident.incident_type,
+        severity: newIncident.severity,
+        category: 'incident',
+        description: newIncident.description,
+        location: newIncident.location,
+        action_taken: 'Recorded by DOD'
+      };
+      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newIncident.student_id}/discipline`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(incidentData)
       });
-      fetchData();
-    } catch (error: any) {
-      alert('Failed to create incident: ' + (error.message || 'Unknown error'));
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Ikosa cyanditswe neza!');
+        setShowIncidentModal(false);
+        setNewIncident({ student_id: '', incident_type: 'behavioral', description: '', severity: 'medium', location: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze kwandika ikosa');
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleDeleteRecord = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this record?')) return;
-    
+  const handleScheduleCounseling = async () => {
+    if (!newCounseling.student_id || !newCounseling.notes) return alert('Uzuza ibisabwa byose');
     try {
-      await apiService.deleteDisciplineRecord(id);
-      showSuccessMsg('Record deleted successfully!');
-      fetchData();
-    } catch (error: any) {
-      alert('Failed to delete record: ' + (error.message || 'Unknown error'));
+      setProcessing(true);
+      const token = localStorage.getItem('token');
+      const counselingData = {
+        session_date: newCounseling.scheduled_date || new Date().toISOString().split('T')[0],
+        session_type: newCounseling.session_type,
+        notes: newCounseling.notes,
+        counselor: 'DOD',
+        status: 'scheduled'
+      };
+      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newCounseling.student_id}/counseling`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(counselingData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Inama yateganijwe neza!');
+        setShowCounselingModal(false);
+        setNewCounseling({ student_id: '', session_type: 'individual', notes: '', scheduled_date: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze guteganya inama');
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const handleBulkStatusUpdate = async (status: string) => {
-    if (selectedStudents.length === 0) {
-      alert('Please select records first');
-      return;
-    }
-
+  const handleAwardRecognition = async () => {
+    if (!newRecognition.student_id || !newRecognition.description) return alert('Uzuza ibisabwa byose');
     try {
-      await apiService.bulkUpdateDisciplineRecords(selectedStudents, status);
-      showSuccessMsg(`${selectedStudents.length} records updated successfully!`);
-      setSelectedStudents([]);
-      fetchData();
-    } catch (error: any) {
-      alert('Failed to update records: ' + (error.message || 'Unknown error'));
+      setProcessing(true);
+      const token = localStorage.getItem('token');
+      const recognitionData = {
+        award_date: newRecognition.date_awarded || new Date().toISOString().split('T')[0],
+        award_type: newRecognition.award_type,
+        description: newRecognition.description,
+        awarded_by: 'DOD',
+        category: 'recognition'
+      };
+      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newRecognition.student_id}/recognition`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(recognitionData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Igihembo cyatanzwe neza!');
+        setShowRecognitionModal(false);
+        setNewRecognition({ student_id: '', award_type: 'excellence', description: '', date_awarded: '' });
+        fetchDashboardData();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (error) {
+      alert('Byanze gutanga igihembo');
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!messageForm.subject || !messageForm.message) {
-      alert('Please fill in subject and message');
-      return;
-    }
-
+    if (!messageForm.subject || !messageForm.message) return alert('Uzuza ibisabwa byose');
     try {
       setProcessing(true);
-      if (selectedStudents.length > 0) {
-        await apiService.sendBulkParentMessage({
-          student_ids: selectedStudents,
-          subject: messageForm.subject,
-          message: messageForm.message,
-          priority: messageForm.priority
-        });
-        showSuccessMsg(`Message sent to ${selectedStudents.length} parent(s) successfully!`);
-      } else {
-        await apiService.sendBulkParentMessage({
-          subject: messageForm.subject,
-          message: messageForm.message,
-          priority: messageForm.priority
-        });
-        showSuccessMsg('Message sent to all parents successfully!');
-      }
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:5000/api/discipline-management/message-parents', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(messageForm)
+      });
+      setSuccessMessage('Ubutumwa bwoherejwe neza!');
       setShowMessageModal(false);
-      setMessageForm({ subject: '', message: '', priority: 'normal' });
-      setSelectedStudents([]);
-    } catch (error: any) {
-      alert('Failed to send message: ' + (error.message || 'Unknown error'));
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      alert('Byanze kohereza ubutumwa');
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleExportRecords = async () => {
-    try {
-      const csvContent = [
-        ['Student Code', 'Student Name', 'Trade', 'Conduct Type', 'Severity', 'Description', 'Action Taken', 'Date', 'Removed By'].join(','),
-        ...disciplineRecords.map(r => [
-          r.student_code,
-          r.student_name,
-          r.trade,
-          r.conduct_type,
-          r.severity,
-          `"${r.description?.replace(/"/g, '""')}"`,
-          `"${r.action_taken?.replace(/"/g, '""')}"`,
-          new Date(r.created_at).toLocaleDateString(),
-          r.removed_by_name
-        ].join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `discipline_records_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-      showSuccessMsg('Records exported successfully!');
-    } catch (error: any) {
-      alert('Failed to export records: ' + (error.message || 'Unknown error'));
-    }
-  };
-
-  const handleMarkNotificationRead = async (id: number) => {
-    try {
-      await apiService.markDODNotificationRead(id);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-      showSuccessMsg('Notification marked as read');
-    } catch (error: any) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
-
-  const showSuccessMsg = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 4000);
-  };
-
-  const toggleStudentSelection = (id: number) => {
-    setSelectedStudents(prev =>
-      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
-    );
-  };
-
-  const filteredStudents = students.filter(s =>
-    `${s.name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.student_code?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredRecords = disciplineRecords.filter(r =>
-    r.student_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.student_code?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-orange-100">
-        <Loader2 className="w-16 h-16 animate-spin text-red-600" />
-      </div>
-    );
-  }
+  const statsCards = [
+    { title: 'Abanyeshuri Bose', value: stats.totalStudents || students.length, icon: Users, color: 'from-blue-500 to-indigo-500', change: '+5%' },
+    { title: 'Ibyabaye Bikomeye', value: stats.activeIncidents || incidents.length, icon: AlertTriangle, color: 'from-red-500 to-orange-500', change: '-12%' },
+    { title: 'Ibikorwa Bitegerejwe', value: stats.pendingCases || 0, icon: FileText, color: 'from-yellow-500 to-amber-500', change: '+3%' },
+    { title: 'Inama Ubuzima', value: stats.counselingSessions || 0, icon: Heart, color: 'from-pink-500 to-rose-500', change: '+8%' },
+    { title: 'Uruhushya Rugihari', value: stats.activeLeaves || leaves.length, icon: Plane, color: 'from-green-500 to-teal-500', change: '+2%' },
+    { title: 'Imyitwarire Yakuwemo', value: stats.conductRemoved || conducts.length, icon: Award, color: 'from-purple-500 to-violet-500', change: '+15%' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Success Message */}
-        <AnimatePresence>
-          {successMessage && (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-orange-50 p-6">
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+            <CheckCircle className="w-6 h-6" />
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-black text-gray-900">Ikibaho cy'Umuyobozi w'Imyitwarire</h1>
+              <p className="text-gray-600 mt-2">Gucunga Imyitwarire n'Imyifatire y'Abanyeshuri (DOD/Matron/Patron)</p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={fetchDashboardData} variant="outline" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Kuvugurura
+              </Button>
+              <Button className="gap-2 bg-gradient-to-r from-green-600 to-yellow-600">
+                <Download className="w-4 h-4" />
+                Gukuramo Raporo
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowConductModal(true)} className="w-full h-32 bg-gradient-to-br from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <Ban className="w-10 h-10" />
+              Kuraho Imyitwarire
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowLeaveModal(true)} className="w-full h-32 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <Plane className="w-10 h-10" />
+              Gutanga Uruhushya
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowIncidentModal(true)} className="w-full h-32 bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <AlertTriangle className="w-10 h-10" />
+              Kwandika Ikosa
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowAttendanceModal(true)} className="w-full h-32 bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <UserCheck className="w-10 h-10" />
+              Kwandika Kwitabira
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowMessageModal(true)} className="w-full h-32 bg-gradient-to-br from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <Mail className="w-10 h-10" />
+              Kohereza Ababyeyi
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowCounselingModal(true)} className="w-full h-32 bg-gradient-to-br from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <MessageSquare className="w-10 h-10" />
+              Inama
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setShowRecognitionModal(true)} className="w-full h-32 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center gap-3 text-lg font-bold">
+              <Award className="w-10 h-10" />
+              Ibihembo
+            </Button>
+          </motion.div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {statsCards.map((stat, index) => (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-green-500 text-white px-6 py-4 rounded-2xl shadow-lg flex items-center gap-3 font-bold"
+              key={stat.title}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
             >
-              <CheckCircle className="w-6 h-6" />
-              {successMessage}
+              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-green-300">
+                <CardContent className="p-0">
+                  <div className={`bg-gradient-to-br ${stat.color} p-6 text-white relative overflow-hidden`}>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <p className="text-white/90 text-sm mb-2">{stat.title}</p>
+                          <p className="text-4xl font-black">{stat.value}</p>
+                        </div>
+                        <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                          <stat.icon className="w-12 h-12 opacity-90" />
+                        </motion.div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4" />
+                        <span className="text-sm font-medium">{stat.change} this month</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-red-600 via-orange-600 to-red-700 bg-clip-text text-transparent">
-              Director of Discipline Dashboard
-            </h1>
-            <p className="text-gray-600 mt-2 font-medium">Comprehensive student discipline & behavior management</p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              onClick={() => setShowConductModal(true)}
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg hover:shadow-xl"
-            >
-              <Ban className="w-4 h-4 mr-2" />
-              Remove Conduct
-            </Button>
-            <Button 
-              onClick={() => setShowLeaveModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl"
-            >
-              <Plane className="w-4 h-4 mr-2" />
-              Grant Leave
-            </Button>
-            <Button 
-              onClick={() => setShowIncidentModal(true)}
-              className="bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Record Incident
-            </Button>
-            <Button 
-              onClick={() => setShowMessageModal(true)}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg hover:shadow-xl"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Message Parents
-            </Button>
-            <Button 
-              onClick={handleExportRecords}
-              variant="outline"
-              className="border-2 shadow-lg hover:shadow-xl"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button 
-              variant="outline"
-              className="relative border-2 shadow-lg hover:shadow-xl"
-              onClick={() => onNavigate('notifications')}
-            >
-              <Bell className="w-4 h-4" />
-              {notifications.filter(n => !n.is_read).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {notifications.filter(n => !n.is_read).length}
-                </span>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <Card 
-            className="border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
-            onClick={() => onNavigate('dod-parent-management')}
-          >
-            <CardContent className="p-6 text-center">
-              <Mail className="w-12 h-12 mx-auto text-blue-600 mb-2" />
-              <p className="text-lg font-bold text-blue-900">Parent Management</p>
-              <p className="text-xs text-gray-600 mt-1">View & message parents</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
-            onClick={() => onNavigate('dod-leave-management')}
-          >
-            <CardContent className="p-6 text-center">
-              <Plane className="w-12 h-12 mx-auto text-purple-600 mb-2" />
-              <p className="text-lg font-bold text-purple-900">Leave Management</p>
-              <p className="text-xs text-gray-600 mt-1">Manage student leaves</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="border-2 border-green-200 shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105"
-            onClick={() => onNavigate('profile')}
-          >
-            <CardContent className="p-6 text-center">
-              <UserCircle className="w-12 h-12 mx-auto text-green-600 mb-2" />
-              <p className="text-lg font-bold text-green-900">My Profile</p>
-              <p className="text-xs text-gray-600 mt-1">Update account settings</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid md:grid-cols-4 gap-6">
-          <Card className="border-2 border-red-100 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6 text-center">
-              <AlertTriangle className="w-12 h-12 mx-auto text-red-600 mb-2" />
-              <p className="text-4xl font-black text-red-900">{overview?.total_incidents_30days || 0}</p>
-              <p className="text-sm text-gray-600">Incidents (30 days)</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-yellow-100 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6 text-center">
-              <Shield className="w-12 h-12 mx-auto text-yellow-600 mb-2" />
-              <p className="text-4xl font-black text-yellow-900">{overview?.active_warnings || 0}</p>
-              <p className="text-sm text-gray-600">Active Warnings</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-orange-100 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6 text-center">
-              <XCircle className="w-12 h-12 mx-auto text-orange-600 mb-2" />
-              <p className="text-4xl font-black text-orange-900">{overview?.recent_suspensions || 0}</p>
-              <p className="text-sm text-gray-600">Suspensions (30 days)</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6 text-center">
-              <Users className="w-12 h-12 mx-auto text-blue-600 mb-2" />
-              <p className="text-4xl font-black text-blue-900">{students.length}</p>
-              <p className="text-sm text-gray-600">Students with Records</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex gap-2 border-b-2 border-gray-200">
-          {['overview', 'students', 'statistics'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 font-semibold capitalize transition-all ${
-                activeTab === tab
-                  ? 'border-b-4 border-red-600 text-red-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab}
-            </button>
           ))}
         </div>
 
-        {activeTab === 'overview' && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-2 border-red-100 shadow-xl">
+        <Tabs defaultValue="incidents" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-white shadow-lg rounded-xl p-2 border-2">
+            <TabsTrigger value="incidents" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-orange-500 data-[state=active]:text-white">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Incidents
+            </TabsTrigger>
+            <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white">
+              <Users className="w-4 h-4 mr-2" />
+              Students
+            </TabsTrigger>
+            <TabsTrigger value="counseling" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white">
+              <Heart className="w-4 h-4 mr-2" />
+              Counseling
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
+              <UserCheck className="w-4 h-4 mr-2" />
+              Attendance
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-500 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="incidents">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  Recent Incidents
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Ibyabaye Vuba Aha ({incidents.length})</CardTitle>
+                  <div className="flex gap-2">
+                    <Input placeholder="Shakisha..." className="w-64" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Button size="sm"><Search className="w-4 h-4" /></Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                  {overview?.recent_incidents?.slice(0, 10).map((incident: any, index: number) => (
+                {incidents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <AlertTriangle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500 font-semibold">Nta kibazo cyabonetse</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Itariki</TableHead>
+                        <TableHead>Umunyeshuri</TableHead>
+                        <TableHead>Ubwoko</TableHead>
+                        <TableHead>Urwego</TableHead>
+                        <TableHead>Imiterere</TableHead>
+                        <TableHead>Ibikorwa</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incidents.slice(0, 10).map((incident, idx) => (
+                        <motion.tr
+                          key={incident.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="hover:bg-green-50 transition-colors"
+                        >
+                          <TableCell className="font-semibold">{new Date(incident.created_at || incident.date).toLocaleDateString('rw-RW')}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-bold text-gray-900">{incident.student_name || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{incident.student_id}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{incident.incident_type || incident.type}</Badge></TableCell>
+                          <TableCell>
+                            <Badge className={
+                              incident.severity === 'high' ? 'bg-red-500 text-white' :
+                              incident.severity === 'medium' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'
+                            }>
+                              {incident.severity === 'high' ? 'Hejuru' : incident.severity === 'medium' ? 'Hagati' : 'Hasi'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={incident.status === 'resolved' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'}>
+                              {incident.status === 'resolved' ? 'Byakemuwe' : 'Bitegerejwe'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline"><Eye className="w-3 h-3 mr-1" />Reba</Button>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="students">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Abanyeshuri ({students.length})</CardTitle>
+                  <div className="flex gap-2">
+                    <Input placeholder="Shakisha umunyeshuri..." className="w-64" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Button size="sm"><Search className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Trades Overview with Real Images */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {[
+                    { name: 'Software Development', code: 'SOD', image: sodImage, count: students.filter(s => s.trade_code === 'SOD').length, color: 'from-blue-500 to-indigo-500' },
+                    { name: 'Building Construction', code: 'BDC', image: bdcImage, count: students.filter(s => s.trade_code === 'BDC').length, color: 'from-orange-500 to-red-500' },
+                    { name: 'Automobile Technology', code: 'AUT', image: autImage, count: students.filter(s => s.trade_code === 'AUT' || s.trade_code === 'AUTO').length, color: 'from-green-500 to-teal-500' }
+                  ].map((trade, idx) => (
                     <motion.div
-                      key={incident.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-red-500 hover:shadow-md transition-shadow"
+                      key={trade.code}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="relative overflow-hidden rounded-xl shadow-lg group cursor-pointer"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <p className="font-bold text-lg">
-                            {incident.first_name} {incident.last_name}
-                          </p>
-                          <Badge className="bg-blue-100 text-blue-700">{incident.student_id}</Badge>
-                          <Badge className={
-                            incident.severity === 'severe' ? 'bg-red-100 text-red-700' :
-                            incident.severity === 'major' ? 'bg-orange-100 text-orange-700' :
-                            incident.severity === 'moderate' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
-                          }>
-                            {incident.severity}
-                          </Badge>
+                      <div className="aspect-video relative">
+                        <img src={trade.image} alt={trade.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="text-white font-bold text-lg mb-1">{trade.name}</h3>
+                        <div className="flex items-center justify-between">
+                          <Badge className={`bg-gradient-to-r ${trade.color} text-white border-0`}>{trade.code}</Badge>
+                          <span className="text-white font-bold">{trade.count} abanyeshuri</span>
                         </div>
-                        <p className="text-sm font-semibold text-red-700 mb-1">{incident.incident_type}</p>
-                        <p className="text-sm text-gray-600 mb-2">{incident.description}</p>
-                        <div className="flex gap-4 text-xs text-gray-500">
-                          <span>📅 {new Date(incident.incident_date).toLocaleDateString()}</span>
-                          <span>👤 Reported by: {incident.reported_by}</span>
-                          <span>⚡ Action: {incident.action_taken}</span>
-                        </div>
-                        {incident.class_name && (
-                          <p className="text-xs text-gray-500 mt-1">Class: {incident.class_name}</p>
-                        )}
                       </div>
                     </motion.div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
 
-            <div className="space-y-6">
-              <Card className="border-2 border-purple-100 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-purple-600" />
-                    Notifications
-                    {notifications.filter(n => !n.is_read).length > 0 && (
-                      <Badge className="bg-red-600 text-white">{notifications.filter(n => !n.is_read).length}</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-[270px] overflow-y-auto">
-                    {notifications.slice(0, 8).map((notif: any, idx: number) => (
+                {students.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500 font-semibold">Nta munyeshuri uhari</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {students.slice(0, 12).map((student) => (
                       <motion.div
-                        key={notif.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${
-                          notif.is_read 
-                            ? 'bg-gray-50 border-gray-300' 
-                            : 'bg-purple-50 border-purple-500'
-                        }`}
-                        onClick={() => !notif.is_read && handleMarkNotificationRead(notif.id)}
+                        key={student.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        className="p-4 border-2 rounded-xl hover:border-green-400 hover:shadow-xl transition-all bg-gradient-to-br from-white to-green-50"
                       >
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="flex-1">
-                            <p className={`text-sm font-bold ${notif.is_read ? 'text-gray-700' : 'text-purple-900'}`}>
-                              {notif.title}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {new Date(notif.created_at).toLocaleString()}
-                            </p>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-yellow-500 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg">
+                            {student.first_name?.[0] || 'S'}{student.last_name?.[0] || 'T'}
                           </div>
-                          {!notif.is_read && (
-                            <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black text-gray-900 truncate">{student.first_name} {student.last_name}</p>
+                            <p className="text-sm text-gray-600 font-semibold">{student.student_id || student.student_code}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-semibold">Umwuga:</span>
+                            <Badge className="bg-blue-500 text-white">{student.trade_code || student.trade_name || 'N/A'}</Badge>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-semibold">Urwego:</span>
+                            <Badge className="bg-purple-500 text-white">Level {student.level_number || 'N/A'}</Badge>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-semibold">Imiterere:</span>
+                            <Badge className={`${student.status === 'active' ? 'bg-green-500' : student.status === 'suspended' ? 'bg-red-500' : 'bg-gray-500'} text-white`}>
+                              {student.status === 'active' ? 'Akora' : student.status === 'suspended' ? 'Yahagaritswe' : student.status || 'Akora'}
+                            </Badge>
+                          </div>
+                          {student.conduct_score && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 font-semibold">Imyitwarire:</span>
+                              <Badge className={`${student.conduct_score >= 90 ? 'bg-green-500' : student.conduct_score >= 70 ? 'bg-yellow-500' : 'bg-red-500'} text-white`}>
+                                {student.conduct_grade || 'A'} ({student.conduct_score || 100}%)
+                              </Badge>
+                            </div>
                           )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          <Button size="sm" variant="outline" className="text-xs" onClick={() => onNavigate(`student-sheet/${student.id}`)}><Eye className="w-3 h-3 mr-1" />Reba</Button>
+                          <Button size="sm" className="bg-gradient-to-r from-green-500 to-yellow-500 text-white text-xs" onClick={() => onNavigate(`student-management/${student.id}`)}><Edit className="w-3 h-3 mr-1" />Hindura</Button>
                         </div>
                       </motion.div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-green-100 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-green-600" />
-                    Today's Activity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {recentActivities.slice(0, 5).map((activity: any, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-2 bg-green-50 rounded-lg">
-                        <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-green-900">{activity.action}</p>
-                          <p className="text-xs text-gray-500">
-                            {activity.module} • {new Date(activity.created_at).toLocaleTimeString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'students' && (
-          <Card className="border-2 border-red-100 shadow-xl">
-            <CardHeader>
-              <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <CardTitle>Students with Discipline Records</CardTitle>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Search students..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 border-2"
-                    />
-                  </div>
-                </div>
-                {selectedStudents.length > 0 && (
-                  <div className="flex gap-2 items-center bg-blue-50 p-3 rounded-lg">
-                    <span className="font-bold text-blue-900">{selectedStudents.length} selected</span>
-                    <Button 
-                      size="sm"
-                      onClick={() => setShowMessageModal(true)}
-                      className="bg-purple-600 text-white"
-                    >
-                      <MessageSquare className="w-3 h-3 mr-1" />
-                      Message Parents
-                    </Button>
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedStudents([])}
-                    >
-                      Clear Selection
-                    </Button>
-                  </div>
                 )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b-2">
-                      <th className="text-center py-3 px-2 w-12">
-                        <input
-                          type="checkbox"
-                          checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedStudents(filteredStudents.map(s => s.id));
-                            } else {
-                              setSelectedStudents([]);
-                            }
-                          }}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                      </th>
-                      <th className="text-left py-3 px-4">Student</th>
-                      <th className="text-left py-3 px-4">Class</th>
-                      <th className="text-center py-3 px-4">Total Incidents</th>
-                      <th className="text-center py-3 px-4">Recent (30d)</th>
-                      <th className="text-left py-3 px-4">Last Incident</th>
-                      <th className="text-left py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredStudents.map((student, index) => (
-                      <motion.tr
-                        key={student.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={`border-b hover:bg-red-50 ${selectedStudents.includes(student.id) ? 'bg-blue-50' : ''}`}
-                      >
-                        <td className="py-3 px-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedStudents.includes(student.id)}
-                            onChange={() => toggleStudentSelection(student.id)}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="font-semibold">{student.first_name} {student.last_name}</p>
-                            <p className="text-xs text-gray-500">{student.student_id}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="text-sm">{student.trade_name}</p>
-                          <p className="text-xs text-gray-500">Level {student.level_number}</p>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge className="bg-red-100 text-red-700">
-                            {student.total_incidents}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge className={
-                            (student.recent_incidents || 0) > 3 ? 'bg-red-100 text-red-700' :
-                            (student.recent_incidents || 0) > 0 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }>
-                            {student.recent_incidents || 0}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="text-xs text-gray-600">
-                            {student.last_incident_date 
-                              ? new Date(student.last_incident_date).toLocaleDateString() 
-                              : 'No incidents'}
-                          </p>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onNavigate('dod-students')}
-                            className="hover:bg-red-50"
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View
-                          </Button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {activeTab === 'statistics' && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-2 border-red-100 shadow-xl">
+          <TabsContent value="counseling">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-red-600" />
-                  Incidents by Severity
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Inama z'Ubuzima bw'Umutwe</CardTitle>
+                  <Button onClick={() => setShowCounselingModal(true)} className="bg-gradient-to-r from-pink-500 to-rose-600 text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ongeraho Inama
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { label: 'Critical', count: statistics?.overall?.critical_severity || 0, color: 'bg-red-600' },
-                    { label: 'High', count: statistics?.overall?.high_severity || 0, color: 'bg-orange-500' },
-                    { label: 'Medium', count: statistics?.overall?.medium_severity || 0, color: 'bg-yellow-500' },
-                    { label: 'Low', count: statistics?.overall?.low_severity || 0, color: 'bg-blue-500' }
-                  ].map(item => (
-                    <div key={item.label} className="flex items-center gap-4">
-                      <div className="w-24 text-sm font-semibold">{item.label}</div>
-                      <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden">
-                        <div 
-                          className={`${item.color} h-full flex items-center justify-end px-3 text-white font-bold text-sm`}
-                          style={{ width: `${(item.count / (statistics?.overall?.total_incidents || 1)) * 100}%` }}
-                        >
-                          {item.count}
+                  {leaves.filter(l => l.leave_type === 'medical' || l.leave_type === 'sick').slice(0, 5).map((item, i) => (
+                    <motion.div 
+                      key={item.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="flex items-center justify-between p-4 border-2 rounded-xl hover:border-pink-400 hover:shadow-xl transition-all bg-gradient-to-r from-pink-50 to-rose-50"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg">
+                          <Heart className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-900">{item.student_name || 'Umunyeshuri'}</p>
+                          <p className="text-sm text-gray-600 font-semibold">Yategekanijwe: {new Date(item.start_time).toLocaleDateString('rw-RW')}</p>
+                          <p className="text-xs text-gray-500">{item.reason}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-blue-100 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  By Trade Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {statistics?.byTrade?.slice(0, 5).map((trade: any) => (
-                    <div key={trade.trade} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-bold">{trade.trade}</p>
-                        <p className="text-xs text-gray-500">{trade.total_incidents} total incidents</p>
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-pink-500 text-white">{item.status === 'active' ? 'Igitegerejwe' : 'Byarangiye'}</Badge>
+                        <Button size="sm" className="bg-gradient-to-r from-pink-500 to-rose-600 text-white"><Edit className="w-3 h-3 mr-1" />Gucunga</Button>
                       </div>
-                      <Badge className={
-                        trade.critical_incidents > 5 ? 'bg-red-100 text-red-700' :
-                        trade.critical_incidents > 2 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }>
-                        {trade.critical_incidents} critical
-                      </Badge>
-                    </div>
+                    </motion.div>
                   ))}
+                  {leaves.filter(l => l.leave_type === 'medical' || l.leave_type === 'sick').length === 0 && (
+                    <div className="text-center py-12">
+                      <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                      <p className="text-gray-500 font-semibold">Nta nama zabonetse</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="border-2 border-green-100 shadow-xl">
+          <TabsContent value="attendance">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-green-600" />
-                  Leave Statistics
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Kwitabira Amasomo</CardTitle>
+                  <div className="flex gap-2">
+                    <Button onClick={() => fetchAttendanceData()} variant="outline" size="sm">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Kuvugurura
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg text-center">
-                    <p className="text-3xl font-black text-blue-600">
-                      {statistics?.leaveStats?.total_leaves || 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Total Leaves</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="p-6 bg-gradient-to-br from-green-100 to-teal-100 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <span className="text-3xl font-black text-green-600">
+                        {students.length > 0 ? Math.round((students.filter(s => s.attendance_percentage >= 90).length / students.length) * 100) : 95}%
+                      </span>
+                    </div>
+                    <p className="font-bold text-gray-900">Bitabiriye Neza</p>
+                    <p className="text-sm text-gray-600">{students.filter(s => s.attendance_percentage >= 90).length} abanyeshuri</p>
                   </div>
-                  <div className="p-4 bg-red-50 rounded-lg text-center">
-                    <p className="text-3xl font-black text-red-600">
-                      {statistics?.leaveStats?.sick_leaves || 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Sick Leaves</p>
+                  <div className="p-6 bg-gradient-to-br from-yellow-100 to-amber-100 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <Clock className="w-8 h-8 text-yellow-600" />
+                      <span className="text-3xl font-black text-yellow-600">
+                        {students.length > 0 ? Math.round((students.filter(s => s.attendance_percentage >= 70 && s.attendance_percentage < 90).length / students.length) * 100) : 3}%
+                      </span>
+                    </div>
+                    <p className="font-bold text-gray-900">Batinze</p>
+                    <p className="text-sm text-gray-600">{students.filter(s => s.attendance_percentage >= 70 && s.attendance_percentage < 90).length} abanyeshuri</p>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-lg text-center">
-                    <p className="text-3xl font-black text-purple-600">
-                      {statistics?.leaveStats?.home_leaves || 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Home Leaves</p>
+                  <div className="p-6 bg-gradient-to-br from-red-100 to-orange-100 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <XCircle className="w-8 h-8 text-red-600" />
+                      <span className="text-3xl font-black text-red-600">
+                        {students.length > 0 ? Math.round((students.filter(s => s.attendance_percentage < 70).length / students.length) * 100) : 2}%
+                      </span>
+                    </div>
+                    <p className="font-bold text-gray-900">Ntibatitabira</p>
+                    <p className="text-sm text-gray-600">{students.filter(s => s.attendance_percentage < 70).length} abanyeshuri</p>
                   </div>
-                  <div className="p-4 bg-orange-50 rounded-lg text-center">
-                    <p className="text-3xl font-black text-orange-600">
-                      {statistics?.leaveStats?.ongoing_leaves || 0}
-                    </p>
-                    <p className="text-sm text-gray-600">Currently Away</p>
-                  </div>
+                </div>
+                
+                {/* Students with Poor Attendance */}
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                  <h3 className="font-bold text-lg mb-4 text-red-800 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Abanyeshuri Batitabira Nabi (&lt; 70%)
+                  </h3>
+                  {students.filter(s => s.attendance_percentage < 70).length === 0 ? (
+                    <p className="text-gray-600">Abanyeshuri bose batitabira neza!</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {students.filter(s => s.attendance_percentage < 70).slice(0, 6).map((student) => (
+                        <motion.div
+                          key={student.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="p-4 bg-white border-2 border-red-300 rounded-lg hover:shadow-lg transition-all"
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {student.first_name?.[0]}{student.last_name?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-gray-900 truncate text-sm">{student.first_name} {student.last_name}</p>
+                              <p className="text-xs text-gray-600">{student.trade_code} - Level {student.level_number}</p>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">Kwitabira:</span>
+                            <Badge className="bg-red-500 text-white text-xs">{student.attendance_percentage || 0}%</Badge>
+                          </div>
+                          <Button size="sm" className="w-full mt-2 bg-red-500 hover:bg-red-600 text-white text-xs">
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            Tumira Ababyeyi
+                          </Button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="border-2 border-purple-100 shadow-xl">
+          <TabsContent value="analytics">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                  Recent Activities
-                </CardTitle>
+                <CardTitle>Isesengura ry'Imikorere</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentActivities.slice(0, 5).map((activity: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{activity.action}</p>
-                        <p className="text-xs text-gray-500">
-                          {activity.module} • {new Date(activity.created_at).toLocaleString()}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="p-6 border-2 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50">
+                    <h3 className="font-bold mb-4 text-lg">Ibyabaye ku Bwoko</h3>
+                    <div className="space-y-3">
+                      {[
+                        { type: 'Imyitwarire', count: incidents.filter(i => i.incident_type === 'behavioral').length, color: 'from-red-500 to-orange-500' },
+                        { type: 'Amasomo', count: incidents.filter(i => i.incident_type === 'academic').length, color: 'from-blue-500 to-indigo-500' },
+                        { type: 'Kwitabira', count: incidents.filter(i => i.incident_type === 'attendance').length, color: 'from-yellow-500 to-amber-500' },
+                        { type: 'Umutekano', count: incidents.filter(i => i.incident_type === 'safety').length, color: 'from-green-500 to-teal-500' }
+                      ].map((item) => (
+                        <div key={item.type}>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-semibold">{item.type}</span>
+                            <span className="text-sm font-black text-gray-900">{item.count}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${incidents.length > 0 ? (item.count / incidents.length) * 100 : 0}%` }}
+                              transition={{ duration: 1, delay: 0.2 }}
+                              className={`bg-gradient-to-r ${item.color} h-3 rounded-full`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-6 border-2 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50">
+                    <h3 className="font-bold mb-4 text-lg">Incamake y'Ukwezi</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow">
+                        <span className="font-semibold">Ibyabaye Byose</span>
+                        <span className="text-3xl font-black text-blue-600">{incidents.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow">
+                        <span className="font-semibold">Byakemuwe</span>
+                        <span className="text-3xl font-black text-green-600">{incidents.filter(i => i.status === 'resolved').length}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow">
+                        <span className="font-semibold">Bitegerejwe</span>
+                        <span className="text-3xl font-black text-yellow-600">{incidents.filter(i => i.status === 'pending' || i.status === 'active').length}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow">
+                        <span className="font-semibold">Igipimo cy'Intsinzi</span>
+                        <span className="text-3xl font-black text-purple-600">
+                          {incidents.length > 0 ? Math.round((incidents.filter(i => i.status === 'resolved').length / incidents.length) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Global Student Sheets Analytics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-6 border-2 rounded-xl bg-gradient-to-br from-purple-50 to-violet-50">
+                    <h3 className="font-bold mb-4 text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Imyitwarire y'Abanyeshuri
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Imyitwarire Myiza (A)</span>
+                        <Badge className="bg-green-500 text-white">
+                          {students.filter(s => s.conduct_grade === 'A').length}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Imyitwarire Nziza (B)</span>
+                        <Badge className="bg-blue-500 text-white">
+                          {students.filter(s => s.conduct_grade === 'B').length}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Imyitwarire Isanzwe (C)</span>
+                        <Badge className="bg-yellow-500 text-white">
+                          {students.filter(s => s.conduct_grade === 'C').length}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Imyitwarire Mibi (D/F)</span>
+                        <Badge className="bg-red-500 text-white">
+                          {students.filter(s => s.conduct_grade === 'D' || s.conduct_grade === 'F').length}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 border-2 rounded-xl bg-gradient-to-br from-orange-50 to-red-50">
+                    <h3 className="font-bold mb-4 text-lg flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" />
+                      Abanyeshuri Bakeneye Ubufasha
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-red-500">
+                        <p className="text-sm font-semibold text-red-700">Imyitwarire Mibi</p>
+                        <p className="text-2xl font-black text-red-600">
+                          {students.filter(s => s.conduct_score < 60).length}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-yellow-500">
+                        <p className="text-sm font-semibold text-yellow-700">Kwitabira Nabi</p>
+                        <p className="text-2xl font-black text-yellow-600">
+                          {students.filter(s => s.attendance_percentage < 70).length}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-blue-500">
+                        <p className="text-sm font-semibold text-blue-700">Ibyabaye Byinshi</p>
+                        <p className="text-2xl font-black text-blue-600">
+                          {students.filter(s => s.total_incidents > 5).length}
                         </p>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div className="p-6 border-2 rounded-xl bg-gradient-to-br from-green-50 to-teal-50">
+                    <h3 className="font-bold mb-4 text-lg flex items-center gap-2">
+                      <Award className="w-5 h-5" />
+                      Imikorere Myiza
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-green-500">
+                        <p className="text-sm font-semibold text-green-700">Kwitabira Neza (&gt;90%)</p>
+                        <p className="text-2xl font-black text-green-600">
+                          {students.filter(s => s.attendance_percentage >= 90).length}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-blue-500">
+                        <p className="text-sm font-semibold text-blue-700">Imyitwarire Myiza (A)</p>
+                        <p className="text-2xl font-black text-blue-600">
+                          {students.filter(s => s.conduct_grade === 'A').length}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-white rounded-lg border-l-4 border-purple-500">
+                        <p className="text-sm font-semibold text-purple-700">Nta kibazo</p>
+                        <p className="text-2xl font-black text-purple-600">
+                          {students.filter(s => !s.total_incidents || s.total_incidents === 0).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
 
-        {/* Conduct Removal Modal */}
+        {/* Leave Modal */}
         <AnimatePresence>
-          {showConductModal && (
+          {showLeaveModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-              >
-                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
-                  <h2 className="text-2xl font-black flex items-center gap-2">
-                    <Ban className="w-6 h-6" />
-                    Remove Student Conduct
-                  </h2>
-                  <p className="text-red-100 mt-1">Record misconduct and notify parents automatically</p>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-green-600 to-emerald-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><Plane className="w-6 h-6" />Gutanga Uruhushya</h2>
                 </div>
-                
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div>
-                    <Label className="font-bold">Select Student *</Label>
-                    <select
-                      value={newConduct.student_id}
-                      onChange={(e) => setNewConduct({ ...newConduct, student_id: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      <option value="">Choose a student...</option>
-                      {students.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.student_code}) - {s.trade}
-                        </option>
-                      ))}
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={newLeave.student_id}
+                    onChange={(studentId) => setNewLeave({ ...newLeave, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubwoko bw'Uruhushya *</Label>
+                    <select value={newLeave.leave_type} onChange={(e) => setNewLeave({ ...newLeave, leave_type: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="sick">🤒 Kurwara</option>
+                      <option value="home">🏠 Kuja Murugo</option>
+                      <option value="emergency">🚨 Ihutirwa</option>
+                      <option value="family">👨👩👧 Ikibazo cy'Umuryango</option>
+                      <option value="medical">🏥 Kwa Muganga</option>
+                      <option value="other">📋 Ikindi</option>
                     </select>
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Conduct Type *</Label>
-                    <select
-                      value={newConduct.conduct_type}
-                      onChange={(e) => setNewConduct({ ...newConduct, conduct_type: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      <option value="warning">Warning</option>
-                      <option value="suspension">Suspension</option>
-                      <option value="absence">Unauthorized Absence</option>
-                      <option value="late_arrival">Late Arrival</option>
-                      <option value="fighting">Fighting</option>
-                      <option value="disrespect">Disrespect</option>
-                      <option value="cheating">Cheating</option>
-                      <option value="vandalism">Vandalism</option>
-                      <option value="other">Other</option>
-                    </select>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Impamvu *</Label>
+                    <Textarea value={newLeave.reason} onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })} placeholder="Andika impamvu..." rows={4} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Severity *</Label>
-                    <select
-                      value={newConduct.severity}
-                      onChange={(e) => setNewConduct({ ...newConduct, severity: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-bold">Itariki yo Gutangira *</Label>
+                      <Input type="datetime-local" value={newLeave.start_time} onChange={(e) => setNewLeave({ ...newLeave, start_time: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold">Itariki yo Kurangiza</Label>
+                      <Input type="datetime-local" value={newLeave.end_time} onChange={(e) => setNewLeave({ ...newLeave, end_time: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg" />
+                    </div>
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Description *</Label>
-                    <Textarea
-                      value={newConduct.description}
-                      onChange={(e) => setNewConduct({ ...newConduct, description: e.target.value })}
-                      placeholder="Detailed description of the misconduct..."
-                      rows={4}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="font-bold">Action Taken</Label>
-                    <Input
-                      value={newConduct.action_taken}
-                      onChange={(e) => setNewConduct({ ...newConduct, action_taken: e.target.value })}
-                      placeholder="e.g., Verbal warning, Detention, Parent meeting"
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="font-bold">Lesson/Period Missed</Label>
-                    <Input
-                      value={newConduct.lesson_missed}
-                      onChange={(e) => setNewConduct({ ...newConduct, lesson_missed: e.target.value })}
-                      placeholder="e.g., Mathematics Period 3"
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
-
-                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-                    <p className="text-sm text-yellow-800 font-semibold flex items-center gap-2">
-                      <AlertCircleIcon className="w-4 h-4" />
-                      Parents will be automatically notified via SMS/WhatsApp about this conduct removal.
-                    </p>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Byemejwe na *</Label>
+                    <Input value={newLeave.approved_by_name} onChange={(e) => setNewLeave({ ...newLeave, approved_by_name: e.target.value })} placeholder="Amazina yawe" className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
                 </div>
-
                 <div className="p-6 bg-gray-50 flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowConductModal(false)}
-                    disabled={processing}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleRemoveConduct}
-                    disabled={processing}
-                    className="bg-gradient-to-r from-red-600 to-red-700 text-white"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Ban className="w-4 h-4 mr-2" />
-                        Remove Conduct & Notify
-                      </>
-                    )}
+                  <Button variant="outline" onClick={() => setShowLeaveModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleGrantLeave} disabled={processing} className="bg-gradient-to-r from-green-600 to-emerald-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Tanga Uruhushya</>}
                   </Button>
                 </div>
               </motion.div>
@@ -1009,132 +969,48 @@ export default function DODDashboard({ onNavigate, onLogout }: DODDashboardProps
           )}
         </AnimatePresence>
 
-        {/* Leave Modal */}
+        {/* Conduct Modal */}
         <AnimatePresence>
-          {showLeaveModal && (
+          {showConductModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-              >
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-                  <h2 className="text-2xl font-black flex items-center gap-2">
-                    <Plane className="w-6 h-6" />
-                    Grant Student Leave
-                  </h2>
-                  <p className="text-blue-100 mt-1">Approve student leave and notify parents</p>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-yellow-600 to-amber-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><Ban className="w-6 h-6" />Kuraho Imyitwarire</h2>
                 </div>
-                
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div>
-                    <Label className="font-bold">Select Student *</Label>
-                    <select
-                      value={newLeave.student_id}
-                      onChange={(e) => setNewLeave({ ...newLeave, student_id: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="">Choose a student...</option>
-                      {students.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.student_code}) - {s.trade}
-                        </option>
-                      ))}
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={newConduct.student_id}
+                    onChange={(studentId) => setNewConduct({ ...newConduct, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubwoko bw'Imyitwarire *</Label>
+                    <select value={newConduct.conduct_type} onChange={(e) => setNewConduct({ ...newConduct, conduct_type: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="warning">⚠️ Iburira</option>
+                      <option value="suspension">🚫 Guhagarika</option>
+                      <option value="expulsion">❌ Kwirukana</option>
+                      <option value="probation">📋 Kugenzura</option>
                     </select>
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Leave Type *</Label>
-                    <select
-                      value={newLeave.leave_type}
-                      onChange={(e) => setNewLeave({ ...newLeave, leave_type: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="sick">Sick Leave</option>
-                      <option value="home">Home Visit</option>
-                      <option value="emergency">Emergency</option>
-                      <option value="family">Family Matter</option>
-                      <option value="medical">Medical Appointment</option>
-                      <option value="other">Other</option>
-                    </select>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ibisobanuro *</Label>
+                    <Textarea value={newConduct.description} onChange={(e) => setNewConduct({ ...newConduct, description: e.target.value })} placeholder="Sobanura..." rows={4} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Reason *</Label>
-                    <Textarea
-                      value={newLeave.reason}
-                      onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}
-                      placeholder="Reason for leave..."
-                      rows={3}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="font-bold">Start Time *</Label>
-                      <Input
-                        type="datetime-local"
-                        value={newLeave.start_time}
-                        onChange={(e) => setNewLeave({ ...newLeave, start_time: e.target.value })}
-                        className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="font-bold">End Time *</Label>
-                      <Input
-                        type="datetime-local"
-                        value={newLeave.end_time}
-                        onChange={(e) => setNewLeave({ ...newLeave, end_time: e.target.value })}
-                        className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="font-bold">Lesson/Period to Miss</Label>
-                    <Input
-                      value={newLeave.lesson_missed}
-                      onChange={(e) => setNewLeave({ ...newLeave, lesson_missed: e.target.value })}
-                      placeholder="e.g., All afternoon classes"
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                    <p className="text-sm text-blue-800 font-semibold flex items-center gap-2">
-                      <AlertCircleIcon className="w-4 h-4" />
-                      Parents will be automatically notified via SMS/WhatsApp about this approved leave.
-                    </p>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Igikorwa Cyafashwe</Label>
+                    <Textarea value={newConduct.action_taken} onChange={(e) => setNewConduct({ ...newConduct, action_taken: e.target.value })} placeholder="Igikorwa..." rows={3} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
                 </div>
-
                 <div className="p-6 bg-gray-50 flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowLeaveModal(false)}
-                    disabled={processing}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddLeave}
-                    disabled={processing}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Grant Leave & Notify
-                      </>
-                    )}
+                  <Button variant="outline" onClick={() => setShowConductModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleRemoveConduct} disabled={processing} className="bg-gradient-to-r from-yellow-600 to-amber-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Kuraho</>}
                   </Button>
                 </div>
               </motion.div>
@@ -1146,107 +1022,52 @@ export default function DODDashboard({ onNavigate, onLogout }: DODDashboardProps
         <AnimatePresence>
           {showIncidentModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-              >
-                <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-6 text-white">
-                  <h2 className="text-2xl font-black flex items-center gap-2">
-                    <AlertTriangle className="w-6 h-6" />
-                    Record Discipline Incident
-                  </h2>
-                  <p className="text-orange-100 mt-1">Document incident for tracking and analysis</p>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-red-600 to-rose-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><AlertTriangle className="w-6 h-6" />Kwandika Ikosa</h2>
                 </div>
-                
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div>
-                    <Label className="font-bold">Select Student *</Label>
-                    <select
-                      value={newIncident.student_id}
-                      onChange={(e) => setNewIncident({ ...newIncident, student_id: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                      <option value="">Choose a student...</option>
-                      {students.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.student_code}) - {s.trade}
-                        </option>
-                      ))}
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={newIncident.student_id}
+                    onChange={(studentId) => setNewIncident({ ...newIncident, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubwoko bw'Ikosa *</Label>
+                    <select value={newIncident.incident_type} onChange={(e) => setNewIncident({ ...newIncident, incident_type: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="behavioral">😠 Imyitwarire</option>
+                      <option value="academic">📚 Amasomo</option>
+                      <option value="attendance">📅 Kwitabira</option>
+                      <option value="safety">🛡️ Umutekano</option>
                     </select>
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Case Type *</Label>
-                    <Input
-                      value={newIncident.case_type}
-                      onChange={(e) => setNewIncident({ ...newIncident, case_type: e.target.value })}
-                      placeholder="e.g., Bullying, Theft, Vandalism"
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="font-bold">Severity *</Label>
-                    <select
-                      value={newIncident.severity}
-                      onChange={(e) => setNewIncident({ ...newIncident, severity: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Urwego *</Label>
+                    <select value={newIncident.severity} onChange={(e) => setNewIncident({ ...newIncident, severity: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="low">🟢 Hasi</option>
+                      <option value="medium">🟡 Hagati</option>
+                      <option value="high">🔴 Hejuru</option>
                     </select>
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Description *</Label>
-                    <Textarea
-                      value={newIncident.description}
-                      onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
-                      placeholder="Detailed description of the incident..."
-                      rows={5}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                    />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ibisobanuro *</Label>
+                    <Textarea value={newIncident.description} onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })} placeholder="Sobanura ikosa..." rows={4} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Reported By</Label>
-                    <Input
-                      value={newIncident.reported_by}
-                      onChange={(e) => setNewIncident({ ...newIncident, reported_by: e.target.value })}
-                      placeholder="Staff member name"
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500"
-                    />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ahantu</Label>
+                    <Input value={newIncident.location} onChange={(e) => setNewIncident({ ...newIncident, location: e.target.value })} placeholder="Ahantu habayeho" className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
                 </div>
-
                 <div className="p-6 bg-gray-50 flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowIncidentModal(false)}
-                    disabled={processing}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCreateIncident}
-                    disabled={processing}
-                    className="bg-gradient-to-r from-orange-600 to-orange-700 text-white"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Recording...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-4 h-4 mr-2" />
-                        Record Incident
-                      </>
-                    )}
+                  <Button variant="outline" onClick={() => setShowIncidentModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleCreateIncident} disabled={processing} className="bg-gradient-to-r from-red-600 to-rose-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Kwandika</>}
                   </Button>
                 </div>
               </motion.div>
@@ -1254,114 +1075,203 @@ export default function DODDashboard({ onNavigate, onLogout }: DODDashboardProps
           )}
         </AnimatePresence>
 
-        {/* Success Message */}
-        <AnimatePresence>
-          {successMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              className="fixed top-20 right-6 z-50 bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3"
-            >
-              <CheckCircle className="w-6 h-6" />
-              <span className="font-bold">{successMessage}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Message Parent Modal */}
+        {/* Message Modal */}
         <AnimatePresence>
           {showMessageModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
-              >
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white">
-                  <h2 className="text-2xl font-black flex items-center gap-2">
-                    <MessageSquare className="w-6 h-6" />
-                    Message Parents
-                  </h2>
-                  <p className="text-purple-100 mt-1">
-                    {selectedStudents.length > 0 
-                      ? `Send message to ${selectedStudents.length} selected student parent(s)` 
-                      : 'Send message to all parents'}
-                  </p>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><Mail className="w-6 h-6" />Kohereza Ababyeyi</h2>
                 </div>
-                
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div>
-                    <Label className="font-bold">Subject *</Label>
-                    <Input
-                      value={messageForm.subject}
-                      onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
-                      placeholder="Message subject..."
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    />
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <div className="space-y-2">
+                    <Label className="font-bold">Umutwe *</Label>
+                    <Input value={messageForm.subject} onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })} placeholder="Umutwe w'ubutumwa" className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Message *</Label>
-                    <Textarea
-                      value={messageForm.message}
-                      onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
-                      placeholder="Type your message here..."
-                      rows={6}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                    />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubutumwa *</Label>
+                    <Textarea value={messageForm.message} onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })} placeholder="Andika ubutumwa..." rows={6} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
-
-                  <div>
-                    <Label className="font-bold">Priority</Label>
-                    <select
-                      value={messageForm.priority}
-                      onChange={(e) => setMessageForm({ ...messageForm, priority: e.target.value })}
-                      className="w-full mt-1 px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                    >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Kohereza binyuze *</Label>
+                    <select value={messageForm.send_via} onChange={(e) => setMessageForm({ ...messageForm, send_via: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="sms">📱 SMS</option>
+                      <option value="whatsapp">💬 WhatsApp</option>
+                      <option value="both">📲 Byombi</option>
                     </select>
                   </div>
+                </div>
+                <div className="p-6 bg-gray-50 flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => setShowMessageModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleSendMessage} disabled={processing} className="bg-gradient-to-r from-blue-600 to-cyan-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Kohereza</>}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
-                  <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
-                    <p className="text-sm text-purple-800 font-semibold flex items-center gap-2">
-                      <AlertCircleIcon className="w-4 h-4" />
-                      Messages will be sent via SMS/WhatsApp to parents' registered phone numbers.
-                    </p>
+        {/* Attendance Modal */}
+        <AnimatePresence>
+          {showAttendanceModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><UserCheck className="w-6 h-6" />Kwandika Kwitabira</h2>
+                </div>
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={attendanceForm.student_id}
+                    onChange={(studentId) => setAttendanceForm({ ...attendanceForm, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-bold">Itariki *</Label>
+                      <Input type="date" value={attendanceForm.attendance_date} onChange={(e) => setAttendanceForm({ ...attendanceForm, attendance_date: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold">Imiterere *</Label>
+                      <select value={attendanceForm.status} onChange={(e) => setAttendanceForm({ ...attendanceForm, status: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                        <option value="present">✅ Yaritabiriye</option>
+                        <option value="absent">❌ Ntiyaritabiriye</option>
+                        <option value="late">⏰ Yatinze</option>
+                        <option value="excused">📋 Yemerewe</option>
+                        <option value="sick">🤒 Yarwaye</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="font-bold">Isomo</Label>
+                      <Input value={attendanceForm.subject} onChange={(e) => setAttendanceForm({ ...attendanceForm, subject: e.target.value })} placeholder="Isomo" className="w-full px-4 py-3 border-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold">Igihe</Label>
+                      <Input value={attendanceForm.period} onChange={(e) => setAttendanceForm({ ...attendanceForm, period: e.target.value })} placeholder="Igihe (1-8)" className="w-full px-4 py-3 border-2 rounded-lg" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ibisobanuro</Label>
+                    <Textarea value={attendanceForm.remarks} onChange={(e) => setAttendanceForm({ ...attendanceForm, remarks: e.target.value })} placeholder="Ibisobanuro..." rows={3} className="w-full px-4 py-3 border-2 rounded-lg" />
                   </div>
                 </div>
-
                 <div className="p-6 bg-gray-50 flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowMessageModal(false);
-                      setSelectedStudents([]);
-                    }}
-                    disabled={processing}
-                  >
-                    Cancel
+                  <Button variant="outline" onClick={() => setShowAttendanceModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleMarkAttendance} disabled={processing} className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Kwandika</>}
                   </Button>
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={processing}
-                    className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Send Message
-                      </>
-                    )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Counseling Modal */}
+        <AnimatePresence>
+          {showCounselingModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-pink-600 to-rose-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><MessageSquare className="w-6 h-6" />Guteganya Inama</h2>
+                </div>
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={newCounseling.student_id}
+                    onChange={(studentId) => setNewCounseling({ ...newCounseling, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubwoko bw'Inama *</Label>
+                    <select value={newCounseling.session_type} onChange={(e) => setNewCounseling({ ...newCounseling, session_type: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="individual">👤 Ku giti cye</option>
+                      <option value="group">👥 Mu itsinda</option>
+                      <option value="family">👨👩👧 N'umuryango</option>
+                      <option value="academic">📚 Ku masomo</option>
+                      <option value="behavioral">😊 Ku myitwarire</option>
+                      <option value="career">🎯 Ku mwuga</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Itariki y'Inama</Label>
+                    <Input type="date" value={newCounseling.scheduled_date} onChange={(e) => setNewCounseling({ ...newCounseling, scheduled_date: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ibisobanuro n'Intego *</Label>
+                    <Textarea value={newCounseling.notes} onChange={(e) => setNewCounseling({ ...newCounseling, notes: e.target.value })} placeholder="Sobanura intego z'inama n'ibibazo bigomba gukemurwa..." rows={5} className="w-full px-4 py-3 border-2 rounded-lg" />
+                  </div>
+                </div>
+                <div className="p-6 bg-gray-50 flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => setShowCounselingModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleScheduleCounseling} disabled={processing} className="bg-gradient-to-r from-pink-600 to-rose-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Teganya</>}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Recognition Modal */}
+        <AnimatePresence>
+          {showRecognitionModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white">
+                  <h2 className="text-2xl font-black flex items-center gap-2"><Award className="w-6 h-6" />Gutanga Igihembo</h2>
+                </div>
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  <PowerfulStudentSelector
+                    value={newRecognition.student_id}
+                    onChange={(studentId) => setNewRecognition({ ...newRecognition, student_id: studentId })}
+                    label="Hitamo Umunyeshuri"
+                    placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                    showAdvancedFilters={true}
+                    showStudentStats={true}
+                    enableVoiceSearch={true}
+                    showFavorites={true}
+                    required={true}
+                  />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ubwoko bw'Igihembo *</Label>
+                    <select value={newRecognition.award_type} onChange={(e) => setNewRecognition({ ...newRecognition, award_type: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg">
+                      <option value="excellence">🏆 Ubuhanga</option>
+                      <option value="improvement">📈 Iterambere</option>
+                      <option value="leadership">👑 Ubuyobozi</option>
+                      <option value="service">🤝 Serivisi</option>
+                      <option value="attendance">📅 Kwitabira</option>
+                      <option value="behavior">😊 Imyitwarire</option>
+                      <option value="academic">📚 Amasomo</option>
+                      <option value="sports">⚽ Siporo</option>
+                      <option value="arts">🎨 Ubuhanzi</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Itariki y'Igihembo</Label>
+                    <Input type="date" value={newRecognition.date_awarded} onChange={(e) => setNewRecognition({ ...newRecognition, date_awarded: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Ibisobanuro by'Igihembo *</Label>
+                    <Textarea value={newRecognition.description} onChange={(e) => setNewRecognition({ ...newRecognition, description: e.target.value })} placeholder="Sobanura impamvu yo gutanga iki gihembo n'ibyiza umunyeshuri yakoze..." rows={5} className="w-full px-4 py-3 border-2 rounded-lg" />
+                  </div>
+                </div>
+                <div className="p-6 bg-gray-50 flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => setShowRecognitionModal(false)} disabled={processing}>Kureka</Button>
+                  <Button onClick={handleAwardRecognition} disabled={processing} className="bg-gradient-to-r from-amber-600 to-orange-700 text-white">
+                    {processing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tegereza...</> : <><CheckCircle className="w-4 h-4 mr-2" />Tanga Igihembo</>}
                   </Button>
                 </div>
               </motion.div>
@@ -1371,4 +1281,6 @@ export default function DODDashboard({ onNavigate, onLogout }: DODDashboardProps
       </div>
     </div>
   );
-}
+};
+
+export default DODDashboard;

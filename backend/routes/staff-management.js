@@ -4,13 +4,13 @@ const { pool: db } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Get all staff (teachers and other staff)
-router.get('/', authenticateToken, requireRole(['admin', 'headmaster', 'director_study']), async (req, res) => {
+router.get('/', authenticateToken, requireRole(['admin', 'headmaster', 'director_study', 'school_owner']), async (req, res) => {
   try {
     const [staff] = await db.query(`
       SELECT u.*, r.name as role_name 
       FROM users u
       JOIN roles r ON u.role_id = r.id
-      WHERE r.name IN ('teacher', 'staff', 'accountant', 'stock_manager', 'advisor', 'director_study', 'director_discipline', 'headmaster')
+      WHERE r.name IN ('teacher', 'staff', 'accountant', 'stock_manager', 'advisor', 'director_study', 'director_discipline', 'headmaster', 'school_owner')
       ORDER BY u.created_at DESC
     `);
     res.json({ success: true, staff });
@@ -20,7 +20,7 @@ router.get('/', authenticateToken, requireRole(['admin', 'headmaster', 'director
 });
 
 // Get single staff member
-router.get('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'director_study']), async (req, res) => {
+router.get('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'director_study', 'school_owner']), async (req, res) => {
   try {
     const [staff] = await db.query(`
       SELECT u.*, r.name as role_name 
@@ -39,7 +39,7 @@ router.get('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'direc
 });
 
 // Add new staff member
-router.post('/', authenticateToken, requireRole(['admin', 'headmaster', 'director_study']), async (req, res) => {
+router.post('/', authenticateToken, requireRole(['admin', 'headmaster', 'director_study', 'school_owner']), async (req, res) => {
   try {
     const { first_name, last_name, email, phone, role_name, department, specialization, hire_date, trade_id, level } = req.body;
     
@@ -77,7 +77,7 @@ router.post('/', authenticateToken, requireRole(['admin', 'headmaster', 'directo
 });
 
 // Update staff member
-router.put('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'director_study']), async (req, res) => {
+router.put('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'director_study', 'school_owner']), async (req, res) => {
   try {
     const { first_name, last_name, email, phone, role_name, department, specialization, hire_date, is_active } = req.body;
     
@@ -104,7 +104,7 @@ router.put('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'direc
 });
 
 // Delete staff member
-router.delete('/:id', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+router.delete('/:id', authenticateToken, requireRole(['admin', 'headmaster', 'school_owner']), async (req, res) => {
   try {
     // Soft delete - deactivate instead of removing
     await db.query('UPDATE users SET is_active=false WHERE id=?', [req.params.id]);

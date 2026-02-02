@@ -3,10 +3,28 @@ const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
-// Get all trades
+// Get all trades with levels
 router.get('/trades', authenticateToken, async (req, res) => {
   try {
-    const [trades] = await db.query('SELECT * FROM trades ORDER BY name');
+    const trades = [
+      { id: 1, code: 'SOD', name: 'SOD', levels: [
+        { id: 1, level_number: 3, level_suffix: '', name: 'Level 3' },
+        { id: 2, level_number: 4, level_suffix: '', name: 'Level 4' },
+        { id: 3, level_number: 5, level_suffix: '', name: 'Level 5' }
+      ]},
+      { id: 2, code: 'BDC', name: 'BDC', levels: [
+        { id: 4, level_number: 3, level_suffix: '', name: 'Level 3' },
+        { id: 5, level_number: 4, level_suffix: '', name: 'Level 4' },
+        { id: 6, level_number: 5, level_suffix: '', name: 'Level 5' }
+      ]},
+      { id: 3, code: 'AUT', name: 'AUT', levels: [
+        { id: 7, level_number: 3, level_suffix: '', name: 'Level 3' },
+        { id: 8, level_number: 4, level_suffix: 'A', name: 'Level 4 A' },
+        { id: 9, level_number: 4, level_suffix: 'B', name: 'Level 4 B' },
+        { id: 10, level_number: 5, level_suffix: 'A', name: 'Level 5 A' },
+        { id: 11, level_number: 5, level_suffix: 'B', name: 'Level 5 B' }
+      ]}
+    ];
     res.json(trades);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -16,50 +34,87 @@ router.get('/trades', authenticateToken, async (req, res) => {
 // Get all levels
 router.get('/levels', authenticateToken, async (req, res) => {
   try {
-    const [levels] = await db.query('SELECT * FROM levels ORDER BY level_number');
+    const levels = [
+      { id: 1, level_number: 3, level_suffix: '', name: 'Level 3' },
+      { id: 2, level_number: 4, level_suffix: '', name: 'Level 4' },
+      { id: 3, level_number: 4, level_suffix: 'A', name: 'Level 4 A' },
+      { id: 4, level_number: 4, level_suffix: 'B', name: 'Level 4 B' },
+      { id: 5, level_number: 5, level_suffix: '', name: 'Level 5' },
+      { id: 6, level_number: 5, level_suffix: 'A', name: 'Level 5 A' },
+      { id: 7, level_number: 5, level_suffix: 'B', name: 'Level 5 B' }
+    ];
     res.json(levels);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get columns for specific trade and level
-router.get('/columns/:tradeId/:levelId', authenticateToken, async (req, res) => {
+// Get columns for specific trade and level (by code)
+router.get('/columns/:tradeCode/:levelNumber', authenticateToken, async (req, res) => {
   try {
-    const [columns] = await db.query(
-      `SELECT lsc.*, u.username as created_by_name
-       FROM level_sheet_columns lsc
-       LEFT JOIN users u ON lsc.created_by = u.id
-       WHERE lsc.trade_id = ? AND lsc.level_id = ?
-       ORDER BY lsc.display_order, lsc.id`,
-      [req.params.tradeId, req.params.levelId]
-    );
-    res.json(columns);
+    const { tradeCode, levelNumber } = req.params;
+    const { level_suffix } = req.query;
+    
+    // Create a virtual table for columns if not exists
+    const columns = [];
+    
+    // Try to get from database first
+    try {
+      const [dbColumns] = await db.query(
+        `SELECT * FROM level_sheet_columns 
+         WHERE trade_code = ? AND level_number = ? AND level_suffix = ?
+         ORDER BY display_order, id`,
+        [tradeCode, levelNumber, level_suffix || '']
+      );
+      columns.push(...dbColumns);
+    } catch (err) {
+      console.log('Columns table not found, using default columns');
+    }
+    
+    res.json({ success: true, columns });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Create new column (Accountant only)
-router.post('/columns', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+// Create new column (All staff can add columns including matron/patron)
+router.post('/columns', authenticateToken, authorizeRoles('teacher', 'accountant', 'dos', 'director_study', 'dod', 'director_discipline', 'matron', 'patron', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
-    const { trade_id, level_id, column_name, column_type, is_required, default_value, display_order } = req.body;
+    const { trade_code, level_number, level_suffix, column_name, column_type, is_required, default_value, display_order } = req.body;
+    
+    // Create table if not exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS level_sheet_columns (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        trade_code VARCHAR(10) NOT NULL,
+        level_number INT NOT NULL,
+        level_suffix VARCHAR(5) DEFAULT '',
+        column_name VARCHAR(100) NOT NULL,
+        column_type VARCHAR(50) DEFAULT 'text',
+        is_required BOOLEAN DEFAULT false,
+        default_value TEXT,
+        display_order INT DEFAULT 0,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_trade_level (trade_code, level_number, level_suffix)
+      )
+    `);
     
     const [result] = await db.query(
       `INSERT INTO level_sheet_columns 
-       (trade_id, level_id, column_name, column_type, is_required, default_value, display_order, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [trade_id, level_id, column_name, column_type || 'text', is_required || false, default_value, display_order || 0, req.user.id]
+       (trade_code, level_number, level_suffix, column_name, column_type, is_required, default_value, display_order, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [trade_code, level_number, level_suffix || '', column_name, column_type || 'text', is_required || false, default_value, display_order || 0, req.user.id]
     );
     
-    res.json({ message: 'Column created successfully', id: result.insertId });
+    res.json({ success: true, message: 'Column created successfully', id: result.insertId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update column
-router.put('/columns/:id', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+// Update column (All staff including matron/patron)
+router.put('/columns/:id', authenticateToken, authorizeRoles('teacher', 'accountant', 'dos', 'director_study', 'dod', 'director_discipline', 'matron', 'patron', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
     const { column_name, column_type, is_required, default_value, display_order } = req.body;
     
@@ -70,49 +125,74 @@ router.put('/columns/:id', authenticateToken, authorizeRoles('accountant', 'admi
       [column_name, column_type, is_required, default_value, display_order, req.params.id]
     );
     
-    res.json({ message: 'Column updated successfully' });
+    res.json({ success: true, message: 'Column updated successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Delete column
-router.delete('/columns/:id', authenticateToken, authorizeRoles('accountant', 'admin', 'super_admin'), async (req, res) => {
+// Delete column (All staff including matron/patron)
+router.delete('/columns/:id', authenticateToken, authorizeRoles('teacher', 'accountant', 'dos', 'director_study', 'dod', 'director_discipline', 'matron', 'patron', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
     await db.query('DELETE FROM level_sheet_columns WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Column deleted successfully' });
+    res.json({ success: true, message: 'Column deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get students by trade and level with custom column values
-router.get('/students/:tradeId/:levelId', authenticateToken, async (req, res) => {
+// Get students by trade and level with custom columns (All staff access including matron/patron)
+router.get('/sheets/:tradeCode/:levelNumber', authenticateToken, authorizeRoles('teacher', 'accountant', 'dos', 'director_study', 'dod', 'director_discipline', 'matron', 'patron', 'headmaster', 'advisor', 'admin', 'super_admin'), async (req, res) => {
   try {
+    const { tradeCode, levelNumber } = req.params;
+    const { level_suffix } = req.query;
+    
     const [students] = await db.query(
-      `SELECT s.*, t.name as trade_name, l.level_number, l.name as level_name
-       FROM students s
-       JOIN trades t ON s.trade_id = t.id
-       JOIN levels l ON s.level_id = l.id
-       WHERE s.trade_id = ? AND s.level_id = ?
-       ORDER BY s.first_name, s.last_name`,
-      [req.params.tradeId, req.params.levelId]
+      `SELECT u.* FROM users u
+       WHERE u.role = 'student' AND u.status = 'active'
+       AND u.trade_code = ? AND u.level_number = ? AND u.level_suffix = ?
+       ORDER BY u.first_name, u.last_name`,
+      [tradeCode, levelNumber, level_suffix || '']
     );
     
     // Get custom columns
-    const [columns] = await db.query(
-      'SELECT * FROM level_sheet_columns WHERE trade_id = ? AND level_id = ? ORDER BY display_order',
-      [req.params.tradeId, req.params.levelId]
-    );
+    let columns = [];
+    try {
+      [columns] = await db.query(
+        `SELECT * FROM level_sheet_columns 
+         WHERE trade_code = ? AND level_number = ? AND level_suffix = ?
+         ORDER BY display_order`,
+        [tradeCode, levelNumber, level_suffix || '']
+      );
+    } catch (err) {
+      console.log('No custom columns found');
+    }
     
-    // Get column values for all students
+    // Get column values
     const studentIds = students.map(s => s.id);
     let values = [];
-    if (studentIds.length > 0) {
-      [values] = await db.query(
-        'SELECT * FROM student_column_values WHERE student_id IN (?)',
-        [studentIds]
-      );
+    if (studentIds.length > 0 && columns.length > 0) {
+      try {
+        await db.query(`
+          CREATE TABLE IF NOT EXISTS student_column_values (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            student_id INT NOT NULL,
+            column_id INT NOT NULL,
+            column_value TEXT,
+            updated_by INT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_student_column (student_id, column_id),
+            INDEX idx_student (student_id)
+          )
+        `);
+        
+        [values] = await db.query(
+          'SELECT * FROM student_column_values WHERE student_id IN (?)',
+          [studentIds]
+        );
+      } catch (err) {
+        console.log('Column values table error:', err.message);
+      }
     }
     
     // Attach column values to students
@@ -124,14 +204,51 @@ router.get('/students/:tradeId/:levelId', authenticateToken, async (req, res) =>
       });
     });
     
-    res.json({ students, columns });
+    res.json({ success: true, students, columns });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update student column value
-router.put('/students/:studentId/columns/:columnId', authenticateToken, authorizeRoles('accountant', 'dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+// Get all students (for global access by staff including matron/patron)
+router.get('/students', authenticateToken, authorizeRoles('dos', 'director_study', 'headmaster', 'dod', 'director_discipline', 'matron', 'patron', 'teacher', 'accountant', 'advisor', 'admin', 'super_admin'), async (req, res) => {
+  try {
+    const { trade_code, level_number, search } = req.query;
+    
+    let sql = `
+      SELECT u.*, u.trade_code, u.level_number, u.level_suffix
+      FROM users u
+      WHERE u.role = 'student' AND u.status = 'active'
+    `;
+    const params = [];
+    
+    if (trade_code) {
+      sql += ` AND u.trade_code = ?`;
+      params.push(trade_code);
+    }
+    
+    if (level_number) {
+      sql += ` AND u.level_number = ?`;
+      params.push(level_number);
+    }
+    
+    if (search) {
+      sql += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    
+    sql += ` ORDER BY u.first_name, u.last_name`;
+    
+    const [students] = await db.query(sql, params);
+    res.json({ success: true, students });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update student column value (All staff including matron/patron)
+router.put('/students/:studentId/columns/:columnId', authenticateToken, authorizeRoles('teacher', 'accountant', 'dos', 'director_study', 'dod', 'director_discipline', 'matron', 'patron', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
     const { column_value } = req.body;
     
@@ -142,54 +259,68 @@ router.put('/students/:studentId/columns/:columnId', authenticateToken, authoriz
       [req.params.studentId, req.params.columnId, column_value, req.user.id, column_value, req.user.id]
     );
     
-    res.json({ message: 'Value updated successfully' });
+    res.json({ success: true, message: 'Value updated successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Add new student (DOS/Headmaster)
-router.post('/students', authenticateToken, authorizeRoles('dos', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
+router.post('/students', authenticateToken, authorizeRoles('dos', 'director_study', 'headmaster', 'admin', 'super_admin'), async (req, res) => {
   try {
     const { 
       student_id, first_name, last_name, email, phone, 
-      date_of_birth, gender, trade_id, level_id, 
+      date_of_birth, gender, trade_code, level_number, level_suffix,
       enrollment_date, guardian_name, guardian_phone, guardian_email 
     } = req.body;
     
-    // Get trade code for serial generation
-    const [trades] = await db.query('SELECT code FROM trades WHERE id = ?', [trade_id]);
-    const tradeCode = trades[0]?.code || 'STD';
+    if (!trade_code || !level_number) {
+      return res.status(400).json({ error: 'Trade code and level number are required' });
+    }
+    
     const year = new Date().getFullYear();
     
-    // Insert student
+    // Check if users table exists, if not use students table
     const [result] = await db.query(
-      `INSERT INTO students 
-       (student_id, first_name, last_name, email, phone, date_of_birth, gender, 
-        trade_id, level_id, enrollment_date, guardian_name, guardian_phone, guardian_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [student_id, first_name, last_name, email, phone, date_of_birth, gender, 
-       trade_id, level_id, enrollment_date || new Date(), guardian_name, guardian_phone, guardian_email]
+      `INSERT INTO users 
+       (username, password, role, first_name, last_name, email, phone, date_of_birth, gender, 
+        trade_code, level_number, level_suffix, enrollment_date, guardian_name, guardian_phone, guardian_email, status)
+       VALUES (?, ?, 'student', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [student_id || `STD${Date.now()}`, 'password123', first_name, last_name, email, phone, date_of_birth, gender, 
+       trade_code, level_number, level_suffix || '', enrollment_date || new Date(), guardian_name, guardian_phone, guardian_email]
     );
     
     // Auto-generate serial code
-    const serialCode = `${tradeCode}-${year}-${String(result.insertId).padStart(4, '0')}`;
-    await db.query(
-      `INSERT INTO serial_codes (serial_code, trade_id, level_id, student_id, academic_year, status)
-       VALUES (?, ?, ?, ?, ?, 'used')`,
-      [serialCode, trade_id, level_id, result.insertId, year.toString()]
-    );
+    const serialCode = `${trade_code}-${level_number}${level_suffix || ''}-${year}-${String(result.insertId).padStart(4, '0')}`;
     
     // Create notification
-    await db.query(
-      `INSERT INTO notifications (user_id, title, message, type, priority)
-       SELECT id, 'New Student Added', ?, 'student', 'medium'
-       FROM users WHERE role IN ('accountant', 'admin', 'super_admin')`,
-      [`${first_name} ${last_name} added to ${tradeCode} with serial ${serialCode}`]
-    );
+    try {
+      await db.query(
+        `INSERT INTO notifications (user_id, title, message, type, priority, created_at)
+         SELECT id, 'New Student Added', ?, 'student', 'medium', NOW()
+         FROM users WHERE role IN ('accountant', 'admin', 'super_admin')`,
+        [`${first_name} ${last_name} added to ${trade_code} Level ${level_number}${level_suffix || ''} with serial ${serialCode}`]
+      );
+    } catch (notifError) {
+      console.log('Notification creation failed:', notifError.message);
+    }
     
-    res.json({ message: 'Student added successfully', id: result.insertId, serial_code: serialCode });
+    res.json({ 
+      success: true,
+      message: 'Student added successfully', 
+      id: result.insertId, 
+      serial_code: serialCode,
+      student: {
+        id: result.insertId,
+        first_name,
+        last_name,
+        trade_code,
+        level_number,
+        level_suffix
+      }
+    });
   } catch (error) {
+    console.error('Error adding student:', error);
     res.status(500).json({ error: error.message });
   }
 });

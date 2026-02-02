@@ -40,6 +40,7 @@ interface AuthContextType {
     last_name: string;
     phone?: string;
   }) => Promise<{ success: boolean; dashboardPage?: string; message?: string }>;
+  setAuthFromRegistration: (token: string, user: User) => string;
   logout: () => void;
   loading: boolean;
   getRoleDashboard: (role: string) => string;
@@ -271,6 +272,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(data.user));
         
         const dashboardPage = getRoleDashboard(data.user.role);
+        
+        // Auto-redirect for students and parents
+        if (data.user.role === 'student' || data.user.role === 'parent') {
+          setTimeout(() => {
+            window.location.href = `/${dashboardPage}`;
+          }, 100);
+        }
+        
         return { success: true, dashboardPage };
       } else {
         console.error('Role registration failed:', data.message);
@@ -282,6 +291,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setAuthFromRegistration = (token: string, user: User): string => {
+    setUser(user);
+    setToken(token);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    return getRoleDashboard(user.role);
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -291,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, loginWithRole, updateProfile, register, registerRole, logout, loading, getRoleDashboard }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithRole, updateProfile, register, registerRole, setAuthFromRegistration, logout, loading, getRoleDashboard }}>
       {children}
     </AuthContext.Provider>
   );
@@ -309,6 +326,7 @@ export const useAuth = () => {
       updateProfile: async () => false,
       register: async () => false,
       registerRole: async () => ({ success: false }),
+      setAuthFromRegistration: () => 'home',
       logout: () => {},
       loading: false,
       getRoleDashboard: () => 'home'

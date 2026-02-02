@@ -8,14 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { PowerfulStudentSelector } from '../components/PowerfulStudentSelector';
 import apiService from '../services/apiService';
 
 export default function DOSStudentManagement() {
   const [students, setStudents] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
-  const [levels, setLevels] = useState<any[]>([]);
-  const [filterTrade, setFilterTrade] = useState('');
-  const [filterLevel, setFilterLevel] = useState('');
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [filterTrade, setFilterTrade] = useState('all');
+  const [filterLevel, setFilterLevel] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -30,8 +31,9 @@ export default function DOSStudentManagement() {
     phone: '',
     date_of_birth: '',
     gender: 'male',
-    trade_id: '',
-    level_id: '',
+    trade_code: '',
+    level_number: '',
+    level_suffix: '',
     enrollment_date: new Date().toISOString().split('T')[0],
     guardian_name: '',
     guardian_phone: '',
@@ -40,7 +42,6 @@ export default function DOSStudentManagement() {
 
   useEffect(() => {
     loadTrades();
-    loadLevels();
     loadStudents();
   }, []);
 
@@ -50,27 +51,18 @@ export default function DOSStudentManagement() {
 
   const loadTrades = async () => {
     try {
-      const data = await apiService.getTrades();
-      setTrades(data);
+      const data = await apiService.request('/management/trades');
+      setTrades(data || []);
     } catch (error) {
       console.error('Error loading trades:', error);
-    }
-  };
-
-  const loadLevels = async () => {
-    try {
-      const data = await apiService.getLevels();
-      setLevels(data);
-    } catch (error) {
-      console.error('Error loading levels:', error);
     }
   };
 
   const loadStudents = async () => {
     try {
       const params: any = {};
-      if (filterTrade) params.trade_id = filterTrade;
-      if (filterLevel) params.level_id = filterLevel;
+      if (filterTrade && filterTrade !== 'all') params.trade_code = filterTrade;
+      if (filterLevel && filterLevel !== 'all') params.level_number = filterLevel;
       if (searchQuery) params.search = searchQuery;
       
       const data = await apiService.getStudents(params);
@@ -83,10 +75,21 @@ export default function DOSStudentManagement() {
   const handleAddStudent = async () => {
     setLoading(true);
     try {
-      await apiService.addStudent(studentForm);
-      setShowAddModal(false);
-      resetForm();
-      loadStudents();
+      const result = await apiService.request('/management/students', {
+        method: 'POST',
+        body: JSON.stringify(studentForm)
+      });
+      if (result.success) {
+        alert(`Student added successfully! Serial Code: ${result.serial_code}`);
+        setShowAddModal(false);
+        resetForm();
+        loadStudents();
+        
+        // Broadcast update event for global sheets
+        window.dispatchEvent(new CustomEvent('studentAdded', { detail: result.student }));
+      } else {
+        alert(result.error || 'Failed to add student');
+      }
     } catch (error: any) {
       alert(error.message || 'Byanze kwandika umunyeshuri');
     } finally {
@@ -126,13 +129,15 @@ export default function DOSStudentManagement() {
       phone: '',
       date_of_birth: '',
       gender: 'male',
-      trade_id: '',
-      level_id: '',
+      trade_code: '',
+      level_number: '',
+      level_suffix: '',
       enrollment_date: new Date().toISOString().split('T')[0],
       guardian_name: '',
       guardian_phone: '',
       guardian_email: ''
     });
+    setSelectedTrade(null);
   };
 
   const filteredStudents = students.filter(s => {
@@ -174,9 +179,9 @@ export default function DOSStudentManagement() {
                 <SelectValue placeholder="Umwuga wose" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Umwuga wose</SelectItem>
+                <SelectItem value="all">Umwuga wose</SelectItem>
                 {trades.map(trade => (
-                  <SelectItem key={trade.id} value={trade.id.toString()}>
+                  <SelectItem key={trade.code} value={trade.code}>
                     {trade.name}
                   </SelectItem>
                 ))}
@@ -187,10 +192,14 @@ export default function DOSStudentManagement() {
                 <SelectValue placeholder="Urwego rwose" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Urwego rwose</SelectItem>
-                {levels.map(level => (
-                  <SelectItem key={level.id} value={level.id.toString()}>
-                    Urwego {level.level_number}
+                <SelectItem value="all">Urwego rwose</SelectItem>
+                {selectedTrade?.levels?.map((level: any) => (
+                  <SelectItem key={`${level.level_number}${level.level_suffix || ''}`} value={level.level_number.toString()}>
+                    Level {level.level_number}{level.level_suffix || ''}
+                  </SelectItem>
+                )) || trades.find(t => t.code === filterTrade)?.levels?.map((level: any) => (
+                  <SelectItem key={`${level.level_number}${level.level_suffix || ''}`} value={level.level_number.toString()}>
+                    Level {level.level_number}{level.level_suffix || ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -225,9 +234,9 @@ export default function DOSStudentManagement() {
                       </div>
                     </td>
                     <td className="p-3 text-sm">{student.student_id}</td>
-                    <td className="p-3 text-sm">{student.trade_name || '-'}</td>
+                    <td className="p-3 text-sm">{student.trade_code || student.trade_name || '-'}</td>
                     <td className="p-3 text-sm">
-                      {student.level_number ? `Urwego ${student.level_number}` : '-'}
+                      {student.level_number ? `Level ${student.level_number}${student.level_suffix || ''}` : '-'}
                     </td>
                     <td className="p-3 text-sm">{student.phone || '-'}</td>
                     <td className="p-3 text-right">
@@ -315,13 +324,20 @@ export default function DOSStudentManagement() {
               </div>
               <div>
                 <Label>Umwuga *</Label>
-                <Select value={studentForm.trade_id} onValueChange={(v) => setStudentForm({ ...studentForm, trade_id: v })}>
+                <Select 
+                  value={studentForm.trade_code} 
+                  onValueChange={(v) => {
+                    const trade = trades.find(t => t.code === v);
+                    setSelectedTrade(trade);
+                    setStudentForm({ ...studentForm, trade_code: v, level_number: '', level_suffix: '' });
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Hitamo umwuga..." />
                   </SelectTrigger>
                   <SelectContent>
                     {trades.map(trade => (
-                      <SelectItem key={trade.id} value={trade.id.toString()}>
+                      <SelectItem key={trade.code} value={trade.code}>
                         {trade.name}
                       </SelectItem>
                     ))}
@@ -330,14 +346,27 @@ export default function DOSStudentManagement() {
               </div>
               <div>
                 <Label>Urwego *</Label>
-                <Select value={studentForm.level_id} onValueChange={(v) => setStudentForm({ ...studentForm, level_id: v })}>
+                <Select 
+                  value={studentForm.level_number ? `${studentForm.level_number}${studentForm.level_suffix || ''}` : ''} 
+                  onValueChange={(v) => {
+                    const level = selectedTrade?.levels?.find((l: any) => `${l.level_number}${l.level_suffix || ''}` === v);
+                    if (level) {
+                      setStudentForm({ 
+                        ...studentForm, 
+                        level_number: level.level_number.toString(), 
+                        level_suffix: level.level_suffix || '' 
+                      });
+                    }
+                  }}
+                  disabled={!studentForm.trade_code}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Hitamo urwego..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {levels.map(level => (
-                      <SelectItem key={level.id} value={level.id.toString()}>
-                        Urwego {level.level_number}
+                    {selectedTrade?.levels?.map((level: any) => (
+                      <SelectItem key={`${level.level_number}${level.level_suffix || ''}`} value={`${level.level_number}${level.level_suffix || ''}`}>
+                        Level {level.level_number}{level.level_suffix || ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -354,31 +383,29 @@ export default function DOSStudentManagement() {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3">Amakuru y'Umurerezi</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Amazina y'Umurerezi</Label>
-                  <Input
-                    value={studentForm.guardian_name}
-                    onChange={(e) => setStudentForm({ ...studentForm, guardian_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Telefone y'Umurerezi</Label>
-                  <Input
-                    value={studentForm.guardian_phone}
-                    onChange={(e) => setStudentForm({ ...studentForm, guardian_phone: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Imeri y'Umurerezi</Label>
-                  <Input
-                    type="email"
-                    value={studentForm.guardian_email}
-                    onChange={(e) => setStudentForm({ ...studentForm, guardian_email: e.target.value })}
-                  />
-                </div>
-              </div>
+              <h3 className="font-semibold mb-3">Quick Student Reference</h3>
+              <PowerfulStudentSelector
+                value=""
+                onChange={(id, data) => {
+                  if (data) {
+                    setStudentForm({
+                      ...studentForm,
+                      trade_code: data.trade_code || '',
+                      level_number: data.level_number?.toString() || '',
+                      level_suffix: data.level_suffix || ''
+                    });
+                    const trade = trades.find(t => t.code === data.trade_code);
+                    setSelectedTrade(trade);
+                  }
+                }}
+                label="Hitamo Umunyeshuri"
+                placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                showAdvancedFilters={true}
+                showStudentStats={true}
+                enableVoiceSearch={true}
+                showFavorites={true}
+                required={false}
+              />
             </div>
 
             <div className="flex gap-2">
@@ -414,8 +441,8 @@ export default function DOSStudentManagement() {
                   <div><span className="font-semibold">Telefone:</span> {selectedStudent.phone || '-'}</div>
                   <div><span className="font-semibold">Igitsina:</span> {selectedStudent.gender === 'male' ? 'Gabo' : 'Gore'}</div>
                   <div><span className="font-semibold">Itariki y'Amavuko:</span> {selectedStudent.date_of_birth || '-'}</div>
-                  <div><span className="font-semibold">Umwuga:</span> {selectedStudent.trade_name || '-'}</div>
-                  <div><span className="font-semibold">Urwego:</span> {selectedStudent.level_number ? `Urwego ${selectedStudent.level_number}` : '-'}</div>
+                  <div><span className="font-semibold">Umwuga:</span> {selectedStudent.trade_code || selectedStudent.trade_name || '-'}</div>
+                  <div><span className="font-semibold">Urwego:</span> {selectedStudent.level_number ? `Level ${selectedStudent.level_number}${selectedStudent.level_suffix || ''}` : '-'}</div>
                 </CardContent>
               </Card>
 

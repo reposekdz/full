@@ -8,6 +8,7 @@ import { Label } from '@/app/components/ui/label';
 import { Badge } from '@/app/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
+import { PowerfulStudentSelector } from '@/app/components/PowerfulStudentSelector';
 import apiService from '@/app/services/apiService';
 
 interface Teacher {
@@ -313,12 +314,23 @@ export default function TeacherManagementPanel() {
                 />
               </div>
               <div>
-                <Label>Salary (RWF)</Label>
-                <Input
-                  type="number"
-                  value={newTeacher.salary}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, salary: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
+                <PowerfulStudentSelector
+                  value=""
+                  onChange={(id, data) => {
+                    if (data) {
+                      setNewTeacher({ 
+                        ...newTeacher, 
+                        specialization: data.trade_name || data.trade_code || '' 
+                      });
+                    }
+                  }}
+                  label="Hitamo Umunyeshuri"
+                  placeholder="Andika izina, kode, umwuga cyangwa urwego..."
+                  showAdvancedFilters={true}
+                  showStudentStats={true}
+                  enableVoiceSearch={true}
+                  showFavorites={true}
+                  required={false}
                 />
               </div>
             </div>

@@ -132,27 +132,37 @@ router.get('/overview', authenticateToken, requireRole(...DISCIPLINE_ROLES), asy
 
 router.get('/students', authenticateToken, requireRole(...DISCIPLINE_ROLES), async (req, res) => {
   try {
-    const { severity, status, class_id } = req.query;
+    const { trade, level } = req.query;
     
     let query = `
-      SELECT u.id, u.first_name, u.last_name, u.student_id, u.phone, u.email,
-        tc.class_name, tl.trade_name, tl.level_number,
-        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = u.id) as total_incidents,
-        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = u.id AND DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as recent_incidents,
-        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = u.id AND point_type = 'negative') as negative_points,
-        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = u.id AND point_type = 'positive') as positive_points,
-        (SELECT incident_date FROM student_conduct_records WHERE student_id = u.id ORDER BY incident_date DESC LIMIT 1) as last_incident
-      FROM users u
-      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trade_classes tc ON e.class_id = tc.id
-      LEFT JOIN trade_levels tl ON tc.trade_level_id = tl.id
-      WHERE u.role = 'student' AND u.is_active = TRUE
+      SELECT DISTINCT
+        ss.student_id as id,
+        ss.first_name,
+        ss.last_name,
+        ss.student_number as student_id,
+        ss.phone,
+        ss.email,
+        ss.trade_code,
+        ss.level,
+        c.name as trade_name,
+        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = ss.student_id) as total_incidents,
+        (SELECT COUNT(*) FROM student_conduct_records WHERE student_id = ss.student_id AND DATE(incident_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as recent_incidents,
+        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = ss.student_id AND point_type = 'negative') as negative_points,
+        (SELECT SUM(points) FROM student_behavior_points WHERE student_id = ss.student_id AND point_type = 'positive') as positive_points,
+        (SELECT incident_date FROM student_conduct_records WHERE student_id = ss.student_id ORDER BY incident_date DESC LIMIT 1) as last_incident
+      FROM student_sheets ss
+      LEFT JOIN courses c ON ss.trade_code = c.code
+      WHERE 1=1
     `;
     
     const params = [];
-    if (class_id) {
-      query += ' AND tc.id = ?';
-      params.push(class_id);
+    if (trade && trade !== 'all') {
+      query += ' AND ss.trade_code = ?';
+      params.push(trade);
+    }
+    if (level && level !== 'all') {
+      query += ' AND ss.level = ?';
+      params.push(level);
     }
     
     query += ' ORDER BY recent_incidents DESC, total_incidents DESC';

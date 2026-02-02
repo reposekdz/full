@@ -11,20 +11,30 @@ interface TeamDetailPageProps {
 const ModernTeamDetailPage: React.FC<TeamDetailPageProps> = ({ teamId, onNavigate }) => {
   const { language } = useLanguage();
   const [data, setData] = useState<any>(null);
+  const [overview, setOverview] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('players');
+  const [activeTab, setActiveTab] = useState('overview');
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [filterPosition, setFilterPosition] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/sports/teams/${teamId}`)
-      .then(r => r.json())
-      .then(teamData => {
+    const fetchData = async () => {
+      try {
+        const [teamRes, overviewRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/sports/teams/${teamId}`),
+          fetch(`http://localhost:5000/api/sports/teams/${teamId}/overview`)
+        ]);
+        const [teamData, overviewData] = await Promise.all([teamRes.json(), overviewRes.json()]);
         if (teamData.success) setData(teamData);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+        if (overviewData.success) setOverview(overviewData.content);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [teamId]);
 
   if (loading) {
@@ -82,15 +92,18 @@ const ModernTeamDetailPage: React.FC<TeamDetailPageProps> = ({ teamId, onNavigat
         {/* Stats Overview */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
           {[
-            { icon: Users, label: 'Abakinnyi', value: players.length, color: 'blue' },
-            { icon: Trophy, label: 'Intsinzi', value: stats?.wins || 0, color: 'green' },
-            { icon: Activity, label: 'Imikino', value: stats?.total_matches || 0, color: 'purple' },
-            { icon: Award, label: 'Ibihembo', value: achievements.length, color: 'yellow' },
-            { icon: Target, label: 'Impunzi', value: stats?.goals_for || 0, color: 'orange' }
+            { icon: Users, label: 'Abakinnyi', value: players.length, color: 'from-blue-500 to-cyan-500', bg: 'from-blue-50 to-cyan-50' },
+            { icon: Trophy, label: 'Intsinzi', value: stats?.wins || 0, color: 'from-green-500 to-emerald-500', bg: 'from-green-50 to-emerald-50' },
+            { icon: Activity, label: 'Imikino', value: stats?.total_matches || 0, color: 'from-purple-500 to-pink-500', bg: 'from-purple-50 to-pink-50' },
+            { icon: Award, label: 'Ibihembo', value: achievements.length, color: 'from-yellow-500 to-orange-500', bg: 'from-yellow-50 to-orange-50' },
+            { icon: Target, label: 'Impunzi', value: stats?.goals_for || 0, color: 'from-orange-500 to-red-500', bg: 'from-orange-50 to-red-50' }
           ].map((stat, i) => (
-            <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.1 }}
-              className={`bg-gradient-to-br from-${stat.color}-50 to-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all`}>
-              <stat.icon className={`w-8 h-8 text-${stat.color}-600 mb-3`} />
+            <motion.div key={i} initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: i * 0.1, type: 'spring' }}
+              whileHover={{ scale: 1.05, y: -5 }}
+              className={`bg-gradient-to-br ${stat.bg} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border-2 border-white`}>
+              <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-3 shadow-lg`}>
+                <stat.icon className="w-6 h-6 text-white" />
+              </div>
               <p className="text-4xl font-black text-gray-900 mb-1">{stat.value}</p>
               <p className="text-sm text-gray-600 font-bold">{stat.label}</p>
             </motion.div>
@@ -143,6 +156,7 @@ const ModernTeamDetailPage: React.FC<TeamDetailPageProps> = ({ teamId, onNavigat
         {/* Tabs */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
           {[
+            { id: 'overview', label: 'Ibyanyu', icon: Shield },
             { id: 'players', label: 'Abakinnyi', icon: Users },
             { id: 'achievements', label: 'Ibihembo', icon: Trophy },
             { id: 'matches', label: 'Imikino', icon: Calendar },
@@ -158,62 +172,102 @@ const ModernTeamDetailPage: React.FC<TeamDetailPageProps> = ({ teamId, onNavigat
           ))}
         </div>
 
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            {overview.length > 0 ? (
+              overview.map((section: any, idx: number) => (
+                <motion.div key={section.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+                  className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="text-5xl">{section.icon}</div>
+                    <h3 className="text-3xl font-black text-gray-900">{section.title_rw || section.title}</h3>
+                  </div>
+                  <div className="prose prose-lg max-w-none">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">{section.content_rw || section.content}</p>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-3xl font-black text-gray-900 mb-6">Ibyanyu {team.name}</h3>
+                <p className="text-gray-700 leading-relaxed">{team.description}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Players Tab */}
         {activeTab === 'players' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {/* Search & Filter */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+            <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl shadow-xl p-6 mb-8 border-2 border-gray-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-black text-gray-900">Shakisha & Shungura</h3>
+              </div>
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input type="text" placeholder="Shakisha umukinnyi..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none font-bold" />
+                    className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-4 focus:ring-green-100 outline-none font-bold transition-all" />
                 </div>
                 <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)}
-                  className="px-6 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none font-bold bg-white">
-                  <option value="all">Imyanya Yose</option>
-                  {positions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                  className="px-6 py-4 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-4 focus:ring-green-100 outline-none font-bold bg-white transition-all">
+                  <option value="all">Imyanya Yose ({players.length})</option>
+                  {positions.map(pos => <option key={pos} value={pos}>{pos} ({players.filter((p: any) => p.position === pos).length})</option>)}
                 </select>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-gray-600 font-bold">
+                  Byerekanwe: <span className="text-green-600 font-black">{filteredPlayers.length}</span> / {players.length}
+                </p>
+                {(searchQuery || filterPosition !== 'all') && (
+                  <button onClick={() => { setSearchQuery(''); setFilterPosition('all'); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all font-bold">
+                    <X className="w-4 h-4" /> Siba
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Players Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Players List */}
+            <div className="space-y-3">
               {filteredPlayers.map((player: any, idx: number) => (
-                <motion.div key={player.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }}
-                  whileHover={{ y: -8, scale: 1.02 }} onClick={() => setSelectedPlayer(player)}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition-all group">
-                  <div className={`bg-gradient-to-r ${gradient} p-6 relative`}>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="bg-white/20 backdrop-blur-md rounded-full px-4 py-2">
-                        <p className="text-3xl font-black text-white">#{player.jersey_number}</p>
-                      </div>
-                      {player.is_captain && (
-                        <div className="bg-yellow-500 rounded-full p-2 shadow-lg">
-                          <Crown className="w-5 h-5 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="w-32 h-32 mx-auto rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center overflow-hidden border-4 border-white/30 shadow-2xl">
+                <motion.div key={player.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
+                  whileHover={{ x: 8, scale: 1.01 }} onClick={() => setSelectedPlayer(player)}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer group">
+                  <div className="flex items-center gap-6 p-4">
+                    <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden shadow-lg flex-shrink-0`}>
                       {player.image_url ? (
                         <img src={`http://localhost:5000${player.image_url}`} alt={player.name} className="w-full h-full object-cover" />
                       ) : (
-                        <Users className="w-16 h-16 text-white/50" />
+                        <Users className="w-10 h-10 text-white" />
                       )}
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-black text-gray-900 mb-1">{player.name_rw || player.name}</h3>
-                    <p className="text-sm text-gray-600 font-bold mb-4">{player.position_rw || player.position}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-blue-50 rounded-lg p-3 text-center">
-                        <p className="text-xs text-gray-600 mb-1">Ikilas</p>
-                        <p className="text-lg font-black text-blue-600">{player.class}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-xl font-black text-gray-900 truncate">{player.name_rw || player.name}</h3>
+                        {player.is_captain && <Crown className="w-5 h-5 text-yellow-500 flex-shrink-0" />}
                       </div>
-                      <div className="bg-green-50 rounded-lg p-3 text-center">
-                        <p className="text-xs text-gray-600 mb-1">Uburebure</p>
-                        <p className="text-lg font-black text-green-600">{player.height}cm</p>
+                      <p className="text-sm text-gray-600 font-bold">{player.position_rw || player.position}</p>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg px-4 py-2 text-center">
+                        <p className="text-xs text-gray-600 font-bold">Jersey</p>
+                        <p className="text-2xl font-black text-blue-600">#{player.jersey_number}</p>
                       </div>
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg px-4 py-2 text-center">
+                        <p className="text-xs text-gray-600 font-bold">Class</p>
+                        <p className="text-lg font-black text-green-600">{player.class}</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg px-4 py-2 text-center">
+                        <p className="text-xs text-gray-600 font-bold">Height</p>
+                        <p className="text-lg font-black text-purple-600">{player.height}cm</p>
+                      </div>
+                      <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-green-600 transition-colors" />
                     </div>
                   </div>
                 </motion.div>

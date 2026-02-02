@@ -185,12 +185,16 @@ const EnhancedRegistrationPage: React.FC<EnhancedRegistrationPageProps> = ({ onN
       const data = await response.json();
 
       if (data.success) {
+        // Store user data and token
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
         setSuccess(true);
-        // Auto login after successful registration
+        // Auto-redirect to student dashboard
         setTimeout(() => {
-          const dashboard = getRoleDashboard('student');
-          onNavigate(dashboard);
-        }, 2000);
+          window.location.href = '/dashboard-student';
+        }, 1500);
       } else {
         setError(data.message || 'Registration failed');
       }
@@ -226,10 +230,10 @@ const EnhancedRegistrationPage: React.FC<EnhancedRegistrationPageProps> = ({ onN
         localStorage.setItem('user', JSON.stringify(data.user));
         
         setSuccess(true);
-        // Redirect to parent dashboard
+        // Auto-redirect to parent dashboard
         setTimeout(() => {
-          onNavigate('/parent/dashboard');
-        }, 2000);
+          window.location.href = '/dashboard-parent';
+        }, 1500);
       } else {
         setError(data.message || 'Registration failed');
       }

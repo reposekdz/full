@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { GraduationCap, BookOpen, Calendar, Clock, Award, TrendingUp, RefreshCw, Bell, Eye, MessageSquare, Trophy, ClipboardList, Target, Upload, Download, PlayCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { GraduationCap, BookOpen, Calendar, Clock, Award, TrendingUp, RefreshCw, Bell, Eye, MessageSquare, Trophy, ClipboardList, Target, Upload, Download, PlayCircle, Star, Zap, Activity, Users, FileText, Video, Headphones, CheckCircle, AlertCircle, TrendingDown, BarChart3, PieChart, Search, Filter, ChevronRight, Heart, Bookmark, Share2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -10,7 +10,9 @@ import { Badge } from '@/app/components/ui/badge';
 import { Progress } from '@/app/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert';
-import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
+import { Input } from '@/app/components/ui/input';
+import { ScrollArea } from '@/app/components/ui/scroll-area';
+import ModernUniversalSidebar from '@/app/components/ModernUniversalSidebar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 
 interface RealEnhancedStudentDashboardProps {
@@ -28,6 +30,9 @@ const RealEnhancedStudentDashboard: React.FC<RealEnhancedStudentDashboardProps> 
   const [timetable, setTimetable] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
 
   const API_BASE = 'http://localhost:5000/api';
 
@@ -120,61 +125,113 @@ const RealEnhancedStudentDashboard: React.FC<RealEnhancedStudentDashboardProps> 
   const performanceLevel = getPerformanceLevel(stats.overall_grade);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-hidden">
       <UniversalMessagingWidget />
-      <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
+      <ModernUniversalSidebar 
+        currentPage="dashboard" 
+        onNavigate={onNavigate} 
+        onLogout={onLogout}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       
       <div className="flex-1 overflow-auto">
-        <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 border-b sticky top-0 z-10 shadow-xl"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center space-x-4">
-                <GraduationCap className="w-8 h-8 text-blue-600" />
+                <motion.div 
+                  whileHover={{ scale: 1.1, rotate: 360 }}
+                  transition={{ duration: 0.5 }}
+                  className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl"
+                >
+                  <GraduationCap className="w-8 h-8 text-white" />
+                </motion.div>
                 <div>
-                  <h1 className="text-2xl font-black text-gray-900">STUDENT DASHBOARD</h1>
-                  <p className="text-gray-600">Welcome back, {user?.name} • Grade {performanceLevel.emoji} {performanceLevel.label}</p>
+                  <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+                    STUDENT PORTAL
+                    <Badge className="bg-yellow-400 text-yellow-900 border-0">{performanceLevel.emoji}</Badge>
+                  </h1>
+                  <p className="text-white/90 text-sm sm:text-base">Welcome back, {user?.name} • {performanceLevel.label}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                  <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh
+              <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input 
+                    placeholder="Search..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60 w-full sm:w-64"
+                  />
+                </div>
+                <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={refreshing} className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </Button>
-                <Button variant="outline" size="icon" className="relative">
+                <Button variant="secondary" size="icon" className="relative bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30">
                   <Bell className="w-5 h-5" />
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500">3</Badge>
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white border-2 border-white">3</Badge>
                 </Button>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Alert className="mb-6 border-green-200 bg-green-50">
-            <Trophy className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-800">Outstanding Performance! 🎉</AlertTitle>
-            <AlertDescription className="text-green-700">
-              You're maintaining a {stats.overall_grade}% average with {stats.attendance_rate}% attendance. Keep up the excellent work!
-            </AlertDescription>
-          </Alert>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Alert className="mb-6 border-2 border-green-300 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg">
+              <Trophy className="h-5 w-5 text-green-600" />
+              <AlertTitle className="text-green-800 font-bold text-lg">Outstanding Performance! 🎉</AlertTitle>
+              <AlertDescription className="text-green-700">
+                You're maintaining a <span className="font-bold">{stats.overall_grade}%</span> average with <span className="font-bold">{stats.attendance_rate}%</span> attendance. Keep up the excellent work!
+              </AlertDescription>
+            </Alert>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {[
-              { title: 'Overall Grade', value: `${stats.overall_grade}%`, icon: Target, color: 'from-green-500 to-green-600' },
-              { title: 'Attendance Rate', value: `${stats.attendance_rate}%`, icon: Calendar, color: 'from-blue-500 to-blue-600' },
-              { title: 'Assignments', value: `${stats.completed_assignments}/${stats.total_assignments}`, icon: ClipboardList, color: 'from-purple-500 to-purple-600' },
-              { title: 'Enrolled Courses', value: stats.enrollments.toString(), icon: BookOpen, color: 'from-yellow-500 to-yellow-600' }
+              { title: 'Overall Grade', value: `${stats.overall_grade}%`, icon: Target, color: 'from-green-500 via-emerald-500 to-teal-500', trend: '+5%', trendUp: true },
+              { title: 'Attendance Rate', value: `${stats.attendance_rate}%`, icon: Calendar, color: 'from-blue-500 via-indigo-500 to-purple-500', trend: '+2%', trendUp: true },
+              { title: 'Assignments', value: `${stats.completed_assignments}/${stats.total_assignments}`, icon: ClipboardList, color: 'from-purple-500 via-pink-500 to-rose-500', trend: '3 pending', trendUp: false },
+              { title: 'Enrolled Courses', value: stats.enrollments.toString(), icon: BookOpen, color: 'from-yellow-500 via-orange-500 to-red-500', trend: 'Active', trendUp: true }
             ].map((stat, index) => (
-              <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-                <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1">
+              <motion.div 
+                key={stat.title} 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.05, y: -5 }}
+              >
+                <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-white">
                   <CardContent className="p-0">
-                    <div className={`bg-gradient-to-r ${stat.color} p-6 text-white`}>
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <p className="text-white/80 text-sm mb-1">{stat.title}</p>
-                          <p className="text-3xl font-black">{stat.value}</p>
+                    <div className={`bg-gradient-to-br ${stat.color} p-6 text-white relative overflow-hidden`}>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                      <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <p className="text-white/90 text-xs sm:text-sm mb-2 font-medium">{stat.title}</p>
+                            <p className="text-3xl sm:text-4xl font-black">{stat.value}</p>
+                          </div>
+                          <motion.div
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <stat.icon className="w-10 h-10 sm:w-12 sm:h-12 opacity-90" />
+                          </motion.div>
                         </div>
-                        <stat.icon className="w-10 h-10 opacity-80" />
+                        <div className="flex items-center gap-2">
+                          {stat.trendUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          <span className="text-xs font-medium">{stat.trend}</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -184,13 +241,29 @@ const RealEnhancedStudentDashboard: React.FC<RealEnhancedStudentDashboardProps> 
           </div>
 
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="courses">Courses</TabsTrigger>
-              <TabsTrigger value="grades">Grades</TabsTrigger>
-              <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="timetable">Timetable</TabsTrigger>
-            </TabsList>
+            <ScrollArea className="w-full">
+              <TabsList className="inline-flex w-full sm:w-auto min-w-full sm:min-w-0 bg-white shadow-lg rounded-xl p-2 border-2 border-gray-100">
+                {[
+                  { value: 'overview', label: 'Overview', icon: LayoutDashboard },
+                  { value: 'courses', label: 'Courses', icon: BookOpen },
+                  { value: 'grades', label: 'Grades', icon: Award },
+                  { value: 'attendance', label: 'Attendance', icon: Calendar },
+                  { value: 'timetable', label: 'Timetable', icon: Clock }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger 
+                      key={tab.value} 
+                      value={tab.value}
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </ScrollArea>
 
             <TabsContent value="overview" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

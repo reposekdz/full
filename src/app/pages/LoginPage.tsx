@@ -36,7 +36,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
       
       // Determine endpoint and data based on login method
       if (loginMethod === 'phone') {
-        // Parent login with phone
+        // Try parent login first, then fallback to regular login
         endpoint = 'http://localhost:5000/api/auth/login/parent';
         loginData = { phone: formData.phone, password: formData.password };
       } else if (loginMethod === 'serial') {
@@ -44,7 +44,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
         endpoint = 'http://localhost:5000/api/auth/login/student';
         loginData = { serial_code: formData.serialCode, password: formData.password };
       } else {
-        // Regular login with email/username
+        // Email login - works for all registered users (parent, student, staff)
         loginData = { username: formData.email, password: formData.password };
       }
 
