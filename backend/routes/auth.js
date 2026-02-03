@@ -162,9 +162,8 @@ router.post('/login/student', [
 
     // Find student by serial code (username)
     const [users] = await pool.execute(`
-      SELECT u.*, sp.admission_number 
+      SELECT u.* 
       FROM users u 
-      LEFT JOIN student_profiles sp ON u.id = sp.user_id
       WHERE u.username = ? AND u.role = 'student' AND u.is_active = true
     `, [serial_code]);
 
@@ -208,7 +207,7 @@ router.post('/login/student', [
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        student_id: user.admission_number || user.username,
+        student_id: user.student_id || user.username,
         role: 'student'
       }
     });
@@ -392,10 +391,13 @@ router.post('/register/student', [
       parent_info
     } = req.body;
 
-    // Validate serial code
+    // Validate serial code from new serial_codes table
     const [serialCodeResult] = await connection.execute(
-      `SELECT * FROM student_serial_codes 
-       WHERE serial_code = ? AND status = 'active' AND is_used = false`,
+      `SELECT sc.*, gss.first_name as student_first_name, gss.last_name as student_last_name, 
+              gss.trade_name, gss.trade_code, gss.level_number, gss.level_suffix
+       FROM serial_codes sc
+       JOIN global_student_sheets gss ON sc.student_id = gss.student_id
+       WHERE sc.serial_code = ? AND sc.status = 'active'`,
       [serial_code]
     );
 
@@ -584,14 +586,12 @@ router.post('/register/student', [
 
     // Mark serial code as used
     await connection.execute(`
-      UPDATE student_serial_codes
-      SET is_used = true, 
+      UPDATE serial_codes
+      SET status = 'used', 
           used_by = ?, 
-          used_at = NOW(), 
-          student_id = ?,
-          status = 'used'
+          used_at = NOW()
       WHERE serial_code = ?
-    `, [new_student_id, new_student_id, serial_code]);
+    `, [new_student_id, serial_code]);
 
     await connection.commit();
 
@@ -683,7 +683,7 @@ router.post('/register/student-serial', [
 
     // Check if serial code exists and is not used
     const [serialCodes] = await connection.execute(
-      'SELECT * FROM serial_codes WHERE code = ? AND status = ? AND used_by IS NULL',
+      'SELECT * FROM serial_codes WHERE serial_code = ? AND status = ? AND used_by IS NULL',
       [serial_code, 'active']
     );
 
@@ -736,12 +736,32 @@ router.post('/register/student-serial', [
 
     // Mark serial code as used
     await connection.execute(
-      'UPDATE serial_codes SET status = ?, used_by = ?, used_at = NOW() WHERE code = ?',
+      'UPDATE serial_codes SET status = ?, used_by = ?, used_at = NOW() WHERE serial_code = ?',
       ['used', new_student_id, serial_code]
     );
 
-    // If serial code has trade info, create enrollment
-    if (serialCodeData.trade_code) {
+    // Add student to global_student_sheets if serial code has trade info
+    if (serialCodeData.trade_code && serialCodeData.level_number) {
+      await connection.execute(`
+        INSERT INTO global_student_sheets (
+          student_id, student_code, first_name, last_name, email, phone,
+          trade_code, trade_name, level_number, level_suffix,
+          status, enrollment_date, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())
+      `, [
+        new_student_id,
+        serial_code,
+        first_name,
+        last_name,
+        `${serial_code}@garden.tvet`,
+        phone,
+        serialCodeData.trade_code,
+        serialCodeData.trade_name || serialCodeData.trade_code,
+        serialCodeData.level_number,
+        serialCodeData.level_suffix || ''
+      ]);
+
+      // Create enrollment if trade_classes exist
       const [tradeClasses] = await connection.execute(
         'SELECT id FROM trade_classes WHERE trade_code = ? ORDER BY id DESC LIMIT 1',
         [serialCodeData.trade_code]
@@ -806,9 +826,11 @@ router.post('/register/parent', [
   body('email').isEmail().withMessage('Valid email is required'),
   body('phone').notEmpty().withMessage('Phone number is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('district').notEmpty().withMessage('District is required'),
+  body('province').notEmpty().withMessage('Province is required'),
+  body('relationship_type').isIn(['father', 'mother', 'guardian']).withMessage('Relationship type must be father, mother, or guardian'),
   body('address').optional(),
   body('occupation').optional(),
-  body('relationship').optional().isIn(['father', 'mother', 'guardian']).withMessage('Valid relationship required'),
   body('children').optional().isArray().withMessage('Children must be an array')
 ], async (req, res) => {
   const connection = await pool.getConnection();
@@ -830,9 +852,11 @@ router.post('/register/parent', [
       email,
       phone,
       password,
+      district,
+      province,
+      relationship_type,
       address,
       occupation,
-      relationship,
       children
     } = req.body;
 
@@ -859,8 +883,8 @@ router.post('/register/parent', [
     const [parentResult] = await connection.execute(`
       INSERT INTO parents (
         username, email, password_hash, first_name, last_name,
-        phone, address, occupation, relationship, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
+        phone, address, district, province, relationship_type, occupation, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)
     `, [
       username,
       email,
@@ -869,8 +893,10 @@ router.post('/register/parent', [
       last_name,
       phone,
       address,
-      occupation,
-      relationship
+      district,
+      province,
+      relationship_type,
+      occupation
     ]);
 
     const parent_id = parentResult.insertId;
@@ -1472,13 +1498,16 @@ router.post('/login/parent', [
   }
 });
 
-// Parent phone-based registration (phone + password)
+// Parent phone-based registration (phone + password + district + province + relationship)
 router.post('/register/parent-phone', [
   body('phone').notEmpty().withMessage('Phone number is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('first_name').notEmpty().withMessage('First name is required'),
   body('last_name').notEmpty().withMessage('Last name is required'),
   body('email').optional().isEmail().withMessage('Valid email required if provided'),
+  body('district').notEmpty().withMessage('District is required'),
+  body('province').notEmpty().withMessage('Province is required'),
+  body('relationship_type').isIn(['father', 'mother', 'guardian']).withMessage('Relationship type must be father, mother, or guardian'),
   body('address').optional()
 ], async (req, res) => {
   try {
@@ -1491,7 +1520,7 @@ router.post('/register/parent-phone', [
       });
     }
 
-    const { phone, password, first_name, last_name, email, address } = req.body;
+    const { phone, password, first_name, last_name, email, district, province, relationship_type, address } = req.body;
 
     const [existingPhone] = await pool.execute(
       'SELECT id FROM users WHERE phone = ?',
@@ -1536,9 +1565,11 @@ router.post('/register/parent-phone', [
 
     const [result] = await pool.execute(`
       INSERT INTO users (
-        username, email, password_hash, first_name, last_name, phone, role_id, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, true)
-    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, parentRole[0].id]);
+        username, email, password_hash, first_name, last_name, phone, address, 
+        district, province, relationship_type, role_id, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)
+    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, address, 
+        district, province, relationship_type, parentRole[0].id]);
 
     const token = jwt.sign(
       { userId: result.insertId, username, role: 'parent' },
@@ -1555,6 +1586,9 @@ router.post('/register/parent-phone', [
         username,
         email: parentEmail,
         phone,
+        district,
+        province,
+        relationship_type,
         role: 'parent',
         first_name,
         last_name,

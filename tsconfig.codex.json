@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/app/config/apiBase.ts",
+    "src/app/services/apiService.ts",
+    "src/app/pages/teacher/TeacherAttendancePage.tsx",
+    "src/app/pages/teacher/TeacherDashboard.tsx",
+    "src/app/pages/teacher/TeacherSchedulePage.tsx",
+    "src/app/pages/teacher/TeacherGradesPage.tsx",
+    "src/app/pages/teacher/TeacherCreateAssignmentPage.tsx",
+    "src/app/pages/teacher/StudyLinksManager.tsx",
+    "src/app/contexts/AuthContext.tsx",
+    "src/app/contexts/AuthContextNew.tsx",
+    "src/app/contexts/ContentContext.tsx",
+    "src/app/context/AuthContext.tsx",
+    "src/app/pages/dashboards/ModernParentDashboard.tsx",
+    "src/app/pages/dashboards/PowerfulParentDashboard.tsx",
+    "src/app/pages/accountant/AccountantUltraAdvancedDashboard.tsx",
+    "src/app/pages/student/StudentUltraAdvancedPortal.tsx",
+    "src/app/services/unifiedIntegrationService.ts",
+    "src/app/services/teamsService.ts",
+    "src/app/services/examsService.ts",
+    "src/app/services/dosService.ts",
+    "src/app/components/admin/ClassLevelSheetsDashboard.tsx"
+  ]
+}
+

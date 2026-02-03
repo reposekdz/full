@@ -65,7 +65,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
     try {
       setProcessing(true);
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${attendanceForm.student_id}/attendance`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students/${attendanceForm.student_id}/attendance`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(attendanceForm)
@@ -101,7 +101,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
       const [statsRes, incidentsRes, studentsRes, leavesRes, conductsRes] = await Promise.all([
         fetch('http://localhost:5000/api/discipline-management/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('http://localhost:5000/api/discipline-management/incidents/all', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/global-student-sheets/students', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:5000/api/global-sheets/students', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('http://localhost:5000/api/discipline-management/leave/all', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('http://localhost:5000/api/discipline-management/conduct/all', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
@@ -138,7 +138,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
         action_taken: newConduct.action_taken,
         location: 'DOD Office'
       };
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newConduct.student_id}/discipline`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students/${newConduct.student_id}/discipline`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(disciplineData)
@@ -198,7 +198,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
         location: newIncident.location,
         action_taken: 'Recorded by DOD'
       };
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newIncident.student_id}/discipline`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students/${newIncident.student_id}/discipline`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(incidentData)
@@ -230,7 +230,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
         counselor: 'DOD',
         status: 'scheduled'
       };
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newCounseling.student_id}/counseling`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students/${newCounseling.student_id}/counseling`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(counselingData)
@@ -262,7 +262,7 @@ const DODDashboard: React.FC<DODDashboardProps> = ({ onNavigate }) => {
         awarded_by: 'DOD',
         category: 'recognition'
       };
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students/${newRecognition.student_id}/recognition`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students/${newRecognition.student_id}/recognition`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(recognitionData)

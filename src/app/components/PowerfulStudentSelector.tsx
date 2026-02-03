@@ -85,7 +85,7 @@ export const PowerfulStudentSelector: React.FC<PowerfulStudentSelectorProps> = (
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/global-student-sheets/all-students', {
+      const response = await fetch('http://localhost:5000/api/global-sheets/all-students', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

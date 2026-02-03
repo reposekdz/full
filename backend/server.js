@@ -326,6 +326,15 @@ const routes = {
   advisorUltra: loadRoute('./routes/advisor-ultra', 'Advisor Ultra'),
   dosUltra: loadRoute('./routes/dos-ultra', 'DOS Ultra'),
   dodUltra: loadRoute('./routes/dod-ultra', 'DOD Ultra'),
+  
+  // ULTRA-ADVANCED ROUTES (Feature-Complete, Modern, Production-Ready)
+  dosUltraAdvanced: loadRoute('./routes/dos-ultra-advanced', 'DOS Ultra Advanced'),
+  timetableUltraAdvanced: loadRoute('./routes/timetable-ultra-advanced', 'Timetable Ultra Advanced'),
+  studentUltraAdvanced: loadRoute('./routes/student-ultra-advanced', 'Student Ultra Advanced'),
+  accountantUltraAdvanced: loadRoute('./routes/accountant-ultra-advanced', 'Accountant Ultra Advanced'),
+  stockUltraAdvanced: loadRoute('./routes/stock-ultra-advanced', 'Stock Ultra Advanced'),
+  serialCodeSystem: loadRoute('./routes/serial-code-system', 'Serial Code System'),
+  teacherStudentMarks: loadRoute('./routes/teacher-student-marks', 'Teacher Student Marks'),
 };
 
 // Mount routes
@@ -412,6 +421,7 @@ if (routes.studentAdvanced) { app.use('/api/student-advanced', routes.studentAdv
 // Teacher Features
 if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal); mountedRoutes++; }
 if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
+app.use('/api/teacher-content', require('./routes/teacher-content-management')); mountedRoutes++;
 if (routes.marksManagement) { app.use('/api/marks-management', routes.marksManagement); mountedRoutes++; }
 if (routes.staffDashboard) { app.use('/api/staff', routes.staffDashboard); mountedRoutes++; }
 if (routes.comprehensiveManagement) { app.use('/api/management', routes.comprehensiveManagement); mountedRoutes++; }
@@ -611,6 +621,15 @@ if (routes.stockManagerUltra) { app.use('/api/stock-manager-ultra', routes.stock
 if (routes.advisorUltra) { app.use('/api/advisor-ultra', routes.advisorUltra); mountedRoutes++; }
 if (routes.dosUltra) { app.use('/api/dos-ultra', routes.dosUltra); mountedRoutes++; }
 if (routes.dodUltra) { app.use('/api/dod-ultra', routes.dodUltra); mountedRoutes++; }
+
+// ULTRA-ADVANCED ROUTES (Modern, Feature-Complete, Production-Ready)
+if (routes.dosUltraAdvanced) { app.use('/api/dos-ultra-advanced', routes.dosUltraAdvanced); mountedRoutes++; }
+if (routes.timetableUltraAdvanced) { app.use('/api/timetable-ultra-advanced', routes.timetableUltraAdvanced); mountedRoutes++; }
+if (routes.studentUltraAdvanced) { app.use('/api/student-ultra-advanced', routes.studentUltraAdvanced); mountedRoutes++; }
+if (routes.accountantUltraAdvanced) { app.use('/api/accountant-ultra-advanced', routes.accountantUltraAdvanced); mountedRoutes++; }
+if (routes.stockUltraAdvanced) { app.use('/api/stock-ultra-advanced', routes.stockUltraAdvanced); mountedRoutes++; }
+if (routes.serialCodeSystem) { app.use('/api/serial-code-system', routes.serialCodeSystem); mountedRoutes++; }
+if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.teacherStudentMarks); mountedRoutes++; }
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -34,7 +34,7 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceData, setAttendanceData] = useState<{[key: number]: {status: string, remarks: string}}>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; remarks: string }>>({});
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -68,9 +68,10 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
       if (res.success) {
         setStudents(res.students);
         // Initialize attendance data
-        const initialData: any = {};
+        const initialData: Record<string, { status: string; remarks: string }> = {};
         res.students.forEach((student: any) => {
-          initialData[student.id] = { status: 'present', remarks: '' };
+          const studentKey = String(student.student_id ?? student.student_code ?? student.id);
+          initialData[studentKey] = { status: 'present', remarks: '' };
         });
         setAttendanceData(initialData);
       }
@@ -81,14 +82,14 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
     }
   };
 
-  const handleStatusChange = (studentId: number, status: string) => {
+  const handleStatusChange = (studentId: string, status: string) => {
     setAttendanceData(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], status }
     }));
   };
 
-  const handleRemarksChange = (studentId: number, remarks: string) => {
+  const handleRemarksChange = (studentId: string, remarks: string) => {
     setAttendanceData(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], remarks }
@@ -100,22 +101,17 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
 
     try {
       setSubmitting(true);
-      const attendanceArray = Object.entries(attendanceData).map(([studentId, data]) => ({
-        student_id: parseInt(studentId),
+      const attendance_records = Object.entries(attendanceData).map(([studentId, data]) => ({
+        student_id: studentId,
         status: data.status,
-        remarks: data.remarks
+        notes: data.remarks || null
       }));
 
-      // Assuming we need a subjectId. For now we use the course_id from the class if available.
-      const selectedClass = classes.find(c => c.id === selectedClassId);
-      const subjectId = selectedClass?.course_id || 1; 
-
-      const res = await apiService.markAttendanceBulk(
-        attendanceArray, 
-        selectedClassId, 
-        subjectId, 
-        attendanceDate
-      );
+      const res = await apiService.markAttendance({
+        class_id: selectedClassId,
+        attendance_date: attendanceDate,
+        attendance_records
+      });
 
       if (res.success) {
         toast.success('Kwitabira kwabitswe neza');
@@ -131,19 +127,20 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
   const markAll = (status: string) => {
     const updatedData = { ...attendanceData };
     students.forEach(student => {
-      updatedData[student.id] = { ...updatedData[student.id], status };
+      const studentKey = String(student.student_id ?? student.student_code ?? student.id);
+      updatedData[studentKey] = { ...(updatedData[studentKey] || { status: 'present', remarks: '' }), status };
     });
     setAttendanceData(updatedData);
   };
 
   const filteredStudents = students.filter(s => 
-    `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+    `${s.full_name || `${s.first_name || ''} ${s.last_name || ''}`}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const stats = {
-    present: Object.values(attendanceData).filter(d => d.status === 'present').length,
-    absent: Object.values(attendanceData).filter(d => d.status === 'absent').length,
-    late: Object.values(attendanceData).filter(d => d.status === 'late').length
+    present: Object.values(attendanceData).filter((d) => d.status === 'present').length,
+    absent: Object.values(attendanceData).filter((d) => d.status === 'absent').length,
+    late: Object.values(attendanceData).filter((d) => d.status === 'late').length
   };
 
   if (loading) {
@@ -217,7 +214,7 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                       }`}
                     >
                       <p className="font-black text-gray-900">{cls.class_name}</p>
-                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{cls.course_name}</p>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{cls.subject_name || cls.course_name || '-'}</p>
                     </button>
                   ))}
                 </div>
@@ -300,9 +297,13 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {filteredStudents.map((student) => (
+                          {filteredStudents.map((student) => {
+                            const studentKey = String(student.student_id ?? student.student_code ?? student.id);
+                            const firstInitial = (student.first_name || student.full_name || '?')[0];
+                            const lastInitial = (student.last_name || '')[0] || '';
+                            return (
                             <motion.tr 
-                              key={student.id}
+                              key={studentKey}
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               className="hover:bg-green-50/30 transition-colors"
@@ -311,21 +312,21 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-10 w-10 border-2 border-green-100">
                                     <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-black">
-                                      {student.first_name[0]}{student.last_name[0]}
+                                      {firstInitial}{lastInitial}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <p className="font-black text-gray-900">{student.first_name} {student.last_name}</p>
-                                    <p className="text-xs text-gray-500 font-bold">{student.student_number || 'STU-001'}</p>
+                                    <p className="font-black text-gray-900">{student.full_name || `${student.first_name || ''} ${student.last_name || ''}`.trim()}</p>
+                                    <p className="text-xs text-gray-500 font-bold">{student.student_id || student.student_number || 'STU'}</p>
                                   </div>
                                 </div>
                               </td>
                               <td className="p-4">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
-                                    onClick={() => handleStatusChange(student.id, 'present')}
+                                    onClick={() => handleStatusChange(studentKey, 'present')}
                                     className={`p-2 rounded-xl transition-all ${
-                                      attendanceData[student.id]?.status === 'present'
+                                      attendanceData[studentKey]?.status === 'present'
                                       ? 'bg-green-500 text-white shadow-lg shadow-green-200'
                                       : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
                                     }`}
@@ -334,9 +335,9 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                                     <Check className="h-5 w-5" />
                                   </button>
                                   <button
-                                    onClick={() => handleStatusChange(student.id, 'absent')}
+                                    onClick={() => handleStatusChange(studentKey, 'absent')}
                                     className={`p-2 rounded-xl transition-all ${
-                                      attendanceData[student.id]?.status === 'absent'
+                                      attendanceData[studentKey]?.status === 'absent'
                                       ? 'bg-red-500 text-white shadow-lg shadow-red-200'
                                       : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'
                                     }`}
@@ -345,9 +346,9 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                                     <XCircle className="h-5 w-5" />
                                   </button>
                                   <button
-                                    onClick={() => handleStatusChange(student.id, 'late')}
+                                    onClick={() => handleStatusChange(studentKey, 'late')}
                                     className={`p-2 rounded-xl transition-all ${
-                                      attendanceData[student.id]?.status === 'late'
+                                      attendanceData[studentKey]?.status === 'late'
                                       ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-200'
                                       : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'
                                     }`}
@@ -360,13 +361,14 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
                               <td className="p-4">
                                 <Input 
                                   placeholder="Icyitonderwa..."
-                                  value={attendanceData[student.id]?.remarks || ''}
-                                  onChange={(e) => handleRemarksChange(student.id, e.target.value)}
+                                  value={attendanceData[studentKey]?.remarks || ''}
+                                  onChange={(e) => handleRemarksChange(studentKey, e.target.value)}
                                   className="h-10 border-2 border-gray-100 focus:border-green-500 rounded-xl text-sm"
                                 />
                               </td>
                             </motion.tr>
-                          ))}
+                          );
+                          })}
                         </tbody>
                       </table>
                     </div>

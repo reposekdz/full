@@ -141,6 +141,184 @@ cron.schedule('0 9 1 * *', async () => {
   }
 });
 
+// Daily Reminder: Parent Payment Reminders for Outstanding Balances (10:00 AM Daily)
+cron.schedule('0 10 * * *', async () => {
+  console.log('Running parent payment reminder for outstanding balances...');
+  try {
+    const [overdueStudents] = await pool.query(`
+      SELECT 
+        gss.student_id,
+        gss.student_code,
+        gss.first_name as student_first_name,
+        gss.last_name as student_last_name,
+        gss.guardian_name,
+        gss.guardian_phone,
+        gss.guardian_email,
+        gss.total_fees,
+        gss.paid_amount,
+        gss.balance,
+        gss.payment_deadline,
+        gss.trade_name,
+        gss.level_number,
+        gss.level_suffix,
+        DATEDIFF(NOW(), gss.payment_deadline) as days_overdue
+      FROM global_student_sheets gss
+      WHERE gss.status = 'active' 
+        AND gss.balance > 0
+        AND gss.payment_deadline < NOW()
+      ORDER BY days_overdue DESC
+    `);
+    
+    console.log(`Found ${overdueStudents.length} students with overdue payments`);
+    
+    let smsCount = 0;
+    let emailCount = 0;
+    
+    for (const student of overdueStudents) {
+      const studentName = `${student.student_first_name} ${student.student_last_name}`;
+      const level = `${student.level_number}${student.level_suffix || ''}`;
+      const balance = parseFloat(student.balance).toLocaleString();
+      const daysOverdue = student.days_overdue;
+      
+      const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, your child ${studentName} (${student.trade_name} L${level}) has an outstanding balance of ${balance} RWF. Payment is ${daysOverdue} days overdue. Please settle to avoid service interruption. Thank you.`;
+      
+      const emailMessage = `
+        <h2>Payment Reminder - Garden TVET School</h2>
+        <p>Dear ${student.guardian_name},</p>
+        <p>This is a reminder that your child <strong>${studentName}</strong> has an outstanding balance.</p>
+        <h3>Payment Details:</h3>
+        <ul>
+          <li><strong>Student:</strong> ${studentName} (${student.student_code})</li>
+          <li><strong>Program:</strong> ${student.trade_name} - Level ${level}</li>
+          <li><strong>Total Fees:</strong> ${parseFloat(student.total_fees).toLocaleString()} RWF</li>
+          <li><strong>Amount Paid:</strong> ${parseFloat(student.paid_amount).toLocaleString()} RWF</li>
+          <li><strong>Balance Due:</strong> ${balance} RWF</li>
+          <li><strong>Days Overdue:</strong> ${daysOverdue} days</li>
+        </ul>
+        <p><strong>Important:</strong> Please settle this amount as soon as possible to avoid service interruption.</p>
+        <p>For payment options or inquiries, please contact the school accountant.</p>
+        <p>Thank you for your cooperation.</p>
+        <p><em>Garden TVET School</em></p>
+      `;
+      
+      if (student.guardian_phone && sendSMSFunc) {
+        try {
+          const smsResult = await sendSMSFunc(
+            student.guardian_phone, 
+            smsMessage, 
+            1, 
+            { 
+              type: 'payment_reminder',
+              student_id: student.student_id,
+              student_code: student.student_code,
+              balance: student.balance,
+              days_overdue: daysOverdue
+            }
+          );
+          
+          if (smsResult.success) {
+            smsCount++;
+            console.log(`✓ SMS sent to ${student.guardian_name} (${student.guardian_phone})`);
+          }
+        } catch (err) {
+          console.log(`✗ SMS failed for ${student.guardian_name}: ${err.message}`);
+        }
+      }
+      
+      if (student.guardian_email && emailTransporter) {
+        try {
+          await emailTransporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: student.guardian_email,
+            subject: `Payment Reminder - ${studentName} - Garden TVET`,
+            html: emailMessage
+          });
+          emailCount++;
+          console.log(`✓ Email sent to ${student.guardian_email}`);
+        } catch (err) {
+          console.log(`✗ Email failed for ${student.guardian_email}: ${err.message}`);
+        }
+      }
+      
+      const [parentLinks] = await pool.query(
+        'SELECT parent_id FROM parent_student_links WHERE student_id = ? AND is_active = 1',
+        [student.student_id]
+      );
+      
+      if (parentLinks.length > 0) {
+        const parentId = parentLinks[0].parent_id;
+        await createNotification(
+          parentId,
+          'Payment Reminder',
+          `Outstanding balance of ${balance} RWF for ${studentName}. Payment is ${daysOverdue} days overdue.`,
+          'payment',
+          'urgent',
+          false,
+          false
+        );
+      }
+    }
+    
+    console.log(`✅ Payment reminders sent: ${smsCount} SMS, ${emailCount} emails`);
+  } catch (error) {
+    console.error('Parent payment reminder error:', error);
+  }
+});
+
+// Weekly Reminder: Payment Reminders for Near-Due Payments (Monday 9:00 AM)
+cron.schedule('0 9 * * 1', async () => {
+  console.log('Running weekly payment reminder for upcoming deadlines...');
+  try {
+    const [upcomingDue] = await pool.query(`
+      SELECT 
+        gss.student_id,
+        gss.student_code,
+        gss.first_name as student_first_name,
+        gss.last_name as student_last_name,
+        gss.guardian_name,
+        gss.guardian_phone,
+        gss.guardian_email,
+        gss.balance,
+        gss.payment_deadline,
+        gss.trade_name,
+        gss.level_number,
+        gss.level_suffix,
+        DATEDIFF(gss.payment_deadline, NOW()) as days_remaining
+      FROM global_student_sheets gss
+      WHERE gss.status = 'active' 
+        AND gss.balance > 0
+        AND gss.payment_deadline BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
+    `);
+    
+    console.log(`Found ${upcomingDue.length} students with payments due this week`);
+    
+    for (const student of upcomingDue) {
+      const studentName = `${student.student_first_name} ${student.student_last_name}`;
+      const level = `${student.level_number}${student.level_suffix || ''}`;
+      const balance = parseFloat(student.balance).toLocaleString();
+      const daysRemaining = student.days_remaining;
+      
+      const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, payment of ${balance} RWF for ${studentName} (${student.trade_name} L${level}) is due in ${daysRemaining} day(s). Please make payment to avoid penalties.`;
+      
+      if (student.guardian_phone && sendSMSFunc) {
+        try {
+          await sendSMSFunc(student.guardian_phone, smsMessage, 1, { 
+            type: 'upcoming_payment',
+            student_id: student.student_id,
+            days_remaining: daysRemaining
+          });
+        } catch (err) {
+          console.log(`SMS failed for ${student.guardian_name}: ${err.message}`);
+        }
+      }
+    }
+    
+    console.log(`✅ Weekly payment reminders sent`);
+  } catch (error) {
+    console.error('Weekly payment reminder error:', error);
+  }
+});
+
 // Weekly Report: Parent Updates (Friday 5:00 PM)
 cron.schedule('0 17 * * 5', async () => {
   console.log('Running weekly parent report...');

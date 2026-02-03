@@ -101,7 +101,7 @@ const TradeLevelSelector: React.FC<TradeLevelSelectorProps> = ({
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/trades', {
+      const response = await axios.get('http://localhost:5000/api/trades-levels/trades', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {
@@ -123,7 +123,7 @@ const TradeLevelSelector: React.FC<TradeLevelSelectorProps> = ({
       setLoadingLevels(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/levels`, {
+      const response = await axios.get(`http://localhost:5000/api/trades-levels/trades/${tradeCode}/levels`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.success) {

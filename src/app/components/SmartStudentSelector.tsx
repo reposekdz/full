@@ -52,7 +52,7 @@ export const SmartStudentSelector: React.FC<SmartStudentSelectorProps> = ({ valu
       const token = localStorage.getItem('token');
       
       // Use Global Student Sheets API as single source of truth
-      const res = await fetch(`http://localhost:5000/api/global-student-sheets/students?trade_code=${tradeCode}&level_number=${level}`, {
+      const res = await fetch(`http://localhost:5000/api/global-sheets/students?trade_code=${tradeCode}&level_number=${level}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

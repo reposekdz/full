@@ -17,14 +17,14 @@ const authenticateToken = async (req, res, next) => {
     
     // First try admin_users table (for backward compatibility)
     let [users] = await pool.execute(
-      'SELECT id, username, email, role FROM admin_users WHERE id = ?',
+      'SELECT id, username, email, role, NULL as phone FROM admin_users WHERE id = ?',
       [decoded.userId]
     );
 
     if (users.length === 0) {
       // Try users table with role information
       [users] = await pool.execute(`
-        SELECT u.id, u.username, u.email, r.name as role, u.first_name, u.last_name, u.student_id
+        SELECT u.id, u.username, u.email, u.phone, r.name as role, u.first_name, u.last_name, u.student_id
         FROM users u
         JOIN roles r ON u.role_id = r.id
         WHERE u.id = ? AND u.is_active = true
@@ -38,7 +38,19 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    req.user = users[0];
+    // Normalize user payload so all route modules can rely on a consistent shape.
+    // Many existing routes expect `req.user.userId` and/or `req.user.name`.
+    const user = users[0];
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    req.user = {
+      ...user,
+      userId: user.id,
+      name: fullName || user.username || user.email,
+      phone: user.phone || null
+    };
     next();
   } catch (error) {
     return res.status(403).json({ 
@@ -50,11 +62,15 @@ const authenticateToken = async (req, res, next) => {
 
 const requireRole = (...roles) => {
   return async (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    const allowedRoles = roles
+      .flatMap((r) => (Array.isArray(r) ? r : [r]))
+      .filter(Boolean);
+
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ 
         success: false, 
         message: 'Insufficient permissions',
-        required_roles: roles,
+        required_roles: allowedRoles,
         user_role: req.user?.role || 'none'
       });
     }

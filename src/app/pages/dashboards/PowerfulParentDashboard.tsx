@@ -24,8 +24,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = API_BASE_URL;
 
 interface PowerfulParentDashboardProps {
   onNavigate: (page: string) => void;

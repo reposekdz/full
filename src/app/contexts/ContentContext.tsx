@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
 interface Slide {
   id: number;
@@ -55,7 +56,7 @@ export const ContentProvider: React.FC<ContentProviderProps> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = 'http://localhost:5000/api';
+  const API_BASE = API_BASE_URL;
 
   const fetchSlides = async () => {
     try {

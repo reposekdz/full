@@ -7,6 +7,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import AdvancedTextEditor from '@/app/components/AdvancedTextEditor';
 import { apiService } from '@/app/services/apiService';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
 interface TeacherCreateAssignmentPageProps {
   teacherId: number;
@@ -42,7 +43,7 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/advanced-assignments/teacher/${teacherId}/classes`, {
+      const response = await fetch(`${API_BASE_URL}/advanced-assignments/teacher/${teacherId}/classes`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
@@ -108,7 +109,7 @@ const TeacherCreateAssignmentPage: React.FC<TeacherCreateAssignmentPageProps> = 
         submitData.append('files', file);
       });
 
-      const response = await fetch('http://localhost:5000/api/advanced-assignments/assignments', {
+      const response = await fetch(`${API_BASE_URL}/advanced-assignments/assignments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: submitData

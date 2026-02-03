@@ -102,36 +102,38 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
       const userStr = localStorage.getItem('user');
       const currentUser = userStr ? JSON.parse(userStr) : null;
       
-      const [statsRes, classesRes, assignmentsRes, lessonsRes, gradesRes, attendanceRes] = await Promise.all([
-        apiService.getTeacherStatistics(),
+      const [dashboardRes, classesRes, assignmentsRes] = await Promise.all([
+        apiService.getTeacherDashboard(),
         apiService.getTeacherClasses(),
-        currentUser ? apiService.getAssignmentsByTeacher(currentUser.id) : Promise.resolve([]),
-        apiService.getTeacherUpcomingLessons(),
-        apiService.getTeacherRecentGrades(),
-        apiService.getTeacherAttendanceSummary()
+        currentUser ? apiService.getAssignmentsByTeacher(currentUser.id) : Promise.resolve([])
       ]);
 
-      if (statsRes.success) {
-        setStatsData(statsRes.statistics);
-        if (statsRes.statistics?.top_students) {
-          setTopStudents(statsRes.statistics.top_students);
-        }
-      }
-      if (classesRes.success) {
+      const classes = classesRes?.success ? (classesRes.classes || []) : [];
+      const totalStudents = classes.reduce((sum: number, c: any) => sum + Number(c.student_count || 0), 0);
+      const attendanceRate = Number(dashboardRes?.dashboard?.attendanceStats?.attendance_rate || 0);
+
+      setStatsData({
+        total_classes: classes.length,
+        total_students: totalStudents,
+        total_assignments: dashboardRes?.dashboard?.pendingGrading || 0,
+        average_performance: attendanceRate
+      });
+
+      if (classesRes?.success) {
         setTeacherClasses(classesRes.classes);
       }
+
       if (Array.isArray(assignmentsRes)) {
         setAssignments(assignmentsRes);
       }
-      if (lessonsRes.success) {
-        setUpcomingLessons(lessonsRes.lessons);
+
+      if (dashboardRes?.success) {
+        setUpcomingLessons(dashboardRes.dashboard?.todaySchedule || []);
+        setAttendanceData(dashboardRes.dashboard?.attendanceStats ? [dashboardRes.dashboard.attendanceStats] : []);
       }
-      if (gradesRes.success) {
-        setRecentGrades(gradesRes.grades);
-      }
-      if (attendanceRes.success) {
-        setAttendanceData(attendanceRes.attendance);
-      }
+
+      setRecentGrades([]);
+      setTopStudents([]);
     } catch (err) {
       console.error('Failed to fetch teacher data:', err);
     } finally {
@@ -186,10 +188,10 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
 
   const myClasses = teacherClasses.map((cls, index) => ({
     id: cls.id,
-    name: `${cls.class_name} - ${cls.course_name}`,
+    name: `${cls.class_name || cls.class_code || 'Class'} - ${cls.subject_name || cls.course_name || 'Subject'}`,
     students: cls.student_count || 0,
-    attendance: Math.round(cls.attendance_rate || 0),
-    avgGrade: Math.round(cls.average_grade || 0),
+    attendance: Math.round(cls.avg_attendance || cls.attendance_rate || 0),
+    avgGrade: Math.round(cls.average_marks || cls.average_grade || 0),
     lessons: cls.total_sessions || 0,
     pending: cls.pending_assignments || 0,
     color: index % 5 === 0 ? 'from-yellow-500 to-amber-500' :
@@ -199,7 +201,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
            'from-purple-500 to-pink-500'
   }));
 
-  const lessons = upcomingLessons.length > 0 ? upcomingLessons : [
+  const lessons = upcomingLessons.length > 0
+    ? upcomingLessons.map((l) => ({
+        class: l.class_name || l.class || l.class_code || 'Class',
+        subject: l.subject_name || l.subject || 'Subject',
+        topic: l.topic || l.lesson_topic || l.subject_name || 'Somo',
+        time: l.start_time && l.end_time ? `${l.start_time} - ${l.end_time}` : (l.start_time || l.time || '-'),
+        duration: l.duration || '',
+        room: l.room || l.location || '-'
+      }))
+    : [
     {
       class: 'N/A',
       subject: 'N/A',

@@ -38,11 +38,14 @@ function generateSerialCode(type) {
 // PARENT REGISTRATION WITH SERIAL CODE
 // ======================
 router.post('/parent/register', [
-  body('serial_code').notEmpty().withMessage('Parent serial code is required'),
+  body('phone').notEmpty().withMessage('Phone number is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('first_name').notEmpty().withMessage('First name is required'),
   body('last_name').notEmpty().withMessage('Last name is required'),
-  body('phone').notEmpty().withMessage('Phone number is required'),
+  body('email').optional().isEmail().withMessage('Valid email required if provided'),
+  body('district').notEmpty().withMessage('District is required'),
+  body('province').notEmpty().withMessage('Province is required'),
+  body('relationship_type').isIn(['father', 'mother', 'guardian']).withMessage('Relationship type must be father, mother, or guardian'),
   body('has_smartphone').isBoolean().optional()
 ], async (req, res) => {
   const connection = await pool.getConnection();
@@ -55,22 +58,8 @@ router.post('/parent/register', [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { serial_code, password, first_name, last_name, phone, email, address, 
-            national_id, occupation, has_smartphone, relationship_type } = req.body;
-
-    // Check if serial code exists and is valid
-    const [serialCheck] = await connection.execute(
-      'SELECT * FROM parents WHERE parent_code = ? AND status = "active"',
-      [serial_code]
-    );
-
-    if (serialCheck.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or inactive parent serial code. Please contact school administration.' 
-      });
-    }
+    const { password, first_name, last_name, phone, email, district, province, 
+            relationship_type, address, national_id, occupation, has_smartphone } = req.body;
 
     // Check if parent already registered
     const [existingParent] = await connection.execute(
@@ -94,57 +83,41 @@ router.post('/parent/register', [
       return res.status(500).json({ success: false, message: 'Parent role not configured' });
     }
 
-    const username = serial_code.toLowerCase();
+    const username = `parent_${phone.replace(/[^0-9]/g, '')}`;
+    const parentEmail = email || `${username}@parent.gardentvet.com`;
     
     // Create user account
     const [userResult] = await connection.execute(`
       INSERT INTO users (
         username, email, password_hash, first_name, last_name, 
-        phone, address, role_id, serial_code, is_active, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true, NOW())
-    `, [username, email || null, hashedPassword, first_name, last_name, 
-        phone, address || null, parentRole[0].id, serial_code]);
+        phone, address, district, province, relationship_type, role_id, is_active, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, NOW())
+    `, [username, parentEmail, hashedPassword, first_name, last_name, 
+        phone, address || null, district, province, relationship_type, parentRole[0].id]);
 
     const userId = userResult.insertId;
 
-    // Update parent record with user details
+    // Create parent record in parents table for compatibility
     await connection.execute(`
-      UPDATE parents SET 
-        first_name = ?, last_name = ?, phone = ?, email = ?,
-        national_id = ?, address = ?, occupation = ?,
-        has_smartphone = ?, relationship_type = ?, updated_at = NOW()
-      WHERE parent_code = ?
-    `, [first_name, last_name, phone, email || null, national_id || null,
-        address || null, occupation || null, has_smartphone ? 1 : 0,
-        relationship_type || 'guardian', serial_code]);
-
-    // Get linked students for this parent
-    const [linkedStudents] = await connection.execute(`
-      SELECT ps.student_id, s.first_name, s.last_name, s.student_id as student_code
-      FROM parent_student ps
-      JOIN students s ON ps.student_id = s.id
-      WHERE ps.parent_id = (SELECT id FROM parents WHERE parent_code = ?)
-    `, [serial_code]);
-
-    // Create parent-student links in users table
-    for (const student of linkedStudents) {
-      await connection.execute(`
-        INSERT INTO parent_student_links (parent_id, student_id, relationship, is_primary, created_at)
-        VALUES (?, ?, ?, true, NOW())
-        ON DUPLICATE KEY UPDATE updated_at = NOW()
-      `, [userId, student.student_id, relationship_type || 'guardian']);
-    }
+      INSERT INTO parents (
+        username, email, password_hash, first_name, last_name, phone, 
+        district, province, relationship_type, address, national_id, occupation, 
+        has_smartphone, is_active, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, NOW())
+    `, [username, parentEmail, hashedPassword, first_name, last_name, phone,
+        district, province, relationship_type, address || null, national_id || null, 
+        occupation || null, has_smartphone ? 1 : 0]);
 
     await connection.commit();
 
-    // Send SMS notification if parent doesn't have smartphone
-    if (!has_smartphone) {
-      const message = `Welcome ${first_name}! Your parent account has been activated. Login Code: ${serial_code}. Call school for support: +250788123456`;
-      await sendSMS(phone, message, 1, { type: 'parent_registration' });
-    }
+    // Send SMS notification
+    const message = `Welcome ${first_name}! Your parent account has been created at Garden TVET School. Login with your phone number. Support: +250788123456`;
+    await sendSMS(phone, message, 1, { type: 'parent_registration' }).catch(err => 
+      console.log('SMS notification failed:', err.message)
+    );
 
     const token = jwt.sign(
-      { userId, username, role: 'parent', serial_code },
+      { userId, username, role: 'parent' },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
@@ -156,12 +129,15 @@ router.post('/parent/register', [
       user: { 
         id: userId, 
         username, 
+        email: parentEmail,
+        phone,
         role: 'parent', 
         first_name, 
         last_name,
-        serial_code,
-        has_smartphone: has_smartphone || false,
-        linked_students: linkedStudents.length
+        district,
+        province,
+        relationship_type,
+        has_smartphone: has_smartphone || false
       }
     });
 

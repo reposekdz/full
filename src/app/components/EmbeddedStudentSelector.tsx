@@ -41,29 +41,40 @@ export const EmbeddedStudentSelector: React.FC<EmbeddedStudentSelectorProps> = (
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      // Fetch students, trades, and levels in parallel
-      const [studentsRes, tradesRes, levelsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/global-student-sheets/all-students', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:5000/api/trades', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('http://localhost:5000/api/levels', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
 
-      const [studentsData, tradesData, levelsData] = await Promise.all([
-        studentsRes.json(),
-        tradesRes.json(),
-        levelsRes.json()
-      ]);
+      // Global Student Sheets is the single source of truth; derive filter lists from it.
+      const studentsRes = await fetch('http://localhost:5000/api/global-sheets/all-students', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const studentsData = await studentsRes.json();
 
-      setStudents(studentsData.students || []);
-      setTrades(tradesData.trades || []);
-      setLevels(levelsData.levels || []);
+      const list = studentsData.students || [];
+      setStudents(list);
+
+      const tradeMap = new Map<string, any>();
+      const levelMap = new Map<string, any>();
+
+      list.forEach((s: any) => {
+        if (s.trade_code) {
+          tradeMap.set(s.trade_code, {
+            trade_code: s.trade_code,
+            trade_name: s.trade_name || s.trade_code
+          });
+        }
+
+        if (s.level_number !== undefined && s.level_number !== null) {
+          const suffix = (s.level_suffix || '').toString();
+          const display = `${s.level_number}${suffix}`;
+          levelMap.set(display, {
+            level_number: Number(s.level_number),
+            level_suffix: suffix,
+            level_display: display
+          });
+        }
+      });
+
+      setTrades(Array.from(tradeMap.values()).sort((a, b) => a.trade_code.localeCompare(b.trade_code)));
+      setLevels(Array.from(levelMap.values()).sort((a, b) => a.level_display.localeCompare(b.level_display)));
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -81,7 +92,12 @@ export const EmbeddedStudentSelector: React.FC<EmbeddedStudentSelectorProps> = (
 
     // Apply level filter
     if (levelFilter) {
-      filtered = filtered.filter(s => s.level_number.toString() === levelFilter);
+      const levelNumber = parseInt(levelFilter, 10);
+      const levelSuffix = levelFilter.replace(/\d+/g, '');
+      filtered = filtered.filter(s =>
+        Number(s.level_number) === levelNumber &&
+        ((s.level_suffix || '').toString() === levelSuffix)
+      );
     }
 
     // Apply search query
@@ -146,7 +162,7 @@ export const EmbeddedStudentSelector: React.FC<EmbeddedStudentSelectorProps> = (
           >
             <option value="">All Levels</option>
             {levels.map(level => (
-              <option key={level.level_number} value={level.level_number}>
+              <option key={level.level_display} value={level.level_display}>
                 Level {level.level_display}
               </option>
             ))}

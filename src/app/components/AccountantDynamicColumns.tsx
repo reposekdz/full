@@ -9,17 +9,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import apiService from '../services/apiService';
+import { GLOBAL_TRADES, GLOBAL_LEVELS, getLevelsForTrade } from '../constants/tradesAndLevels';
 
 export default function AccountantDynamicColumns() {
-  const [trades, setTrades] = useState<any[]>([]);
-  const [levels, setLevels] = useState<any[]>([]);
+  const [trades] = useState<any[]>(GLOBAL_TRADES);
   const [selectedTrade, setSelectedTrade] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
+  const [selectedLevelId, setSelectedLevelId] = useState('');
   const [columns, setColumns] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [editingColumn, setEditingColumn] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  const availableLevels = selectedTrade ? getLevelsForTrade(selectedTrade) : GLOBAL_LEVELS;
+  const selectedLevel = selectedLevelId ? GLOBAL_LEVELS.find((l) => l.id === selectedLevelId) : null;
+  const levelNumber = selectedLevel?.level_number || null;
+  const levelSuffix = selectedLevel?.level_suffix || '';
 
   const [columnForm, setColumnForm] = useState({
     column_name: '',
@@ -30,65 +35,47 @@ export default function AccountantDynamicColumns() {
   });
 
   useEffect(() => {
-    loadTrades();
-    loadLevels();
-  }, []);
-
-  useEffect(() => {
     if (selectedTrade && selectedLevel) {
-      loadColumns();
-      loadStudents();
+      loadSheet();
     }
-  }, [selectedTrade, selectedLevel]);
+  }, [selectedTrade, selectedLevelId]);
 
-  const loadTrades = async () => {
+  const loadSheet = async () => {
     try {
-      const data = await apiService.getTrades();
-      setTrades(data);
+      setLoading(true);
+      const qs = new URLSearchParams({ level_suffix: levelSuffix }).toString();
+      const res = await apiService.request(`/student-management/sheets/${selectedTrade}/${levelNumber}?${qs}`);
+      if (res?.success) {
+        setColumns(res.columns || []);
+        setStudents(res.students || []);
+      } else {
+        setColumns([]);
+        setStudents([]);
+      }
     } catch (error) {
-      console.error('Error loading trades:', error);
-    }
-  };
-
-  const loadLevels = async () => {
-    try {
-      const data = await apiService.getLevels();
-      setLevels(data);
-    } catch (error) {
-      console.error('Error loading levels:', error);
-    }
-  };
-
-  const loadColumns = async () => {
-    try {
-      const data = await apiService.getLevelSheetColumns(parseInt(selectedTrade), parseInt(selectedLevel));
-      setColumns(data);
-    } catch (error) {
-      console.error('Error loading columns:', error);
-    }
-  };
-
-  const loadStudents = async () => {
-    try {
-      const data = await apiService.getStudentsByTradeLevel(parseInt(selectedTrade), parseInt(selectedLevel));
-      setStudents(data.students || []);
-    } catch (error) {
-      console.error('Error loading students:', error);
+      console.error('Error loading sheet:', error);
+      setColumns([]);
+      setStudents([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreateColumn = async () => {
     setLoading(true);
     try {
-      await apiService.createLevelSheetColumn({
-        ...columnForm,
-        trade_id: parseInt(selectedTrade),
-        level_id: parseInt(selectedLevel)
+      await apiService.request('/student-management/columns', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...columnForm,
+          trade_code: selectedTrade,
+          level_number: levelNumber,
+          level_suffix: levelSuffix
+        })
       });
       setShowColumnModal(false);
       resetForm();
-      loadColumns();
-      loadStudents();
+      loadSheet();
     } catch (error: any) {
       alert(error.message || 'Byanze gukora inkingi');
     } finally {
@@ -99,11 +86,14 @@ export default function AccountantDynamicColumns() {
   const handleUpdateColumn = async () => {
     setLoading(true);
     try {
-      await apiService.updateLevelSheetColumn(editingColumn.id, columnForm);
+      await apiService.request(`/student-management/columns/${editingColumn.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(columnForm)
+      });
       setShowColumnModal(false);
       setEditingColumn(null);
       resetForm();
-      loadColumns();
+      loadSheet();
     } catch (error: any) {
       alert(error.message || 'Byanze kuvugurura inkingi');
     } finally {
@@ -114,9 +104,8 @@ export default function AccountantDynamicColumns() {
   const handleDeleteColumn = async (columnId: number) => {
     if (!confirm('Urashaka gusiba iyi nkingi?')) return;
     try {
-      await apiService.deleteLevelSheetColumn(columnId);
-      loadColumns();
-      loadStudents();
+      await apiService.request(`/student-management/columns/${columnId}`, { method: 'DELETE' });
+      loadSheet();
     } catch (error: any) {
       alert(error.message || 'Byanze gusiba inkingi');
     }
@@ -124,9 +113,54 @@ export default function AccountantDynamicColumns() {
 
   const handleUpdateValue = async (studentId: number, columnId: number, value: string) => {
     try {
-      await apiService.updateStudentColumnValue(studentId, columnId, value);
+      await apiService.request(`/student-management/students/${studentId}/columns/${columnId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ column_value: value })
+      });
     } catch (error: any) {
       alert(error.message || 'Byanze kuvugurura agaciro');
+    }
+  };
+
+  const addTemplateColumns = async (template: 'finance' | 'marks') => {
+    if (!selectedTrade || !selectedLevel) return;
+    const templates =
+      template === 'finance'
+        ? [
+            { column_name: 'Paid', column_type: 'number', default_value: '0', is_required: false },
+            { column_name: 'Unpaid', column_type: 'number', default_value: '0', is_required: false },
+            { column_name: 'Balance', column_type: 'number', default_value: '0', is_required: false }
+          ]
+        : [
+            { column_name: 'Quiz', column_type: 'number', default_value: '0', is_required: false },
+            { column_name: 'Midterm', column_type: 'number', default_value: '0', is_required: false },
+            { column_name: 'Final', column_type: 'number', default_value: '0', is_required: false }
+          ];
+
+    const existing = new Set((columns || []).map((c) => String(c.column_name || '').toLowerCase().trim()));
+    setLoading(true);
+    try {
+      for (const c of templates) {
+        if (existing.has(c.column_name.toLowerCase())) continue;
+        await apiService.request('/student-management/columns', {
+          method: 'POST',
+          body: JSON.stringify({
+            trade_code: selectedTrade,
+            level_number: levelNumber,
+            level_suffix: levelSuffix,
+            column_name: c.column_name,
+            column_type: c.column_type,
+            is_required: c.is_required,
+            default_value: c.default_value,
+            display_order: (columns?.length || 0) + 1
+          })
+        });
+      }
+      await loadSheet();
+    } catch (e: any) {
+      alert(e?.message || 'Byanze kongeramo templates');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -171,8 +205,8 @@ export default function AccountantDynamicColumns() {
                 </SelectTrigger>
                 <SelectContent>
                   {trades.map(trade => (
-                    <SelectItem key={trade.id} value={trade.id.toString()}>
-                      {trade.name}
+                    <SelectItem key={trade.code} value={trade.code}>
+                      {trade.code} - {trade.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -180,14 +214,14 @@ export default function AccountantDynamicColumns() {
             </div>
             <div>
               <Label>Hitamo Urwego</Label>
-              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+              <Select value={selectedLevelId} onValueChange={setSelectedLevelId} disabled={!selectedTrade}>
                 <SelectTrigger>
                   <SelectValue placeholder="Hitamo urwego..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {levels.map(level => (
-                    <SelectItem key={level.id} value={level.id.toString()}>
-                      Urwego {level.level_number}
+                  {availableLevels.map(level => (
+                    <SelectItem key={level.id} value={level.id}>
+                      {level.display}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -196,10 +230,18 @@ export default function AccountantDynamicColumns() {
           </div>
 
           {selectedTrade && selectedLevel && (
-            <Button onClick={() => setShowColumnModal(true)} className="bg-green-600">
-              <Plus className="w-4 h-4 mr-2" />
-              Ongeraho Inkingi Nshya
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setShowColumnModal(true)} className="bg-green-600">
+                <Plus className="w-4 h-4 mr-2" />
+                Ongeraho Inkingi Nshya
+              </Button>
+              <Button variant="outline" onClick={() => addTemplateColumns('finance')}>
+                Ongeraho Finance (Paid/Unpaid/Balance)
+              </Button>
+              <Button variant="outline" onClick={() => addTemplateColumns('marks')}>
+                Ongeraho Marks (Quiz/Mid/Final)
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

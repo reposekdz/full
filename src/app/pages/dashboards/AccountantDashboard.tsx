@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { DollarSign, TrendingUp, Users, AlertCircle, Plus, Search, Download, CreditCard, Wallet, PieChart, Upload, Columns } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, AlertCircle, Plus, Search, Download, CreditCard, Wallet, PieChart, Upload, Columns, Phone, Bell, Filter, FileText, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -12,14 +12,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import apiService from '@/app/services/apiService';
 import AccountantPaymentProofs from '@/app/components/AccountantPaymentProofs';
 import AccountantDynamicColumns from '@/app/components/AccountantDynamicColumns';
+import { GLOBAL_TRADES, GLOBAL_LEVELS } from '@/app/constants/tradesAndLevels';
 
 export default function AccountantDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [levels, setLevels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTrade, setFilterTrade] = useState('all');
+  const [filterLevel, setFilterLevel] = useState('all');
   const [newPayment, setNewPayment] = useState({
     student_id: '',
     amount: '',
@@ -31,14 +36,22 @@ export default function AccountantDashboard() {
 
   useEffect(() => {
     fetchData();
+    setTrades(GLOBAL_TRADES);
+    setLevels(GLOBAL_LEVELS);
   }, []);
+
+  useEffect(() => {
+    if (filterTrade !== 'all' || filterLevel !== 'all') {
+      fetchData();
+    }
+  }, [filterTrade, filterLevel]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [overviewData, studentsData] = await Promise.all([
         apiService.getAccountantOverview(),
-        apiService.getAccountantStudents()
+        apiService.getAccountantStudentsFinancial({ trade: filterTrade !== 'all' ? filterTrade : undefined, level: filterLevel !== 'all' ? filterLevel : undefined })
       ]);
       setOverview(overviewData.data);
       setStudents(studentsData.students || []);
@@ -84,12 +97,38 @@ export default function AccountantDashboard() {
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.student_id?.toLowerCase().includes(searchQuery.toLowerCase());
+      s.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.student_code?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || s.payment_status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesTrade = filterTrade === 'all' || s.trade === filterTrade;
+    const matchesLevel = filterLevel === 'all' || s.level === filterLevel;
+    return matchesSearch && matchesStatus && matchesTrade && matchesLevel;
   });
 
+  const handleContactParent = async (studentId: number) => {
+    try {
+      await apiService.contactParent(studentId, { message: 'Muraho! Mwaramutse. Turabamenyesha ko umwana wanyu afite ideni ry\'amafaranga y\'ishuri. Mwakwishyura vuba bishoboka. Murakoze!' });
+      alert('Ubutumwa bwoherejwe ku mubyeyi!');
+    } catch (error: any) {
+      alert('Byanze kohereza ubutumwa: ' + error.message);
+    }
+  };
+
+  const handleAutoRemind = async () => {
+    try {
+      const unpaidStudents = students.filter(s => s.payment_status === 'unpaid' || s.payment_status === 'partial');
+      await apiService.bulkRemindParents(unpaidStudents.map(s => s.id));
+      alert(`Ibutumwa byoherejwe ku babyeyi ${unpaidStudents.length}!`);
+    } catch (error: any) {
+      alert('Byanze kohereza ibutumwa: ' + error.message);
+    }
+  };
+
   const collectionRate = overview ? ((overview.total_collected / overview.total_expected) * 100).toFixed(1) : 0;
+
+  const paidCount = students.filter(s => s.payment_status === 'paid').length;
+  const unpaidCount = students.filter(s => s.payment_status === 'unpaid').length;
+  const partialCount = students.filter(s => s.payment_status === 'partial').length;
 
   if (loading) {
     return (
@@ -110,6 +149,10 @@ export default function AccountantDashboard() {
             <p className="text-gray-600 mt-2">Gucunga amafaranga n'amafaranga y'ishuri</p>
           </div>
           <div className="flex gap-3">
+            <Button onClick={handleAutoRemind} className="bg-gradient-to-r from-orange-600 to-red-600 text-white">
+              <Bell className="w-4 h-4 mr-2" />
+              Ibutsa Ababyeyi ({unpaidCount + partialCount})
+            </Button>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white">
@@ -203,12 +246,12 @@ export default function AccountantDashboard() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white border-2 border-green-200 p-1">
+          <TabsList className="grid w-full grid-cols-5 bg-white border-2 border-green-200 p-1">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
               Incamake
             </TabsTrigger>
             <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
-              Abanyeshuri
+              Imbonerahamwe Rusange
             </TabsTrigger>
             <TabsTrigger value="columns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
               <Columns className="w-4 h-4 mr-2" />
@@ -216,12 +259,16 @@ export default function AccountantDashboard() {
             </TabsTrigger>
             <TabsTrigger value="payment-proofs" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
               <Upload className="w-4 h-4 mr-2" />
-              Ibyemezo by'Kwishyura
+              Ibyemezo
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              Raporo
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <Card className="border-2 border-green-100 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6 text-center">
                   <DollarSign className="w-12 h-12 mx-auto text-green-600 mb-2" />
@@ -259,31 +306,68 @@ export default function AccountantDashboard() {
                   <p className="text-sm text-gray-600">Collection Rate</p>
                 </CardContent>
               </Card>
+
+              <Card className="border-2 border-orange-100 shadow-lg hover:shadow-xl transition-shadow">
+                <CardContent className="p-6 text-center">
+                  <Users className="w-12 h-12 mx-auto text-orange-600 mb-2" />
+                  <p className="text-2xl font-black text-green-700">{paidCount}</p>
+                  <p className="text-2xl font-black text-yellow-700">{partialCount}</p>
+                  <p className="text-2xl font-black text-red-700">{unpaidCount}</p>
+                  <p className="text-xs text-gray-600">Paid/Partial/Unpaid</p>
+                </CardContent>
+              </Card>
             </div>
 
             <Card className="border-2 border-green-100 shadow-xl">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle>Student Fee Records</CardTitle>
-                  <div className="flex gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-green-600" />
+                    Imbonerahamwe Rusange y'Abanyeshuri - Global Student Sheet
+                  </CardTitle>
+                  <div className="flex gap-3 flex-wrap">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
-                        placeholder="Search students..."
+                        placeholder="Shakisha abanyeshuri..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 border-2"
+                        className="pl-10 border-2 w-64"
                       />
                     </div>
+                    <Select value={filterTrade} onValueChange={setFilterTrade}>
+                      <SelectTrigger className="w-40 border-2">
+                        <SelectValue placeholder="Umwuga" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Imyuga Yose</SelectItem>
+                        {trades.filter(t => t.id).map(trade => (
+                          <SelectItem key={trade.id} value={trade.code}>{trade.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterLevel} onValueChange={setFilterLevel}>
+                      <SelectTrigger className="w-40 border-2">
+                        <SelectValue placeholder="Urwego" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Inzego Zose</SelectItem>
+                        {levels.filter(l => l.id).map(level => (
+                          <SelectItem key={level.id} value={level.display}>
+                            {level.display}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-40 border-2">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="partial">Partial</SelectItem>
-                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                        <SelectItem value="all">Byose</SelectItem>
+                        <SelectItem value="paid">Yishyuye</SelectItem>
+                        <SelectItem value="partial">Yishyuye Igice</SelectItem>
+                        <SelectItem value="unpaid">Ntiyishyura</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -293,14 +377,15 @@ export default function AccountantDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b-2">
-                        <th className="text-left py-3 px-4">Student</th>
-                        <th className="text-left py-3 px-4">Class</th>
-                        <th className="text-right py-3 px-4">Total Amount</th>
-                        <th className="text-right py-3 px-4">Paid</th>
-                        <th className="text-right py-3 px-4">Balance</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-right py-3 px-4">Actions</th>
+                      <tr className="border-b-2 bg-gradient-to-r from-green-50 to-teal-50">
+                        <th className="text-left py-3 px-4 font-bold">Umwana</th>
+                        <th className="text-left py-3 px-4 font-bold">Umwuga</th>
+                        <th className="text-left py-3 px-4 font-bold">Urwego</th>
+                        <th className="text-right py-3 px-4 font-bold">Yishyuwe</th>
+                        <th className="text-right py-3 px-4 font-bold">Yasabwe</th>
+                        <th className="text-right py-3 px-4 font-bold">Ideni</th>
+                        <th className="text-center py-3 px-4 font-bold">Uko Bimeze</th>
+                        <th className="text-center py-3 px-4 font-bold">Ibikorwa</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -314,43 +399,59 @@ export default function AccountantDashboard() {
                         >
                           <td className="py-3 px-4">
                             <div>
-                              <p className="font-semibold">{student.first_name} {student.last_name}</p>
-                              <p className="text-xs text-gray-500">{student.student_id}</p>
+                              <p className="font-semibold text-gray-900">{student.first_name} {student.last_name}</p>
+                              <p className="text-xs text-gray-500">{student.student_code || student.student_id}</p>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="text-sm">{student.trade_name}</p>
-                            <p className="text-xs text-gray-500">Level {student.level_number}</p>
-                          </td>
-                          <td className="py-3 px-4 text-right font-semibold">
-                            {(student.total_amount || 0).toLocaleString()} RWF
-                          </td>
-                          <td className="py-3 px-4 text-right text-green-600 font-semibold">
-                            {(student.paid_amount || 0).toLocaleString()} RWF
-                          </td>
-                          <td className="py-3 px-4 text-right text-red-600 font-semibold">
-                            {(student.balance || 0).toLocaleString()} RWF
+                            <p className="text-sm font-medium">{student.trade || student.trade_name || 'N/A'}</p>
                           </td>
                           <td className="py-3 px-4">
-                            <Badge className={
-                              student.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
-                              student.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }>
-                              {student.payment_status || 'unpaid'}
-                            </Badge>
+                            <p className="text-sm">Urwego {student.level || student.level_number || 'N/A'}</p>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setNewPayment({ ...newPayment, student_id: student.id.toString() });
-                              }}
-                            >
-                              <CreditCard className="w-3 h-3 mr-1" />
-                              Pay
-                            </Button>
+                          <td className="py-3 px-4 text-right font-bold text-green-600">
+                            {(student.total_paid || student.paid_amount || 0).toLocaleString()} RWF
+                          </td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-700">
+                            {(student.total_invoiced || student.total_amount || 0).toLocaleString()} RWF
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-red-600">
+                            {(student.balance || 0).toLocaleString()} RWF
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <Badge className={
+                              student.payment_status === 'paid' ? 'bg-green-100 text-green-700 font-semibold' :
+                              student.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700 font-semibold' :
+                              'bg-red-100 text-red-700 font-semibold'
+                            }>
+                              {student.payment_status === 'paid' ? 'Yishyuye' : 
+                               student.payment_status === 'partial' ? 'Igice' : 'Ntiyishyura'}
+                            </Badge>
+                            <div className="text-xs text-gray-500 mt-1">{student.percentage_paid || 0}%</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-600 text-green-600 hover:bg-green-50"
+                                onClick={() => {
+                                  setNewPayment({ ...newPayment, student_id: student.id.toString() });
+                                }}
+                              >
+                                <CreditCard className="w-3 h-3 mr-1" />
+                                Ishyura
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                onClick={() => handleContactParent(student.id)}
+                              >
+                                <Phone className="w-3 h-3 mr-1" />
+                                Hamagara
+                              </Button>
+                            </div>
                           </td>
                         </motion.tr>
                       ))}
@@ -364,7 +465,10 @@ export default function AccountantDashboard() {
           <TabsContent value="students" className="space-y-6">
             <Card className="border-2 border-green-100 shadow-xl">
               <CardHeader>
-                <CardTitle>Recent Transactions</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 text-green-600" />
+                  Ibikorwa Biheruka - Recent Transactions
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -396,6 +500,48 @@ export default function AccountantDashboard() {
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-6">
+            <Card className="border-2 border-blue-100 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                  Raporo z'Amafaranga - Financial Reports
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="border-2 border-green-200">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-3xl font-black text-green-600">{paidCount}</p>
+                      <p className="text-sm text-gray-600 mt-2">Abanyeshuri Bishyuye</p>
+                      <p className="text-xs text-gray-500">Students Who Paid</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-2 border-yellow-200">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-3xl font-black text-yellow-600">{partialCount}</p>
+                      <p className="text-sm text-gray-600 mt-2">Bishyuye Igice</p>
+                      <p className="text-xs text-gray-500">Partial Payment</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-2 border-red-200">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-3xl font-black text-red-600">{unpaidCount}</p>
+                      <p className="text-sm text-gray-600 mt-2">Ntibashyura</p>
+                      <p className="text-xs text-gray-500">Not Paid</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="mt-6">
+                  <Button onClick={exportData} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                    <Download className="w-4 h-4 mr-2" />
+                    Pakurura Raporo Yuzuye (CSV)
+                  </Button>
                 </div>
               </CardContent>
             </Card>

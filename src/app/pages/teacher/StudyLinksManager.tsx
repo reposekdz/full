@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Switch } from '@/app/components/ui/switch';
 import { apiService } from '@/app/services/apiService';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
 interface StudyLink {
   id: number;
@@ -90,7 +91,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
       if (classId) params.append('class_id', classId.toString());
       if (subjectId) params.append('subject_id', subjectId.toString());
 
-      const response = await fetch(`http://localhost:5000/api/teacher-advanced/study-links?${params}`);
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/study-links?${params}`);
       const data = await response.json();
       
       if (data.success) {
@@ -105,7 +106,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
 
   const loadAnalytics = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teacher-advanced/study-links-analytics?teacher_id=${teacherId}`);
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/study-links-analytics?teacher_id=${teacherId}`);
       const data = await response.json();
       if (data.success) {
         setAnalytics(data.stats);
@@ -143,7 +144,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
         subject_id: subjectId || 1
       };
 
-      const response = await fetch('http://localhost:5000/api/teacher-advanced/add-study-link', {
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/add-study-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -166,7 +167,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
     if (!selectedLink) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/teacher-advanced/study-link/${selectedLink.id}`, {
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/study-link/${selectedLink.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -188,7 +189,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
     if (!confirm('Are you sure you want to delete this study link?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/teacher-advanced/study-link/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/study-link/${id}`, {
         method: 'DELETE'
       });
 
@@ -212,7 +213,7 @@ const StudyLinksManager: React.FC<StudyLinksManagerProps> = ({ teacherId, classI
         links: bulkLinks.filter(link => link.title && link.url)
       };
 
-      const response = await fetch('http://localhost:5000/api/teacher-advanced/bulk-study-links', {
+      const response = await fetch(`${API_BASE_URL}/teacher-advanced/bulk-study-links`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

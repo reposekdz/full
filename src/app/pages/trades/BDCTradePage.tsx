@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   Building, 
@@ -37,8 +37,6 @@ import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Progress } from '@/app/components/ui/progress';
 import { Dialog, DialogContent } from '@/app/components/ui/dialog';
-import { getTeachersByTrade } from '@/app/data/mockTeachers';
-import { mockStudents } from '@/app/data/mockStudents';
 import { 
   TradeInquiryModal, 
   TradeFAQSection, 
@@ -53,6 +51,7 @@ interface BDCTradePageProps {
 }
 
 const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
+  const TRADE_CODE = 'BDC';
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
@@ -60,8 +59,29 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
-  const teachers = getTeachersByTrade('BDC');
-  const students = mockStudents.filter(s => s.trade === 'BDC');
+  const [tradeInfo, setTradeInfo] = useState<any>(null);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadTradeData = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/trades/code/${TRADE_CODE}`);
+        const data = await res.json();
+        if (data?.success) {
+          setTradeInfo(data.trade || null);
+          setTeachers(Array.isArray(data.instructors) ? data.instructors : []);
+          setStudents(Array.isArray(data.students) ? data.students : []);
+        }
+      } catch (e) {
+        setTeachers([]);
+        setStudents([]);
+        setTradeInfo(null);
+      }
+    };
+
+    loadTradeData();
+  }, []);
 
   const programs = [
     {
@@ -135,8 +155,8 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
   ];
 
   const stats = [
-    { label: 'Active Students', value: students.length, icon: Users, color: 'from-orange-500 to-red-500' },
-    { label: 'Expert Teachers', value: teachers.length, icon: GraduationCap, color: 'from-green-500 to-teal-500' },
+    { label: 'Active Students', value: tradeInfo?.total_students ?? students.length, icon: Users, color: 'from-orange-500 to-red-500' },
+    { label: 'Expert Teachers', value: tradeInfo?.total_instructors ?? teachers.length, icon: GraduationCap, color: 'from-green-500 to-teal-500' },
     { label: 'Success Rate', value: '91%', icon: TrendingUp, color: 'from-yellow-500 to-orange-500' },
     { label: 'Industry Partners', value: '20+', icon: Briefcase, color: 'from-purple-500 to-pink-500' }
   ];
@@ -571,52 +591,52 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
                     >
                       <Card className="border-2 border-orange-200 hover:shadow-xl transition-all overflow-hidden">
                         <div className="relative h-64 overflow-hidden">
-                          <img 
-                            src={teacher.photoUrl} 
-                            alt={teacher.name}
-                            className="w-full h-full object-cover"
-                          />
+                          {teacher.image_url ? (
+                            <img 
+                              src={`http://localhost:5000${teacher.image_url}`} 
+                              alt={teacher.name_rw || teacher.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center">
+                              <div className="text-white text-4xl font-black">
+                                {(teacher.name_rw || teacher.name || 'T').toString().charAt(0)}
+                              </div>
+                            </div>
+                          )}
                           <div className="absolute top-4 right-4">
-                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
-                              <Star className="w-4 h-4 mr-1 fill-white" />
-                              {teacher.rating}
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
+                              {teacher.role_rw || teacher.role || 'Instructor'}
                             </Badge>
                           </div>
                         </div>
                         <CardContent className="p-6">
-                          <h3 className="text-xl font-black text-gray-900 mb-1">{teacher.name}</h3>
-                          <p className="text-sm text-orange-600 font-bold mb-3">{teacher.specialization}</p>
-                          <p className="text-sm text-gray-600 mb-4">{teacher.bio}</p>
+                          <h3 className="text-xl font-black text-gray-900 mb-1">{teacher.name_rw || teacher.name}</h3>
+                          <p className="text-sm text-orange-600 font-bold mb-3">
+                            {teacher.specialization_rw || teacher.specialization || teacher.role || 'Instructor'}
+                          </p>
                           
                           <div className="space-y-2 mb-4">
                             <div className="flex items-center text-sm text-gray-600">
                               <Award className="w-4 h-4 mr-2 text-orange-500" />
-                              {teacher.qualification}
+                              {teacher.role_rw || teacher.role || 'Instructor'}
                             </div>
                             <div className="flex items-center text-sm text-gray-600">
                               <Briefcase className="w-4 h-4 mr-2 text-green-500" />
-                              {teacher.experience} years experience
+                              {teacher.experience_years || 0} years experience
                             </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Users className="w-4 h-4 mr-2 text-purple-500" />
-                              {teacher.studentsCount} students
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-orange-100">
-                            <p className="text-xs font-bold text-gray-700 mb-2">Teaching:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {teacher.coursesTeaching.slice(0, 2).map((course, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs border-orange-300 text-orange-700">
-                                  {course}
-                                </Badge>
-                              ))}
-                              {teacher.coursesTeaching.length > 2 && (
-                                <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
-                                  +{teacher.coursesTeaching.length - 2}
-                                </Badge>
-                              )}
-                            </div>
+                            {teacher.email && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Mail className="w-4 h-4 mr-2 text-purple-500" />
+                                {teacher.email}
+                              </div>
+                            )}
+                            {teacher.phone && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Phone className="w-4 h-4 mr-2 text-purple-500" />
+                                {teacher.phone}
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex gap-2 mt-4">
@@ -668,43 +688,19 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
                             </Avatar>
                             <h3 className="font-black text-gray-900 text-lg">{student.name}</h3>
                             <Badge className="mt-2 bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
-                              {student.level}
+                              Level {student.level} {TRADE_CODE}
                             </Badge>
-                            <p className="text-xs text-gray-600 mt-1">{student.studentCode}</p>
+                            <p className="text-xs text-gray-600 mt-1">{student.student_code || student.studentCode}</p>
                           </div>
 
-                          <div className="space-y-3">
+                          <div className="pt-3 border-t border-orange-100 grid grid-cols-2 gap-2 text-center">
                             <div>
-                              <div className="flex items-center justify-between text-sm mb-2">
-                                <span className="text-gray-600 flex items-center">
-                                  <TrendingUp className="w-4 h-4 mr-1" />
-                                  Performance
-                                </span>
-                                <span className="font-bold text-gray-900">{student.overallAverage}%</span>
-                              </div>
-                              <Progress value={student.overallAverage} className="h-2" />
+                              <p className="text-xs text-gray-600">Status</p>
+                              <p className="text-lg font-black text-gray-900">{student.is_active ? 'Active' : 'Inactive'}</p>
                             </div>
-
                             <div>
-                              <div className="flex items-center justify-between text-sm mb-2">
-                                <span className="text-gray-600 flex items-center">
-                                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Attendance
-                                </span>
-                                <span className="font-bold text-gray-900">{student.attendanceRate}%</span>
-                              </div>
-                              <Progress value={student.attendanceRate} className="h-2" />
-                            </div>
-
-                            <div className="pt-3 border-t border-orange-100 grid grid-cols-2 gap-2 text-center">
-                              <div>
-                                <p className="text-xs text-gray-600">Behavior</p>
-                                <p className="text-lg font-black text-gray-900">{student.behaviorScore}%</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-600">Grades</p>
-                                <p className="text-lg font-black text-gray-900">{student.grades.length}</p>
-                              </div>
+                              <p className="text-xs text-gray-600">Level</p>
+                              <p className="text-lg font-black text-gray-900">{student.level}</p>
                             </div>
                           </div>
                         </CardContent>

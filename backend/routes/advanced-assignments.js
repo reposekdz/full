@@ -379,11 +379,11 @@ router.post('/grades', async (req, res) => {
     await updateStudentPerformance(connection, submission[0].student_id);
 
     await connection.commit();
-    res.status(201).json({ message: 'Graded successfully', percentage, grade });
+    res.status(201).json({ success: true, message: 'Graded successfully', percentage, grade });
   } catch (error) {
     await connection.rollback();
     console.error('Error grading submission:', error);
-    res.status(500).json({ message: 'Error grading submission' });
+    res.status(500).json({ success: false, message: 'Error grading submission' });
   } finally {
     connection.release();
   }

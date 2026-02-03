@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
+const API_BASE = API_BASE_URL;
 
 // Unified Integration Service
 class UnifiedIntegrationService {

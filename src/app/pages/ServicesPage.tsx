@@ -44,7 +44,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/services/services');
+      const response = await fetch('http://localhost:5000/api/services-advanced/services');
       const data = await response.json();
       if (data.success && Array.isArray(data.services)) {
         setServices(data.services);

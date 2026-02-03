@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS `student_achievements` (
   INDEX `idx_student_code` (`student_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Timetable Management
+ 
 CREATE TABLE IF NOT EXISTS `timetable_entries` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `class_id` VARCHAR(100),

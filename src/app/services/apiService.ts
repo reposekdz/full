@@ -1,4 +1,6 @@
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
+const API_BASE = API_BASE_URL;
 
 class ApiService {
   private getAuthHeaders(isFormData: boolean = false) {
@@ -687,19 +689,20 @@ class ApiService {
   }
 
   async getAssignmentsByTeacher(teacherId: number) {
-    return this.request(`/assignments/assignments/teacher/${teacherId}`);
+    // Advanced Assignments is the fully-featured, file-capable assignments system
+    return this.request(`/advanced-assignments/assignments/teacher/${teacherId}`);
   }
 
   async getAssignmentSubmissions(assignmentId: number) {
-    return this.request(`/assignments/assignments/${assignmentId}/submissions`);
+    return this.request(`/advanced-assignments/assignments/${assignmentId}/submissions`);
   }
 
   async getAssignmentAnalytics(assignmentId: number) {
-    return this.request(`/assignments/analytics/assignment/${assignmentId}`);
+    return this.request(`/advanced-assignments/analytics/assignment/${assignmentId}`);
   }
 
   async submitGrade(gradeData: any) {
-    return this.request('/assignments/grades', {
+    return this.request('/advanced-assignments/grades', {
       method: 'POST',
       body: JSON.stringify(gradeData)
     });
@@ -2530,7 +2533,8 @@ class ApiService {
   }
 
   async getAssignmentSubmissions(assignmentId: number) {
-    return this.request(`/teacher-portal-advanced/assignments/${assignmentId}/submissions`);
+    // Keep consistent return shape with TeacherGradingPage (expects a raw array)
+    return this.request(`/advanced-assignments/assignments/${assignmentId}/submissions`);
   }
 
   async gradeSubmission(submissionId: number, gradeData: any) {
@@ -2727,6 +2731,21 @@ class ApiService {
   async getGlobalStudents(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/global-sheets/students?${query}`);
+  }
+
+  // Parent Contact & Reminders
+  async contactParent(studentId: number, messageData: { message: string; subject?: string; send_sms?: boolean }) {
+    return this.request(`/accountant/students/${studentId}/contact-parent`, {
+      method: 'POST',
+      body: JSON.stringify(messageData)
+    });
+  }
+
+  async bulkRemindParents(studentIds: number[]) {
+    return this.request('/accountant/bulk-remind-parents', {
+      method: 'POST',
+      body: JSON.stringify({ student_ids: studentIds })
+    });
   }
 }
 

@@ -3,415 +3,542 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
-// GET comprehensive advisor management features
-router.get('/management/features', authenticateToken, requireRole('advisor', 'admin'), async (req, res) => {
+/**
+ * ====================================
+ * ADVISOR MANAGEMENT SYSTEM
+ * ====================================
+ * Comprehensive student counseling and academic advising
+ * - Counseling sessions tracking
+ * - Student meetings and interventions
+ * - Academic progress monitoring
+ * - Mental health support tracking
+ * - Career guidance
+ * - Parent collaboration
+ */
+
+// =====================================
+// DASHBOARD
+// =====================================
+
+router.get('/dashboard', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
   try {
-    const managementFeatures = {
-      // Student management features in Kinyarwanda
-      imicungire_y_abanyeshuri: {
-        gukurikirana_iterambere: {
-          izina: "Gukurikirana Iterambere ry'Abanyeshuri",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo gukurikirana iterambere ry'abanyeshuri bose mu ishuri. 
-          Dukoresha tekinoroji igezweho kugira ngo tumenye uko buri munyeshuri agenda mu by'amashuri, 
-          imyitwarire, n'ubuzima bwe muri rusange.
-          
-          Ibi bikoresho bifasha:
-          - Gukurikirana amanota y'abanyeshuri buri gihe
-          - Kumenya abanyeshuri bafite ibibazo vuba
-          - Gufasha abanyeshuri bagera ku ntego zabo
-          - Guhuza n'ababyeyi mu gufasha abanyeshuri
-          - Gukora raporo z'iterambere buri gihe
-          
-          Dukoresha sisitemu y'amabara kugira ngo tumenye abanyeshuri:
-          - Icyatsi (Green): Abanyeshuri bagenda neza cyane
-          - Umuhondo (Yellow): Abanyeshuri bakeneye gufashwa gato
-          - Umutuku (Red): Abanyeshuri bakeneye gufashwa cyane
-          `,
-          ibikorwa: [
-            "Gukurikirana amanota buri munsi",
-            "Gukurikirana kwitabira amasomo", 
-            "Gukurikirana imyitwarire mu ishuri",
-            "Gukora raporo z'iterambere",
-            "Guhamagara ababyeyi igihe hakenewe"
-          ]
-        },
-        
-        gukemura_ibibazo: {
-          izina: "Gukemura Ibibazo by'Abanyeshuri",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo gukemura ibibazo byose by'abanyeshuri. Dufasha 
-          abanyeshuri gukemura ibibazo byabo by'amashuri, ubuzima, n'imyitwarire.
-          
-          Ibibazo dukemura:
-          - Ibibazo by'amanota make
-          - Ibibazo by'kutitabira amasomo
-          - Ibibazo by'imyitwarire mibi
-          - Ibibazo by'ubwoba bwo kwiga
-          - Ibibazo by'ubusabane n'abandi
-          - Ibibazo by'umuryango
-          - Ibibazo by'ubuzima
-          
-          Dukoresha uburyo bukurikira:
-          1. Kwumva ikibazo neza
-          2. Gusesengura impamvu z'ikibazo
-          3. Gushyiraho umuti w'ikibazo
-          4. Gukurikirana uko umuti ugenda
-          5. Gusuzuma niba ikibazo cyakemutse
-          `,
-          uburyo_bwo_gukemura: [
-            "Ubujyanama bw'imbonankubone",
-            "Ubujyanama bw'itsinda",
-            "Guhuza n'ababyeyi",
-            "Guhuza n'abarimu",
-            "Gufasha mu kwiga",
-            "Gufasha mu buzima"
-          ]
-        }
-      },
-
-      // Parent communication system
-      itumanaho_n_ababyeyi: {
-        sisitemu_y_ubutumwa: {
-          izina: "Sisitemu y'Ubutumwa n'Ababyeyi",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo kuvugana n'ababyeyi. Dukoresha tekinoroji igezweho 
-          kugira ngo ababyeyi bamenye uko abana babo bagenda mu ishuri.
-          
-          Ubutumwa dutanga ababyeyi:
-          - Raporo z'iterambere ry'abana babo buri cyumweru
-          - Amakuru y'amanota y'abana babo
-          - Amakuru y'imyitwarire y'abana babo
-          - Amakuru y'ibikorwa by'ishuri
-          - Ubutumwa bw'ibihangano
-          - Ubutumwa bw'inama z'ababyeyi
-          
-          Ababyeyi bashobora:
-          - Kubaza ibibazo ku bana babo
-          - Gusaba ikiganiro n'umujyanama
-          - Kubona raporo z'abana babo
-          - Kwishyira mu bikorwa by'ishuri
-          - Gutanga igitekerezo ku ishuri
-          `,
-          ubwoko_bw_ubutumwa: [
-            "SMS - Ubutumwa bw'ibanze",
-            "WhatsApp - Ubutumwa bw'amafoto n'amajwi", 
-            "Email - Raporo n'inyandiko",
-            "Telefoni - Ikiganiro cy'imbonankubone",
-            "Inama - Guhura mu ishuri"
-          ]
-        },
-        
-        inama_z_ababyeyi: {
-          izina: "Inama z'Ababyeyi",
-          ibisobanuro: `
-          Dukora inama z'ababyeyi kugira ngo babone amakuru y'ishuri n'iterambere ry'abana babo. 
-          Inama zitandukanye zikoresha intego zitandukanye.
-          
-          Ubwoko bw'inama:
-          - Inama rusange z'ababyeyi bose
-          - Inama z'ababyeyi b'icyiciro runaka
-          - Inama z'ababyeyi b'abanyeshuri bafite ibibazo
-          - Inama z'ababyeyi b'abanyeshuri bakomeye
-          - Inama z'ababyeyi b'abanyeshuri bashya
-          
-          Mu nama tubagezaho:
-          - Politiki z'ishuri
-          - Iterambere ry'abana babo
-          - Ibibazo by'abana babo
-          - Uburyo bwo gufasha abana mu rugo
-          - Amahirwe y'abana nyuma y'amashuri
-          `,
-          gahunda_y_inama: [
-            "Inama ya mbere y'ukwezi - Raporo z'iterambere",
-            "Inama ya kabiri y'ukwezi - Ibibazo n'ibisubizo",
-            "Inama ya gatatu y'ukwezi - Gahunda z'ejo hazaza",
-            "Inama y'ihariye - Ibibazo by'ibihangano"
-          ]
-        }
-      },
-
-      // School services management
-      imicungire_y_serivisi: {
-        serivisi_z_ubujyanama: {
-          izina: "Imicungire y'Ubujyanama",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo gucunga serivisi zose z'ubujyanama mu ishuri. 
-          Dufasha abanyeshuri, ababyeyi, n'abarimu mu bibazo byabo byose.
-          
-          Serivisi z'ubujyanama:
-          - Ubujyanama bw'amashuri
-          - Ubujyanama bw'umwuga  
-          - Ubujyanama bw'ubuzima
-          - Ubujyanama bw'umuryango
-          - Ubujyanama bw'ubusabane
-          - Ubujyanama bw'imyitwarire
-          
-          Abafasha mu bujyanama:
-          - Umujyanama mukuru (Mukamugema Emerance)
-          - Abajyanama bafasha (3)
-          - Abarimu bafasha mu bujyanama (5)
-          - Abaganga b'ubwoba (2)
-          `,
-          ibikorwa_by_buri_munsi: [
-            "Kwakira abanyeshuri bakeneye ubujyanama",
-            "Gukora ubujyanama bw'imbonankubone", 
-            "Gukora ubujyanama bw'itsinda",
-            "Gusubiza ababyeyi",
-            "Gukora raporo z'ubujyanama",
-            "Guhugura abarimu ku bujyanama"
-          ]
-        },
-        
-        gahunda_z_ubufasha: {
-          izina: "Gahunda z'Ubufasha Abanyeshuri",
-          ibisobanuro: `
-          Izi ni gahunda zitandukanye zo gufasha abanyeshuri mu bibazo byabo bitandukanye. 
-          Buri gahunda ifite intego yayo n'uburyo bwayo bwo gukora.
-          
-          Gahunda z'ubufasha:
-          1. Gahunda yo gufasha mu kwiga
-          2. Gahunda yo gufasha mu buzima
-          3. Gahunda yo gufasha mu mwuga
-          4. Gahunda yo gufasha mu busabane
-          5. Gahunda yo gufasha mu muryango
-          
-          Buri gahunda ikubiyemo:
-          - Intego z'igikoresho
-          - Uburyo bwo gukora
-          - Igihe gikoresho gimara
-          - Abafasha mu gikoresho
-          - Uburyo bwo gupima ubwiyunge
-          `,
-          gahunda_zihari: [
-            {
-              izina: "Gahunda yo Gufasha mu Kwiga",
-              intego: "Gufasha abanyeshuri kwiga neza",
-              abanyeshuri: 120,
-              ubwiyunge: "89%"
-            },
-            {
-              izina: "Gahunda yo Gufasha mu Buzima", 
-              intego: "Gufasha abanyeshuri mu buzima bwabo",
-              abanyeshuri: 85,
-              ubwiyunge: "92%"
-            },
-            {
-              izina: "Gahunda yo Gufasha mu Mwuga",
-              intego: "Gufasha abanyeshuri guhitamo umwuga",
-              abanyeshuri: 200,
-              ubwiyunge: "95%"
-            }
-          ]
-        }
-      },
-
-      // Advanced analytics and reporting
-      isesengura_n_raporo: {
-        raporo_z_iterambere: {
-          izina: "Raporo z'Iterambere ry'Abanyeshuri",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo gukora raporo z'iterambere ry'abanyeshuri. 
-          Dukoresha tekinoroji igezweho kugira ngo tukore raporo zuzuye kandi zifasha.
-          
-          Ubwoko bw'raporo:
-          - Raporo z'amanota
-          - Raporo z'imyitwarire
-          - Raporo z'kwitabira amasomo
-          - Raporo z'iterambere mu buzima
-          - Raporo z'ubufasha bwahawe
-          - Raporo z'intego zagezweho
-          
-          Raporo zikozwe:
-          - Buri cyumweru - Raporo z'ibanze
-          - Buri kwezi - Raporo z'iterambere
-          - Buri gihembwe - Raporo z'amanota
-          - Buri mwaka - Raporo z'ubwiyunge
-          `,
-          amakuru_akozwe: [
-            "Abanyeshuri bose: 1,250",
-            "Abanyeshuri bafite ibibazo: 180 (14.4%)",
-            "Abanyeshuri bafashijwe: 165 (91.7%)",
-            "Ababyeyi bahamagawe: 120",
-            "Inama z'ababyeyi: 24 buri mwaka"
-          ]
-        },
-        
-        isesengura_ry_ibibazo: {
-          izina: "Isesengura ry'Ibibazo by'Abanyeshuri",
-          ibisobanuro: `
-          Iki ni gikoresho gikomeye cyo gusesengura ibibazo by'abanyeshuri kugira ngo 
-          tumenye ibibazo bikunze kugaragara n'impamvu zazo.
-          
-          Ibibazo bikunze kugaragara:
-          1. Amanota make (35% by'ibibazo)
-          2. Kutitabira amasomo (25% by'ibibazo)
-          3. Imyitwarire mibi (20% by'ibibazo)
-          4. Ibibazo by'ubuzima (15% by'ibibazo)
-          5. Ibibazo by'umuryango (5% by'ibibazo)
-          
-          Impamvu z'ibibazo:
-          - Kubura ubufasha mu rugo
-          - Kubura ibikoresho by'amashuri
-          - Ibibazo by'ubuzima
-          - Ibibazo by'umuryango
-          - Kutamenya uburyo bwo kwiga
-          `,
-          ibisubizo_byabonetse: [
-            "Kongera ubujyanama bw'abanyeshuri",
-            "Gufasha ababyeyi gufasha abana mu rugo",
-            "Gutanga ibikoresho by'amashuri",
-            "Gufasha abanyeshuri mu buzima",
-            "Guhugura abarimu ku bujyanama"
-          ]
-        }
+    const [sessionStats] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_sessions,
+        COUNT(CASE WHEN session_type = 'counseling' THEN 1 END) as counseling_sessions,
+        COUNT(CASE WHEN session_type = 'academic' THEN 1 END) as academic_sessions,
+        COUNT(CASE WHEN session_type = 'career' THEN 1 END) as career_sessions,
+        COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as scheduled_sessions,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sessions
+      FROM advisor_sessions
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    `);
+    
+    const [studentStats] = await pool.execute(`
+      SELECT 
+        COUNT(DISTINCT student_id) as students_counseled,
+        AVG(CASE WHEN session_outcome_rating > 0 THEN session_outcome_rating END) as avg_outcome_rating
+      FROM advisor_sessions
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+    `);
+    
+    const [interventionStats] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_interventions,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_interventions,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_interventions,
+        COUNT(CASE WHEN priority = 'high' THEN 1 END) as high_priority
+      FROM student_interventions
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+    `);
+    
+    const [upcomingSessions] = await pool.execute(`
+      SELECT 
+        ase.*,
+        gss.first_name,
+        gss.last_name,
+        gss.student_code,
+        gss.trade_code,
+        gss.level_number
+      FROM advisor_sessions ase
+      JOIN global_student_sheets gss ON ase.student_id = gss.student_id
+      WHERE ase.status = 'scheduled' AND ase.session_date >= CURDATE()
+      ORDER BY ase.session_date, ase.session_time
+      LIMIT 10
+    `);
+    
+    const [recentSessions] = await pool.execute(`
+      SELECT 
+        ase.*,
+        gss.first_name,
+        gss.last_name,
+        gss.student_code,
+        gss.trade_code,
+        gss.level_number
+      FROM advisor_sessions ase
+      JOIN global_student_sheets gss ON ase.student_id = gss.student_id
+      WHERE ase.status = 'completed'
+      ORDER BY ase.session_date DESC, ase.created_at DESC
+      LIMIT 10
+    `);
+    
+    const [activeInterventions] = await pool.execute(`
+      SELECT 
+        si.*,
+        gss.first_name,
+        gss.last_name,
+        gss.student_code,
+        gss.trade_code,
+        gss.level_number
+      FROM student_interventions si
+      JOIN global_student_sheets gss ON si.student_id = gss.student_id
+      WHERE si.status = 'active'
+      ORDER BY FIELD(si.priority, 'high', 'medium', 'low'), si.created_at DESC
+      LIMIT 15
+    `);
+    
+    res.json({
+      success: true,
+      dashboard: {
+        sessions: sessionStats[0],
+        students: studentStats[0],
+        interventions: interventionStats[0],
+        upcoming_sessions: upcomingSessions,
+        recent_sessions: recentSessions,
+        active_interventions: activeInterventions
       }
-    };
-
-    res.json({ success: true, features: managementFeatures });
+    });
   } catch (error) {
-    console.error('Error fetching management features:', error);
-    res.status(500).json({ success: false, message: 'Error fetching features' });
+    console.error('Advisor dashboard error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// GET detailed advisor statistics
-router.get('/statistics/detailed', authenticateToken, requireRole('advisor', 'admin'), async (req, res) => {
+// =====================================
+// COUNSELING SESSIONS
+// =====================================
+
+router.get('/sessions', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
   try {
-    const [studentStats] = await pool.execute(`
+    const { student_id, session_type, status, from_date, to_date } = req.query;
+    
+    let query = `
       SELECT 
-        COUNT(*) as total_students,
-        COUNT(CASE WHEN u.is_active = true THEN 1 END) as active_students,
-        COUNT(CASE WHEN r.name = 'student' THEN 1 END) as enrolled_students
-      FROM users u 
-      JOIN roles r ON u.role_id = r.id 
-      WHERE r.name = 'student'
-    `);
-
-    const [parentStats] = await pool.execute(`
-      SELECT 
-        COUNT(*) as total_parents,
-        COUNT(CASE WHEN u.is_active = true THEN 1 END) as active_parents
-      FROM users u 
-      JOIN roles r ON u.role_id = r.id 
-      WHERE r.name = 'parent'
-    `);
-
-    const detailedStats = {
-      // Comprehensive statistics in Kinyarwanda
-      imibare_y_ishuri: {
-        abanyeshuri: {
-          abanyeshuri_bose: studentStats[0]?.total_students || 0,
-          abanyeshuri_bakora: studentStats[0]?.active_students || 0,
-          abanyeshuri_bafite_ibibazo: Math.floor((studentStats[0]?.total_students || 0) * 0.15),
-          abanyeshuri_bafashijwe: Math.floor((studentStats[0]?.total_students || 0) * 0.13),
-          igipimo_cy_ubwiyunge: "87%"
-        },
-        
-        ababyeyi: {
-          ababyeyi_bose: parentStats[0]?.total_parents || 0,
-          ababyeyi_bakora: parentStats[0]?.active_parents || 0,
-          ababyeyi_bitabira_inama: Math.floor((parentStats[0]?.total_parents || 0) * 0.75),
-          ababyeyi_bahamagawe: Math.floor((parentStats[0]?.total_parents || 0) * 0.25),
-          igipimo_cy_ubwishyire: "78%"
-        },
-        
-        ubujyanama: {
-          abanyeshuri_bahawe_ubujyanama: 450,
-          ababyeyi_bahawe_ubujyanama: 180,
-          inama_zakozwe: 48,
-          raporo_zakozwe: 156,
-          igipimo_cy_ubwiyunge: "91%"
-        }
-      },
-
-      // Monthly performance data
-      imikorere_ya_buri_kwezi: {
-        ukwezi_gushize: {
-          izina: "Ukwezi gushize",
-          abanyeshuri_bafashijwe: 85,
-          ababyeyi_bahamagawe: 32,
-          inama_zakozwe: 4,
-          ibibazo_byakemutse: 78,
-          igipimo_cy_ubwiyunge: "92%"
-        },
-        
-        uku_kwezi: {
-          izina: "Uku kwezi",
-          abanyeshuri_bafashijwe: 92,
-          ababyeyi_bahamagawe: 28,
-          inama_zakozwe: 3,
-          ibibazo_byakemutse: 85,
-          igipimo_cy_ubwiyunge: "93%"
-        },
-        
-        intego_z_ukwezi_gutaha: {
-          izina: "Intego z'ukwezi gutaha",
-          abanyeshuri_bagomba_gufashwa: 95,
-          ababyeyi_bagomba_guhamagara: 35,
-          inama_zigomba_gukorwa: 4,
-          ibibazo_bigomba_gukemurwa: 90,
-          igipimo_cy_ubwiyunge_kigamijwe: "94%"
-        }
-      },
-
-      // Success stories in Kinyarwanda
-      inkuru_z_ubwiyunge: [
-        {
-          izina_ry_umunyeshuri: "Jean Baptiste M.",
-          ikibazo_yari_afite: "Yari afite ibibazo by'amanota make mu mibare",
-          ubufasha_yahawe: "Yahawe ubujyanama bw'amashuri n'ubufasha mu kwiga",
-          ibisubizo_byagezweho: "Amanota ye yazamutse kuva 45% kugeza 78%",
-          icyifuzo_cy_ababyeyi: "Ababyeyi be bashimiye cyane iterambere rye"
-        },
-        {
-          izina_ry_umunyeshuri: "Marie Claire N.",
-          ikibazo_yari_afite: "Yari afite ubwoba bwo kwiga no gucika intege",
-          ubufasha_yahawe: "Yahawe ubujyanama bw'ubuzima n'ubufasha mu kwihangana",
-          ibisubizo_byagezweho: "Yongereye kwizera kandi akaba mu banyeshuri bakomeye",
-          icyifuzo_cy_ababyeyi: "Umuryango we wose ushimiye impinduka ye"
-        },
-        {
-          izina_ry_umunyeshuri: "Emmanuel K.",
-          ikibazo_yari_afite: "Yari afite ibibazo by'imyitwarire mibi mu ishuri",
-          ubufasha_yahawe: "Yahawe ubujyanama bw'imyitwarire n'ubufasha bw'ababyeyi",
-          ibisubizo_byagezweho: "Imyitwarire ye yarahindutse kandi akaba mu banyeshuri bakomeye",
-          icyifuzo_cy_ababyeyi: "Ababyeyi be bashimiye cyane impinduka ye"
-        }
-      ],
-
-      // Future plans and goals
-      gahunda_z_ejo_hazaza: {
-        intego_z_umwaka_utaha: [
-          "Kongera ubujyanama bw'abanyeshuri kugeza 95%",
-          "Kongera ubwishyire bw'ababyeyi kugeza 85%", 
-          "Gushyiraho gahunda nshya zo gufasha abanyeshuri",
-          "Guhugura abarimu benshi ku bujyanama",
-          "Gushyiraho sisitemu nshya y'itumanaho n'ababyeyi"
-        ],
-        
-        ibikoresho_bishya: [
-          "Sisitemu ya tekinoroji yo gukurikirana abanyeshuri",
-          "Porogaramu nshya yo gufasha abanyeshuri mu kwiga",
-          "Sisitemu nshya y'ubujyanama bw'imbonankubone",
-          "Gahunda nshya zo gufasha ababyeyi",
-          "Ibikoresho bishya by'ubujyanama"
-        ],
-        
-        amahugurwa_agomba_gukorwa: [
-          "Amahugurwa y'abarimu ku bujyanama",
-          "Amahugurwa y'ababyeyi ku gufasha abana",
-          "Amahugurwa ku gukoresha tekinoroji mu bujyanama",
-          "Amahugurwa ku gukemura amakimbirane",
-          "Amahugurwa ku gufasha abanyeshuri mu buzima"
-        ]
-      }
-    };
-
-    res.json({ success: true, statistics: detailedStats });
+        ase.*,
+        gss.first_name,
+        gss.last_name,
+        gss.student_code,
+        gss.trade_code,
+        gss.level_number,
+        gss.guardian_phone,
+        u.first_name as advisor_first_name,
+        u.last_name as advisor_last_name
+      FROM advisor_sessions ase
+      JOIN global_student_sheets gss ON ase.student_id = gss.student_id
+      LEFT JOIN users u ON ase.advisor_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (student_id) {
+      query += ` AND ase.student_id = ?`;
+      params.push(student_id);
+    }
+    if (session_type) {
+      query += ` AND ase.session_type = ?`;
+      params.push(session_type);
+    }
+    if (status) {
+      query += ` AND ase.status = ?`;
+      params.push(status);
+    }
+    if (from_date) {
+      query += ` AND ase.session_date >= ?`;
+      params.push(from_date);
+    }
+    if (to_date) {
+      query += ` AND ase.session_date <= ?`;
+      params.push(to_date);
+    }
+    
+    query += ` ORDER BY ase.session_date DESC, ase.created_at DESC LIMIT 100`;
+    
+    const [sessions] = await pool.execute(query, params);
+    
+    res.json({
+      success: true,
+      sessions: sessions
+    });
   } catch (error) {
-    console.error('Error fetching detailed statistics:', error);
-    res.status(500).json({ success: false, message: 'Error fetching statistics' });
+    console.error('Get sessions error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/sessions', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const {
+      student_id,
+      session_type,
+      session_date,
+      session_time,
+      purpose,
+      concerns,
+      location
+    } = req.body;
+    
+    if (!student_id || !session_type || !session_date || !purpose) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    
+    const [student] = await pool.execute(
+      'SELECT * FROM global_student_sheets WHERE student_id = ? AND status = "active"',
+      [student_id]
+    );
+    
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Active student not found' });
+    }
+    
+    const [result] = await pool.execute(
+      `INSERT INTO advisor_sessions (
+        student_id, advisor_id, session_type, session_date, session_time,
+        purpose, concerns, location, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())`,
+      [student_id, req.user.id, session_type, session_date, session_time, purpose, concerns, location]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Session scheduled successfully',
+      session_id: result.insertId
+    });
+  } catch (error) {
+    console.error('Create session error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/sessions/:id', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      status,
+      session_notes,
+      action_items,
+      follow_up_required,
+      follow_up_date,
+      session_outcome_rating,
+      parent_notified
+    } = req.body;
+    
+    const [result] = await pool.execute(
+      `UPDATE advisor_sessions 
+       SET status = ?, session_notes = ?, action_items = ?,
+           follow_up_required = ?, follow_up_date = ?, session_outcome_rating = ?,
+           parent_notified = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [status, session_notes, action_items, follow_up_required, follow_up_date, 
+       session_outcome_rating, parent_notified, id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Session not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Session updated successfully'
+    });
+  } catch (error) {
+    console.error('Update session error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/sessions/:id', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [result] = await pool.execute(
+      'DELETE FROM advisor_sessions WHERE id = ?',
+      [id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Session not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Session deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete session error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// =====================================
+// STUDENT INTERVENTIONS
+// =====================================
+
+router.get('/interventions', authenticateToken, requireRole(['advisor', 'admin', 'teacher']), async (req, res) => {
+  try {
+    const { student_id, status, priority, intervention_type } = req.query;
+    
+    let query = `
+      SELECT 
+        si.*,
+        gss.first_name,
+        gss.last_name,
+        gss.student_code,
+        gss.trade_code,
+        gss.level_number,
+        u.first_name as created_by_first_name,
+        u.last_name as created_by_last_name
+      FROM student_interventions si
+      JOIN global_student_sheets gss ON si.student_id = gss.student_id
+      LEFT JOIN users u ON si.created_by = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (student_id) {
+      query += ` AND si.student_id = ?`;
+      params.push(student_id);
+    }
+    if (status) {
+      query += ` AND si.status = ?`;
+      params.push(status);
+    }
+    if (priority) {
+      query += ` AND si.priority = ?`;
+      params.push(priority);
+    }
+    if (intervention_type) {
+      query += ` AND si.intervention_type = ?`;
+      params.push(intervention_type);
+    }
+    
+    query += ` ORDER BY FIELD(si.priority, 'high', 'medium', 'low'), si.created_at DESC LIMIT 100`;
+    
+    const [interventions] = await pool.execute(query, params);
+    
+    res.json({
+      success: true,
+      interventions: interventions
+    });
+  } catch (error) {
+    console.error('Get interventions error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/interventions', authenticateToken, requireRole(['advisor', 'admin', 'teacher']), async (req, res) => {
+  try {
+    const {
+      student_id,
+      intervention_type,
+      concern_area,
+      description,
+      priority,
+      planned_actions,
+      target_date
+    } = req.body;
+    
+    if (!student_id || !intervention_type || !concern_area || !description || !priority) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    
+    const [student] = await pool.execute(
+      'SELECT * FROM global_student_sheets WHERE student_id = ? AND status = "active"',
+      [student_id]
+    );
+    
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Active student not found' });
+    }
+    
+    const [result] = await pool.execute(
+      `INSERT INTO student_interventions (
+        student_id, intervention_type, concern_area, description,
+        priority, planned_actions, target_date, status, created_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())`,
+      [student_id, intervention_type, concern_area, description, priority, planned_actions, target_date, req.user.id]
+    );
+    
+    if (student[0].guardian_phone) {
+      const message = `Dear ${student[0].guardian_name || 'Parent/Guardian'},\n\n` +
+        `An intervention plan has been created for ${student[0].first_name} ${student[0].last_name}.\n` +
+        `Type: ${intervention_type}\n` +
+        `Concern: ${concern_area}\n` +
+        `Priority: ${priority}\n\n` +
+        `The school advisor will contact you soon for collaboration.`;
+      
+      try {
+        const smsService = require('../services/smsService');
+        await smsService.sendSMS(student[0].guardian_phone, message);
+        
+        await pool.execute(
+          `INSERT INTO parent_notifications (
+            student_id, notification_type, message, sent_to,
+            sent_via, sent_by, sent_at
+          ) VALUES (?, 'intervention', ?, ?, 'sms', ?, NOW())`,
+          [student_id, message, student[0].guardian_phone, req.user.id]
+        );
+      } catch (err) {
+        console.error('SMS notification error:', err);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Intervention created successfully',
+      intervention_id: result.insertId
+    });
+  } catch (error) {
+    console.error('Create intervention error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/interventions/:id', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      status,
+      progress_notes,
+      outcome,
+      effectiveness_rating
+    } = req.body;
+    
+    const [result] = await pool.execute(
+      `UPDATE student_interventions 
+       SET status = ?, progress_notes = ?, outcome = ?, effectiveness_rating = ?,
+           completed_by = ?, completed_at = NOW(), updated_at = NOW()
+       WHERE id = ?`,
+      [status, progress_notes, outcome, effectiveness_rating, req.user.id, id]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Intervention not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Intervention updated successfully'
+    });
+  } catch (error) {
+    console.error('Update intervention error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// =====================================
+// STUDENT ACADEMIC TRACKING
+// =====================================
+
+router.get('/students/:student_id/profile', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    
+    const [student] = await pool.execute(
+      'SELECT * FROM global_student_sheets WHERE student_id = ?',
+      [student_id]
+    );
+    
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const [sessions] = await pool.execute(
+      `SELECT * FROM advisor_sessions 
+       WHERE student_id = ? 
+       ORDER BY session_date DESC, created_at DESC 
+       LIMIT 10`,
+      [student_id]
+    );
+    
+    const [interventions] = await pool.execute(
+      `SELECT * FROM student_interventions 
+       WHERE student_id = ? 
+       ORDER BY created_at DESC 
+       LIMIT 10`,
+      [student_id]
+    );
+    
+    const [disciplineRecords] = await pool.execute(
+      `SELECT * FROM discipline_records 
+       WHERE student_id = ? 
+       ORDER BY incident_date DESC 
+       LIMIT 5`,
+      [student_id]
+    );
+    
+    const [conductRecords] = await pool.execute(
+      `SELECT * FROM student_conduct 
+       WHERE student_id = ? 
+       ORDER BY academic_year DESC, term DESC 
+       LIMIT 5`,
+      [student_id]
+    );
+    
+    res.json({
+      success: true,
+      profile: {
+        student: student[0],
+        sessions: sessions,
+        interventions: interventions,
+        discipline_records: disciplineRecords,
+        conduct_records: conductRecords
+      }
+    });
+  } catch (error) {
+    console.error('Get student profile error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// =====================================
+// REPORTS AND ANALYTICS
+// =====================================
+
+router.get('/reports/student-summary/:student_id', authenticateToken, requireRole(['advisor', 'admin']), async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    
+    const [sessionSummary] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_sessions,
+        COUNT(CASE WHEN session_type = 'counseling' THEN 1 END) as counseling_count,
+        COUNT(CASE WHEN session_type = 'academic' THEN 1 END) as academic_count,
+        COUNT(CASE WHEN session_type = 'career' THEN 1 END) as career_count,
+        AVG(CASE WHEN session_outcome_rating > 0 THEN session_outcome_rating END) as avg_rating
+      FROM advisor_sessions
+      WHERE student_id = ?
+    `, [student_id]);
+    
+    const [interventionSummary] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_interventions,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_count,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+        AVG(CASE WHEN effectiveness_rating > 0 THEN effectiveness_rating END) as avg_effectiveness
+      FROM student_interventions
+      WHERE student_id = ?
+    `, [student_id]);
+    
+    res.json({
+      success: true,
+      summary: {
+        sessions: sessionSummary[0],
+        interventions: interventionSummary[0]
+      }
+    });
+  } catch (error) {
+    console.error('Get student summary error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

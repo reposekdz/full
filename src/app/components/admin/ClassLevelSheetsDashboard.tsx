@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/app/config/apiBase';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Download, Upload, Plus, Edit, Trash2, Eye, Search, Filter,
@@ -18,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { exportToCSV, exportToPDF, printTable, ExportColumn } from '@/app/utils/exportUtils';
 import { notify } from '@/app/utils/notificationUtils';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = API_BASE_URL;
 
 interface ClassLevelSheetsDashboardProps {
   userRole: string;

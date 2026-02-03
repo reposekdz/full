@@ -17,8 +17,9 @@ import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = API_BASE_URL;
 
 interface ModernParentDashboardProps {
   onNavigate: (page: string) => void;

@@ -12,6 +12,7 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 router.get('/dashboard', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const parentId = req.user.id;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Get all linked children
     const [children] = await db.query(`
@@ -21,7 +22,7 @@ router.get('/dashboard', authenticateToken, requireRole(['parent']), async (req,
       INNER JOIN global_students gs ON sp.student_id = gs.id
       LEFT JOIN trade_classes tc ON gs.current_class_id = tc.id
       WHERE sp.phone = ? AND sp.is_active = true
-    `, [req.user.phone]);
+    `, [parentPhone]);
 
     const childrenData = await Promise.all(children.map(async (child) => {
       // Get recent attendance
@@ -92,12 +93,13 @@ router.get('/students/:studentId/academics', authenticateToken, requireRole(['pa
   try {
     const { studentId } = req.params;
     const { academic_year, term } = req.query;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify parent has access to this student
     const [access] = await db.query(`
       SELECT * FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true AND can_view_grades = true
-    `, [studentId, req.user.phone]);
+    `, [studentId, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -153,12 +155,13 @@ router.get('/students/:studentId/attendance', authenticateToken, requireRole(['p
   try {
     const { studentId } = req.params;
     const { start_date, end_date } = req.query;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT * FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true AND can_view_attendance = true
-    `, [studentId, req.user.phone]);
+    `, [studentId, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -215,12 +218,13 @@ router.get('/students/:studentId/attendance', authenticateToken, requireRole(['p
 router.get('/students/:studentId/discipline', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { studentId } = req.params;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT * FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true
-    `, [studentId, req.user.phone]);
+    `, [studentId, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -245,12 +249,13 @@ router.get('/students/:studentId/discipline', authenticateToken, requireRole(['p
 router.get('/students/:studentId/fees', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { studentId } = req.params;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT * FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true
-    `, [studentId, req.user.phone]);
+    `, [studentId, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -284,12 +289,13 @@ router.get('/students/:studentId/fees', authenticateToken, requireRole(['parent'
 router.post('/payments/initiate', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { student_id, amount, phone, payment_method, fee_type, description } = req.body;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT id FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true AND can_make_payments = true
-    `, [student_id, req.user.phone]);
+    `, [student_id, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Payment access denied' });
@@ -328,6 +334,7 @@ router.post('/payments/initiate', authenticateToken, requireRole(['parent']), as
 router.get('/notifications', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { student_id, is_read, notification_type, page = 1, limit = 20 } = req.query;
+    const parentPhone = req.user.phone || req.user.username;
 
     let query = `
       SELECT pn.*, gs.full_name as student_name
@@ -336,7 +343,7 @@ router.get('/notifications', authenticateToken, requireRole(['parent']), async (
       INNER JOIN student_parents sp ON sp.student_id = pn.student_id
       WHERE sp.phone = ? AND sp.is_active = true
     `;
-    const params = [req.user.phone];
+    const params = [parentPhone];
 
     if (student_id) {
       query += ` AND pn.student_id = ?`;
@@ -372,6 +379,7 @@ router.get('/notifications', authenticateToken, requireRole(['parent']), async (
 router.put('/notifications/:id/read', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { id } = req.params;
+    const parentPhone = req.user.phone || req.user.username;
 
     await db.query(`
       UPDATE parent_notifications
@@ -379,7 +387,7 @@ router.put('/notifications/:id/read', authenticateToken, requireRole(['parent'])
       WHERE id = ? AND parent_id IN (
         SELECT id FROM student_parents WHERE phone = ?
       )
-    `, [id, req.user.phone]);
+    `, [id, parentPhone]);
 
     res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
@@ -392,12 +400,13 @@ router.put('/notifications/:id/read', authenticateToken, requireRole(['parent'])
 router.post('/communications', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { student_id, recipient_type, recipient_id, subject, message, priority } = req.body;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT id FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true AND can_communicate_teachers = true
-    `, [student_id, req.user.phone]);
+    `, [student_id, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Communication access denied' });
@@ -444,6 +453,7 @@ router.post('/communications', authenticateToken, requireRole(['parent']), async
 router.get('/communications', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { student_id, status } = req.query;
+    const parentPhone = req.user.phone || req.user.username;
 
     let query = `
       SELECT psc.*, gs.full_name as student_name, u.name as responder_name
@@ -453,7 +463,7 @@ router.get('/communications', authenticateToken, requireRole(['parent']), async 
       LEFT JOIN users u ON psc.responded_by = u.id
       WHERE sp.phone = ? AND sp.is_active = true
     `;
-    const params = [req.user.phone];
+    const params = [parentPhone];
 
     if (student_id) {
       query += ` AND psc.student_id = ?`;
@@ -480,12 +490,13 @@ router.get('/communications', authenticateToken, requireRole(['parent']), async 
 router.get('/students/:studentId/activities', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const { studentId } = req.params;
+    const parentPhone = req.user.phone || req.user.username;
 
     // Verify access
     const [access] = await db.query(`
       SELECT * FROM student_parents 
       WHERE student_id = ? AND phone = ? AND is_active = true
-    `, [studentId, req.user.phone]);
+    `, [studentId, parentPhone]);
 
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
