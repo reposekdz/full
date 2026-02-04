@@ -331,7 +331,7 @@ const AdvancedParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate })
                 ))}
               </div>
             )}
-
+ 
             {activeTab === 'payment-proof' && (
               <ParentPaymentProofSubmission />
             )}

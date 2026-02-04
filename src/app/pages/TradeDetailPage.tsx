@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { Progress } from '@/app/components/ui/progress';
 import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
+import { TradeTeachers } from '@/app/components/trades/TradeTeachers';
 
 interface TradeDetailPageProps {
   tradeCode: string;
@@ -23,6 +24,7 @@ interface TradeDetailPageProps {
 
 const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) => {
   const [trade, setTrade] = useState<any>(null);
+  const [tradeData, setTradeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(() => {
@@ -79,7 +81,8 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
                 baseType,
                 name: nameRw,
                 description: t.description_rw || t.description,
-                levels: []
+                levels: [],
+                tradeId: t.id
               };
             }
             
@@ -108,6 +111,15 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
               }
             });
             setSelectedLevel(foundTrade.levels[0]);
+            
+            // Fetch full trade details with instructors
+            if (foundTrade.tradeId) {
+              const detailResponse = await fetch(`http://localhost:5000/api/trades/${foundTrade.tradeId}`);
+              const detailData = await detailResponse.json();
+              if (detailData.success) {
+                setTradeData(detailData);
+              }
+            }
           }
         }
       } catch (error) {
@@ -668,40 +680,27 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
           {/* Instructors Tab */}
           <TabsContent value="instructors" className="space-y-6">
             <Card className="border-2 border-gray-100 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="text-2xl">Hura n'Abarimu Bacu Banyobozi</CardTitle>
-                <CardDescription>
+              <CardHeader className={`bg-gradient-to-r ${getGradientColors(tradeCode)} text-white`}>
+                <CardTitle className="text-3xl flex items-center gap-3">
+                  <Users className="w-8 h-8" />
+                  Hura n'Abarimu Bacu Banyobozi
+                </CardTitle>
+                <CardDescription className="text-white/90 text-lg">
                   Wiga ku banyobozi b'inganda bafite uburambe bw'imyaka myinshi
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[1, 2, 3].map((i) => (
-                    <motion.div
-                      key={i}
-                      whileHover={{ y: -5 }}
-                      className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-100 shadow-lg"
-                    >
-                      <Avatar className="w-20 h-20 mb-4 border-4 border-white shadow-lg">
-                        <AvatarFallback className="text-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                          IN
-                        </AvatarFallback>
-                      </Avatar>
-                      <h4 className="font-bold text-lg mb-1">Izina ry'Umwarimu</h4>
-                      <p className="text-sm text-gray-600 mb-3">Umwarimu Mukuru w'{trade.name}</p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          <span>Uburambe bw'imyaka 10+</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Mail className="w-4 h-4" />
-                          <span>umwarimu@ishuri.rw</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+              <CardContent className="p-8">
+                {trade?.tradeId ? (
+                  <TradeTeachers 
+                    tradeId={trade.tradeId} 
+                    gradientColors={getGradientColors(tradeCode)}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">Nta makuru y'abarimu ahari</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

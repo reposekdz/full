@@ -10,7 +10,7 @@ echo Please enter your MySQL credentials:
 set /p DB_USER="MySQL Username (default: root): "
 if "%DB_USER%"=="" set DB_USER=root
 
-set /p DB_NAME="Database Name (default: school_management_db): "
+set /p DB_NAME="Database Name (default: school_management): "
 if "%DB_NAME%"=="" set DB_NAME=school_management_db
 
 echo.

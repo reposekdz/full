@@ -199,7 +199,15 @@ export default function AccountantDynamicColumns() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Hitamo Umwuga</Label>
-              <Select value={selectedTrade} onValueChange={setSelectedTrade}>
+              <Select
+                value={selectedTrade}
+                onValueChange={(v) => {
+                  setSelectedTrade(v);
+                  setSelectedLevelId('');
+                  setColumns([]);
+                  setStudents([]);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Hitamo umwuga..." />
                 </SelectTrigger>

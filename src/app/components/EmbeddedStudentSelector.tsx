@@ -39,8 +39,7 @@ export const EmbeddedStudentSelector: React.FC<EmbeddedStudentSelectorProps> = (
 
   const fetchData = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
+      setLoading(true);      const token = localStorage.getItem('token');
 
       // Global Student Sheets is the single source of truth; derive filter lists from it.
       const studentsRes = await fetch('http://localhost:5000/api/global-sheets/all-students', {

@@ -172,7 +172,17 @@ router.get('/:id', async (req, res) => {
     if (trades.length === 0) return res.status(404).json({ success: false, message: 'Trade not found' });
 
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name', 
+      `SELECT 
+        ti.*,
+        COALESCE(ti.photo_url, '/uploads/teachers/default.jpg') as image_url,
+        ti.email,
+        ti.phone,
+        ti.specialization,
+        ti.qualification,
+        ti.experience_years
+      FROM trade_instructors ti 
+      WHERE ti.trade_id = ? 
+      ORDER BY ti.name`, 
       [req.params.id]
     );
     
@@ -220,7 +230,17 @@ router.get('/code/:code', async (req, res) => {
 
     const tradeId = trades[0].id;
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name', 
+      `SELECT 
+        ti.*,
+        COALESCE(ti.photo_url, '/uploads/teachers/default.jpg') as image_url,
+        ti.email,
+        ti.phone,
+        ti.specialization,
+        ti.qualification,
+        ti.experience_years
+      FROM trade_instructors ti 
+      WHERE ti.trade_id = ? 
+      ORDER BY ti.name`, 
       [tradeId]
     );
     
@@ -276,7 +296,17 @@ router.get('/:id/courses', async (req, res) => {
 router.get('/:id/instructors', async (req, res) => {
   try {
     const [instructors] = await pool.query(
-      'SELECT * FROM trade_instructors WHERE trade_id = ? ORDER BY name',
+      `SELECT 
+        ti.*,
+        COALESCE(ti.photo_url, '/uploads/teachers/default.jpg') as image_url,
+        ti.email,
+        ti.phone,
+        ti.specialization,
+        ti.qualification,
+        ti.experience_years
+      FROM trade_instructors ti 
+      WHERE ti.trade_id = ? 
+      ORDER BY ti.name`,
       [req.params.id]
     );
     res.json({ success: true, instructors });

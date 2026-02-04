@@ -52,6 +52,7 @@ import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
 import ModernParentDashboard from '@/app/pages/dashboards/ModernParentDashboard';
 import PowerfulParentDashboard from '@/app/pages/dashboards/PowerfulParentDashboard';
+import ParentPortalComprehensiveDashboard from '@/app/pages/dashboards/ParentPortalComprehensiveDashboard';
 import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
@@ -191,7 +192,7 @@ const AppContent: React.FC = () => {
         return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
-        return <PowerfulParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'advisor':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-advisor" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets onNavigate={handleNavigate} />;
@@ -272,7 +273,7 @@ const AppContent: React.FC = () => {
     // Check for dashboard routes first
     if (currentPage === 'admin' && user?.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-student' && user?.role === 'student') return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ModernParentDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-dos' && user?.role === 'director_study') return <DOSDashboard onNavigate={handleNavigate} onLogout={logout} />;

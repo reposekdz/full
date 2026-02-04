@@ -2637,55 +2637,44 @@ class ApiService {
 
   async getChildAcademicPerformance(studentId: string, params = {}) {
     const query = new URLSearchParams(params as any).toString();
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/academic?${query}`);
+    return this.request(`/parent-portal-comprehensive/students/${studentId}/academics?${query}`);
   }
 
   async getChildAttendance(studentId: string, params = {}) {
     const query = new URLSearchParams(params as any).toString();
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/attendance?${query}`);
+    return this.request(`/parent-portal-comprehensive/students/${studentId}/attendance?${query}`);
   }
 
   async getChildDiscipline(studentId: string) {
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/discipline`);
+    return this.request(`/parent-portal-comprehensive/students/${studentId}/discipline`);
   }
 
-  async getChildAssignments(studentId: string, params = {}) {
+  async getChildActivities(studentId: string, params = {}) {
     const query = new URLSearchParams(params as any).toString();
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/assignments?${query}`);
+    return this.request(`/parent-portal-comprehensive/students/${studentId}/activities?${query}`);
   }
 
-  async getChildFeeStatement(studentId: string) {
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/statement`);
+  async getChildFees(studentId: string) {
+    return this.request(`/parent-portal-comprehensive/students/${studentId}/fees`);
   }
 
-  async submitPaymentProof(studentId: string, proofData: any) {
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/payment-proof`, {
+  async initiateParentPayment(paymentData: any) {
+    return this.request('/parent-portal-comprehensive/payments/initiate', {
       method: 'POST',
-      body: JSON.stringify(proofData)
+      body: JSON.stringify(paymentData)
     });
   }
 
-  async getChildReceipts(studentId: string) {
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/fees/receipts`);
-  }
-
-  async sendMessageToTeacher(messageData: any) {
-    return this.request('/parent-portal-comprehensive/messages/teacher', {
+  async sendParentCommunication(commData: any) {
+    return this.request('/parent-portal-comprehensive/communications', {
       method: 'POST',
-      body: JSON.stringify(messageData)
+      body: JSON.stringify(commData)
     });
   }
 
-  async sendMessageToAdmin(messageData: any) {
-    return this.request('/parent-portal-comprehensive/messages/admin', {
-      method: 'POST',
-      body: JSON.stringify(messageData)
-    });
-  }
-
-  async getParentMessages(params = {}) {
+  async getParentCommunications(params = {}) {
     const query = new URLSearchParams(params as any).toString();
-    return this.request(`/parent-portal-comprehensive/messages?${query}`);
+    return this.request(`/parent-portal-comprehensive/communications?${query}`);
   }
 
   async getParentNotifications(params = {}) {
@@ -2697,11 +2686,6 @@ class ApiService {
     return this.request(`/parent-portal-comprehensive/notifications/${id}/read`, {
       method: 'PUT'
     });
-  }
-
-  async getChildComprehensiveReport(studentId: string, params = {}) {
-    const query = new URLSearchParams(params as any).toString();
-    return this.request(`/parent-portal-comprehensive/children/${studentId}/report?${query}`);
   }
 
   // ==================== GLOBAL STUDENT SHEETS ====================

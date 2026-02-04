@@ -416,14 +416,14 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-xl sm:rounded-2xl shadow-xl cursor-pointer"
+                className="group relative overflow-hidden rounded-xl sm:rounded-2xl shadow-xl cursor-pointer h-full flex flex-col"
                 onClick={() => onNavigate('trades')}
               >
-                <div className="aspect-[4/3] relative">
+                <div className="h-64 relative flex-shrink-0">
                   <ImageWithFallback
                     src={getTradeImageUrl(trade)}
                     alt={trade.name || t(trade.titleKey)}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-center"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 </div>

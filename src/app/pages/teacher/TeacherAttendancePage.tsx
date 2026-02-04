@@ -53,6 +53,8 @@ const TeacherAttendancePage: React.FC<TeacherAttendancePageProps> = ({ onNavigat
       const res = await apiService.getTeacherClasses();
       if (res.success) {
         setClasses(res.classes);
+        const saved = localStorage.getItem('teacher_selected_class_id');
+        if (saved) setSelectedClassId(Number(saved));
       }
     } catch (err) {
       toast.error('Gufata amaklasi byanze');

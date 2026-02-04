@@ -6,6 +6,7 @@ import { Input } from '@/app/components/ui/input';
 import { Eye, Edit, Filter, RefreshCw, Download } from 'lucide-react';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import apiService from '@/app/services/apiService';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
 interface TeacherGradesPageProps {
   onNavigate: (page: string) => void;
@@ -47,13 +48,22 @@ const TeacherGradesPage: React.FC<TeacherGradesPageProps> = ({ onNavigate }) => 
   const fetchGrades = async (classId: number) => {
     try {
       setLoading(true);
-      const res = await apiService.request(`/teacher-portal-advanced/grades/class/${classId}`);
-      if (res.success) {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/teacher-portal-advanced/grades/class/${classId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const res = await response.json();
+      if (res?.success) {
         setGrades(res.marks || []);
         setStats(res.statistics || null);
+      } else {
+        setGrades([]);
+        setStats(null);
       }
     } catch (err) {
       console.error('Failed to fetch grades:', err);
+      setGrades([]);
+      setStats(null);
     } finally {
       setLoading(false);
     }
