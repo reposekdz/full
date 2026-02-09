@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/app/config/apiBase';
 import React, { useState, useEffect } from 'react';
 import {
   Box,

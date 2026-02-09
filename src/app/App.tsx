@@ -109,6 +109,9 @@ import Footer from '@/app/components/Footer';
 import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
 import HeadmasterStudentManagement from '@/app/pages/headmaster/HeadmasterStudentManagement';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import DODManagement from '@/app/pages/dashboards/DODManagement';
+import DOSManagementUltraAdvanced from '@/app/pages/dos/DOSManagementUltraAdvanced';
+import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -199,7 +202,11 @@ const AppContent: React.FC = () => {
         return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-director-study" />;
-        if (currentPage === 'dos-students') return <HeadmasterStudentManagement onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-students') return <StudentManagementUltraAdvanced onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-report-cards') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-teacher-marks') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-parent-access') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-sms') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets onNavigate={handleNavigate} />;
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'dod':
@@ -218,6 +225,7 @@ const AppContent: React.FC = () => {
         if (currentPage === 'dod-punishments') return <DODPunishmentsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-parent-notifications') return <DODParentNotificationsPage onNavigate={handleNavigate} />;
         if (currentPage === 'dod-student-sheets') return <DODStudentSheetsPage onNavigate={handleNavigate} />;
+        if (currentPage === 'dod-management') return <DODManagement onNavigate={handleNavigate} onLogout={logout} />;
         if (currentPage === 'dod-notifications') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets onNavigate={handleNavigate} />;
         return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;

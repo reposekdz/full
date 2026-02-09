@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-02-06T09:27:08.715Z",
+  "summary": {
+    "passed": 24,
+    "failed": 0,
+    "total": 24,
+    "successRate": "100.00%"
+  },
+  "tests": [
+    {
+      "name": "Health Check - API Server",
+      "status": "passed"
+    },
+    {
+      "name": "GET /admin/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /admin/users",
+      "status": "passed"
+    },
+    {
+      "name": "POST /admin/users (validation)",
+      "status": "passed"
+    },
+    {
+      "name": "GET /accountant/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /accountant/transactions",
+      "status": "passed"
+    },
+    {
+      "name": "GET /teacher/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /teacher/classes",
+      "status": "passed"
+    },
+    {
+      "name": "GET /advisor/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /advisor/students",
+      "status": "passed"
+    },
+    {
+      "name": "GET /dos/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /dos/students",
+      "status": "passed"
+    },
+    {
+      "name": "GET /dos/trades-levels",
+      "status": "passed"
+    },
+    {
+      "name": "GET /dod/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /dod/students",
+      "status": "passed"
+    },
+    {
+      "name": "GET /headmaster/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /headmaster/analytics",
+      "status": "passed"
+    },
+    {
+      "name": "GET /headmaster/reports",
+      "status": "passed"
+    },
+    {
+      "name": "GET /stock/dashboard",
+      "status": "passed"
+    },
+    {
+      "name": "GET /stock/items",
+      "status": "passed"
+    },
+    {
+      "name": "GET /stock/categories",
+      "status": "passed"
+    },
+    {
+      "name": "POST /accountant/payments/record (validation)",
+      "status": "passed"
+    },
+    {
+      "name": "POST /teacher/attendance (validation)",
+      "status": "passed"
+    },
+    {
+      "name": "POST /stock/items (validation)",
+      "status": "passed"
+    }
+  ]
+}

@@ -70,6 +70,7 @@ import {
   BarChart,
   PieChart
 } from '@mui/icons-material';
+import { API_BASE_URL } from '@/app/config/apiBase';
 import axios from 'axios';
 import {
   LineChart,

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/app/config/apiBase';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Package, AlertTriangle, ShoppingCart, TrendingUp, Download, Plus, Eye, Edit, Search, Filter, Clock, Users, Truck, Store, ClipboardList, Bell, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
@@ -47,9 +48,9 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
     const token = localStorage.getItem('token');
     try {
       const [statsRes, itemsRes, transactionsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/stock/stats', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`http://localhost:5000/api/stock/items?category=${filterCategory}&status=${filterStatus}&search=${searchQuery}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('http://localhost:5000/api/stock/transactions?limit=20', { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/stock/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/stock/items?category=${filterCategory}&status=${filterStatus}&search=${searchQuery}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/stock/transactions?limit=20`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
       const statsData = await statsRes.json();
@@ -71,7 +72,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
 
   const addItem = async () => {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/stock/items', {
+    const res = await fetch(`${API_BASE_URL}/stock/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(newItem)
@@ -85,7 +86,7 @@ const StockManagerDashboard: React.FC<StockManagerDashboardProps> = ({ onNavigat
 
   const addTransaction = async () => {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:5000/api/stock/transactions', {
+    const res = await fetch(`${API_BASE_URL}/stock/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(newTransaction)

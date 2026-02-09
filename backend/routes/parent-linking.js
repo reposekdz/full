@@ -1,318 +1,375 @@
+// Parent Linking & Access Control Routes
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-const smsService = require('../services/smsService');
 
-// Parent requests to link with student
-router.post('/link-request', authenticateToken, requireRole('parent'), async (req, res) => {
+// In-memory storage
+let parentConnections = [];
+let accessLogs = [];
+let smsRecords = [];
+
+// Middleware
+const authMiddleware = require('./auth');
+
+// ==================== PARENT CONNECTIONS ====================
+
+// GET all parent connections
+router.get('/connections', authMiddleware, async (req, res) => {
   try {
-    const { student_name, student_class, trade, year, student_code } = req.body;
-    
-    const linkCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    await pool.execute(`
-      INSERT INTO parent_student_links (parent_id, student_code, student_name, student_class, trade, year, link_code, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-    `, [req.user.id, student_code, student_name, student_class, trade, year, linkCode]);
-    
-    res.json({ success: true, message: 'Link request submitted. Waiting for approval.', linkCode });
+    const { student_id, parent_phone, status, search } = req.query;
+    let connections = [...parentConnections];
+
+    if (student_id) connections = connections.filter(c => c.student_id === student_id);
+    if (parent_phone) connections = connections.filter(c => c.parent_phone.includes(parent_phone));
+    if (status) connections = connections.filter(c => c.status === status);
+    if (search) {
+      const searchLower = search.toLowerCase();
+      connections = connections.filter(c =>
+        c.parent_name.toLowerCase().includes(searchLower) ||
+        c.student_name.toLowerCase().includes(searchLower) ||
+        c.parent_phone.includes(search)
+      );
+    }
+
+    res.json({
+      success: true,
+      connections: connections.sort((a, b) => new Date(b.access_granted_at) - new Date(a.access_granted_at)),
+      total: connections.length
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching connections' });
   }
 });
 
-// Get parent's link requests
-router.get('/my-requests', authenticateToken, requireRole('parent'), async (req, res) => {
-  try {
-    const [requests] = await pool.execute(`
-      SELECT psl.*, u.first_name, u.last_name, u.student_id
-      FROM parent_student_links psl
-      LEFT JOIN users u ON psl.linked_student_id = u.id
-      WHERE psl.parent_id = ?
-      ORDER BY psl.requested_at DESC
-    `, [req.user.id]);
-    
-    res.json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get pending link requests (DOS/DOD/Headmaster)
-router.get('/pending', authenticateToken, requireRole('dos', 'dod', 'headmaster', 'admin'), async (req, res) => {
-  try {
-    const [requests] = await pool.execute(`
-      SELECT psl.*, p.first_name as parent_first_name, p.last_name as parent_last_name, p.email as parent_email
-      FROM parent_student_links psl
-      JOIN users p ON psl.parent_id = p.id
-      WHERE psl.status = 'pending'
-      ORDER BY psl.requested_at DESC
-    `);
-    
-    res.json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Approve link request
-router.post('/approve/:id', authenticateToken, requireRole('dos', 'dod', 'headmaster', 'admin'), async (req, res) => {
+// GET single connection
+router.get('/connections/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const [linkRequest] = await pool.execute(`SELECT * FROM parent_student_links WHERE id = ?`, [id]);
-    if (linkRequest.length === 0) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    
-    const request = linkRequest[0];
-    const [students] = await pool.execute(`SELECT id FROM users WHERE student_id = ? OR serial_code = ?`, [request.student_code, request.student_code]);
-    
-    if (students.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-    
-    await pool.execute(`
-      UPDATE parent_student_links 
-      SET status = 'approved', linked_student_id = ?, approved_at = NOW(), approved_by = ?
-      WHERE id = ?
-    `, [students[0].id, req.user.id, id]);
-    
-    await pool.execute(`UPDATE users SET parent_id = ? WHERE id = ?`, [request.parent_id, students[0].id]);
-    
-    // Add to parent_student table for unified notifications
-    await pool.execute(`
-      INSERT INTO parent_student (parent_id, student_id, relationship) 
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE relationship = VALUES(relationship)
-    `, [request.parent_id, students[0].id, 'guardian']);
+    const connection = parentConnections.find(c => c.connection_id === id);
 
-    // Send WhatsApp notification
-    const [parent] = await pool.execute('SELECT phone, first_name FROM users WHERE id = ?', [request.parent_id]);
-    const studentName = request.student_name || 'umwana wanyu';
-    
-    if (parent.length > 0 && parent[0].phone) {
-      const message = `Muraho ${parent[0].first_name}! Ubwasabe bwanyu bwo guhuza konti n'umunyeshuri ${studentName} muri Garden TVET School bwemejwe. Noneho mushobora gukurikirana imyigire ye.`;
-      smsService.sendUniversalMessage(parent[0].phone, message, 0, {
-        type: 'parent_link_approval',
-        parentId: request.parent_id,
-        studentId: students[0].id,
-        preferredMethod: 'whatsapp'
-      }).catch(err => console.error('Failed to send approval notification:', err));
+    if (!connection) {
+      return res.status(404).json({ success: false, message: 'Connection not found' });
     }
 
-    res.json({ success: true, message: 'Link approved successfully' });
+    res.json({ success: true, connection });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching connection' });
   }
 });
 
-// Reject link request
-router.post('/reject/:id', authenticateToken, requireRole('dos', 'dod', 'headmaster', 'admin'), async (req, res) => {
+// POST grant parent access
+router.post('/grant-access', authMiddleware, async (req, res) => {
   try {
-    await pool.execute(`UPDATE parent_student_links SET status = 'rejected' WHERE id = ?`, [req.params.id]);
-    res.json({ success: true, message: 'Link rejected' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    const {
+      student_id, parent_name, parent_phone, parent_email, parent_type,
+      can_view_marks, can_view_attendance, can_view_discipline, can_view_report_cards,
+      can_receive_notifications, notification_preferences, access_level
+    } = req.body;
 
-// Parent requests admin help to get linking code (Contact Admin feature)
-router.post('/request-code-help', authenticateToken, requireRole('parent'), async (req, res) => {
-  try {
-    const { student_name, message, preferred_contact } = req.body;
-    const parentId = req.user.id;
-    
-    // Create help request
-    await pool.execute(`
-      INSERT INTO parent_help_requests (parent_id, student_name, message, preferred_contact, status, created_at)
-      VALUES (?, ?, ?, ?, 'pending', NOW())
-    `, [parentId, student_name, message, preferred_contact || 'email']);
-    
-    // Send notification to admin, headmaster, DOS
-    const admins = await pool.execute(`
-      SELECT u.id, u.first_name, u.email, u.phone 
-      FROM users u 
-      JOIN roles r ON u.role_id = r.id 
-      WHERE r.name IN ('admin', 'headmaster', 'dos', 'super_admin')
-    `);
-    
-    // Get parent info
-    const [parent] = await pool.execute('SELECT first_name, last_name, email, phone FROM users WHERE id = ?', [parentId]);
-    const parentInfo = parent[0];
-    
-    // Create notification for each admin
-    for (const admin of admins[0]) {
-      await pool.execute(`
-        INSERT INTO notifications (user_id, title, message, type, created_at)
-        VALUES (?, ?, ?, 'parent_help_request', NOW())
-      `, [
-        admin.id,
-        'Parent Needs Linking Code',
-        `${parentInfo.first_name} ${parentInfo.last_name} needs a linking code for student: ${student_name}. Contact: ${parentInfo.phone || parentInfo.email}`
-      ]);
-      
-      // Send SMS notification
-      if (admin.phone) {
-        const smsMessage = `Muraho ${admin.first_name}! Umubyeyi ${parentInfo.first_name} ${parentInfo.last_name} arasaba kode yo guhuza n'umwana witwa ${student_name}. Amakuru: ${parentInfo.phone || parentInfo.email}`;
-        smsService.sendUniversalMessage(admin.phone, smsMessage, 0, {
-          type: 'parent_code_request',
-          parentId: parentId,
-          adminId: admin.id,
-          preferredMethod: 'sms'
-        }).catch(err => console.error('SMS failed:', err));
-      }
-    }
-    
-    res.json({ success: true, message: 'Your request has been sent to school administration.' });
-  } catch (error) {
-    console.error('Request code help error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    // Check for existing connection
+    const existing = parentConnections.find(
+      c => c.student_id === student_id && c.parent_phone === parent_phone
+    );
 
-// Get parent's help requests
-router.get('/my-help-requests', authenticateToken, requireRole('parent'), async (req, res) => {
-  try {
-    const [requests] = await pool.execute(`
-      SELECT * FROM parent_help_requests 
-      WHERE parent_id = ? 
-      ORDER BY created_at DESC
-    `, [req.user.id]);
-    
-    res.json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    const user = req.user || {};
+    const grantedBy = user.name || 'System';
+    const grantedByRole = user.role || 'admin';
 
-// Admin/Headmaster/DOS: Get all help requests
-router.get('/help-requests', authenticateToken, requireRole('admin', 'headmaster', 'dos', 'super_admin'), async (req, res) => {
-  try {
-    const [requests] = await pool.execute(`
-      SELECT phr.*, u.first_name, u.last_name, u.email, u.phone
-      FROM parent_help_requests phr
-      JOIN users u ON phr.parent_id = u.id
-      WHERE phr.status = 'pending'
-      ORDER BY phr.created_at DESC
-    `);
-    
-    res.json({ success: true, requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    if (existing) {
+      // Update existing connection
+      Object.assign(existing, {
+        parent_name, parent_email, parent_type,
+        can_view_marks, can_view_attendance, can_view_discipline, can_view_report_cards,
+        can_receive_notifications,
+        notification_preferences,
+        access_level: access_level || 'standard',
+        status: 'active',
+        updated_at: new Date().toISOString()
+      });
 
-// Admin/Headmaster/DOS: Respond to help request
-router.post('/help-requests/:id/respond', authenticateToken, requireRole('admin', 'headmaster', 'dos', 'super_admin'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { student_code, response_message } = req.body;
-    
-    // Update help request
-    await pool.execute(`
-      UPDATE parent_help_requests 
-      SET status = 'resolved', response_message = ?, responded_by = ?, responded_at = NOW()
-      WHERE id = ?
-    `, [response_message, req.user.id, id]);
-    
-    // Get request details
-    const [request] = await pool.execute('SELECT parent_id FROM parent_help_requests WHERE id = ?', [id]);
-    if (request.length === 0) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    
-    // Send notification to parent
-    await pool.execute(`
-      INSERT INTO notifications (user_id, title, message, type, created_at)
-      VALUES (?, ?, ?, 'help_request_response', NOW())
-    `, [
-      request[0].parent_id,
-      'Response to Your Request',
-      `${response_message}${student_code ? ` Student Code: ${student_code}` : ''}`
-    ]);
-    
-    res.json({ success: true, message: 'Response sent to parent' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+      // Log access update
+      accessLogs.push({
+        log_id: Date.now().toString(),
+        connection_id: existing.connection_id,
+        action: 'access_updated',
+        performed_by: grantedBy,
+        performed_by_role: grantedByRole,
+        timestamp: new Date().toISOString(),
+        details: { can_view_marks, can_view_attendance, can_view_discipline }
+      });
 
-// Get linked children details for parent
-router.get('/my-children', authenticateToken, requireRole('parent'), async (req, res) => {
-  try {
-    const [children] = await pool.execute(`
-      SELECT u.*, tl.trade_name, tl.level_number
-      FROM users u
-      LEFT JOIN enrollments e ON u.id = e.student_id
-      LEFT JOIN trade_classes tc ON e.class_id = tc.id
-      LEFT JOIN trade_levels tl ON tc.trade_level_id = tl.id
-      WHERE u.parent_id = ?
-      GROUP BY u.id
-    `, [req.user.id]);
-    
-    const childrenData = [];
-    for (const child of children) {
-      const [grades] = await pool.execute(`SELECT AVG(score) as avg FROM grades WHERE student_id = ?`, [child.id]);
-      const [attendance] = await pool.execute(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present
-        FROM attendance WHERE student_id = ?
-      `, [child.id]);
-      const [discipline] = await pool.execute(`SELECT * FROM discipline_records WHERE student_id = ? ORDER BY incident_date DESC LIMIT 5`, [child.id]);
-      const [achievements] = await pool.execute(`SELECT * FROM student_achievements WHERE student_id = ? ORDER BY achievement_date DESC LIMIT 10`, [child.id]);
-      
-      childrenData.push({
-        ...child,
-        averageGrade: grades[0].avg || 0,
-        attendanceRate: attendance[0].total > 0 ? (attendance[0].present / attendance[0].total * 100).toFixed(1) : 0,
-        totalClasses: attendance[0].total,
-        presentClasses: attendance[0].present,
-        disciplineRecords: discipline,
-        achievements: achievements
+      return res.json({
+        success: true,
+        message: 'Parent access updated successfully',
+        connection: existing
       });
     }
-    
-    res.json({ success: true, children: childrenData });
+
+    // Create new connection
+    const connection = {
+      connection_id: `PC-${Date.now()}`,
+      student_id,
+      parent_name,
+      parent_phone,
+      parent_email,
+      parent_type,
+      access_granted_by: grantedBy,
+      access_granted_by_role: grantedByRole,
+      access_granted_at: new Date().toISOString(),
+      access_level: access_level || 'standard',
+      can_view_marks: can_view_marks ?? true,
+      can_view_attendance: can_view_attendance ?? true,
+      can_view_discipline: can_view_discipline ?? false,
+      can_view_report_cards: can_view_report_cards ?? true,
+      can_receive_notifications: can_receive_notifications ?? true,
+      notification_preferences: notification_preferences || {
+        marks_alerts: true,
+        attendance_alerts: true,
+        discipline_alerts: true,
+        fees_alerts: false,
+        events_alerts: true,
+        general_alerts: true
+      },
+      status: 'active',
+      last_accessed_at: null
+    };
+
+    parentConnections.push(connection);
+
+    // Log access grant
+    accessLogs.push({
+      log_id: Date.now().toString(),
+      connection_id: connection.connection_id,
+      action: 'access_granted',
+      performed_by: grantedBy,
+      performed_by_role: grantedByRole,
+      timestamp: new Date().toISOString(),
+      details: { parent_name, parent_phone, access_level: connection.access_level }
+    });
+
+    res.json({
+      success: true,
+      message: 'Parent access granted successfully',
+      connection
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error granting access', error: error.message });
   }
 });
 
-// Get child detailed report
-router.get('/child/:id/report', authenticateToken, requireRole('parent'), async (req, res) => {
+// PUT update connection
+router.put('/connections/:id', authMiddleware, async (req, res) => {
   try {
-    const [child] = await pool.execute(`SELECT * FROM users WHERE id = ? AND parent_id = ?`, [req.params.id, req.user.id]);
-    if (child.length === 0) {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const connIndex = parentConnections.findIndex(c => c.connection_id === id);
+
+    if (connIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Connection not found' });
+    }
+
+    parentConnections[connIndex] = {
+      ...parentConnections[connIndex],
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+
+    // Log update
+    accessLogs.push({
+      log_id: Date.now().toString(),
+      connection_id: id,
+      action: 'connection_updated',
+      performed_by: req.user?.name || 'System',
+      performed_by_role: req.user?.role || 'admin',
+      timestamp: new Date().toISOString(),
+      details: updates
+    });
+
+    res.json({
+      success: true,
+      message: 'Connection updated successfully',
+      connection: parentConnections[connIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating connection' });
+  }
+});
+
+// POST revoke access
+router.post('/revoke-access/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const connIndex = parentConnections.findIndex(c => c.connection_id === id);
+
+    if (connIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Connection not found' });
+    }
+
+    parentConnections[connIndex].status = 'revoked';
+    parentConnections[connIndex].revoked_at = new Date().toISOString();
+    parentConnections[connIndex].revoked_by = req.user?.name || 'System';
+    parentConnections[connIndex].revoked_by_role = req.user?.role || 'admin';
+    parentConnections[connIndex].revocation_reason = reason || 'No reason provided';
+
+    // Log revocation
+    accessLogs.push({
+      log_id: Date.now().toString(),
+      connection_id: id,
+      action: 'access_revoked',
+      performed_by: req.user?.name || 'System',
+      performed_by_role: req.user?.role || 'admin',
+      timestamp: new Date().toISOString(),
+      details: { reason }
+    });
+
+    res.json({
+      success: true,
+      message: 'Parent access revoked successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error revoking access' });
+  }
+});
+
+// POST restore access
+router.post('/restore-access/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const connIndex = parentConnections.findIndex(c => c.connection_id === id);
+
+    if (connIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Connection not found' });
+    }
+
+    parentConnections[connIndex].status = 'active';
+    parentConnections[connIndex].restored_at = new Date().toISOString();
+    parentConnections[connIndex].restored_by = req.user?.name || 'System';
+
+    // Log restoration
+    accessLogs.push({
+      log_id: Date.now().toString(),
+      connection_id: id,
+      action: 'access_restored',
+      performed_by: req.user?.name || 'System',
+      performed_by_role: req.user?.role || 'admin',
+      timestamp: new Date().toISOString(),
+      details: {}
+    });
+
+    res.json({
+      success: true,
+      message: 'Parent access restored successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error restoring access' });
+  }
+});
+
+// ==================== ACCESS LOGS ====================
+
+// GET access logs
+router.get('/access-logs', authMiddleware, async (req, res) => {
+  try {
+    const { connection_id, action, start_date, end_date } = req.query;
+    let logs = [...accessLogs];
+
+    if (connection_id) logs = logs.filter(l => l.connection_id === connection_id);
+    if (action) logs = logs.filter(l => l.action === action);
+    if (start_date) logs = logs.filter(l => new Date(l.timestamp) >= new Date(start_date));
+    if (end_date) logs = logs.filter(l => new Date(l.timestamp) <= new Date(end_date));
+
+    res.json({
+      success: true,
+      logs: logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)),
+      total: logs.length
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching logs' });
+  }
+});
+
+// ==================== PARENT DASHBOARD DATA ====================
+
+// GET parent dashboard data
+router.get('/parent-dashboard/:parentPhone', async (req, res) => {
+  try {
+    const { parentPhone } = req.params;
+
+    // Find all connections for this parent phone
+    const connections = parentConnections.filter(
+      c => c.parent_phone === parentPhone && c.status === 'active'
+    );
+
+    if (connections.length === 0) {
+      return res.status(404).json({ success: false, message: 'No connections found' });
+    }
+
+    // Update last accessed
+    connections.forEach(c => {
+      c.last_accessed_at = new Date().toISOString();
+    });
+
+    const children = connections.map(c => ({
+      student_id: c.student_id,
+      student_name: c.student_name,
+      connection_id: c.connection_id,
+      permissions: {
+        view_marks: c.can_view_marks,
+        view_attendance: c.can_view_attendance,
+        view_discipline: c.can_view_discipline,
+        view_report_cards: c.can_view_report_cards
+      },
+      notification_settings: c.notification_preferences
+    }));
+
+    res.json({
+      success: true,
+      parent: {
+        parent_phone: parentPhone,
+        children,
+        notification_preferences: connections[0].notification_preferences
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching parent dashboard' });
+  }
+});
+
+// GET student data for parent
+router.get('/student-data/:studentId/:parentPhone', async (req, res) => {
+  try {
+    const { studentId, parentPhone } = req.params;
+
+    // Verify connection exists and is active
+    const connection = parentConnections.find(
+      c => c.student_id === studentId &&
+           c.parent_phone === parentPhone &&
+           c.status === 'active'
+    );
+
+    if (!connection) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
-    const [grades] = await pool.execute(`
-      SELECT g.*, c.course_name, e.exam_name
-      FROM grades g
-      LEFT JOIN courses c ON g.course_id = c.id
-      LEFT JOIN exams e ON g.exam_id = e.id
-      WHERE g.student_id = ?
-      ORDER BY g.created_at DESC
-    `, [req.params.id]);
-    
-    const [attendance] = await pool.execute(`
-      SELECT a.*, c.course_name
-      FROM attendance a
-      LEFT JOIN courses c ON a.course_id = c.id
-      WHERE a.student_id = ?
-      ORDER BY a.date DESC
-      LIMIT 50
-    `, [req.params.id]);
-    
-    const [discipline] = await pool.execute(`SELECT * FROM discipline_records WHERE student_id = ? ORDER BY incident_date DESC`, [req.params.id]);
-    const [achievements] = await pool.execute(`SELECT * FROM student_achievements WHERE student_id = ? ORDER BY achievement_date DESC`, [req.params.id]);
-    
-    res.json({ success: true, student: child[0], grades, attendance, discipline, achievements });
+
+    // In production, this would fetch from global-sheets
+    const studentData = {
+      success: true,
+      can_view_marks: connection.can_view_marks,
+      can_view_attendance: connection.can_view_attendance,
+      can_view_discipline: connection.can_view_discipline,
+      can_view_report_cards: connection.can_view_report_cards,
+      student: {
+        student_id: studentId,
+        name: connection.student_name
+      }
+    };
+
+    res.json(studentData);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching student data' });
   }
 });
 

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/app/config/apiBase';
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Edit, Trash2, Eye, Download, 
@@ -21,7 +22,7 @@ const ComprehensiveStaffManagement = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/staff-management', {
+      const res = await fetch(`${API_BASE_URL}/staff-management`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

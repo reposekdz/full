@@ -277,6 +277,7 @@ const routes = {
   dodComprehensive: loadRoute('./routes/dod-comprehensive', 'DOD Comprehensive'),
   dodProfile: loadRoute('./routes/dod-profile', 'DOD Profile'),
   dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
+  dod: loadRoute('./routes/dod', 'DOD Management'),
   staffManagement: loadRoute('./routes/staff-management', 'Staff Management'),
   
   // DOS Comprehensive Management
@@ -549,7 +550,7 @@ if (routes.alumni) { app.use('/api/alumni', routes.alumni); mountedRoutes++; }
 if (routes.messaging) { app.use('/api/messaging', routes.messaging); mountedRoutes++; }
 if (routes.reporting) { app.use('/api/reporting', routes.reporting); mountedRoutes++; }
 if (routes.cms) { app.use('/api/cms', routes.cms); mountedRoutes++; }
-if (routes.sms) { app.use('/api/sms', routes.sms(io)); mountedRoutes++; }
+if (routes.sms) { app.use('/api/sms', routes.sms); mountedRoutes++; }
 if (routes.parentMessages) { app.use('/api/parents', routes.parentMessages); mountedRoutes++; }
 if (routes.parentPortal) { app.use('/api/parent-dashboard', routes.parentPortal); mountedRoutes++; }
 
@@ -577,10 +578,17 @@ if (routes.unifiedIntegration) { app.use('/api/unified-integration', routes.unif
 if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodComprehensive); mountedRoutes++; }
 if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
 if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
+app.use('/api/dod', require('./routes/dod')); mountedRoutes++;
 if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManagement); mountedRoutes++; }
 
 // DOS Comprehensive Management
-if (routes.dosComprehensiveManagement) { app.use('/api/dos-management', routes.dosComprehensiveManagement); mountedRoutes++; }
+app.use('/api/dos-management', require('./routes/dos-management')); mountedRoutes++;
+
+// Parent Linking & Access Control
+app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
+
+// SMS Routes (African Talking)
+app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
 
 // NEW MISSING ROUTES - Full Feature Set
 if (routes.curriculum) { app.use('/api/curriculum', routes.curriculum); mountedRoutes++; }
@@ -630,6 +638,9 @@ if (routes.accountantUltraAdvanced) { app.use('/api/accountant-ultra-advanced', 
 if (routes.stockUltraAdvanced) { app.use('/api/stock-ultra-advanced', routes.stockUltraAdvanced); mountedRoutes++; }
 if (routes.serialCodeSystem) { app.use('/api/serial-code-system', routes.serialCodeSystem); mountedRoutes++; }
 if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.teacherStudentMarks); mountedRoutes++; }
+
+  // COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
+  app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;
 
 // Health check
 app.get('/api/health', (req, res) => {

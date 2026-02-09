@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/app/config/apiBase';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Users, Upload, Edit, Save, X, Image as ImageIcon, Mail, Phone } from 'lucide-react';
@@ -36,7 +37,7 @@ const AdminStaffManagement: React.FC = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/staff', {
+      const response = await fetch(`${API_BASE_URL}/staff`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
@@ -55,7 +56,7 @@ const AdminStaffManagement: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/staff/${editingId}`, {
+      const response = await fetch(`${API_BASE_URL}/staff/${editingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ const AdminStaffManagement: React.FC = () => {
       const formData = new FormData();
       formData.append('image', file);
       
-      const response = await fetch(`http://localhost:5000/api/staff/${staffId}/image`, {
+      const response = await fetch(`${API_BASE_URL}/staff/${staffId}/image`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: formData

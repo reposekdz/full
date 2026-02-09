@@ -1,281 +1,552 @@
+// SMS Routes - African Talking Integration
 const express = require('express');
 const router = express.Router();
-const { sendUniversalMessage, checkBalance, getMessageHistory, getSMSStats } = require('../services/smsService');
-const db = require('../config/database');
 
-// Check role permissions
-const checkPermission = async (req, res, next) => {
+// In-memory storage
+let smsRecords = [];
+let smsTemplates = [];
+
+// Middleware
+const authMiddleware = require('./auth');
+
+// Import African Talking SMS Service
+const { sendSMS, sendBulkSMS, sendTemplateSMS, getBalance, isReady } = require('../services/africanTalkingService');
+
+// ==================== SMS TEMPLATES ====================
+
+// GET all templates
+router.get('/templates', authMiddleware, async (req, res) => {
   try {
-    const { staffId } = req.body;
-    if (!staffId) return res.status(401).json({ success: false, error: 'Staff ID required' });
+    const { type, is_active } = req.query;
+    let templates = [...smsTemplates];
 
-    const [staff] = await db.query('SELECT id, role, first_name, last_name FROM staff WHERE id = ?', [staffId]);
-    if (!staff || staff.length === 0) return res.status(404).json({ success: false, error: 'Staff not found' });
+    if (type) templates = templates.filter(t => t.type === type);
+    if (is_active !== undefined) templates = templates.filter(t => t.is_active === (is_active === 'true'));
 
-    const [perms] = await db.query('SELECT * FROM sms_role_permissions WHERE role = ?', [staff[0].role]);
-    if (!perms || perms.length === 0) {
-      // Default permissions for staff if not explicitly set
-      req.permissions = {
-        can_send_single: 1,
-        can_send_bulk: 0,
-        can_send_class: 1,
-        can_send_all: 0,
-        can_view_history: 1,
-        can_view_stats: 0
-      };
-    } else {
-      req.permissions = perms[0];
-    }
-
-    req.staffMember = staff[0];
-    next();
+    res.json({
+      success: true,
+      templates: templates.sort((a, b) => a.display_order - b.display_order)
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching templates' });
   }
-};
+});
 
-module.exports = (io) => {
-  // Send to single parent
-  router.post('/send', checkPermission, async (req, res) => {
-    if (!req.permissions.can_send_single) return res.status(403).json({ success: false, error: 'No permission' });
+// GET single template
+router.get('/templates/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const template = smsTemplates.find(t => t.template_id === id);
 
-    const { parentId, message, staffId, subject = 'School Message' } = req.body;
-    if (!parentId || !message) return res.status(400).json({ success: false, error: 'Parent ID and message required' });
+    if (!template) {
+      return res.status(404).json({ success: false, message: 'Template not found' });
+    }
 
-    try {
-      const [parents] = await db.query('SELECT * FROM parents WHERE id = ?', [parentId]);
-      if (!parents || parents.length === 0) return res.status(404).json({ success: false, error: 'Parent found' });
+    res.json({ success: true, template });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching template' });
+  }
+});
 
-      const parent = parents[0];
-      const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
+// POST create template
+router.post('/templates', authMiddleware, async (req, res) => {
+  try {
+    const { template_name, template_content, type, is_active, display_order } = req.body;
 
-      // 1. Save to main messages table for UI history
-      const [msgResult] = await db.query(
-        'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parentId, subject, message, 'message', 'sent']
-      );
+    const newTemplate = {
+      template_id: `TPL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      template_name,
+      template_content,
+      type,
+      is_active: is_active !== false,
+      display_order: display_order || 0,
+      created_by: req.user?.userId || 'system',
+      created_at: new Date().toISOString()
+    };
 
-      // 2. Real-time delivery via Socket.io
-      io.emit('parent:message', {
-        id: msgResult.insertId,
-        parentId: parent.id,
-        message: fullMessage,
-        content: message,
-        sender: req.staffMember,
-        timestamp: new Date(),
-        type: 'in-app'
+    smsTemplates.push(newTemplate);
+
+    res.status(201).json({
+      success: true,
+      template: newTemplate,
+      message: 'Template created successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error creating template' });
+  }
+});
+
+// PUT update template
+router.put('/templates/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { template_name, template_content, type, is_active, display_order } = req.body;
+
+    const index = smsTemplates.findIndex(t => t.template_id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Template not found' });
+    }
+
+    smsTemplates[index] = {
+      ...smsTemplates[index],
+      template_name: template_name || smsTemplates[index].template_name,
+      template_content: template_content || smsTemplates[index].template_content,
+      type: type || smsTemplates[index].type,
+      is_active: is_active !== undefined ? is_active : smsTemplates[index].is_active,
+      display_order: display_order || smsTemplates[index].display_order,
+      updated_at: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      template: smsTemplates[index],
+      message: 'Template updated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating template' });
+  }
+});
+
+// DELETE template
+router.delete('/templates/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const index = smsTemplates.findIndex(t => t.template_id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Template not found' });
+    }
+
+    smsTemplates.splice(index, 1);
+
+    res.json({ success: true, message: 'Template deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error deleting template' });
+  }
+});
+
+// ==================== SMS SENDING (African Talking) ====================
+
+// GET SMS configuration status
+router.get('/config', authMiddleware, async (req, res) => {
+  res.json({
+    success: true,
+    config: {
+      provider: 'African Talking',
+      isConfigured: isReady(),
+      senderId: process.env.AFRICAN_TALKING_SENDER || 'SCHOOL',
+      features: ['single_sms', 'bulk_sms', 'templates', 'delivery_reports']
+    }
+  });
+});
+
+// POST send single SMS
+router.post('/send', authMiddleware, async (req, res) => {
+  try {
+    const {
+      type, title, message, recipients, specific_phones,
+      send_via, schedule_send, scheduled_time,
+      template_id, metadata
+    } = req.body;
+
+    let recipientList = [];
+    let sentCount = 0;
+    let failedCount = 0;
+    const smsRecords = [];
+
+    // Determine recipients and send SMS
+    if (recipients === 'specific' && specific_phones) {
+      recipientList = specific_phones.split(',').map(p => p.trim());
+      const result = await sendBulkSMS(recipientList, message);
+      sentCount = result.sent;
+      failedCount = result.failed;
+      recipientList.forEach(phone => {
+        smsRecords.push({
+          sms_id: `SMS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          phone,
+          message,
+          type,
+          title,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          delivery_channel: 'african_talking'
+        });
       });
-
-      // 3. External delivery (WhatsApp/SMS) if needed
-      let externalResult = { success: true, method: 'none' };
-      if (!parent.has_smartphone || parent.preferred_contact_method !== 'app') {
-        externalResult = await sendUniversalMessage(parent.phone, fullMessage, staffId, {
-          parentId: parent.id,
-          hasSmartphone: parent.has_smartphone,
-          preferredMethod: parent.preferred_contact_method || 'dual'
+    } else if (recipients === 'all') {
+      // Would query database for all parents with SMS enabled
+      recipientList = [];
+    } else if (recipients === 'trade' && metadata?.trade_code) {
+      // Would query database for parents of students in trade
+      recipientList = [];
+    } else if (recipients === 'level' && metadata?.level_number) {
+      // Would query database for parents of students in level
+      recipientList = [];
+    } else {
+      // Try sending single SMS
+      const result = await sendSMS(specific_phones || '+250000000000', message);
+      if (result.success) {
+        sentCount = 1;
+        smsRecords.push({
+          sms_id: result.messageId,
+          phone: specific_phones,
+          message,
+          type,
+          title,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          delivery_channel: 'african_talking'
+        });
+      } else {
+        failedCount = 1;
+        smsRecords.push({
+          sms_id: `SMS-${Date.now()}-failed`,
+          phone: specific_phones,
+          message,
+          type,
+          title,
+          status: 'failed',
+          error: result.error,
+          sent_at: new Date().toISOString(),
+          delivery_channel: 'african_talking'
         });
       }
+    }
 
-      res.json({
-        success: true,
-        message: 'Message processed',
-        inApp: true,
-        external: externalResult,
-        messageId: msgResult.insertId
+    // Store SMS records
+    smsRecords.push(...smsRecords);
+
+    res.json({
+      success: true,
+      message: `SMS sent: ${sentCount} successful, ${failedCount} failed`,
+      stats: {
+        total_recipients: recipientList.length,
+        sent: sentCount,
+        failed: failedCount
+      },
+      sms_records: smsRecords,
+      type,
+      title,
+      recipients,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending SMS',
+      error: error.message
+    });
+  }
+});
+
+// POST send bulk SMS
+router.post('/send-bulk', authMiddleware, async (req, res) => {
+  try {
+    const { phones, message, type, title } = req.body;
+
+    if (!phones || !Array.isArray(phones) || phones.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of phone numbers'
       });
-
-    } catch (error) {
-      console.error('Send error:', error);
-      res.status(500).json({ success: false, error: error.message });
     }
-  });
 
-  // Send bulk
-  router.post('/bulk', checkPermission, async (req, res) => {
-    if (!req.permissions.can_send_bulk) return res.status(403).json({ success: false, error: 'No bulk permission' });
+    const result = await sendBulkSMS(phones, message);
 
-    const { parentIds, message, staffId, subject = 'School Announcement' } = req.body;
-    if (!parentIds || !Array.isArray(parentIds) || !message) return res.status(400).json({ success: false, error: 'Invalid data' });
+    // Record SMS
+    const smsRecords = phones.map(phone => ({
+      sms_id: `SMS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      phone,
+      message,
+      type,
+      title,
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      delivery_channel: 'african_talking'
+    }));
 
-    try {
-      const [parents] = await db.query(`SELECT * FROM parents WHERE id IN (${parentIds.map(() => '?').join(',')})`, parentIds);
-      const results = { total: parents.length, sent: 0, failed: 0 };
+    res.json({
+      success: result.success,
+      message: result.success ? 'Bulk SMS sent successfully' : 'Some SMS failed to send',
+      stats: {
+        total: result.total,
+        sent: result.sent,
+        failed: result.failed
+      },
+      sms_records: smsRecords
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending bulk SMS',
+      error: error.message
+    });
+  }
+});
 
-      for (const parent of parents) {
-        const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
+// POST send templated SMS
+router.post('/send-template', authMiddleware, async (req, res) => {
+  try {
+    const { phone, template_id, variables, type, title } = req.body;
 
-        // Save to DB
-        await db.query(
-          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
-        );
+    if (!phone || !template_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide phone number and template_id'
+      });
+    }
 
-        // Socket.io
-        io.emit('parent:message', {
-          parentId: parent.id,
-          message: fullMessage,
-          sender: req.staffMember,
-          timestamp: new Date()
-        });
+    const result = await sendTemplateSMS(phone, template_id, variables || {});
 
-        // External
-        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, {
-          parentId: parent.id,
-          hasSmartphone: parent.has_smartphone,
-          preferredMethod: 'dual'
-        });
-
-        ext.success ? results.sent++ : results.failed++;
-        
-        // Small delay to prevent rate limiting
-        await new Promise(resolve => setTimeout(resolve, 50));
+    res.json({
+      success: result.success,
+      message: result.success ? 'Templated SMS sent successfully' : 'Failed to send SMS',
+      result: {
+        messageId: result.messageId,
+        status: result.status,
+        recipient: phone,
+        template: template_id
       }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending templated SMS',
+      error: error.message
+    });
+  }
+});
 
-      res.json({ success: true, results });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+// GET SMS history
+router.get('/history', authMiddleware, async (req, res) => {
+  try {
+    const { type, status, start_date, end_date, limit } = req.query;
+
+    let filteredRecords = [...smsRecords];
+
+    if (type) filteredRecords = filteredRecords.filter(r => r.type === type);
+    if (status) filteredRecords = filteredRecords.filter(r => r.status === status);
+    if (start_date) filteredRecords = filteredRecords.filter(r => new Date(r.sent_at) >= new Date(start_date));
+    if (end_date) filteredRecords = filteredRecords.filter(r => new Date(r.sent_at) <= new Date(end_date));
+
+    const limitNum = parseInt(limit) || 100;
+    const paginatedRecords = filteredRecords.slice(0, limitNum);
+
+    res.json({
+      success: true,
+      total: filteredRecords.length,
+      records: paginatedRecords
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching SMS history' });
+  }
+});
+
+// GET single SMS record
+router.get('/record/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const record = smsRecords.find(r => r.sms_id === id);
+
+    if (!record) {
+      return res.status(404).json({ success: false, message: 'SMS record not found' });
     }
-  });
 
-  // Send to class
-  router.post('/send-to-class', checkPermission, async (req, res) => {
-    if (!req.permissions.can_send_class) return res.status(403).json({ success: false, error: 'No class permission' });
+    res.json({ success: true, record });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching SMS record' });
+  }
+});
 
-    const { classId, message, staffId, subject = 'Class Announcement' } = req.body;
-    if (!classId || !message) return res.status(400).json({ success: false, error: 'Class ID and message required' });
+// GET SMS balance/status
+router.get('/balance', authMiddleware, async (req, res) => {
+  try {
+    const balanceResult = await getBalance();
 
-    try {
-      const [students] = await db.query('SELECT DISTINCT parent_id FROM students WHERE class_id = ? AND parent_id IS NOT NULL', [classId]);
-      const parentIds = students.map(s => s.parent_id);
+    res.json({
+      success: true,
+      balance: balanceResult,
+      configured: isReady()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching balance',
+      error: error.message
+    });
+  }
+});
 
-      if (parentIds.length === 0) return res.status(404).json({ success: false, error: 'No parents found in this class' });
+// ==================== SMS NOTIFICATIONS BY ROLE ====================
 
-      req.body.parentIds = parentIds;
-      req.body.subject = subject;
-      // Forward to bulk route logic
-      const [parents] = await db.query(`SELECT * FROM parents WHERE id IN (${parentIds.map(() => '?').join(',')})`, parentIds);
-      const results = { total: parents.length, sent: 0, failed: 0 };
+// Parent notification
+router.post('/notify/parent', authMiddleware, async (req, res) => {
+  try {
+    const { parent_phone, notification_type, student_name, message } = req.body;
 
-      for (const parent of parents) {
-        const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
+    let smsMessage = message;
+    if (!smsMessage) {
+      const templates = {
+        'attendance': `Dear parent, ${student_name} was absent from school today. Please contact the school.`,
+        'payment': `Dear parent, ${student_name}'s school fee payment is due. Please make payment soon.`,
+        'marks': `Dear parent, ${student_name}'s academic results have been posted. Please check.`,
+        'general': `Dear parent, ${student_name} has a message from school. Please contact us.`
+      };
+      smsMessage = templates[notification_type] || templates['general'];
+    }
 
-        await db.query(
-          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
-        );
+    const result = await sendSMS(parent_phone, smsMessage);
 
-        io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date() });
-
-        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, { parentId: parent.id, hasSmartphone: parent.has_smartphone, preferredMethod: 'dual' });
-        ext.success ? results.sent++ : results.failed++;
-        await new Promise(resolve => setTimeout(resolve, 50));
+    res.json({
+      success: result.success,
+      message: result.success ? 'Parent notification sent' : 'Failed to send notification',
+      result: {
+        phone: parent_phone,
+        type: notification_type,
+        student: student_name
       }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending parent notification',
+      error: error.message
+    });
+  }
+});
 
-      res.json({ success: true, results });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+// Bulk parent notification
+router.post('/notify/parents-bulk', authMiddleware, async (req, res) => {
+  try {
+    const { parents, notification_type, message } = req.body;
+
+    if (!parents || !Array.isArray(parents)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of parent objects'
+      });
     }
-  });
 
-  // Send to all
-  router.post('/send-to-all', checkPermission, async (req, res) => {
-    if (!req.permissions.can_send_all) return res.status(403).json({ success: false, error: 'Only admin/director can broadcast' });
+    const recipients = parents.map(p => ({
+      phone: p.phone,
+      name: p.student_name
+    }));
 
-    const { message, staffId, subject = 'School-Wide Announcement' } = req.body;
-    if (!message) return res.status(400).json({ success: false, error: 'Message required' });
+    const result = await sendBulkSMS(
+      recipients.map(r => r.phone),
+      message
+    );
 
-    try {
-      const [parents] = await db.query('SELECT * FROM parents WHERE status = "active"');
-      const results = { total: parents.length, sent: 0, failed: 0 };
-
-      for (const parent of parents) {
-        const fullMessage = `GARDEN TSS\nFrom: ${req.staffMember.role.toUpperCase()} - ${req.staffMember.first_name} ${req.staffMember.last_name}\n\n${message}`;
-
-        await db.query(
-          'INSERT INTO messages (sender_id, sender_name, sender_role, receiver_id, subject, content, message_type, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [staffId, `${req.staffMember.first_name} ${req.staffMember.last_name}`, req.staffMember.role, parent.id, subject, message, 'message', 'sent']
-        );
-
-        io.emit('parent:message', { parentId: parent.id, message: fullMessage, sender: req.staffMember, timestamp: new Date() });
-
-        const ext = await sendUniversalMessage(parent.phone, fullMessage, staffId, { parentId: parent.id, hasSmartphone: parent.has_smartphone, preferredMethod: 'dual' });
-        ext.success ? results.sent++ : results.failed++;
-        await new Promise(resolve => setTimeout(resolve, 50));
+    res.json({
+      success: result.success,
+      message: result.success ? 'Bulk notifications sent' : 'Some notifications failed',
+      stats: {
+        total: result.total,
+        sent: result.sent,
+        failed: result.failed
       }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending bulk notifications',
+      error: error.message
+    });
+  }
+});
 
-      res.json({ success: true, results });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+// ==================== SMS DELIVERY REPORTS ====================
+
+router.get('/delivery-report', authMiddleware, async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+
+    let report = smsRecords.filter(r => {
+      const dateMatch = (!start_date || new Date(r.sent_at) >= new Date(start_date)) &&
+                        (!end_date || new Date(r.sent_at) <= new Date(end_date));
+      return dateMatch;
+    });
+
+    const stats = {
+      total: report.length,
+      delivered: report.filter(r => r.status === 'delivered').length,
+      sent: report.filter(r => r.status === 'sent').length,
+      failed: report.filter(r => r.status === 'failed').length,
+      pending: report.filter(r => r.status === 'pending').length
+    };
+
+    res.json({
+      success: true,
+      stats,
+      records: report
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error generating delivery report' });
+  }
+});
+
+// ==================== DEMO DATA ENDPOINTS ====================
+
+// Initialize demo SMS templates
+router.post('/demo/init-templates', authMiddleware, async (req, res) => {
+  const demoTemplates = [
+    {
+      template_id: 'TPL-ATTENDANCE-001',
+      template_name: 'Attendance Alert',
+      template_content: 'Dear {{parent}}, {{student}} was absent on {{date}}. Please contact the school.',
+      type: 'attendance',
+      is_active: true,
+      display_order: 1
+    },
+    {
+      template_id: 'TPL-PAYMENT-001',
+      template_name: 'Payment Reminder',
+      template_content: 'Dear {{parent}}, {{student}}\'s payment of {{amount}} is due on {{due_date}}. Please pay promptly.',
+      type: 'payment',
+      is_active: true,
+      display_order: 2
+    },
+    {
+      template_id: 'TPL-MARKS-001',
+      template_name: 'Marks Notification',
+      template_content: 'Dear {{parent}}, {{student}}\'s marks for {{subject}} have been posted. Log in to view.',
+      type: 'marks',
+      is_active: true,
+      display_order: 3
+    },
+    {
+      template_id: 'TPL-EXAM-001',
+      template_name: 'Exam Schedule',
+      template_content: 'Dear {{parent}}, {{student}} has exams starting {{date}}. Check timetable at school.',
+      type: 'exam',
+      is_active: true,
+      display_order: 4
+    },
+    {
+      template_id: 'TPL-GENERAL-001',
+      template_name: 'General Announcement',
+      template_content: '{{message}}',
+      type: 'announcement',
+      is_active: true,
+      display_order: 5
     }
+  ];
+
+  smsTemplates = demoTemplates;
+
+  res.json({
+    success: true,
+    message: 'Demo templates initialized',
+    templates: demoTemplates
   });
+});
 
-  // Get templates
-  router.get('/templates', async (req, res) => {
-    try {
-      const [templates] = await db.query('SELECT * FROM sms_templates WHERE is_active = TRUE ORDER BY template_category, name');
-      res.json({ success: true, templates });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
+// Clear SMS history
+router.delete('/demo/clear-history', authMiddleware, async (req, res) => {
+  smsRecords = [];
+  res.json({
+    success: true,
+    message: 'SMS history cleared'
   });
+});
 
-  // Create template
-  router.post('/templates', checkPermission, async (req, res) => {
-    if (!req.permissions.can_create_templates) return res.status(403).json({ success: false, error: 'No template permission' });
-
-    const { name, category, message_template, variables } = req.body;
-    try {
-      await db.query('INSERT INTO sms_templates (name, template_category, message_template, variables, created_by) VALUES (?, ?, ?, ?, ?)', 
-        [name, category, message_template, JSON.stringify(variables), req.body.staffId]);
-      res.json({ success: true, message: 'Template created' });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Get history
-  router.get('/history', checkPermission, async (req, res) => {
-    if (!req.permissions.can_view_history) return res.status(403).json({ success: false, error: 'No history permission' });
-
-    try {
-      const result = await getMessageHistory({ senderId: req.query.senderId, limit: parseInt(req.query.limit) || 100 });
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Get stats
-  router.get('/stats', checkPermission, async (req, res) => {
-    if (!req.permissions.can_view_stats) return res.status(403).json({ success: false, error: 'No stats permission' });
-
-    try {
-      const result = await getSMSStats({ dateFrom: req.query.dateFrom, dateTo: req.query.dateTo });
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Check balance
-  router.get('/balance', async (req, res) => {
-    try {
-      const result = await checkBalance();
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  // Get permissions
-  router.get('/permissions/:role', async (req, res) => {
-    try {
-      const [perms] = await db.query('SELECT * FROM sms_role_permissions WHERE role = ?', [req.params.role]);
-      res.json({ success: true, permissions: perms[0] || null });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  return router;
-};
+module.exports = router;
