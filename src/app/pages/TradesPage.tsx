@@ -196,7 +196,7 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
           const tradeGroups: any = {};
           
           data.trades.forEach((trade: any) => {
-            const baseType = trade.code.replace(/L[345]/, ''); // Extract SOD, BDC, or AUTO
+            const baseType = trade.code.replace(/L[345]/, ''); // Extract BDC, SOD, or AUT
             if (!tradeGroups[baseType]) {
               tradeGroups[baseType] = {
                 baseType,
@@ -215,8 +215,8 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
               description: trade.description || trade.description_rw,
               modules: (trade.courses || []).map((c: any) => c.name),
               courses: trade.courses || [],
-              hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
-              classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
+              hasClasses: baseType === 'AUT' && (level === 'L4' || level === 'L5'),
+              classes: baseType === 'AUT' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
             });
           });
 
@@ -308,8 +308,8 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
                 description: trade.description || trade.description_rw,
                 modules: [],
                 courses: [],
-                hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
-                classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
+                hasClasses: baseType === 'AUT' && (level === 'L4' || level === 'L5'),
+                classes: baseType === 'AUT' && (level === 'L4' || level === 'L5') ? ['Class A', 'Class B'] : ['Single Class']
               });
             });
           }
@@ -392,16 +392,16 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
   }, [searchTerm, selectedCategory, allTrades]);
 
   const getTradeIcon = (code: string) => {
-    if (code === 'SOD') return Code;
     if (code === 'BDC') return HardHat;
-    if (code === 'AUTO') return Wrench;
+    if (code === 'SOD') return Code;
+    if (code === 'AUT') return Wrench;
     return Code;
   };
 
   const getTradeImage = (code: string) => {
-    if (code === 'SOD') return 'http://localhost:5000/uploads/trades/sod.jpg';
     if (code === 'BDC') return 'http://localhost:5000/uploads/trades/bdc.jpg';
-    if (code === 'AUTO') return 'http://localhost:5000/uploads/trades/aut1.jpg';
+    if (code === 'SOD') return 'http://localhost:5000/uploads/trades/sod.jpg';
+    if (code === 'AUT') return 'http://localhost:5000/uploads/trades/aut1.jpg';
     return 'http://localhost:5000/uploads/trades/sod.jpg';
   };
 
@@ -420,8 +420,8 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
     );
   }
 
-  // Filter functions with enhanced search
-  const filteredTrades = trades;
+  // Filter functions with enhanced search - only show base trades (SOD, BDC, AUT)
+  const filteredTrades = trades.filter(t => ['SOD', 'BDC', 'AUT'].includes(t.code));
   const searchResultsCount = filteredTrades.length + searchResults.length;
   const hasActiveSearch = searchTerm !== '' || selectedCategory !== 'All';
 
@@ -678,10 +678,10 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {trades.map((trade, index) => {
-            const isSOD = trade.code === 'SOD';
+          {trades.filter(t => ['SOD', 'BDC', 'AUT'].includes(t.code)).map((trade, index) => {
             const isBDC = trade.code === 'BDC';
-            const isAUTO = trade.code === 'AUTO';
+            const isSOD = trade.code === 'SOD';
+            const isAUT = trade.code === 'AUT';
             
             return (
               <motion.div
@@ -707,19 +707,19 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
                 
                 <div className="space-y-4 mb-6">
                   <p className="text-gray-700 leading-relaxed">
-                    {isSOD && (
-                      <>
-                        Iterambere rya Software (SOD) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora porogaramu z'urubuga (websites), porogaramu z'itelifone (mobile apps), imikino (games), n'ibindi bikoresho bya software. Ubu burezi bwigisha abanyeshuri ururimi rw'ikoranabuhanga nka JavaScript, Python, Java, C++, React, Node.js, Angular, Vue.js, TypeScript, PHP, Ruby, Swift, Kotlin, n'ibindi byinshi. Abanyeshuri biga kandi uburyo bwo gukora ububiko bw'amakuru (databases) nka MySQL, MongoDB, PostgreSQL, Firebase, Redis, Cassandra, n'ibindi. Muri ubu burezi, abanyeshuri bamenya gukora API (Application Programming Interfaces), REST APIs, GraphQL, gukoresha cloud computing (AWS, Azure, Google Cloud Platform), Docker, Kubernetes, Jenkins, n'ikoranabuhanga rigezweho rya DevOps. Biga kandi cybersecurity (umutekano wa data), encryption, authentication, authorization, penetration testing, ethical hacking, n'uburyo bwo kurinda porogaramu. Abanyeshuri biga kandi artificial intelligence (AI), machine learning (ML), deep learning, natural language processing (NLP), computer vision, data science, big data analytics, blockchain technology, Internet of Things (IoT), augmented reality (AR), virtual reality (VR), n'ikoranabuhanga rigezweho. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka IEEE, ACM, ISO, NIST, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu iterambere rya software. Abanyeshuri bakora imishinga ifatika nka e-commerce websites, mobile banking apps, social media platforms, gaming applications, enterprise software solutions, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software (software developers), web developers, mobile app developers, game developers, data scientists, AI/ML engineers, cybersecurity specialists, cloud architects, DevOps engineers, product managers, technical leads, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko software irakenewe mu nganda zose - amabanki, ibigo by'ubuzima, amasosiyete y'ikoranabuhanga, guverinoma, amashuri, amaduka, amahoteri, n'ibindi byinshi. Umushahara w'abakozi ba software ni mwiza cyane, ukaba ugera kuri $50,000 - $150,000 ku mwaka mu mahanga, naho mu Rwanda ukaba ugera kuri 2,000,000 - 10,000,000 RWF ku mwaka.
-                      </>
-                    )}
                     {isBDC && (
                       <>
-                        Ubwubatsi n'Inyubako (BDC) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, inzira, amazu y'ubucuruzi, amazu y'ishuri, ibitaro, amazu y'abahoze, amazu y'ubucuruzi, amazu y'indege, amazu y'ubwiyunge, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya amazu n'ibindi bintu by'ubwubatsi ukoresheje porogaramu nka AutoCAD, Revit, SketchUp, ArchiCAD, 3ds Max, Lumion, V-Ray, Rhino, Grasshopper, BIM (Building Information Modeling), n'ibindi. Biga kandi gukoresha ibikoresho by'ubwubatsi nka mashini zo kubaka, excavators, bulldozers, cranes, concrete mixers, welding machines, cutting tools, measuring instruments, surveying equipment, ibikoresho byo gupima, ibikoresho byo gusya sima, laser levels, theodolites, total stations, GPS equipment, n'ibindi. Muri ubu burezi, abanyeshuri bamenya uburyo bwo gukora imishinga y'ubwubatsi, gucunga abantu (project management), gucunga ibikoresho, gucunga amafaranga, procurement, logistics, quality control, risk management, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi ibipimo by'ubwubatsi (building codes), umutekano ku murimo (safety standards), OSHA regulations, environmental regulations, ubwiza bw'amazu (architectural design), structural engineering, mechanical engineering, electrical engineering, plumbing, HVAC systems, n'uburambe bw'ibikoresho (material science) - concrete, steel, wood, glass, plastics, composites, n'ibindi. Abanyeshuri biga kandi sustainable construction, green building practices, LEED certification, energy efficiency, renewable energy systems, smart building technologies, n'ikoranabuhanga rigezweho ry'ubwubatsi. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka ISO, ASTM, ACI, AISC, IBC, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. Abanyeshuri bakora imishinga ifatika nko kubaka amazu, kubaka inzira, kubaka ibyogajuru, kubaka amazu y'ubucuruzi, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi (builders), abashushanya (architects), abacunga imishinga (project managers), abagenzuzi b'ubwubatsi (construction supervisors), structural engineers, civil engineers, quantity surveyors, construction estimators, safety officers, quality control inspectors, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ubwubatsi burakenewe mu iterambere ry'igihugu - kubaka amazu, inzira, ibitaro, amashuri, amaduka, amahoteri, ibigo by'ubucuruzi, n'ibindi bintu by'ingenzi. Umushahara w'abakozi b'ubwubatsi ni mwiza, ukaba ugera kuri 1,500,000 - 8,000,000 RWF ku mwaka mu Rwanda.
+                        Ubwubatsi n'Inyubako (BDC) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, inzira, amazu y'ubucuruzi, amashuri, ibitaro, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya amazu ukoresheje AutoCAD, Revit, SketchUp, gukoresha ibikoresho by'ubwubatsi, gupima, n'ibindi bintu by'ingenzi by'ubwubatsi. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi, abashushanya, abacunga imishinga, cyangwa bakongera kwiga muri kaminuza.
                       </>
                     )}
-                    {isAUTO && (
+                    {isSOD && (
                       <>
-                        Ikoranabuhanga ry'Ibinyabiziga (AUTO) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo bwo gusana moteri (engines) - moteri za petrol (gasoline engines), diesel engines, hybrid engines, electric motors, hydrogen fuel cell engines, rotary engines, turbocharged engines, supercharged engines, n'ibindi bwoko bw'amakinamico. Biga kandi gusana electrical systems - batteries (lithium-ion, lead-acid, AGM, gel), alternators, starters, ignition systems, fuel injection systems, ECU (Engine Control Units), sensors, wiring harnesses, fuses, relays, n'ibindi bintu by'amashanyarazi mu binyabiziga. Muri ubu burezi, abanyeshuri bamenya gusana brakes (freni) - disc brakes, drum brakes, ABS (Anti-lock Braking System), EBD (Electronic Brake Distribution), brake pads, brake rotors, brake fluid systems, suspension systems (amajosi) - MacPherson struts, coil springs, leaf springs, shock absorbers, air suspension, active suspension, steering systems (steering) - power steering, electric power steering, rack and pinion, steering columns, transmission (gearbox) - manual transmission, automatic transmission, CVT (Continuously Variable Transmission), dual-clutch transmission, n'ibindi bintu by'ibinyabiziga. Biga kandi gukoresha ibikoresho byo gusana nka diagnostic tools (ibikoresho byo gusuzuma), OBD scanners, multimeters, oscilloscopes, compression testers, leak detectors, alignment machines, tire balancers, hydraulic lifts, pneumatic tools, welding equipment, n'ibindi. Porogaramu yacu yita cyane ku koranabuhanga rigezweho rya hybrid vehicles (ibinyabiziga bya hybrid), electric vehicles (ibinyabiziga by'amashanyarazi), autonomous vehicles (ibinyabiziga bikora wenyine), connected cars (ibinyabiziga bifite internet), advanced driver assistance systems (ADAS), kuko ari byo bizaza. Biga kandi uburyo bwo gukora serivisi y'ibinyabiziga, guhindura amavuta (oil change), gusuzuma ibinyabiziga (vehicle inspection), wheel alignment, tire rotation, brake service, transmission service, air conditioning service, n'ibindi. Abanyeshuri biga kandi automotive electronics, CAN bus systems, automotive networking, telematics, GPS systems, infotainment systems, security systems, n'ikoranabuhanga rigezweho. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga nka ASE (Automotive Service Excellence), NATEF (National Automotive Technicians Education Foundation), ISO standards, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu koranabuhanga ry'ibinyabiziga. Abanyeshuri bakora imishinga ifatika nko gusana ibinyabiziga bitandukanye, gukora diagnostics, gusana hybrid na electric vehicles, n'ibindi. Nyuma y'amahugurwa, abanyeshuri bashobora gukora mu magaraje (garages), mu nganda z'ibinyabiziga (automotive companies) nka Toyota, Volkswagen, Mercedes-Benz, BMW, Audi, Ford, General Motors, Hyundai, Kia, Nissan, Honda, n'ibindi, mu maduka y'ibinyabiziga, mu bigo by'ubwiyunge bw'ibinyabiziga, cyangwa bakongera kwiga muri kaminuza. Amahirwe y'akazi ni menshi cyane kuko ibinyabiziga birakenewe cyane kandi bikeneye abantu bazi kubisana no kubikora serivisi. Umushahara w'abakozi b'ibinyabiziga ni mwiza, ukaba ugera kuri 1,200,000 - 6,000,000 RWF ku mwaka mu Rwanda.
+                        Iterambere rya Software (SOD) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora porogaramu z'urubuga (websites), porogaramu z'itelifone (mobile apps), imikino (games), n'ibindi bikoresho bya software. Ubu burezi bwigisha abanyeshuri ururimi rw'ikoranabuhanga nka JavaScript, Python, Java, React, Node.js, n'ibindi byinshi. Abanyeshuri biga kandi gukora database, API, cloud computing, cybersecurity, n'ikoranabuhanga rigezweho rya AI/ML. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu iterambere rya software. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software, web developers, mobile app developers, cyangwa bakongera kwiga muri kaminuza.
+                      </>
+                    )}
+                    {isAUT && (
+                      <>
+                        Ikoranabuhanga ry'Ibinyabiziga (AUT) ni umwuga ukomeye cyane ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo bwo gusana moteri (engines), electrical systems, brakes, suspension, transmission, n'ibindi bintu by'ibinyabiziga. Biga kandi gukoresha ibikoresho byo gusana, diagnostics, n'ikoranabuhanga rigezweho rya hybrid na electric vehicles. Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu koranabuhanga ry'ibinyabiziga. Nyuma y'amahugurwa, abanyeshuri bashobora gukora mu magaraje, mu nganda z'ibinyabiziga, cyangwa bakongera kwiga muri kaminuza.
                       </>
                     )}
                   </p>
@@ -765,142 +765,7 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
             </p>
           </div>
 
-          {/* Enhanced Trade Cards with More Details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            {trades.map((trade, index) => {
-              const isSOD = trade.code === 'SOD';
-              const isBDC = trade.code === 'BDC';
-              const isAUTO = trade.code === 'AUTO';
-              
-              return (
-                <motion.div
-                  key={trade.code}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
-                  whileHover={{ y: -10, scale: 1.02 }}
-                  className="bg-gradient-to-br from-green-50 via-yellow-50 to-lime-50 rounded-3xl p-8 border-2 border-green-200 hover:shadow-2xl transition-all duration-500 cursor-pointer"
-                  onClick={() => setSelectedTradeCode(trade.code)}
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="p-4 bg-gradient-to-r from-green-600 to-yellow-600 rounded-2xl shadow-lg">
-                      <trade.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <Badge className="mb-2 bg-gradient-to-r from-green-600 to-yellow-600 text-white">
-                        {trade.code}
-                      </Badge>
-                      <h3 className="text-2xl font-bold text-gray-900">{trade.title}</h3>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4 mb-6">
-                    <p className="text-gray-700 leading-relaxed">
-                      {isSOD && (
-                        <>
-                          Iterambere rya Software ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo gukora 
-                          porogaramu z'urubuga, porogaramu z'itelifone, imikino, n'ibindi bikoresho bya software. Abanyeshuri biga 
-                          ururimi rw'ikoranabuhanga nka JavaScript, Python, React, Node.js, n'ibindi byinshi. Biga kandi uburyo bwo 
-                          gukora database, API, cloud computing, cybersecurity, n'ikoranabuhanga rigezweho rya AI/ML. Porogaramu yacu 
-                          itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe 
-                          bwinshi mu iterambere rya software. Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abakora software, 
-                          web developers, mobile app developers, game developers, cyangwa bakongera kwiga muri kaminuza.
-                        </>
-                      )}
-                      {isBDC && (
-                        <>
-                          Ubwubatsi n'Inyubako ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo kubaka amazu, 
-                          inzira, amazu y'ubucuruzi, n'ibindi bintu by'ubwubatsi. Abanyeshuri biga uburyo bwo gushushanya amazu, 
-                          gukoresha ibikoresho by'ubwubatsi, gupima, n'ibindi bintu by'ingenzi by'ubwubatsi. Biga kandi uburyo bwo 
-                          gukora imishinga y'ubwubatsi, gucunga abantu, n'ibikoresho. Porogaramu yacu itanga amahugurwa yuzuye 
-                          akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere bafite uburambe bwinshi mu bwubatsi. 
-                          Nyuma y'amahugurwa, abanyeshuri bashobora gukora nk'abubatsi, abashushanya, abacunga imishinga, cyangwa 
-                          bakongera kwiga muri kaminuza.
-                        </>
-                      )}
-                      {isAUTO && (
-                        <>
-                          Ikoranabuhanga ry'Ibinyabiziga ni umwuga ukomeye ugamije guteza imbere abanyeshuri bafite ubushobozi bwo 
-                          gusana ibinyabiziga, gukora serivisi, n'ikoranabuhanga ry'ibinyabiziga bigezweho. Abanyeshuri biga uburyo 
-                          bwo gusana moteri, gearbox, brakes, electrical systems, n'ibindi bintu by'ibinyabiziga. Biga kandi uburyo 
-                          bwo gukoresha ibikoresho byo gusana, diagnostics, n'ikoranabuhanga rigezweho rya hybrid na electric vehicles. 
-                          Porogaramu yacu itanga amahugurwa yuzuye akurikije ibipimo mpuzamahanga, ikaba ifite abarimu b'inzobere 
-                          bafite uburambe bwinshi mu koranabuhanga ry'ibinyabiziga. Nyuma y'amahugurwa, abanyeshuri bashobora gukora 
-                          mu magaraje, mu nganda z'ibinyabiziga, cyangwa bakongera kwiga muri kaminuza.
-                        </>
-                      )}
-                    </p>
-                  </div>
 
-                  <div className="space-y-3 mb-6">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-yellow-600" />
-                      Ibintu by'Ingenzi:
-                    </h4>
-                    {isSOD && [
-                      'Kwiga ururimi rw\'ikoranabuhanga: JavaScript, Python, Java, C++, React, Node.js',
-                      'Gukora porogaramu z\'urubuga (websites) n\'imbuga nkoranyambaga (web apps)',
-                      'Gukora porogaramu z\'itelifone (mobile apps) kuri Android na iOS',
-                      'Kwiga database: MySQL, MongoDB, PostgreSQL, Firebase',
-                      'Cloud Computing: AWS, Azure, Google Cloud, Docker, Kubernetes',
-                      'Cybersecurity: Umutekano wa data, encryption, authentication',
-                      'AI/ML: Artificial Intelligence, Machine Learning, Data Science',
-                      'Imyitozo mu nganda: Google, Microsoft, Amazon, n\'ibindi'
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-                    {isBDC && [
-                      'Gushushanya amazu n\'ibindi bintu by\'ubwubatsi (AutoCAD, Revit)',
-                      'Gukoresha ibikoresho by\'ubwubatsi: mashini, ibikoresho byo gupima',
-                      'Kwiga uburyo bwo kubaka amazu, inzira, n\'ibindi bintu',
-                      'Gucunga imishinga y\'ubwubatsi: abantu, ibikoresho, amafaranga',
-                      'Kwiga ibipimo by\'ubwubatsi: umutekano, ubwiza, n\'uburambe',
-                      'Imyitozo mu nganda: amasosiyete y\'ubwubatsi, ibigo by\'ubwubatsi',
-                      'Impamyabumenyi z\'ubwubatsi: certificates, diplomas, degrees'
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-                    {isAUTO && [
-                      'Gusana moteri: petrol, diesel, hybrid, electric motors',
-                      'Gusana electrical systems: batteries, alternators, starters',
-                      'Gusana brakes, suspension, steering systems',
-                      'Diagnostics: gukoresha ibikoresho byo gusuzuma ibinyabiziga',
-                      'Hybrid & Electric Vehicles: ikoranabuhanga rigezweho',
-                      'Imyitozo mu nganda: Toyota, Volkswagen, n\'ibindi',
-                      'Impamyabumenyi: ASE, NATEF, manufacturer certifications'
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-white rounded-xl p-4 shadow-md">
-                      <div className="text-2xl font-bold text-green-600">{trade.statistics.students}+</div>
-                      <div className="text-xs text-gray-600">Abanyeshuri</div>
-                    </div>
-                    <div className="bg-white rounded-xl p-4 shadow-md">
-                      <div className="text-2xl font-bold text-yellow-600">{trade.statistics.successRate}%</div>
-                      <div className="text-xs text-gray-600">Intsinzi</div>
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-gradient-to-r from-green-600 to-yellow-600 hover:opacity-90 text-white font-semibold py-6 text-lg shadow-lg">
-                    <ArrowRight className="w-5 h-5 mr-2" />
-                    Reba Amakuru Yuzuye
-                  </Button>
-                </motion.div>
-              );
-            })}
-          </div>
 
           <div className="prose prose-lg max-w-none">
             <div className="bg-gradient-to-r from-green-100 to-yellow-100 rounded-2xl p-8 mb-8">

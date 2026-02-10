@@ -22,6 +22,7 @@ const UltimateAdminDashboard = () => {
   const [imagePreview, setImagePreview] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchAllData();
@@ -185,14 +186,32 @@ const UltimateAdminDashboard = () => {
     );
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-xl flex items-center justify-center text-white"
+      >
+        <Settings className="w-6 h-6" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+        />
+      )}
+
       <div className="flex">
         {/* Advanced Sidebar */}
         <motion.div
           initial={{ x: -300 }}
-          animate={{ x: 0 }}
-          className="w-80 bg-gradient-to-b from-indigo-900 via-purple-900 to-pink-900 min-h-screen p-6 shadow-2xl sticky top-0 h-screen overflow-y-auto"
+          animate={{ x: sidebarOpen ? 0 : -300 }}
+          className={`fixed lg:sticky lg:translate-x-0 top-0 left-0 w-80 bg-gradient-to-b from-indigo-900 via-purple-900 to-pink-900 min-h-screen p-6 shadow-2xl h-screen overflow-y-auto z-40 transition-transform lg:block`}
         >
           <div className="mb-8">
             <motion.div
@@ -260,25 +279,25 @@ const UltimateAdminDashboard = () => {
         </motion.div>
 
         {/* Main Content Area */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 w-full lg:w-auto p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
           <div className="max-w-7xl mx-auto">
 
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-5xl font-black text-gray-900 mb-2">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-2">
                   {activeModule === 'overview' ? 'Dashboard Overview' :
                    activeModule === 'support' ? 'Support Management' :
                    activeModule === 'sports' ? 'Sports Management' : 'System Settings'}
                 </h2>
-                <p className="text-gray-600">Complete control over all system content</p>
+                <p className="text-sm sm:text-base text-gray-600">Complete control over all system content</p>
               </div>
               {activeModule !== 'overview' && (
                 <Button
                   onClick={() => openModal(activeModule === 'support' ? 'faq' : activeModule === 'sports' ? 'team' : 'systemContent')}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold h-14 px-8 shadow-2xl"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold h-12 sm:h-14 px-6 sm:px-8 shadow-2xl w-full sm:w-auto"
                 >
-                  <Plus className="w-6 h-6 mr-2" />
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                   Add New
                 </Button>
               )}
@@ -286,8 +305,8 @@ const UltimateAdminDashboard = () => {
 
             {/* Overview Module */}
             {activeModule === 'overview' && (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-6 sm:space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {[
                     { label: 'Total Tickets', value: stats?.total_tickets || 0, icon: MessageSquare, color: 'from-blue-500 to-indigo-600' },
                     { label: 'Sports Teams', value: data.sports.teams.length, icon: Trophy, color: 'from-green-500 to-emerald-600' },
@@ -302,19 +321,19 @@ const UltimateAdminDashboard = () => {
                       whileHover={{ scale: 1.05, y: -5 }}
                     >
                       <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-gray-50">
-                        <CardContent className="p-6">
-                          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center mx-auto mb-4 shadow-xl`}>
-                            <stat.icon className="w-9 h-9 text-white" />
+                        <CardContent className="p-4 sm:p-6">
+                          <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-xl`}>
+                            <stat.icon className="w-6 h-6 sm:w-9 sm:h-9 text-white" />
                           </div>
-                          <p className="text-4xl font-black text-gray-900 mb-2 text-center">{stat.value}</p>
-                          <p className="text-sm font-bold text-gray-600 text-center uppercase">{stat.label}</p>
+                          <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-1 sm:mb-2 text-center">{stat.value}</p>
+                          <p className="text-xs sm:text-sm font-bold text-gray-600 text-center uppercase">{stat.label}</p>
                         </CardContent>
                       </Card>
                     </motion.div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                   <Card className="border-0 shadow-2xl">
                     <CardContent className="p-6">
                       <h3 className="text-2xl font-black text-gray-900 mb-4">Recent Activity</h3>
@@ -360,8 +379,8 @@ const UltimateAdminDashboard = () => {
 
             {/* Support Module */}
             {activeModule === 'support' && (
-              <div className="space-y-6">
-                <div className="flex gap-4 mb-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="flex-1 relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <Input
@@ -377,7 +396,7 @@ const UltimateAdminDashboard = () => {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {data.support.faqs.map((faq) => (
                     <Card key={faq.id} className="border-0 shadow-xl hover:shadow-2xl transition-shadow">
                       <CardContent className="p-6">
@@ -413,10 +432,10 @@ const UltimateAdminDashboard = () => {
 
             {/* Sports Module */}
             {activeModule === 'sports' && (
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 <div>
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-3xl font-black text-gray-900">Teams</h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                    <h3 className="text-2xl sm:text-3xl font-black text-gray-900">Teams</h3>
                     <Button
                       onClick={() => openModal('team')}
                       className="bg-gradient-to-r from-green-600 to-yellow-500 text-white h-12 px-6"
@@ -425,7 +444,7 @@ const UltimateAdminDashboard = () => {
                       Add Team
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {data.sports.teams.map((team) => (
                       <Card key={team.id} className="border-0 shadow-xl hover:shadow-2xl transition-all">
                         <div className="h-2 bg-gradient-to-r from-green-500 to-yellow-500"></div>
@@ -480,7 +499,7 @@ const UltimateAdminDashboard = () => {
                       Add Player
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                     {data.sports.players.map((player) => (
                       <Card key={player.id} className="border-0 shadow-xl hover:shadow-2xl transition-all">
                         <CardContent className="p-4 text-center">
@@ -513,8 +532,8 @@ const UltimateAdminDashboard = () => {
 
             {/* System Module */}
             {activeModule === 'system' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <Card className="border-0 shadow-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                     <CardContent className="p-8 text-center">
                       <ImageIcon className="w-16 h-16 mx-auto mb-4" />
@@ -551,12 +570,14 @@ const UltimateAdminDashboard = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={closeModal}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-2xl flex justify-between items-center">
                 <h3 className="text-2xl font-black">

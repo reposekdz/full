@@ -1,8 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-router.get('/inventory-items', async (req, res) => {
+// Stock Stats Endpoint
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const [totalItems] = await pool.execute('SELECT COUNT(*) as count FROM inventory WHERE status = "active"');
+    const [totalValue] = await pool.execute('SELECT COALESCE(SUM(quantity * unit_price), 0) as total FROM inventory WHERE status = "active"');
+    const [lowStock] = await pool.execute('SELECT COUNT(*) as count FROM inventory WHERE quantity <= reorder_level AND quantity > 0 AND status = "active"');
+    const [outOfStock] = await pool.execute('SELECT COUNT(*) as count FROM inventory WHERE quantity = 0 AND status = "active"');
+    const [byCategory] = await pool.execute(
+      'SELECT category, COUNT(*) as item_count, SUM(quantity) as total_quantity, SUM(quantity * unit_price) as category_value FROM inventory WHERE status = "active" GROUP BY category'
+    );
+    const [lowStockItems] = await pool.execute('SELECT * FROM inventory WHERE quantity <= reorder_level AND status = "active" ORDER BY (quantity / reorder_level) ASC LIMIT 20');
+    
+    res.json({
+      success: true,
+      totals: {
+        total_items: totalItems[0].count,
+        total_value: totalValue[0].total
+      },
+      alerts: {
+        low_stock_count: lowStock[0].count,
+        out_of_stock_count: outOfStock[0].count
+      },
+      byCategory,
+      lowStock: lowStockItems
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/inventory-items', authenticateToken, async (req, res) => {
   try {
     const { category, low_stock } = req.query;
     
@@ -27,7 +59,7 @@ router.get('/inventory-items', async (req, res) => {
   }
 });
 
-router.get('/inventory-items/:id', async (req, res) => {
+router.get('/inventory-items/:id', authenticateToken, async (req, res) => {
   try {
     const [items] = await pool.execute('SELECT * FROM inventory WHERE id = ?', [req.params.id]);
     
@@ -46,7 +78,7 @@ router.get('/inventory-items/:id', async (req, res) => {
   }
 });
 
-router.post('/inventory-items', async (req, res) => {
+router.post('/inventory-items', authenticateToken, async (req, res) => {
   try {
     const { item_name, category, quantity, unit, unit_price, reorder_level, supplier, location } = req.body;
     
@@ -62,7 +94,7 @@ router.post('/inventory-items', async (req, res) => {
   }
 });
 
-router.put('/inventory-items/:id', async (req, res) => {
+router.put('/inventory-items/:id', authenticateToken, async (req, res) => {
   try {
     const { item_name, category, quantity, unit, unit_price, reorder_level, supplier, location } = req.body;
     
@@ -79,7 +111,7 @@ router.put('/inventory-items/:id', async (req, res) => {
   }
 });
 
-router.delete('/inventory-items/:id', async (req, res) => {
+router.delete('/inventory-items/:id', authenticateToken, async (req, res) => {
   try {
     await pool.execute('DELETE FROM inventory WHERE id = ?', [req.params.id]);
     res.json({ success: true });
@@ -88,7 +120,7 @@ router.delete('/inventory-items/:id', async (req, res) => {
   }
 });
 
-router.post('/inventory-transactions', async (req, res) => {
+router.post('/inventory-transactions', authenticateToken, async (req, res) => {
   try {
     const { item_id, transaction_type, quantity, notes, user_id } = req.body;
     
@@ -138,7 +170,7 @@ router.post('/inventory-transactions', async (req, res) => {
   }
 });
 
-router.get('/inventory-transactions', async (req, res) => {
+router.get('/inventory-transactions', authenticateToken, async (req, res) => {
   try {
     const { item_id, start_date, end_date } = req.query;
     
@@ -170,7 +202,7 @@ router.get('/inventory-transactions', async (req, res) => {
   }
 });
 
-router.get('/low-stock-alerts', async (req, res) => {
+router.get('/low-stock-alerts', authenticateToken, async (req, res) => {
   try {
     const [alerts] = await pool.execute(`
       SELECT * FROM inventory 
@@ -184,7 +216,7 @@ router.get('/low-stock-alerts', async (req, res) => {
   }
 });
 
-router.get('/inventory-categories', async (req, res) => {
+router.get('/inventory-categories', authenticateToken, async (req, res) => {
   try {
     const [categories] = await pool.execute(`
       SELECT 
@@ -203,7 +235,7 @@ router.get('/inventory-categories', async (req, res) => {
   }
 });
 
-router.get('/inventory-valuation', async (req, res) => {
+router.get('/inventory-valuation', authenticateToken, async (req, res) => {
   try {
     const [valuation] = await pool.execute(`
       SELECT 
@@ -219,7 +251,7 @@ router.get('/inventory-valuation', async (req, res) => {
   }
 });
 
-router.post('/purchase-orders', async (req, res) => {
+router.post('/purchase-orders', authenticateToken, async (req, res) => {
   try {
     const { supplier_id, items, expected_delivery_date, notes } = req.body;
     
@@ -258,7 +290,7 @@ router.post('/purchase-orders', async (req, res) => {
   }
 });
 
-router.get('/purchase-orders', async (req, res) => {
+router.get('/purchase-orders', authenticateToken, async (req, res) => {
   try {
     const [orders] = await pool.execute(`
       SELECT po.*, s.name as supplier_name
@@ -273,7 +305,7 @@ router.get('/purchase-orders', async (req, res) => {
   }
 });
 
-router.get('/purchase-orders/:id', async (req, res) => {
+router.get('/purchase-orders/:id', authenticateToken, async (req, res) => {
   try {
     const [orders] = await pool.execute(`
       SELECT po.*, s.name as supplier_name, s.contact_person, s.phone, s.email
@@ -299,7 +331,7 @@ router.get('/purchase-orders/:id', async (req, res) => {
   }
 });
 
-router.put('/purchase-orders/:id/status', async (req, res) => {
+router.put('/purchase-orders/:id/status', authenticateToken, async (req, res) => {
   try {
     const { status } = req.body;
     
@@ -328,7 +360,7 @@ router.put('/purchase-orders/:id/status', async (req, res) => {
   }
 });
 
-router.get('/suppliers', async (req, res) => {
+router.get('/suppliers', authenticateToken, async (req, res) => {
   try {
     const [suppliers] = await pool.execute(`
       SELECT s.*,
@@ -345,7 +377,7 @@ router.get('/suppliers', async (req, res) => {
   }
 });
 
-router.post('/suppliers', async (req, res) => {
+router.post('/suppliers', authenticateToken, async (req, res) => {
   try {
     const { name, contact_person, phone, email, address, payment_terms } = req.body;
     
@@ -361,7 +393,7 @@ router.post('/suppliers', async (req, res) => {
   }
 });
 
-router.put('/suppliers/:id', async (req, res) => {
+router.put('/suppliers/:id', authenticateToken, async (req, res) => {
   try {
     const { name, contact_person, phone, email, address, payment_terms } = req.body;
     
@@ -378,7 +410,7 @@ router.put('/suppliers/:id', async (req, res) => {
   }
 });
 
-router.delete('/suppliers/:id', async (req, res) => {
+router.delete('/suppliers/:id', authenticateToken, async (req, res) => {
   try {
     await pool.execute('UPDATE suppliers SET is_active = false WHERE id = ?', [req.params.id]);
     res.json({ success: true });
@@ -387,7 +419,7 @@ router.delete('/suppliers/:id', async (req, res) => {
   }
 });
 
-router.get('/inventory-audit', async (req, res) => {
+router.get('/inventory-audit', authenticateToken, async (req, res) => {
   try {
     const [audit] = await pool.execute(`
       SELECT 
@@ -405,7 +437,7 @@ router.get('/inventory-audit', async (req, res) => {
   }
 });
 
-router.post('/stock-take', async (req, res) => {
+router.post('/stock-take', authenticateToken, async (req, res) => {
   try {
     const { items, conducted_by, notes } = req.body;
     
@@ -455,7 +487,7 @@ router.post('/stock-take', async (req, res) => {
   }
 });
 
-router.get('/stock-takes', async (req, res) => {
+router.get('/stock-takes', authenticateToken, async (req, res) => {
   try {
     const [stockTakes] = await pool.execute(`
       SELECT st.*, u.first_name, u.last_name

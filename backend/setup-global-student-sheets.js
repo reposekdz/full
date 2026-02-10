@@ -18,16 +18,62 @@ async function setupGlobalStudentSheets() {
     }
     console.log('✅ Database schema created');
     
-    // Migrate existing students
-    console.log('\n📦 Migrating existing students...');
+    // Check database structure and add missing columns
+    console.log('\n🔧 Checking and fixing database structure...');
+    
+    // Add missing sheet_id column to student_conduct_tracking if not exists
+    try {
+      await pool.execute(`
+        ALTER TABLE student_conduct_tracking 
+        ADD COLUMN IF NOT EXISTS sheet_id INT,
+        ADD INDEX IF NOT EXISTS idx_sheet_id (sheet_id)
+      `);
+      console.log('✅ Added sheet_id column to student_conduct_tracking');
+    } catch (e) {
+      console.log('Sheet_id column already exists or error:', e.message);
+    }
+    
+    // Get all trades and levels for comprehensive sheets
+    const [trades] = await pool.execute('SELECT * FROM trades');
+    const [levels] = await pool.execute('SELECT * FROM trade_levels');
+    const [classes] = await pool.execute('SELECT * FROM trade_classes');
+    
+    console.log(`Found ${trades.length} trades, ${levels.length} levels, ${classes.length} classes`);
+    
+    // Check actual column names
+    const [tradeColumns] = await pool.execute("SHOW COLUMNS FROM trades");
+    const [levelColumns] = await pool.execute("SHOW COLUMNS FROM trade_levels");
+    console.log('Trades columns:', tradeColumns.map(c => c.Field));
+    console.log('Levels columns:', levelColumns.map(c => c.Field));
+    
+    // Check if tables exist and get structure
+    try {
+      const [tables] = await pool.execute("SHOW TABLES LIKE 'trade_%'");
+      console.log('Available trade tables:', tables.map(t => Object.values(t)[0]));
+      
+      if (tables.length > 0) {
+        const [columns] = await pool.execute("SHOW COLUMNS FROM trade_classes");
+        console.log('Trade classes columns:', columns.map(c => c.Field));
+      }
+    } catch (e) {
+      console.log('Table structure check failed:', e.message);
+    }
+    
+    // Migrate existing students with proper trade/level mapping
+    console.log('\n📦 Migrating existing students with full trade data...');
     const [students] = await pool.execute(`
       SELECT u.id, u.student_id as student_code, u.first_name, u.last_name, u.email, u.phone, 
-             u.gender, u.date_of_birth, e.academic_year,
-             tl.trade_code, tl.trade_name, tl.level_number, tl.level_suffix, tc.class_name
+             u.gender, u.date_of_birth,
+             COALESCE(t.name, 'General') as trade_name,
+             COALESCE(tl.level_number, tc.level, 1) as level_number,
+             COALESCE(tl.level_suffix, 'A') as level_suffix,
+             COALESCE(tc.class_name, tc.name, 'General Class') as class_name,
+             COALESCE(t.id, 'GEN') as trade_code
       FROM users u
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
       LEFT JOIN trade_classes tc ON e.class_id = tc.id
-      LEFT JOIN trade_levels tl ON tc.trade_level_id = tl.id
+      LEFT JOIN trades t ON tc.name LIKE CONCAT('%', t.name, '%') OR tc.class_name LIKE CONCAT('%', t.name, '%')
+      LEFT JOIN trade_levels tl ON tl.level_number = tc.level
       WHERE u.role_id = (SELECT id FROM roles WHERE name = 'student')
     `);
     
@@ -46,16 +92,25 @@ async function setupGlobalStudentSheets() {
           student.id, student.student_code, student.first_name, student.last_name, 
           student.email, student.phone, student.gender || 'Male', student.date_of_birth,
           student.trade_code, student.trade_name, student.level_number, student.level_suffix,
-          student.class_name, student.academic_year || new Date().getFullYear()
+          student.class_name, new Date().getFullYear().toString()
         ]);
         
-        // Create conduct tracking
+        // Create conduct tracking with proper sheet_id
         const [sheet] = await pool.execute('SELECT id FROM global_student_sheets WHERE student_id = ?', [student.id]);
-        await pool.execute(`
-          INSERT INTO student_conduct_tracking (sheet_id, student_id) 
-          VALUES (?,?) 
-          ON DUPLICATE KEY UPDATE sheet_id=VALUES(sheet_id)
-        `, [sheet[0].id, student.id]);
+        if (sheet.length > 0) {
+          await pool.execute(`
+            INSERT INTO student_conduct_tracking (sheet_id, student_id) 
+            VALUES (?,?) 
+            ON DUPLICATE KEY UPDATE sheet_id=VALUES(sheet_id)
+          `, [sheet[0].id, student.id]);
+          
+          // Create attendance summary
+          await pool.execute(`
+            INSERT INTO student_attendance_summary (sheet_id, student_id, month, year) 
+            VALUES (?,?,?,?) 
+            ON DUPLICATE KEY UPDATE sheet_id=VALUES(sheet_id)
+          `, [sheet[0].id, student.id, new Date().toLocaleString('default', { month: 'long' }), new Date().getFullYear()]);
+        }
         
         migrated++;
       } catch (err) {
@@ -63,6 +118,52 @@ async function setupGlobalStudentSheets() {
       }
     }
     console.log(`✅ Migrated ${migrated} students`);
+    
+    // Create sheets for all trade levels (ensure every level has sheets)
+    console.log('\n📋 Creating sheets for all trade levels...');
+    
+    for (const trade of trades) {
+      for (const level of levels) {
+        // Create template sheet for each trade-level combination
+        try {
+          await pool.execute(`
+            INSERT IGNORE INTO global_student_sheets 
+            (student_id, student_code, first_name, last_name, trade_code, trade_name, 
+             level_number, level_suffix, class_name, academic_year, status)
+            VALUES (?,?,?,?,?,?,?,?,?,?,'active')
+          `, [
+            0, `TEMPLATE_${trade.id}_L${level.level_number}`, 'Template', 'Student',
+            trade.id, trade.name, level.level_number, level.level_suffix || 'A',
+            `${trade.name} Level ${level.level_number}`, new Date().getFullYear().toString()
+          ]);
+        } catch (e) {
+          console.log(`Template for ${trade.id} L${level.level_number}: ${e.message}`);
+        }
+      }
+    }
+    
+    // Create staff management integration
+    console.log('\n👥 Setting up staff management integration...');
+    
+    // Add staff access permissions for student sheets
+    const staffRoles = ['teacher', 'dos', 'admin', 'principal', 'accountant'];
+    for (const role of staffRoles) {
+      try {
+        await pool.execute(`
+          INSERT INTO student_sheet_custom_columns 
+          (column_name, column_label, column_type, created_by_role, visible_to_roles, editable_by_roles, scope, is_active)
+          VALUES (?,?,?,?,?,?,?,1)
+          ON DUPLICATE KEY UPDATE column_label=VALUES(column_label)
+        `, [
+          `${role}_notes`, `${role.charAt(0).toUpperCase() + role.slice(1)} Notes`, 'textarea',
+          role, JSON.stringify([role, 'admin']), JSON.stringify([role, 'admin']), 'global'
+        ]);
+      } catch (e) {
+        console.log(`Staff column for ${role}: ${e.message}`);
+      }
+    }
+    
+    console.log('✅ Staff management integration complete');
     
     // Create default custom columns
     console.log('\n📋 Creating default custom columns...');

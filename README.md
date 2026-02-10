@@ -50,6 +50,31 @@
   - [Complete Guide](SMS_NOTIFICATION_SYSTEM.md) - Full documentation
   - [System Ready](SMS_READY.md) - Quick reference
 
+  ## 👥 Staff Management Advanced System
+
+  The system includes a **fully functional, production-ready staff management system** with:
+  - 👤 **Full CRUD Operations** - Create, Read, Update, Delete staff
+  - 📊 **Performance Reviews** - Track evaluations and ratings
+  - 📅 **Schedule Management** - Weekly schedules and calendar view
+  - 📄 **Document Management** - Upload contracts, certificates, etc.
+  - 🔔 **Notifications** - Individual and broadcast messaging
+  - 🏖️ **Leave Management** - Applications and approval workflow
+  - 📈 **Reports & Analytics** - Comprehensive insights
+  - 📝 **Activity Tracking** - Full audit logs
+  - 🔄 **Bulk Operations** - Update/delete multiple staff
+  - 📥 **CSV Export** - Export staff data
+
+  ### Quick Setup for Staff System
+  ```bash
+  # Automated setup
+  setup-staff-advanced.bat
+  ```
+
+  📖 **Documentation:**
+  - [Staff System Guide](STAFF_ADVANCED_SYSTEM.md) - Complete documentation
+  - **Frontend**: `/staff-management-advanced`
+  - **API**: `/api/staff-advanced`
+
   ## 📰 News Article Management System
 
   The system now includes a **fully functional, dynamic news article management system** with:
@@ -66,6 +91,28 @@
   - [News Management Guide](NEWS_MANAGEMENT_GUIDE.md) - Complete system guide
   - [API Documentation](NEWS_API_DOCUMENTATION.md) - API reference
   - [Admin Interface Guide](NEWS_ADMIN_INTERFACE_GUIDE.md) - Visual guide
+
+  ## 👮 DOD Dashboard Advanced
+
+  The system includes a **powerful, streamlined DOD dashboard** with full global student sheet access:
+  - 📊 **Global Student Access** - View all students across trades and levels
+  - 🚫 **Conduct Management** - Remove conduct with automatic parent notifications
+  - 📱 **Parent Communication** - SMS/WhatsApp messaging to individual or multiple parents
+  - 🔍 **Advanced Filtering** - Search and filter by name, trade, level, conduct score
+  - ✅ **Bulk Operations** - Select multiple students for batch messaging
+  - 📈 **Real-Time Stats** - Live statistics on conduct, attendance, and incidents
+  - 🎯 **Focused Interface** - Clean, functional design with only working features
+
+  ### Quick Setup for DOD Dashboard
+  ```bash
+  # Automated setup
+  setup-dod-advanced.bat
+  ```
+
+  📖 **Documentation:**
+  - [DOD Dashboard Guide](DOD_DASHBOARD_ADVANCED_GUIDE.md) - Complete system guide
+  - **Frontend**: `/dashboards/DODDashboardAdvanced`
+  - **API**: `/api/global-sheets/students`
 
   ## 🔍 Powerful Global Search System
 

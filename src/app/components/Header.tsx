@@ -43,10 +43,70 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     { key: 'services', icon: Briefcase, label: language === 'rw' ? 'Serivisi' : 'Services', subItems: [] },
     { key: 'trades', icon: Wrench, label: language === 'rw' ? 'Imyuga' : 'Trades', subItems: [] },
     { key: 'leadership', icon: Shield, label: language === 'rw' ? 'Ubuyobozi' : 'Leadership', subItems: [] },
+    { key: 'staff-management-advanced', icon: Users, label: language === 'rw' ? 'Abakozi' : 'Staff', subItems: [] },
     { key: 'contactUs', icon: Phone, label: language === 'rw' ? 'Twandikire' : 'Contact', subItems: [] },
     { key: 'supports', icon: HelpCircle, label: language === 'rw' ? 'Ubufasha' : 'Support', subItems: [] },
     { key: 'developers', icon: Code, label: language === 'rw' ? 'Abatunganyije' : 'Developers', subItems: [] },
   ];
+
+  // Role-based navigation visibility (keeps existing routes, just filters per role)
+  const roleNavVisibility: Record<string, string[]> = {
+    school_owner: navItems.map(n => n.key),
+    admin: navItems.map(n => n.key),
+    headmaster: navItems.map(n => n.key),
+    director_study: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    director_discipline: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    accountant: ['home', 'services', 'staff-management-advanced', 'leadership', 'supports', 'contactUs'],
+    stock_manager: ['home', 'trades', 'services', 'staff-management-advanced', 'supports', 'contactUs'],
+    teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    advisor: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    patron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    matron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    support_staff: ['home', 'services', 'supports', 'contactUs'],
+    parent: ['home', 'academics', 'sports', 'supports', 'contactUs'],
+    student: ['home', 'academics', 'sports', 'services', 'trades', 'supports', 'contactUs']
+  };
+
+  const allowedNavKeys = displayUser?.role && roleNavVisibility[displayUser.role]
+    ? roleNavVisibility[displayUser.role]
+    : navItems.map(n => n.key);
+  const visibleNavItems = navItems.filter(item => allowedNavKeys.includes(item.key));
+
+  const roleShortcuts: Record<string, { key: string; label: string }[]> = {
+    accountant: [
+      { key: 'payments-management', label: 'Payments' },
+      { key: 'expenses-management', label: 'Expenses' },
+      { key: 'financial-reports', label: 'Reports' },
+      { key: 'salaries-management', label: 'Salaries' },
+    ],
+    stock_manager: [
+      { key: 'staff-management-advanced', label: 'Inventory / Staff' },
+      { key: 'services', label: 'Services' },
+    ],
+    director_study: [
+      { key: 'dos-students', label: 'Students' },
+      { key: 'dos-report-cards', label: 'Report Cards' },
+    ],
+    director_discipline: [
+      { key: 'dod-discipline', label: 'Discipline' },
+      { key: 'dod-reports', label: 'Reports' },
+    ],
+    teacher: [
+      { key: 'classes', label: 'Classes' },
+      { key: 'gradebook', label: 'Gradebook' },
+      { key: 'schedule', label: 'Schedule' },
+    ],
+    student: [
+      { key: 'dashboard-student', label: 'Dashboard' },
+      { key: 'timetable-view', label: 'Timetable' },
+    ],
+    parent: [
+      { key: 'dashboard-parent', label: 'Dashboard' },
+      { key: 'supports', label: 'Support' },
+    ],
+  };
+
+  const shortcuts = displayUser?.role ? roleShortcuts[displayUser.role] || [] : [];
 
   const [pageTitle, setPageTitle] = useState('');
 
@@ -392,7 +452,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
               <div className="flex-1 py-6 px-4">
                 <div className="space-y-2">
                   <h3 className="px-3 mb-3 text-xs font-bold text-green-700 uppercase tracking-wider">{t('navigation') || 'Ibikubiyemo'}</h3>
-                  {navItems.map((item, index) => {
+                  {visibleNavItems.map((item, index) => {
                     const Icon = item.icon;
 
                     return (
@@ -422,6 +482,26 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     );
                   })}
                 </div>
+
+                {shortcuts.length > 0 && (
+                  <div className="mt-6 space-y-2">
+                    <h3 className="px-3 mb-2 text-xs font-bold text-green-700 uppercase tracking-wider">{t('quickLinks') || 'Quick Links'}</h3>
+                    {shortcuts.map((item, idx) => (
+                      <Button
+                        key={item.key}
+                        variant="outline"
+                        onClick={() => {
+                          onNavigate(item.key);
+                          setIsSidebarOpen(false);
+                        }}
+                        className="w-full justify-start px-4 py-2 rounded-xl border-green-200 hover:bg-green-50 text-green-800"
+                      >
+                        <ChevronRight className="w-4 h-4 mr-2" />
+                        <span className="font-semibold text-sm">{item.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Enhanced Footer */}

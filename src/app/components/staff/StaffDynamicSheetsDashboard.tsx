@@ -4,7 +4,8 @@ import {
   Users, TrendingUp, Award, Target, BarChart3, PieChart, Calendar,
   Plus, Edit, Trash2, Eye, Download, Upload, RefreshCw, Filter, Search,
   Star, CheckCircle, AlertCircle, Activity, Zap, Trophy, BookOpen,
-  Calculator, DollarSign, Package, GraduationCap, Shield, Briefcase
+  Calculator, DollarSign, Package, GraduationCap, Shield, Briefcase,
+  FileText, ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -15,6 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Label } from '@/app/components/ui/label';
 import { Progress } from '@/app/components/ui/progress';
+import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import AdminContentEditor from '@/app/components/AdminContentEditor';
+import { usePageContent } from '@/app/hooks/useAdminContent';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -33,6 +37,11 @@ const StaffDynamicSheetsDashboard: React.FC<StaffDynamicSheetsDashboardProps> = 
   const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
+  
+  // Get admin-editable content
+  const pageTitle = usePageContent('staff-management', 'page_title', 'Staff Performance Tracking');
+  const pageDescription = usePageContent('staff-management', 'description', 'Dynamic sheets for staff performance and metrics');
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
     fetchRoleColumns();
@@ -212,12 +221,19 @@ const StaffDynamicSheetsDashboard: React.FC<StaffDynamicSheetsDashboardProps> = 
         className="mb-8"
       >
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
-              Staff Performance Tracking
-            </h1>
-            <p className="text-gray-600 mt-2">Dynamic sheets for staff performance and metrics</p>
-          </div>
+          <AdminContentEditor
+            pageName="staff-management"
+            sectionName="header"
+            isAdmin={isAdmin}
+            className="flex-1"
+          >
+            <div>
+              <h1 className="text-4xl font-black bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
+                {pageTitle.text}
+              </h1>
+              <p className="text-gray-600 mt-2">{pageDescription.text}</p>
+            </div>
+          </AdminContentEditor>
           <div className="flex gap-3">
             <Button
               onClick={() => {
@@ -229,6 +245,13 @@ const StaffDynamicSheetsDashboard: React.FC<StaffDynamicSheetsDashboardProps> = 
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
+            </Button>
+            <Button
+              onClick={() => setShowStudentSheets(true)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Student Sheets
             </Button>
             <Button
               onClick={() => setShowAddColumnDialog(true)}
@@ -247,7 +270,20 @@ const StaffDynamicSheetsDashboard: React.FC<StaffDynamicSheetsDashboardProps> = 
         </div>
       </motion.div>
 
-      <Card className="border-none shadow-xl mb-6">
+      <Tabs defaultValue="staff" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="staff" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Staff Management
+          </TabsTrigger>
+          <TabsTrigger value="students" className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" />
+            Student Sheets
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="staff">
+          <Card className="border-none shadow-xl mb-6">
         <CardHeader className="bg-gradient-to-r from-green-50 to-yellow-50">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <CardTitle className="flex items-center gap-2 font-black">
@@ -506,8 +542,13 @@ const StaffDynamicSheetsDashboard: React.FC<StaffDynamicSheetsDashboardProps> = 
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="students">
+          <GlobalStudentSheets userRole={userRole} userId={userId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

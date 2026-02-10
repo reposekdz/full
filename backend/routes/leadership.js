@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -74,6 +75,113 @@ router.get('/owner', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching owner' });
   }
 });
+
+// ============================================
+// STAFF ALIAS ROUTES (for AdminStaffManagement)
+// All staff routes require authentication
+// ============================================
+
+// GET all staff (alias for / but returns as 'staff')
+router.get('/staff', authenticateToken, async (req, res) => {
+  try {
+    const [leaders] = await pool.execute(
+      'SELECT * FROM leadership WHERE status = "active" ORDER BY display_order ASC'
+    );
+    // Map leadership fields to staff fields
+    const staff = leaders.map(leader => ({
+      id: leader.id,
+      title: leader.role,
+      title_rw: leader.role,
+      name: leader.name,
+      image: leader.image_url,
+      description: leader.biography_en,
+      description_rw: leader.biography_rw,
+      email: leader.email,
+      phone: leader.phone,
+      responsibilities: leader.responsibilities,
+      responsibilities_rw: leader.achievements
+    }));
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ success: false, message: 'Error fetching staff' });
+  }
+});
+
+// GET single staff by ID
+router.get('/staff/:id', authenticateToken, async (req, res) => {
+  try {
+    const [leaders] = await pool.execute('SELECT * FROM leadership WHERE id = ?', [req.params.id]);
+    if (leaders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+    const leader = leaders[0];
+    const staff = {
+      id: leader.id,
+      title: leader.role,
+      title_rw: leader.role,
+      name: leader.name,
+      image: leader.image_url,
+      description: leader.biography_en,
+      description_rw: leader.biography_rw,
+      email: leader.email,
+      phone: leader.phone,
+      responsibilities: leader.responsibilities,
+      responsibilities_rw: leader.achievements
+    };
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ success: false, message: 'Error fetching staff' });
+  }
+});
+
+// PUT update staff
+router.put('/staff/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, title_rw, name, description, description_rw, email, phone, responsibilities, responsibilities_rw } = req.body;
+    
+    await pool.execute(
+      `UPDATE leadership SET 
+        name = ?, 
+        role = COALESCE(?, role),
+        biography_en = ?, 
+        biography_rw = ?, 
+        email = ?, 
+        phone = ?, 
+        responsibilities = ?, 
+        achievements = ?, 
+        updated_at = NOW()
+       WHERE id = ?`,
+      [name, title || title_rw, description, description_rw, email, phone, responsibilities, responsibilities_rw, req.params.id]
+    );
+    res.json({ success: true, message: 'Staff updated successfully' });
+  } catch (error) {
+    console.error('Error updating staff:', error);
+    res.status(500).json({ success: false, message: 'Error updating staff' });
+  }
+});
+
+// POST upload staff image
+router.post('/staff/:id/image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image provided' });
+    }
+    
+    const imageUrl = `/uploads/leadership/${req.file.filename}`;
+    await pool.execute(
+      'UPDATE leadership SET image_url = ?, updated_at = NOW() WHERE id = ?',
+      [imageUrl, req.params.id]
+    );
+    res.json({ success: true, message: 'Image uploaded successfully', image: imageUrl });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ success: false, message: 'Error uploading image' });
+  }
+});
+
+// GET leader by ID (must be after /staff routes)
 router.get('/:id', async (req, res) => {
   try {
     const [leaders] = await pool.execute('SELECT * FROM leadership WHERE id = ?', [req.params.id]);
@@ -154,6 +262,111 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error removing leader:', error);
     res.status(500).json({ success: false, message: 'Error removing leader' });
+  }
+});
+
+// ============================================
+// STAFF ALIAS ROUTES (for AdminStaffManagement)
+// All staff routes require authentication
+// ============================================
+
+// GET all staff (alias for / but returns as 'staff')
+router.get('/staff', authenticateToken, async (req, res) => {
+  try {
+    const [leaders] = await pool.execute(
+      'SELECT * FROM leadership WHERE status = "active" ORDER BY display_order ASC'
+    );
+    // Map leadership fields to staff fields
+    const staff = leaders.map(leader => ({
+      id: leader.id,
+      title: leader.role,
+      title_rw: leader.role,
+      name: leader.name,
+      image: leader.image_url,
+      description: leader.biography_en,
+      description_rw: leader.biography_rw,
+      email: leader.email,
+      phone: leader.phone,
+      responsibilities: leader.responsibilities,
+      responsibilities_rw: leader.achievements
+    }));
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ success: false, message: 'Error fetching staff' });
+  }
+});
+
+// GET single staff by ID
+router.get('/staff/:id', authenticateToken, async (req, res) => {
+  try {
+    const [leaders] = await pool.execute('SELECT * FROM leadership WHERE id = ?', [req.params.id]);
+    if (leaders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+    const leader = leaders[0];
+    const staff = {
+      id: leader.id,
+      title: leader.role,
+      title_rw: leader.role,
+      name: leader.name,
+      image: leader.image_url,
+      description: leader.biography_en,
+      description_rw: leader.biography_rw,
+      email: leader.email,
+      phone: leader.phone,
+      responsibilities: leader.responsibilities,
+      responsibilities_rw: leader.achievements
+    };
+    res.json({ success: true, staff });
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    res.status(500).json({ success: false, message: 'Error fetching staff' });
+  }
+});
+
+// PUT update staff
+router.put('/staff/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, title_rw, name, description, description_rw, email, phone, responsibilities, responsibilities_rw } = req.body;
+    
+    await pool.execute(
+      `UPDATE leadership SET 
+        name = ?, 
+        role = COALESCE(?, role),
+        biography_en = ?, 
+        biography_rw = ?, 
+        email = ?, 
+        phone = ?, 
+        responsibilities = ?, 
+        achievements = ?, 
+        updated_at = NOW()
+       WHERE id = ?`,
+      [name, title || title_rw, description, description_rw, email, phone, responsibilities, responsibilities_rw, req.params.id]
+    );
+    res.json({ success: true, message: 'Staff updated successfully' });
+  } catch (error) {
+    console.error('Error updating staff:', error);
+    res.status(500).json({ success: false, message: 'Error updating staff' });
+  }
+});
+
+// POST upload staff image
+router.post('/staff/:id/image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image provided' });
+    }
+    
+    const imageUrl = `/uploads/leadership/${req.file.filename}`;
+    await pool.execute(
+      'UPDATE leadership SET image_url = ?, updated_at = NOW() WHERE id = ?',
+      [imageUrl, req.params.id]
+    );
+    res.json({ success: true, message: 'Image uploaded successfully', image: imageUrl });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ success: false, message: 'Error uploading image' });
   }
 });
 

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { API_BASE_URL } from '@/app/config/apiBase';
+import { apiFetch } from '@/app/utils/apiClient';
 
 const sections = [
   { id: 'homepage', name: 'Homepage', icon: Home, color: 'bg-blue-500', desc: 'Hero, banners, announcements', api: '/api/homepage' },
@@ -34,8 +36,7 @@ const CMSManagementPage = () => {
   const importFromAPI = async (section) => {
     if (!confirm(`Import existing ${section} data from API?`)) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/cms/${section}/import`, { method: 'POST' });
-      const data = await response.json();
+      const data = await apiFetch(`/cms/${section}/import`, { method: 'POST' });
       if (data.success) {
         alert(`Imported ${data.imported} items!`);
         fetchItems(section);
@@ -49,8 +50,7 @@ const CMSManagementPage = () => {
     const counts = {};
     for (const section of sections) {
       try {
-        const res = await fetch(`http://localhost:5000/api/cms/${section.id}`);
-        const data = await res.json();
+        const data = await apiFetch(`/cms/${section.id}`);
         counts[section.id] = data.items?.length || 0;
       } catch (e) {
         counts[section.id] = 0;
@@ -61,8 +61,7 @@ const CMSManagementPage = () => {
 
   const fetchItems = async (section) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/cms/${section}`);
-      const data = await response.json();
+      const data = await apiFetch(`/cms/${section}`);
       if (data.success) setItems(data.items);
     } catch (error) {
       console.error('Error:', error);
@@ -72,7 +71,7 @@ const CMSManagementPage = () => {
   const handleDelete = async (id) => {
     if (!confirm('Delete this item?')) return;
     try {
-      await fetch(`http://localhost:5000/api/cms/${activeSection}/${id}`, { method: 'DELETE' });
+      await apiFetch(`/cms/${activeSection}/${id}`, { method: 'DELETE' });
       fetchItems(activeSection);
     } catch (error) {
       console.error('Error:', error);
@@ -205,7 +204,7 @@ const CMSManagementPage = () => {
                     {item.image && (
                       <div className="relative overflow-hidden rounded-lg mb-4">
                         <img 
-                          src={`http://localhost:5000/uploads/cms/${item.image}`} 
+                          src={`${API_BASE_URL}/uploads/cms/${item.image}`} 
                           alt={item.title} 
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" 
                         />
@@ -278,7 +277,7 @@ const ContentEditor = ({ section, item, onClose, onSave }) => {
     active: item?.active || 1
   });
   const [imageFile, setImageFile] = useState(null);
-  const [preview, setPreview] = useState(item?.image ? `http://localhost:5000/uploads/cms/${item.image}` : null);
+  const [preview, setPreview] = useState(item?.image ? `${API_BASE_URL}/uploads/cms/${item.image}` : null);
   const [activeTab, setActiveTab] = useState('basic');
 
   const handleImageChange = (e) => {
@@ -296,10 +295,7 @@ const ContentEditor = ({ section, item, onClose, onSave }) => {
       Object.keys(formData).forEach(key => data.append(key, formData[key]));
       if (imageFile) data.append('image', imageFile);
 
-      await fetch(`http://localhost:5000/api/cms/${section}`, {
-        method: 'POST',
-        body: data
-      });
+      await apiFetch(`/cms/${section}`, { method: 'POST', body: data }, true);
       
       onSave();
     } catch (error) {

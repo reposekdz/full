@@ -349,7 +349,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         </div>
       )}
       
-      <Hero />
+      <Hero onNavigate={onNavigate} />
 
       {/* Statistics Section */}
       <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-yellow-50 via-white to-green-50">

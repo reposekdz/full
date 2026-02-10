@@ -6,8 +6,7 @@ import { Label } from '@/app/components/ui/label';
 import { Badge } from '@/app/components/ui/badge';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Calendar, Users, BookOpen, Clock, Plus, Edit, Trash2, Save, X } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { apiFetch } from '@/app/utils/apiClient';
 
 const DOSManagement = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -22,8 +21,6 @@ const DOSManagement = () => {
   const [showTimetableForm, setShowTimetableForm] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const token = localStorage.getItem('token');
-
   useEffect(() => {
     fetchStats();
     fetchTeachers();
@@ -34,10 +31,7 @@ const DOSManagement = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE}/dos-management/dashboard-stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/dos-management/dashboard-stats');
       if (data.success) setStats(data.stats);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -46,10 +40,7 @@ const DOSManagement = () => {
 
   const fetchTeachers = async () => {
     try {
-      const response = await fetch(`${API_BASE}/dos-management/teachers-overview`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/dos-management/teachers-overview');
       if (data.success) setTeachers(data.teachers);
     } catch (error) {
       console.error('Error fetching teachers:', error);
@@ -58,10 +49,7 @@ const DOSManagement = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch(`${API_BASE}/classes`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/classes');
       if (data.success) setClasses(data.classes || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -70,10 +58,7 @@ const DOSManagement = () => {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch(`${API_BASE}/subjects`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/subjects');
       if (data.success) setSubjects(data.subjects || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -82,10 +67,7 @@ const DOSManagement = () => {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`${API_BASE}/dos-management/teacher-assignments`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/dos-management/teacher-assignments');
       if (data.success) setAssignments(data.assignments);
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -94,10 +76,7 @@ const DOSManagement = () => {
 
   const fetchTimetable = async (classId) => {
     try {
-      const response = await fetch(`${API_BASE}/dos-management/timetable/${classId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch(`/dos-management/timetable/${classId}`);
       if (data.success) setTimetable(data.timetable);
     } catch (error) {
       console.error('Error fetching timetable:', error);
@@ -109,12 +88,8 @@ const DOSManagement = () => {
     const formData = new FormData(e.target);
 
     try {
-      const response = await fetch(`${API_BASE}/dos-management/assign-teacher`, {
+      const data = await apiFetch('/dos-management/assign-teacher', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           teacher_id: formData.get('teacher_id'),
           class_id: formData.get('class_id'),
@@ -122,8 +97,6 @@ const DOSManagement = () => {
           academic_year_id: 1 // Get from active academic year
         })
       });
-
-      const data = await response.json();
       if (data.success) {
         setMessage({ type: 'success', text: data.message });
         setShowAssignForm(false);
@@ -152,20 +125,14 @@ const DOSManagement = () => {
     }];
 
     try {
-      const response = await fetch(`${API_BASE}/dos-management/generate-timetable`, {
+      const data = await apiFetch('/dos-management/generate-timetable', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           class_id: selectedClass,
           academic_year_id: 1,
           schedule
         })
       });
-
-      const data = await response.json();
       if (data.success) {
         setMessage({ type: 'success', text: data.message });
         setShowTimetableForm(false);
@@ -182,21 +149,15 @@ const DOSManagement = () => {
   const handleRemoveAssignment = async (id) => {
     if (!confirm('Remove this assignment?')) return;
 
-    try {
-      const response = await fetch(`${API_BASE}/dos-management/teacher-assignments/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setMessage({ type: 'success', text: data.message });
-        fetchAssignments();
-        fetchTeachers();
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to remove assignment' });
-    }
+    apiFetch(`/dos-management/teacher-assignments/${id}`, { method: 'DELETE' })
+      .then((data) => {
+        if (data.success) {
+          setMessage({ type: 'success', text: data.message });
+          fetchAssignments();
+          fetchTeachers();
+        }
+      })
+      .catch(() => setMessage({ type: 'error', text: 'Failed to remove assignment' }));
   };
 
   return (

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/app/config/apiBase';
 import { Plus, Edit2, Trash2, Eye, Heart, Image as ImageIcon, Save, X } from 'lucide-react';
+import { apiFetch } from '@/app/utils/apiClient';
 
 interface Article {
   id: number;
@@ -38,13 +40,11 @@ const AdminArticleManagement: React.FC = () => {
   }, []);
 
   const fetchArticles = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/news');
-      const data = await response.json();
-      if (data.success) setArticles(data.articles);
-    } catch (error) {
-      console.error('Error fetching articles:', error);
-    }
+    apiFetch('/news')
+      .then((data) => {
+        if (data.success) setArticles(data.articles);
+      })
+      .catch((error) => console.error('Error fetching articles:', error));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,19 +66,17 @@ const AdminArticleManagement: React.FC = () => {
     data.append('is_featured', String(formData.is_featured));
     if (formData.image) data.append('image', formData.image);
 
-    try {
-      const url = editingId ? `http://localhost:5000/api/news/${editingId}` : 'http://localhost:5000/api/news';
-      const method = editingId ? 'PUT' : 'POST';
-      const response = await fetch(url, { method, body: data });
-      const result = await response.json();
-      
-      if (result.success) {
-        fetchArticles();
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Error saving article:', error);
-    }
+    const url = editingId ? `/news/${editingId}` : '/news';
+    const method = editingId ? 'PUT' : 'POST';
+
+    apiFetch(url, { method, body: data }, true)
+      .then((result) => {
+        if (result.success) {
+          fetchArticles();
+          resetForm();
+        }
+      })
+      .catch((error) => console.error('Error saving article:', error));
   };
 
   const handleEdit = (article: Article) => {
@@ -91,20 +89,18 @@ const AdminArticleManagement: React.FC = () => {
       is_featured: article.is_featured,
       image: null
     });
-    setImagePreview(article.image_url ? `http://localhost:5000${article.image_url}` : '');
+    setImagePreview(article.image_url ? `${API_BASE_URL}${article.image_url}` : '');
     setEditingId(article.id);
     setShowForm(true);
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this article?')) return;
-    try {
-      const response = await fetch(`http://localhost:5000/api/news/${id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (result.success) fetchArticles();
-    } catch (error) {
-      console.error('Error deleting article:', error);
-    }
+    apiFetch(`/news/${id}`, { method: 'DELETE' })
+      .then((result) => {
+        if (result.success) fetchArticles();
+      })
+      .catch((error) => console.error('Error deleting article:', error));
   };
 
   const resetForm = () => {
@@ -189,7 +185,7 @@ const AdminArticleManagement: React.FC = () => {
               <div className="flex">
                 <div className="w-64 h-48 bg-gray-200 flex-shrink-0">
                   {article.image_url ? (
-                    <img src={`http://localhost:5000${article.image_url}`} alt={article.title} className="w-full h-full object-cover" />
+                    <img src={`${API_BASE_URL}${article.image_url}`} alt={article.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center"><ImageIcon size={48} className="text-gray-400" /></div>
                   )}

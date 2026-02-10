@@ -56,6 +56,7 @@ import {
 import { Label } from '@/app/components/ui/label';
 import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 import DOSManagementDashboard from '@/app/components/dos/DOSManagementDashboard';
+import { ApplicationManagementDashboard } from '@/app/components/ApplicationManagementDashboard';
 
 interface DirectorStudyDashboardProps {
   onNavigate: (page: string) => void;
@@ -375,12 +376,15 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 bg-white border-2 border-yellow-200 p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-9 bg-white border-2 border-yellow-200 p-1 gap-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
               </TabsTrigger>
               <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Abanyeshuri
+              </TabsTrigger>
+              <TabsTrigger value="applications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Amasaba
               </TabsTrigger>
               <TabsTrigger value="classes" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Amaklasi
@@ -490,6 +494,11 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Applications Tab */}
+            <TabsContent value="applications" className="space-y-6">
+              <ApplicationManagementDashboard />
             </TabsContent>
 
             {/* Students Tab */}

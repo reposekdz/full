@@ -106,14 +106,68 @@ import HostelManagementSystem from '@/app/pages/systems/HostelManagementSystem';
 import NYTArticleViewPage from '@/app/pages/NYTArticleViewPage';
 import AdminArticleManagementPage from '@/app/pages/AdminArticleManagementPage';
 import Footer from '@/app/components/Footer';
+import { GlobalMobileMenu } from '@/app/components/GlobalMobileMenu';
 import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
 import HeadmasterStudentManagement from '@/app/pages/headmaster/HeadmasterStudentManagement';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import DODManagement from '@/app/pages/dashboards/DODManagement';
 import DOSManagementUltraAdvanced from '@/app/pages/dos/DOSManagementUltraAdvanced';
 import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
+import StaffManagementPage from '@/app/pages/StaffManagementPage';
 
 const AppContent: React.FC = () => {
+  // Mirror role-based navigation visibility used in Header
+  const roleNavVisibility: Record<string, string[]> = {
+    school_owner: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
+    admin: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
+    super_admin: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
+    headmaster: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
+    director_study: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
+    director_discipline: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
+    dod: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
+    accountant: ['home','services','staff-management-advanced','leadership','supports','contactUs'],
+    stock_manager: ['home','trades','services','staff-management-advanced','supports','contactUs'],
+    teacher: ['home','academics','leadership','contactUs','supports'],
+    advisor: ['home','academics','leadership','contactUs','supports'],
+    patron: ['home','academics','leadership','contactUs','supports'],
+    matron: ['home','academics','leadership','contactUs','supports'],
+    support_staff: ['home','services','supports','contactUs'],
+    parent: ['home','academics','sports','supports','contactUs'],
+    student: ['home','academics','sports','services','trades','supports','contactUs']
+  };
+
+  const roleExtraAllowed: Record<string, string[]> = {
+    school_owner: ['profile','student-sheets'],
+    admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
+    super_admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
+    headmaster: ['profile','headmaster-students','student-sheets','dashboard-headmaster'],
+    director_study: ['profile','dos-students','dos-report-cards','dos-teacher-marks','dos-parent-access','dos-sms','student-sheets','dashboard-director-study','dashboard-dos'],
+    director_discipline: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline'],
+    dod: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline'],
+    accountant: ['profile','student-sheets','dashboard-accountant','payments-management','expenses-management','invoices-management','budgets-management','salaries-management','transactions-management','financial-reports','timetable-view','students-management','student-payments-management'],
+    stock_manager: ['profile','dashboard-stock','staff-management-advanced'],
+    teacher: ['profile','search','notifications','classes','students','gradebook','attendance','assignments','resources','schedule','teacher-grading','teacher-create-assignment','student-sheets','dashboard-teacher'],
+    advisor: ['profile','student-sheets','dashboard-advisor'],
+    parent: ['profile','dashboard-parent'],
+    student: ['profile','dashboard-student'],
+    patron: ['profile'],
+    matron: ['profile'],
+    support_staff: ['profile'],
+    default: []
+  };
+
+  const isPageAllowed = (page: string, role?: string | null) => {
+    if (!role) return true; // public guard handled later
+    const base = roleNavVisibility[role] || roleNavVisibility[role as string] || [];
+    const extras = roleExtraAllowed[role] || roleExtraAllowed.default || [];
+    // allow dashboard routes that start with dashboard- for that role
+    const normalizedPage = page.split('/')[0];
+    const dashboardPage = (role: string) => `dashboard-${role.replace('_', '-')}`;
+    if (normalizedPage === dashboardPage(role)) return true;
+    if (base.includes(normalizedPage) || extras.includes(normalizedPage)) return true;
+    return false;
+  };
+
   const [currentPage, setCurrentPage] = useState(() => {
     // Get page from URL path first, then localStorage
     const path = window.location.pathname.slice(1) || 'home';
@@ -177,6 +231,21 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleNavigate = (page: string) => {
+    // Allow certain pages to be accessed regardless of authentication status
+    const publicPages = ['home', 'trades', 'sports', 'services', 'contactUs', 'supports', 'developers', 'leadership', 'news', 'login', 'register', 'search'];
+    
+    if (publicPages.includes(page)) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    if (user && !isPageAllowed(page, user.role)) {
+      const safe = getRoleDashboard(user.role);
+      setCurrentPage(safe);
+      window.history.pushState({}, '', `/${safe}`);
+      return;
+    }
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -264,11 +333,12 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Auto-redirect authenticated users to their dashboard
+  // Auto-redirect authenticated users to their dashboard only from home page
   useEffect(() => {
     if (user && currentPage === 'home') {
-      const dashboardPage = getRoleDashboard(user.role);
-      handleNavigate(dashboardPage);
+      // Don't auto-redirect from home page, let users browse freely
+      // const dashboardPage = getRoleDashboard(user.role);
+      // handleNavigate(dashboardPage);
     }
   }, [user, currentPage, getRoleDashboard]);
 
@@ -325,38 +395,7 @@ const AppContent: React.FC = () => {
       return <LeaderDetailPage leaderId={leaderId} onNavigate={handleNavigate} />;
     }
 
-    // If user is logged in, check for special pages
-    if (user) {
-      // Accountant management pages
-      if (currentPage === 'students-management') return <StudentsManagementPage onNavigate={handleNavigate} />;
-      if (currentPage === 'student-payments-management') return <EnhancedStudentPayments onNavigate={handleNavigate} />;
-      if (currentPage === 'admin-articles') return <AdminArticleManagementPage onNavigate={handleNavigate} />;
-      if (currentPage === 'payments-management') return <PaymentsManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'expenses-management') return <ExpensesManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'invoices-management') return <InvoicesManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'budgets-management') return <BudgetsManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'salaries-management') return <SalariesManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'transactions-management') return <TransactionsManagement onNavigate={handleNavigate} />;
-      if (currentPage === 'financial-reports') return <FinancialReports onNavigate={handleNavigate} />;
-      if (currentPage === 'timetable-view') return <TimetableView onNavigate={handleNavigate} />;
-      if (currentPage === 'medical-system') return <MedicalManagementSystem />;
-      if (currentPage === 'library-system') return <LibraryManagementSystem />;
-      if (currentPage === 'exam-management') return <ExamManagementSystem />;
-      if (currentPage === 'hostel-management') return <HostelManagementSystem />;
-      if (currentPage === 'staff-management') return <StaffManagementPage onNavigate={handleNavigate} />;
-      
-      // Role selection pages
-      if (currentPage === 'role-selection') {
-        return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
-      }
-      if (currentPage === 'role-login') {
-        return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
-      }
-      // For all other pages, show the dashboard
-      return renderDashboard();
-    }
-
-    // For non-authenticated users, show public pages normally
+    // Public pages that work for both authenticated and non-authenticated users
     switch (currentPage) {
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
@@ -402,12 +441,48 @@ const AppContent: React.FC = () => {
         return <ModernLoginPage onNavigate={handleNavigate} />;
       case 'register':
         return <ModernRegisterPage onNavigate={handleNavigate} />;
+      case 'search':
+        return <AdvancedSearchPage onNavigate={handleNavigate} />;
+    }
+
+    // If user is logged in, check for special pages
+    if (user) {
+      // Accountant management pages
+      if (currentPage === 'students-management') return <StudentsManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'student-payments-management') return <EnhancedStudentPayments onNavigate={handleNavigate} />;
+      if (currentPage === 'admin-articles') return <AdminArticleManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'payments-management') return <PaymentsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'expenses-management') return <ExpensesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'invoices-management') return <InvoicesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'budgets-management') return <BudgetsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'salaries-management') return <SalariesManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'transactions-management') return <TransactionsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'financial-reports') return <FinancialReports onNavigate={handleNavigate} />;
+      if (currentPage === 'timetable-view') return <TimetableView onNavigate={handleNavigate} />;
+      if (currentPage === 'medical-system') return <MedicalManagementSystem />;
+      if (currentPage === 'library-system') return <LibraryManagementSystem />;
+      if (currentPage === 'exam-management') return <ExamManagementSystem />;
+      if (currentPage === 'hostel-management') return <HostelManagementSystem />;
+      if (currentPage === 'staff-management') return <StaffManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'staff-management-advanced') return <StaffManagementPage onNavigate={handleNavigate} />;
+      
+      // Role selection pages
+      if (currentPage === 'role-selection') {
+        return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
+      }
+      if (currentPage === 'role-login') {
+        return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
+      }
+      // For all other pages, show the dashboard
+      return renderDashboard();
+    }
+
+    // Additional public pages for non-authenticated users
+    switch (currentPage) {
       case 'role-selection':
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       case 'role-login':
         return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
-      case 'search':
-        return <AdvancedSearchPage onNavigate={handleNavigate} />;
       case 'admin-panel':
         return <AdminPage />;
       case 'admin-developers':
@@ -438,6 +513,8 @@ const AppContent: React.FC = () => {
         return <TeamOverviewManagement />;
       case 'admin-articles':
         return <AdminArticleManagementPage onNavigate={handleNavigate} />;
+      case 'staff-management-advanced':
+        return <StaffManagementPage onNavigate={handleNavigate} />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
@@ -445,6 +522,9 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full max-w-[100vw]">
+      {/* Global Mobile Menu - Shows everywhere for authenticated users */}
+      <GlobalMobileMenu currentPage={currentPage} onNavigate={handleNavigate} />
+      
       <Header
         currentPage={currentPage}
         onNavigate={handleNavigate}

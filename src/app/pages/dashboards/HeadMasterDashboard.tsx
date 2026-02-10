@@ -50,6 +50,7 @@ import CommunicationHubDashboard from '@/app/components/communication/Communicat
 import StaffDynamicSheetsDashboard from '@/app/components/staff/StaffDynamicSheetsDashboard';
 import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import { ApplicationManagementDashboard } from '@/app/components/ApplicationManagementDashboard';
 
 interface HeadMasterDashboardProps {
   onNavigate: (page: string) => void;
@@ -419,12 +420,15 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
           </motion.div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 lg:grid-cols-14 bg-white border-2 border-yellow-200 p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 lg:grid-cols-15 bg-white border-2 border-yellow-200 p-1 gap-1">
               <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Incamake
               </TabsTrigger>
               <TabsTrigger value="global-sheets" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Global Sheets
+              </TabsTrigger>
+              <TabsTrigger value="applications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                Amasaba
               </TabsTrigger>
               <TabsTrigger value="departments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Ibice
@@ -466,6 +470,10 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
 
             <TabsContent value="global-sheets">
               <GlobalStudentSheets onNavigate={onNavigate} />
+            </TabsContent>
+
+            <TabsContent value="applications">
+              <ApplicationManagementDashboard />
             </TabsContent>
 
             <TabsContent value="overview" className="space-y-6">

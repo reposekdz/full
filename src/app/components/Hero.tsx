@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Pause, Code, Building2, Car, Sparkles, ArrowRight, Users, Trophy, GraduationCap, Star, Clock, TrendingUp, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Code, Building2, Car, Sparkles, ArrowRight, Users, Trophy, GraduationCap, Star, Clock, TrendingUp, Loader2, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useContent } from '@/app/contexts/ContentContext';
@@ -7,6 +7,7 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Card, CardContent } from '@/app/components/ui/card';
+import { StudentApplicationForm } from '@/app/components/StudentApplicationForm';
 import sodSlide from '@/assets/image slides/SOD slides.png';
 import bdcSlide from '@/assets/image slides/BDC slides.jpg';
 import autSlide from '@/assets/image slides/AUT slides.png';
@@ -23,6 +24,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const [slides, setSlides] = useState([]);
   const [skillCards, setSkillCards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
   const { t, language } = useLanguage();
 
   const defaultSlides = [
@@ -176,7 +178,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="relative h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="relative min-h-[500px] sm:min-h-[600px] lg:h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Background Slides with Parallax Effect */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -226,29 +228,29 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Content - Split Layout */}
-      <div className="relative z-10 h-full py-6 lg:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center h-full">
+      <div className="relative z-10 h-full py-4 sm:py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center h-full">
             
             {/* Left Side - Text Content */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="space-y-5"
+              className="space-y-3 sm:space-y-4 lg:space-y-5"
             >
               {/* Badge */}
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center gap-2"
+                className="flex flex-wrap items-center gap-2 justify-center lg:justify-start"
               >
-                <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
-                <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white text-base px-4 py-1.5 font-bold border-0 shadow-lg">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 animate-pulse" />
+                <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white text-sm sm:text-base px-3 sm:px-4 py-1 sm:py-1.5 font-bold border-0 shadow-lg">
                   TVET Excellence 2026
                 </Badge>
-                <Sparkles className="w-6 h-6 text-green-400 animate-pulse" />
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 animate-pulse" />
               </motion.div>
 
               {/* Title */}
@@ -256,7 +258,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-tight text-center lg:text-left"
               >
                 <span className="bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-400 bg-clip-text text-transparent">
                   {language === 'rw' ? 'Garden TVET' : 'Garden TVET'}
@@ -272,7 +274,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-lg md:text-xl text-gray-300 leading-relaxed max-w-xl"
+                className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 leading-relaxed max-w-xl mx-auto lg:mx-0 text-center lg:text-left px-2 sm:px-0"
               >
                 {language === 'rw' 
                   ? 'Twigisha ubumenyi bw\'ikoranabuhanga buzakugeza ku ntsinzi. Hitamo umwuga wawe maze utangire urugendo rwawe rwo gutsinda.' 
@@ -284,27 +286,27 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="grid grid-cols-4 gap-3"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3"
               >
-                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
-                  <Users className="w-6 h-6 text-yellow-400 mx-auto mb-1" />
-                  <p className="text-2xl font-black text-white">{stats.students}</p>
-                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
+                <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 mx-auto mb-1" />
+                  <p className="text-xl sm:text-2xl font-black text-white">{stats.students}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
                 </div>
-                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
-                  <GraduationCap className="w-6 h-6 text-blue-400 mx-auto mb-1" />
-                  <p className="text-2xl font-black text-white">{stats.teachers}</p>
-                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abarimu' : 'Teachers'}</p>
+                <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 mx-auto mb-1" />
+                  <p className="text-xl sm:text-2xl font-black text-white">{stats.teachers}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Abarimu' : 'Teachers'}</p>
                 </div>
-                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
-                  <TrendingUp className="w-6 h-6 text-green-400 mx-auto mb-1" />
-                  <p className="text-2xl font-black text-white">{stats.employmentRate}</p>
-                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Gushirwa mu kazi' : 'Employment'}</p>
+                <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1" />
+                  <p className="text-xl sm:text-2xl font-black text-white">{stats.employmentRate}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Gushirwa mu kazi' : 'Employment'}</p>
                 </div>
-                <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all">
-                  <Trophy className="w-6 h-6 text-amber-400 mx-auto mb-1" />
-                  <p className="text-2xl font-black text-white">{stats.awards}</p>
-                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Ibihembo' : 'Awards'}</p>
+                <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 mx-auto mb-1" />
+                  <p className="text-xl sm:text-2xl font-black text-white">{stats.awards}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Ibihembo' : 'Awards'}</p>
                 </div>
               </motion.div>
 
@@ -313,24 +315,31 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="flex flex-wrap gap-4"
+                className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 lg:gap-4 justify-center lg:justify-start"
               >
                 <Button
                   size="lg"
-                  onClick={() => onNavigate && onNavigate('trades')}
-                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-6 py-5 text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+                  onClick={() => setShowApplicationForm(true)}
+                  className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
                 >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {language === 'rw' ? 'Reba Amahugurwa' : 'View All Trades'}
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  <span className="truncate">{language === 'rw' ? 'Saba Kwiga' : 'Apply Now'}</span>
                 </Button>
                 <Button
                   size="lg"
-                  variant="outline"
-                  onClick={() => onNavigate && onNavigate('login')}
-                  className="rounded-full px-6 py-5 text-base font-bold bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 hover:bg-white/20 hover:border-white/50 transition-all"
+                  onClick={() => window.open('/check-status', '_blank')}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
                 >
-                  {language === 'rw' ? 'Injira' : 'Get Started'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span className="truncate">{language === 'rw' ? 'Reba Status' : 'Check Status'}</span>
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => onNavigate && onNavigate('trades')}
+                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  <span className="truncate">{language === 'rw' ? 'Reba Amahugurwa' : 'View Trades'}</span>
                 </Button>
               </motion.div>
             </motion.div>
@@ -340,7 +349,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="space-y-3"
+              className="space-y-2 sm:space-y-3 hidden lg:block"
             >
               <motion.h2
                 initial={{ opacity: 0 }}
@@ -375,7 +384,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                       <CardContent className="p-0">
                         <div className="flex items-stretch">
                           {/* Card Image */}
-                          <div className="relative w-28 h-28 flex-shrink-0 overflow-hidden">
+                          <div className="relative w-20 sm:w-24 lg:w-28 h-20 sm:h-24 lg:h-28 flex-shrink-0 overflow-hidden">
                             <motion.img
                               src={card.image}
                               alt={language === 'rw' ? card.titleRw : t(card.titleKey)}
@@ -402,7 +411,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                           </div>
 
                           {/* Card Content */}
-                          <div className="flex-1 p-3 flex flex-col justify-between">
+                          <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between">
                             <div>
                               <div className="flex items-center gap-2 mb-0.5">
                                 <Badge className={`bg-gradient-to-r ${card.gradient} text-white font-black text-xs px-2 py-0.5 border-0`}>
@@ -478,7 +487,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Navigation Controls */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-4">
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-2 sm:space-x-4">
         <div className="flex space-x-2">
           {activeSlides.map((_, index) => (
             <button
@@ -512,19 +521,34 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
         size="icon"
         variant="ghost"
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20 w-12 h-12"
+        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20 w-10 h-10 sm:w-12 sm:h-12"
       >
-        <ChevronLeft className="w-6 h-6" />
+        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
       </Button>
 
       <Button
         size="icon"
         variant="ghost"
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20 w-12 h-12"
+        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20 w-10 h-10 sm:w-12 sm:h-12"
       >
-        <ChevronRight className="w-6 h-6" />
+        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
       </Button>
+
+      {/* Application Form Modal */}
+      {showApplicationForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowApplicationForm(false)}
+              className="absolute top-4 right-4 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 shadow-lg"
+            >
+              ✕
+            </button>
+            <StudentApplicationForm onClose={() => setShowApplicationForm(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

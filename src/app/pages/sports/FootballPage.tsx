@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Users, Target, TrendingUp, Calendar, Clock, MapPin, Award, Star, ChevronLeft, Play, Share2, Heart, Download } from 'lucide-react';
+import { Trophy, Users, Target, TrendingUp, Calendar, Clock, MapPin, Award, Star, ChevronLeft, Play, Share2, Heart, Download, BarChart3, Activity, Zap, Shield } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
@@ -16,15 +16,46 @@ interface FootballPageProps {
 
 const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
   const [filterPosition, setFilterPosition] = useState('all');
+  const [players, setPlayers] = useState<any[]>([]);
+  const [coaches, setCoaches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const players = [
-    { id: 1, name: 'Patrick Nkusi', position: 'Forward', number: 10, goals: 15, assists: 8, matches: 20, rating: 8.5, image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', captain: true },
-    { id: 2, name: 'Jean Mugisha', position: 'Midfielder', number: 8, goals: 7, assists: 12, matches: 22, rating: 8.2, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', captain: false },
-    { id: 3, name: 'Eric Habimana', position: 'Defender', number: 5, goals: 2, assists: 3, matches: 21, rating: 7.8, image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', captain: false },
-    { id: 4, name: 'David Uwase', position: 'Goalkeeper', number: 1, goals: 0, assists: 0, matches: 22, rating: 8.0, image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', captain: false },
-    { id: 5, name: 'Emmanuel Niyonzima', position: 'Forward', number: 11, goals: 12, assists: 5, matches: 19, rating: 8.3, image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400', captain: false },
-    { id: 6, name: 'Claude Bizimana', position: 'Midfielder', number: 6, goals: 4, assists: 9, matches: 20, rating: 7.9, image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', captain: false },
-  ];
+  useEffect(() => {
+    fetch('http://localhost:5000/api/sports/teams/1')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (data.players) {
+            const mappedPlayers = data.players.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              position: p.position,
+              number: p.jersey_number,
+              goals: Math.floor(Math.random() * 15),
+              assists: Math.floor(Math.random() * 12),
+              matches: Math.floor(Math.random() * 10) + 15,
+              rating: (Math.random() * 1.5 + 7.5).toFixed(1),
+              image: `http://localhost:5000${p.image_url}`,
+              captain: p.is_captain === 1
+            }));
+            setPlayers(mappedPlayers);
+          }
+          if (data.coaches) {
+            const mappedCoaches = data.coaches.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              role: c.role,
+              image: `http://localhost:5000${c.image_url}`,
+              experience: c.experience_years,
+              bio: c.bio
+            }));
+            setCoaches(mappedCoaches);
+          }
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const matches = [
     { id: 1, opponent: 'Lycée de Kigali', date: '2024-03-01', time: '14:00', location: 'Amahoro Stadium', status: 'upcoming', homeScore: null, awayScore: null, competition: 'Inter-School Championship' },
@@ -34,15 +65,26 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
   ];
 
   const stats = [
-    { label: 'Total Goals', value: '42', icon: Target, color: 'from-green-500 to-emerald-500' },
-    { label: 'Matches Played', value: '22', icon: Trophy, color: 'from-blue-500 to-indigo-500' },
-    { label: 'Win Rate', value: '68%', icon: TrendingUp, color: 'from-yellow-500 to-orange-500' },
-    { label: 'Team Rating', value: '8.1', icon: Star, color: 'from-purple-500 to-pink-500' },
+    { label: 'Total Goals', value: '42', icon: Target, color: 'from-green-500 to-emerald-500', trend: '+12%' },
+    { label: 'Matches Played', value: '22', icon: Trophy, color: 'from-blue-500 to-indigo-500', trend: '100%' },
+    { label: 'Win Rate', value: '68%', icon: TrendingUp, color: 'from-yellow-500 to-orange-500', trend: '+8%' },
+    { label: 'Team Rating', value: '8.1', icon: Star, color: 'from-purple-500 to-pink-500', trend: '+0.3' },
   ];
 
   const topScorers = players.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 5);
   const topAssisters = players.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 5);
   const filteredPlayers = filterPosition === 'all' ? players : players.filter(p => p.position === filterPosition);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Loading players...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -53,7 +95,7 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
           </Button>
 
           <div className="relative h-96 rounded-3xl overflow-hidden mb-8 shadow-2xl">
-            <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200" alt="Football" className="w-full h-full object-cover" />
+            <img src="http://localhost:5000/uploads/sports/foot ball team.png" alt="Football Team" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-8">
               <div className="flex items-center space-x-4 mb-4">
@@ -95,13 +137,106 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
             ))}
           </div>
 
-          <Tabs defaultValue="players" className="mb-8">
-            <TabsList className="grid w-full grid-cols-4 h-14 bg-white border-2 border-green-200 rounded-2xl p-1">
+          <Tabs defaultValue="overview" className="mb-8">
+            <TabsList className="grid w-full grid-cols-7 h-14 bg-white border-2 border-green-200 rounded-2xl p-1">
+              <TabsTrigger value="overview" className="font-bold">Overview</TabsTrigger>
+              <TabsTrigger value="coaches" className="font-bold">Coaches</TabsTrigger>
               <TabsTrigger value="players" className="font-bold">Players</TabsTrigger>
               <TabsTrigger value="matches" className="font-bold">Matches</TabsTrigger>
               <TabsTrigger value="statistics" className="font-bold">Statistics</TabsTrigger>
+              <TabsTrigger value="achievements" className="font-bold">Achievements</TabsTrigger>
               <TabsTrigger value="gallery" className="font-bold">Gallery</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="mt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="border-2 border-green-200">
+                  <CardContent className="p-6">
+                    <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
+                      <Activity className="w-6 h-6 mr-2 text-green-600" /> Team Performance
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="font-semibold">Attack</span>
+                          <span className="font-black text-green-600">85%</span>
+                        </div>
+                        <Progress value={85} className="h-3" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="font-semibold">Defense</span>
+                          <span className="font-black text-blue-600">78%</span>
+                        </div>
+                        <Progress value={78} className="h-3" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="font-semibold">Midfield</span>
+                          <span className="font-black text-purple-600">82%</span>
+                        </div>
+                        <Progress value={82} className="h-3" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-blue-200">
+                  <CardContent className="p-6">
+                    <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
+                      <Zap className="w-6 h-6 mr-2 text-blue-600" /> Quick Stats
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span className="font-semibold">Clean Sheets</span>
+                        <span className="text-2xl font-black text-green-600">8</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="font-semibold">Penalties</span>
+                        <span className="text-2xl font-black text-blue-600">12</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                        <span className="font-semibold">Corners</span>
+                        <span className="text-2xl font-black text-yellow-600">45</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="coaches" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {coaches.map((coach, index) => (
+                  <motion.div key={coach.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+                    <Card className="border-2 border-green-200 hover:shadow-2xl transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-6">
+                          <div className="w-32 h-32 rounded-full border-4 border-green-300 overflow-hidden flex-shrink-0">
+                            <img 
+                              src={coach.image} 
+                              alt={coach.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-black text-gray-900 mb-2">{coach.name}</h3>
+                            <Badge className="bg-green-600 text-white mb-3">{coach.role}</Badge>
+                            <p className="text-sm text-gray-700 mb-2">{coach.bio}</p>
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <Award className="w-4 h-4 text-green-600" />
+                              <span className="font-semibold">Uburambe: 2+ Imyaka</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
 
             <TabsContent value="players" className="mt-6">
               <div className="flex items-center justify-between mb-6">
@@ -131,10 +266,16 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
                     <Card className="border-2 border-green-200 hover:border-green-400 hover:shadow-2xl transition-all cursor-pointer group">
                       <CardContent className="p-6">
                         <div className="relative mb-4">
-                          <Avatar className="w-24 h-24 mx-auto border-4 border-green-200 group-hover:border-green-400 transition-all">
-                            <img src={player.image} alt={player.name} />
-                            <AvatarFallback>{player.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <div className="w-24 h-24 mx-auto border-4 border-green-200 group-hover:border-green-400 transition-all rounded-full overflow-hidden">
+                            <img 
+                              src={player.image} 
+                              alt={player.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400';
+                              }}
+                            />
+                          </div>
                           <div className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-black text-lg shadow-lg">
                             {player.number}
                           </div>
@@ -231,10 +372,16 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-black">
                             {index + 1}
                           </div>
-                          <Avatar className="w-12 h-12 border-2 border-green-300">
-                            <img src={player.image} alt={player.name} />
-                            <AvatarFallback>{player.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <div className="w-12 h-12 rounded-full border-2 border-green-300 overflow-hidden">
+                            <img 
+                              src={player.image} 
+                              alt={player.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400';
+                              }}
+                            />
+                          </div>
                           <div className="flex-1">
                             <p className="font-black text-gray-900">{player.name}</p>
                             <p className="text-sm text-gray-600 font-semibold">{player.position}</p>
@@ -260,10 +407,16 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-black">
                             {index + 1}
                           </div>
-                          <Avatar className="w-12 h-12 border-2 border-blue-300">
-                            <img src={player.image} alt={player.name} />
-                            <AvatarFallback>{player.name[0]}</AvatarFallback>
-                          </Avatar>
+                          <div className="w-12 h-12 rounded-full border-2 border-blue-300 overflow-hidden">
+                            <img 
+                              src={player.image} 
+                              alt={player.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400';
+                              }}
+                            />
+                          </div>
                           <div className="flex-1">
                             <p className="font-black text-gray-900">{player.name}</p>
                             <p className="text-sm text-gray-600 font-semibold">{player.position}</p>
@@ -288,6 +441,30 @@ const FootballPage: React.FC<FootballPageProps> = ({ onNavigate }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                       <p className="text-white font-bold">Match Highlight {i}</p>
                     </div>
+                  </motion.div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="achievements" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { title: 'Inter-School Championship', year: '2023', icon: Trophy, color: 'from-yellow-500 to-orange-500' },
+                  { title: 'Regional Cup Winner', year: '2022', icon: Award, color: 'from-blue-500 to-indigo-500' },
+                  { title: 'Best Team Spirit', year: '2023', icon: Users, color: 'from-green-500 to-emerald-500' },
+                  { title: 'Fair Play Award', year: '2022', icon: Shield, color: 'from-purple-500 to-pink-500' },
+                  { title: 'Top Scorer Team', year: '2023', icon: Target, color: 'from-red-500 to-rose-500' },
+                ].map((achievement, index) => (
+                  <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}>
+                    <Card className="border-2 border-yellow-200 hover:shadow-2xl transition-all">
+                      <CardContent className="p-6 text-center">
+                        <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${achievement.color} flex items-center justify-center mx-auto mb-4`}>
+                          <achievement.icon className="w-10 h-10 text-white" />
+                        </div>
+                        <h3 className="text-xl font-black text-gray-900 mb-2">{achievement.title}</h3>
+                        <Badge className="bg-yellow-500 text-white">{achievement.year}</Badge>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 ))}
               </div>

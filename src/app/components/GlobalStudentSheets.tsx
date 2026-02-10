@@ -1,412 +1,519 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Save, X, Table, Download, Calculator, Sigma, TrendingUp, Percent, Hash } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { Label } from '../components/ui/label';
-import apiService from '../services/apiService';
-import axios from 'axios';
+import { motion } from 'motion/react';
+import {
+  Users, Plus, Edit, Save, Calculator, DollarSign, BookOpen, Shield,
+  Star, FileText, TrendingUp, Award, Target, BarChart3, RefreshCw,
+  Search, Filter, Download, Upload, Eye, Trash2, CheckCircle
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
+import { Input } from '@/app/components/ui/input';
+import { Badge } from '@/app/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { Label } from '@/app/components/ui/label';
+import { Textarea } from '@/app/components/ui/textarea';
 
-export default function GlobalStudentSheets({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const [selectedTrade, setSelectedTrade] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
-  const [trades, setTrades] = useState<any[]>([]);
-  const [levels, setLevels] = useState<any[]>([]);
+const API_BASE = 'http://localhost:5000/api';
+
+interface GlobalStudentSheetsProps {
+  userRole: string;
+  userId: number;
+}
+
+const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = ({ userRole, userId }) => {
   const [students, setStudents] = useState<any[]>([]);
   const [columns, setColumns] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddColumn, setShowAddColumn] = useState(false);
-  const [editingCell, setEditingCell] = useState<any>(null);
-  const [cellValue, setCellValue] = useState('');
-
-  const [columnForm, setColumnForm] = useState({
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
+  const [editData, setEditData] = useState<any>({});
+  const [newColumn, setNewColumn] = useState({
     column_name: '',
+    column_label: '',
     column_type: 'text',
-    is_required: false,
-    default_value: '',
-    display_order: 0,
-    formula: '',
-    calculation_type: 'none'
+    select_options: [],
+    visible_to_roles: [userRole],
+    editable_by_roles: [userRole]
   });
 
-  const [showFormulaBuilder, setShowFormulaBuilder] = useState(false);
-  const [calculatedValues, setCalculatedValues] = useState<any>({});
-
   useEffect(() => {
-    fetchTrades();
-  }, []);
+    fetchColumns();
+    fetchStudents();
+  }, [userRole]);
 
-  useEffect(() => {
-    if (selectedTrade) {
-      fetchLevels(selectedTrade);
-    } else {
-      setLevels([]);
-      setSelectedLevel('');
-    }
-  }, [selectedTrade]);
-
-  useEffect(() => {
-    if (selectedTrade && selectedLevel) {
-      loadSheet();
-    }
-  }, [selectedTrade, selectedLevel]);
-
-  const fetchTrades = async () => {
+  const fetchColumns = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/trades-levels/trades');
-      if (response.data.success) {
-        setTrades(response.data.trades);
+      const response = await fetch(`${API_BASE}/global-sheets/columns/${userRole}`);
+      const data = await response.json();
+      if (data.success) {
+        setColumns(data.columns || []);
       }
     } catch (error) {
-      console.error('Error fetching trades:', error);
+      console.error('Error fetching columns:', error);
     }
   };
 
-  const fetchLevels = async (tradeCode: string) => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/trades-levels/trades/${tradeCode}/levels`);
-      if (response.data.success) {
-        setLevels(response.data.levels);
-      }
-    } catch (error) {
-      console.error('Error fetching levels:', error);
-      setLevels([]);
-    }
-  };
-
-  const loadSheet = async () => {
-    if (!selectedTrade || !selectedLevel) return;
-    
-    const levelNumber = parseInt(selectedLevel);
-    const levelSuffix = selectedLevel.replace(/\d+/, '') || '';
-    
+  const fetchStudents = async () => {
     setLoading(true);
     try {
-      const result = await apiService.getEntities('students', {
-        tradeCode: selectedTrade,
-        levelNumber: levelNumber,
-        levelSuffix: levelSuffix
-      });
-      
-      if (result.success) {
-        setStudents(result.entities || []);
-        setColumns(result.customColumns || []);
+      const response = await fetch(`${API_BASE}/global-sheets/sheets/${userRole}`);
+      const data = await response.json();
+      if (data.success) {
+        setStudents(data.sheets || []);
       }
     } catch (error) {
-      console.error('Error loading sheet:', error);
+      console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const handleStudentAdded = (event: any) => {
-      const newStudent = event.detail;
-      const levelNumber = parseInt(selectedLevel);
-      if (selectedTrade && selectedLevel && 
-          newStudent.trade_code === selectedTrade && 
-          newStudent.level_number === levelNumber) {
-        loadSheet();
-      }
-    };
-    
-    window.addEventListener('studentAdded', handleStudentAdded);
-    return () => window.removeEventListener('studentAdded', handleStudentAdded);
-  }, [selectedTrade, selectedLevel]);
-
-  const calculateFormula = (formula: string, studentData: any, allColumns: any[]) => {
+  const handleUpdateStudent = async () => {
     try {
-      let result = formula;
-      allColumns.forEach(col => {
-        const value = studentData.custom_values?.[col.id] || 0;
-        result = result.replace(new RegExp(`\\{${col.column_name}\\}`, 'g'), value);
+      const response = await fetch(`${API_BASE}/global-sheets/sheets/${selectedStudent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          column_values: editData,
+          user_role: userRole
+        })
       });
-      return eval(result);
-    } catch {
-      return 'Error';
+      const result = await response.json();
+      if (result.success) {
+        fetchStudents();
+        setShowEditDialog(false);
+        alert('Student data updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error updating student:', error);
     }
-  };
-
-  const calculateColumnStats = (columnId: number) => {
-    const values = students.map(s => parseFloat(s.custom_values?.[columnId]) || 0).filter(v => !isNaN(v));
-    if (!values.length) return { sum: 0, avg: 0, min: 0, max: 0, count: 0 };
-    return {
-      sum: values.reduce((a, b) => a + b, 0),
-      avg: values.reduce((a, b) => a + b, 0) / values.length,
-      min: Math.min(...values),
-      max: Math.max(...values),
-      count: values.length
-    };
   };
 
   const handleAddColumn = async () => {
-    if (!columnForm.column_name) {
-      alert('Please fill in column name');
-      return;
-    }
-    
-    setLoading(true);
     try {
-      const result = await apiService.createCustomColumn({
-        entity_type: 'students',
-        column_name: columnForm.column_name,
-        column_label: columnForm.column_name,
-        column_type: columnForm.column_type,
-        data_type: columnForm.column_type === 'number' ? 'decimal' : 'string',
-        is_required: columnForm.is_required,
-        default_value: columnForm.default_value,
-        display_order: columnForm.display_order
+      const response = await fetch(`${API_BASE}/global-sheets/columns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newColumn,
+          created_by_role: userRole,
+          scope: 'global'
+        })
       });
-      
+      const result = await response.json();
       if (result.success) {
-        setShowAddColumn(false);
-        setColumnForm({ column_name: '', column_type: 'text', is_required: false, default_value: '', display_order: 0, formula: '', calculation_type: 'none' });
-        loadSheet();
-      } else {
-        alert(result.message || 'Failed to add column');
+        fetchColumns();
+        setShowAddColumnDialog(false);
+        setNewColumn({
+          column_name: '',
+          column_label: '',
+          column_type: 'text',
+          select_options: [],
+          visible_to_roles: [userRole],
+          editable_by_roles: [userRole]
+        });
+        alert('Column added successfully!');
       }
-    } catch (error: any) {
-      alert(error.message || 'Failed to add column');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error adding column:', error);
     }
   };
 
-  const handleUpdateCell = async () => {
-    if (!editingCell) return;
-    
-    setLoading(true);
+  const handleRecalculate = async (studentId: number) => {
     try {
-      const customFields = { [editingCell.columnId]: cellValue };
-      const result = await apiService.updateEntityCustomFields(
-        'students',
-        editingCell.studentId,
-        customFields
-      );
-      
+      const response = await fetch(`${API_BASE}/global-sheets/recalculate/${studentId}`, {
+        method: 'POST'
+      });
+      const result = await response.json();
       if (result.success) {
-        setEditingCell(null);
-        setCellValue('');
-        loadSheet();
+        fetchStudents();
+        alert('Calculations updated successfully!');
       }
-    } catch (error: any) {
-      alert(error.message || 'Failed to update value');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error recalculating:', error);
     }
   };
 
-  const handleDeleteColumn = async (columnId: number) => {
-    if (!confirm('Delete this column? All data will be lost.')) return;
-    
-    try {
-      await apiService.request(`/management/columns/${columnId}`, { method: 'DELETE' });
-      loadSheet();
-    } catch (error: any) {
-      alert(error.message || 'Failed to delete column');
+  const openEditDialog = (student: any) => {
+    setSelectedStudent(student);
+    const customValues = {};
+    if (student.custom_values) {
+      student.custom_values.split('|').forEach((item: string) => {
+        const [columnId, textValue, numberValue] = item.split(':');
+        customValues[columnId] = textValue || numberValue || '';
+      });
+    }
+    setEditData(customValues);
+    setShowEditDialog(true);
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'accountant': return DollarSign;
+      case 'teacher': return BookOpen;
+      case 'dos': return Award;
+      case 'dod': return Shield;
+      case 'headmaster': return Star;
+      default: return Users;
     }
   };
 
-  const exportToCSV = () => {
-    if (!students.length) return;
-    
-    const headers = ['Name', 'Student ID', ...columns.map(c => c.column_name)];
-    const rows = students.map(s => [
-      `${s.first_name} ${s.last_name}`,
-      s.username,
-      ...columns.map(c => s.custom_values?.[c.id] || '')
-    ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedTrade}_Level${selectedLevel}_Sheet.csv`;
-    a.click();
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'accountant': return 'from-green-500 to-emerald-500';
+      case 'teacher': return 'from-blue-500 to-indigo-500';
+      case 'dos': return 'from-yellow-500 to-orange-500';
+      case 'dod': return 'from-red-500 to-pink-500';
+      case 'headmaster': return 'from-purple-500 to-violet-500';
+      default: return 'from-gray-500 to-slate-500';
+    }
   };
+
+  const getRoleColumns = () => {
+    const roleColumnTemplates = {
+      accountant: [
+        { name: 'paid_amount', label: 'Paid Amount', type: 'number' },
+        { name: 'unpaid_amount', label: 'Unpaid Amount', type: 'number' },
+        { name: 'payment_status', label: 'Payment Status', type: 'select', options: ['Paid', 'Partial', 'Unpaid', 'Overdue'] },
+        { name: 'payment_date', label: 'Last Payment Date', type: 'date' },
+        { name: 'fee_category', label: 'Fee Category', type: 'select', options: ['Tuition', 'Exam', 'Uniform', 'Transport', 'Hostel'] }
+      ],
+      teacher: [
+        { name: 'quiz_marks', label: 'Quiz Marks', type: 'number' },
+        { name: 'midterm_marks', label: 'Midterm Marks', type: 'number' },
+        { name: 'final_marks', label: 'Final Marks', type: 'number' },
+        { name: 'subject_name', label: 'Subject Name', type: 'text' },
+        { name: 'course_code', label: 'Course Code', type: 'text' }
+      ],
+      dos: [
+        { name: 'academic_performance', label: 'Academic Performance', type: 'number' },
+        { name: 'class_rank', label: 'Class Rank', type: 'number' },
+        { name: 'study_plan', label: 'Study Plan', type: 'textarea' },
+        { name: 'academic_status', label: 'Academic Status', type: 'select', options: ['Excellent', 'Good', 'Average', 'Poor'] }
+      ],
+      dod: [
+        { name: 'behavior_score', label: 'Behavior Score', type: 'number' },
+        { name: 'discipline_incidents', label: 'Discipline Incidents', type: 'number' },
+        { name: 'conduct_grade', label: 'Conduct Grade', type: 'select', options: ['A', 'B', 'C', 'D', 'F'] }
+      ],
+      headmaster: [
+        { name: 'recommendation', label: 'Principal Recommendation', type: 'textarea' },
+        { name: 'awards', label: 'Awards & Recognition', type: 'text' },
+        { name: 'leadership_potential', label: 'Leadership Potential', type: 'select', options: ['High', 'Medium', 'Low'] }
+      ]
+    };
+    return roleColumnTemplates[userRole] || [];
+  };
+
+  const filteredStudents = students.filter(student =>
+    student.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.student_code?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const RoleIcon = getRoleIcon(userRole);
 
   return (
-    <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Table className="w-6 h-6" />
-            Global Student Sheets
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Select Trade</Label>
-              <Select value={selectedTrade} onValueChange={setSelectedTrade}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select trade..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {trades.map(trade => (
-                    <SelectItem key={trade.trade_code} value={trade.trade_code}>
-                      {trade.trade_code} - {trade.trade_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-2xl bg-gradient-to-br ${getRoleColor(userRole)}`}>
+              <RoleIcon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <Label>Select Level</Label>
-              <Select value={selectedLevel} onValueChange={setSelectedLevel} disabled={!selectedTrade}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select level..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {levels.map(level => (
-                    <SelectItem key={level.level_display} value={level.level_display}>
-                      Level {level.level_display}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Student Management - {userRole.toUpperCase()}
+              </h1>
+              <p className="text-gray-600 mt-2">Manage student data with role-based access and auto-calculations</p>
             </div>
           </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                fetchColumns();
+                fetchStudents();
+              }}
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-600 to-purple-600"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => setShowAddColumnDialog(true)}
+              className="bg-gradient-to-r from-purple-600 to-pink-600"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Column
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-none shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Students</p>
+                  <p className="text-3xl font-bold text-gray-900">{filteredStudents.length}</p>
+                </div>
+                <Users className="w-12 h-12 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Available Columns</p>
+                  <p className="text-3xl font-bold text-green-600">{columns.length}</p>
+                </div>
+                <BarChart3 className="w-12 h-12 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Role Access</p>
+                  <p className="text-3xl font-bold text-purple-600">{userRole.toUpperCase()}</p>
+                </div>
+                <RoleIcon className="w-12 h-12 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Auto-Calculations</p>
+                  <p className="text-3xl font-bold text-orange-600">ACTIVE</p>
+                </div>
+                <Calculator className="w-12 h-12 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+
+      <Card className="border-none shadow-xl mb-6">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <CardTitle className="flex items-center gap-2 font-black">
+              <Users className="w-6 h-6 text-blue-600" />
+              Student Data Management
+            </CardTitle>
+            <div className="flex gap-3">
+              <Input
+                placeholder="Search students..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading students...</p>
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600">No students found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredStudents.map((student) => (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.01 }}
+                  className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg overflow-hidden border-2 border-gray-100"
+                >
+                  <div className={`h-2 bg-gradient-to-r ${getRoleColor(userRole)}`} />
+                  
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getRoleColor(userRole)} flex items-center justify-center`}>
+                          <span className="text-white font-bold text-lg">
+                            {student.first_name?.[0]}{student.last_name?.[0]}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-gray-800">
+                            {student.first_name} {student.last_name}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            ID: {student.student_code} • {student.trade_name} Level {student.level_number}
+                          </p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="outline">{student.class_name}</Badge>
+                            <Badge variant={student.status === 'active' ? 'default' : 'destructive'}>
+                              {student.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => openEditDialog(student)}
+                          size="sm"
+                          className="bg-gradient-to-r from-blue-600 to-blue-700"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleRecalculate(student.id)}
+                          size="sm"
+                          className="bg-gradient-to-r from-green-600 to-green-700"
+                        >
+                          <Calculator className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">TOTAL MARKS</p>
+                        <p className="text-lg font-black text-blue-600">{student.total_marks || 0}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">AVERAGE</p>
+                        <p className="text-lg font-black text-green-600">{student.average_marks || 0}%</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">ATTENDANCE</p>
+                        <p className="text-lg font-black text-purple-600">{student.attendance_percentage || 100}%</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">CONDUCT</p>
+                        <p className="text-lg font-black text-orange-600">{student.conduct_score || 100}</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {selectedTrade && selectedLevel && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>{selectedTrade} - Level {selectedLevel} ({students.length} students)</span>
-              <div className="flex gap-2">
-                <Button onClick={() => setShowAddColumn(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Column
-                </Button>
-                <Button onClick={exportToCSV} size="sm" variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border p-2 text-left sticky left-0 bg-gray-100 z-10">Name</th>
-                      <th className="border p-2 text-left">Student ID</th>
-                      {columns.map(col => (
-                        <th key={col.id} className="border p-2 text-left min-w-[150px]">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold">{col.column_name}</span>
-                                {col.calculation_type !== 'none' && (
-                                  <Calculator className="w-4 h-4 text-blue-600" />
-                                )}
-                              </div>
-                              <Button size="sm" variant="ghost" onClick={() => handleDeleteColumn(col.id)}>
-                                <Trash2 className="w-3 h-3 text-red-600" />
-                              </Button>
-                            </div>
-                            {col.column_type === 'number' && (
-                              <div className="text-xs text-gray-600 space-y-1">
-                                <div className="flex justify-between">
-                                  <span>Sum:</span>
-                                  <span className="font-bold">{calculateColumnStats(col.id).sum.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Avg:</span>
-                                  <span className="font-bold">{calculateColumnStats(col.id).avg.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map((student, idx) => (
-                      <motion.tr
-                        key={student.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: idx * 0.02 }}
-                        className="hover:bg-blue-50"
-                      >
-                        <td className="border p-2 font-semibold sticky left-0 bg-white">
-                          {student.first_name} {student.last_name}
-                        </td>
-                        <td className="border p-2 text-sm">{student.username}</td>
-                        {columns.map(col => (
-                          <td key={col.id} className="border p-2">
-                            {col.formula ? (
-                              <div className="bg-blue-50 p-1 rounded text-sm font-bold text-blue-700">
-                                {calculateFormula(col.formula, student, columns)}
-                              </div>
-                            ) : editingCell?.studentId === student.id && editingCell?.columnId === col.id ? (
-                              <div className="flex gap-1">
-                                <Input
-                                  value={cellValue}
-                                  onChange={(e) => setCellValue(e.target.value)}
-                                  className="h-8"
-                                  type={col.column_type === 'number' ? 'number' : 'text'}
-                                  autoFocus
-                                />
-                                <Button size="sm" onClick={handleUpdateCell}>
-                                  <Save className="w-3 h-3" />
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => setEditingCell(null)}>
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div
-                                className="cursor-pointer hover:bg-gray-100 p-1 rounded"
-                                onClick={() => {
-                                  setEditingCell({ studentId: student.id, columnId: col.id });
-                                  setCellValue(student.custom_values?.[col.id] || '');
-                                }}
-                              >
-                                {student.custom_values?.[col.id] || '-'}
-                              </div>
-                            )}
-                          </td>
-                        ))}
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      {/* Edit Student Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Edit Student Data - {userRole.toUpperCase()}
+            </DialogTitle>
+            {selectedStudent && (
+              <p className="text-gray-600">
+                {selectedStudent.first_name} {selectedStudent.last_name} ({selectedStudent.student_code})
+              </p>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </DialogHeader>
+          <div className="space-y-4">
+            {columns.filter(col => col.column_type !== 'calculated').map((column, index) => (
+              <div key={index}>
+                <Label>{column.column_label}</Label>
+                {column.column_type === 'select' ? (
+                  <Select
+                    value={editData[column.id] || ''}
+                    onValueChange={(value) => setEditData({ ...editData, [column.id]: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select ${column.column_label}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(column.select_options ? JSON.parse(column.select_options) : []).map((option: string) => (
+                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : column.column_type === 'textarea' ? (
+                  <Textarea
+                    value={editData[column.id] || ''}
+                    onChange={(e) => setEditData({ ...editData, [column.id]: e.target.value })}
+                    placeholder={`Enter ${column.column_label}`}
+                  />
+                ) : (
+                  <Input
+                    type={column.column_type === 'number' ? 'number' : column.column_type === 'date' ? 'date' : 'text'}
+                    value={editData[column.id] || ''}
+                    onChange={(e) => setEditData({ ...editData, [column.id]: e.target.value })}
+                    placeholder={`Enter ${column.column_label}`}
+                  />
+                )}
+              </div>
+            ))}
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleUpdateStudent}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+              <Button
+                onClick={() => setShowEditDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      <Dialog open={showAddColumn} onOpenChange={setShowAddColumn}>
+      {/* Add Column Dialog */}
+      <Dialog open={showAddColumnDialog} onOpenChange={setShowAddColumnDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Column</DialogTitle>
+            <DialogTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Add Custom Column - {userRole.toUpperCase()}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Column Name *</Label>
+              <Label>Column Name</Label>
               <Input
-                value={columnForm.column_name}
-                onChange={(e) => setColumnForm({ ...columnForm, column_name: e.target.value })}
-                placeholder="e.g., Math Marks, Attendance"
+                value={newColumn.column_name}
+                onChange={(e) => setNewColumn({ ...newColumn, column_name: e.target.value })}
+                placeholder="e.g., custom_field"
+              />
+            </div>
+            <div>
+              <Label>Column Label</Label>
+              <Input
+                value={newColumn.column_label}
+                onChange={(e) => setNewColumn({ ...newColumn, column_label: e.target.value })}
+                placeholder="e.g., Custom Field"
               />
             </div>
             <div>
               <Label>Column Type</Label>
-              <Select value={columnForm.column_type} onValueChange={(v) => setColumnForm({ ...columnForm, column_type: v })}>
+              <Select
+                value={newColumn.column_type}
+                onValueChange={(value) => setNewColumn({ ...newColumn, column_type: value })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -414,48 +521,37 @@ export default function GlobalStudentSheets({ onNavigate }: { onNavigate: (page:
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="select">Select</SelectItem>
+                  <SelectItem value="textarea">Textarea</SelectItem>
+                  <SelectItem value="boolean">Boolean</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Calculation Type</Label>
-              <Select value={columnForm.calculation_type} onValueChange={(v) => setColumnForm({ ...columnForm, calculation_type: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="sum">Sum</SelectItem>
-                  <SelectItem value="average">Average</SelectItem>
-                  <SelectItem value="formula">Custom Formula</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {columnForm.calculation_type === 'formula' && (
+            {newColumn.column_type === 'select' && (
               <div>
-                <Label>Formula (use {'{ColumnName}'} for references)</Label>
+                <Label>Options (comma-separated)</Label>
                 <Input
-                  value={columnForm.formula}
-                  onChange={(e) => setColumnForm({ ...columnForm, formula: e.target.value })}
-                  placeholder="e.g., {Math} + {Science} / 2"
+                  placeholder="Option1, Option2, Option3"
+                  onChange={(e) => setNewColumn({ 
+                    ...newColumn, 
+                    select_options: e.target.value.split(',').map(s => s.trim()) 
+                  })}
                 />
-                <p className="text-xs text-gray-500 mt-1">Example: {'{Math}'} * 0.4 + {'{Science}'} * 0.6</p>
               </div>
             )}
-            <div>
-              <Label>Default Value</Label>
-              <Input
-                value={columnForm.default_value}
-                onChange={(e) => setColumnForm({ ...columnForm, default_value: e.target.value })}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleAddColumn} disabled={loading} className="flex-1">
-                <Save className="w-4 h-4 mr-2" />
-                {loading ? 'Adding...' : 'Add Column'}
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleAddColumn}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Column
               </Button>
-              <Button onClick={() => setShowAddColumn(false)} variant="outline">
+              <Button
+                onClick={() => setShowAddColumnDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
                 Cancel
               </Button>
             </div>
@@ -464,4 +560,6 @@ export default function GlobalStudentSheets({ onNavigate }: { onNavigate: (page:
       </Dialog>
     </div>
   );
-}
+};
+
+export default GlobalStudentSheets;

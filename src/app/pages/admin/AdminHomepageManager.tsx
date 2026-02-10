@@ -4,7 +4,8 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Plus, Edit, Trash2, Save, X, Eye, EyeOff } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from '@/app/config/apiBase';
+const API_BASE = `${API_BASE_URL}/`;
 
 const AdminHomepageManager = () => {
   const [activeTab, setActiveTab] = useState('news');

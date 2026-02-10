@@ -1,0 +1,292 @@
+const express = require('express');
+const { pool } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
+const { sendUniversalMessage } = require('../services/smsService');
+
+const router = express.Router();
+
+// Get student history (discipline, leaves, messages)
+router.get('/student/:id/history', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [records] = await pool.execute(
+      'SELECT * FROM discipline_records WHERE student_id = ? ORDER BY created_at DESC',
+      [id]
+    );
+    
+    const [leaves] = await pool.execute(
+      'SELECT * FROM student_leaves WHERE student_id = ? ORDER BY created_at DESC',
+      [id]
+    );
+    
+    const [messages] = await pool.execute(
+      'SELECT * FROM parent_messages WHERE student_id = ? ORDER BY created_at DESC',
+      [id]
+    );
+    
+    res.json({ success: true, records, leaves, messages });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Remove conduct
+router.post('/conduct/remove', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, conduct_type, severity, description, action_taken, conduct_points_deducted, new_conduct_score, removed_by_name } = req.body;
+    
+    const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const [result] = await pool.execute(`
+      INSERT INTO discipline_records 
+      (student_id, student_code, student_name, trade, class_level, conduct_type, severity, description, action_taken, conduct_points_deducted, new_conduct_score, removed_by, removed_by_name, parent_notified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false)
+    `, [
+      student_id, student[0].student_id, `${student[0].first_name} ${student[0].last_name}`,
+      student[0].current_trade, student[0].current_level, conduct_type, severity,
+      description, action_taken, conduct_points_deducted, new_conduct_score,
+      req.user.userId, removed_by_name
+    ]);
+    
+    await pool.execute('UPDATE global_students SET conduct_score = ? WHERE id = ?', [new_conduct_score, student_id]);
+    
+    const [parents] = await pool.execute(
+      'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+      [student_id]
+    );
+    
+    if (parents.length > 0 && parents[0].phone) {
+      const message = `ISHURI: Umwana wawe ${student[0].first_name} ${student[0].last_name} yakiriye igihano cya ${conduct_type} (${severity}). Impamvu: ${description}. Amanota yakuweho: ${conduct_points_deducted}. Amanota ashya: ${new_conduct_score}/40.`;
+      await sendUniversalMessage(parents[0].phone, message, req.user.userId, { type: 'conduct_removal' });
+      await pool.execute('UPDATE discipline_records SET parent_notified = true, sms_sent = true WHERE id = ?', [result.insertId]);
+    }
+    
+    res.json({ success: true, message: 'Conduct removed successfully', recordId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Grant leave
+router.post('/leave/add', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, leave_type, reason, start_time, end_time, approved_by_name } = req.body;
+    
+    const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const [result] = await pool.execute(`
+      INSERT INTO student_leaves 
+      (student_id, student_code, student_name, trade, class_level, leave_type, reason, start_time, end_time, approved_by, approved_by_name, status, parent_notified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false)
+    `, [
+      student_id, student[0].student_id, `${student[0].first_name} ${student[0].last_name}`,
+      student[0].current_trade, student[0].current_level, leave_type, reason,
+      start_time, end_time || start_time, req.user.userId, approved_by_name
+    ]);
+    
+    const [parents] = await pool.execute(
+      'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+      [student_id]
+    );
+    
+    if (parents.length > 0 && parents[0].phone) {
+      const message = `ISHURI: Umwana wawe ${student[0].first_name} ${student[0].last_name} yahawe uruhushya rwo ${leave_type}. Impamvu: ${reason}. Kuva ${start_time} kugeza ${end_time || start_time}.`;
+      await sendUniversalMessage(parents[0].phone, message, req.user.userId, { type: 'leave_approval' });
+      await pool.execute('UPDATE student_leaves SET parent_notified = true, sms_sent = true WHERE id = ?', [result.insertId]);
+    }
+    
+    res.json({ success: true, message: 'Leave granted successfully', leaveId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Message parents
+router.post('/message-parents', authenticateToken, async (req, res) => {
+  try {
+    const { subject, message, send_via, student_ids } = req.body;
+    
+    let successCount = 0;
+    
+    for (const student_id of student_ids) {
+      const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
+      if (student.length === 0) continue;
+      
+      const [parents] = await pool.execute(
+        'SELECT p.id, p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+        [student_id]
+      );
+      
+      if (parents.length > 0 && parents[0].phone) {
+        const fullMessage = `${subject}\n\n${message}\n\nUmwana: ${student[0].first_name} ${student[0].last_name}`;
+        await sendUniversalMessage(parents[0].phone, fullMessage, req.user.userId, { type: 'manual_message', send_via });
+        
+        await pool.execute(`
+          INSERT INTO parent_messages (student_id, parent_id, subject, message, send_via, sent_by, sent_by_name, delivery_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'sent')
+        `, [student_id, parents[0].id, subject, message, send_via, req.user.userId, req.user.name]);
+        
+        successCount++;
+      }
+    }
+    
+    res.json({ success: true, message: `Messages sent to ${successCount} parents`, count: successCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Schedule meeting
+router.post('/schedule-meeting', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, meeting_type, date, time, location, notes } = req.body;
+    
+    const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
+    if (student.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const [result] = await pool.execute(`
+      INSERT INTO scheduled_meetings 
+      (student_id, meeting_type, meeting_date, meeting_time, location, notes, scheduled_by, status, parent_notified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', false)
+    `, [student_id, meeting_type, date, time, location, notes, req.user.userId]);
+    
+    const [parents] = await pool.execute(
+      'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+      [student_id]
+    );
+    
+    if (parents.length > 0 && parents[0].phone) {
+      const message = `ISHURI: Mwahamagariwe mu nama yerekeye umwana wawe ${student[0].first_name} ${student[0].last_name}. Ubwoko: ${meeting_type}. Itariki: ${date} saa ${time}. Ahantu: ${location || 'Ishuri'}.`;
+      await sendUniversalMessage(parents[0].phone, message, req.user.userId, { type: 'meeting_schedule' });
+      await pool.execute('UPDATE scheduled_meetings SET parent_notified = true WHERE id = ?', [result.insertId]);
+    }
+    
+    res.json({ success: true, message: 'Meeting scheduled successfully', meetingId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Bulk action
+router.post('/bulk-action', authenticateToken, async (req, res) => {
+  try {
+    const { student_ids, action_type, data } = req.body;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO bulk_actions_log (action_type, student_ids, executed_by, execution_data, status)
+      VALUES (?, ?, ?, ?, 'completed')
+    `, [action_type, JSON.stringify(student_ids), req.user.userId, JSON.stringify(data)]);
+    
+    let processedCount = 0;
+    
+    switch (action_type) {
+      case 'message':
+        for (const student_id of student_ids) {
+          const [parents] = await pool.execute(
+            'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+            [student_id]
+          );
+          if (parents.length > 0 && parents[0].phone) {
+            await sendUniversalMessage(parents[0].phone, data.message, req.user.userId, { type: 'bulk_message' });
+            processedCount++;
+          }
+        }
+        break;
+        
+      case 'conduct_warning':
+        for (const student_id of student_ids) {
+          await pool.execute(`
+            INSERT INTO discipline_records (student_id, conduct_type, severity, description, removed_by)
+            VALUES (?, 'warning', 'low', ?, ?)
+          `, [student_id, data.warning_message || 'Bulk warning issued', req.user.userId]);
+          processedCount++;
+        }
+        break;
+        
+      case 'schedule_meeting':
+        for (const student_id of student_ids) {
+          await pool.execute(`
+            INSERT INTO scheduled_meetings (student_id, meeting_type, meeting_date, meeting_time, scheduled_by, status)
+            VALUES (?, ?, ?, ?, ?, 'scheduled')
+          `, [student_id, data.meeting_type, data.date, data.time, req.user.userId]);
+          processedCount++;
+        }
+        break;
+        
+      case 'update_status':
+        await pool.execute(`
+          UPDATE global_students SET academic_status = ? WHERE id IN (${student_ids.join(',')})
+        `, [data.new_status]);
+        processedCount = student_ids.length;
+        break;
+    }
+    
+    res.json({ success: true, message: `Bulk action completed for ${processedCount} students`, count: processedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get statistics
+router.get('/statistics', authenticateToken, async (req, res) => {
+  try {
+    const [totalStudents] = await pool.execute('SELECT COUNT(*) as count FROM global_students WHERE academic_status = "Active"');
+    const [poorConduct] = await pool.execute('SELECT COUNT(*) as count FROM global_students WHERE conduct_score < 24');
+    const [poorAttendance] = await pool.execute('SELECT COUNT(*) as count FROM global_students WHERE overall_attendance_percentage < 70');
+    const [totalIncidents] = await pool.execute('SELECT COUNT(*) as count FROM discipline_records WHERE MONTH(created_at) = MONTH(CURRENT_DATE())');
+    const [activeLeaves] = await pool.execute('SELECT COUNT(*) as count FROM student_leaves WHERE status = "active"');
+    const [scheduledMeetings] = await pool.execute('SELECT COUNT(*) as count FROM scheduled_meetings WHERE status = "scheduled" AND meeting_date >= CURDATE()');
+    
+    res.json({
+      success: true,
+      stats: {
+        totalStudents: totalStudents[0].count,
+        poorConduct: poorConduct[0].count,
+        poorAttendance: poorAttendance[0].count,
+        totalIncidents: totalIncidents[0].count,
+        activeLeaves: activeLeaves[0].count,
+        scheduledMeetings: scheduledMeetings[0].count
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get recent activities
+router.get('/recent-activities', authenticateToken, async (req, res) => {
+  try {
+    const [activities] = await pool.execute(`
+      SELECT 'conduct' as type, student_name, conduct_type as action, created_at 
+      FROM discipline_records 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      UNION ALL
+      SELECT 'leave' as type, student_name, leave_type as action, created_at 
+      FROM student_leaves 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      UNION ALL
+      SELECT 'meeting' as type, 
+        (SELECT CONCAT(first_name, ' ', last_name) FROM global_students WHERE id = scheduled_meetings.student_id) as student_name,
+        meeting_type as action, created_at 
+      FROM scheduled_meetings 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      ORDER BY created_at DESC
+      LIMIT 20
+    `);
+    
+    res.json({ success: true, activities });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+module.exports = router;

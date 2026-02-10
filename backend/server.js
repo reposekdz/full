@@ -69,6 +69,7 @@ const routes = {
   teachers: loadRoute('./routes/teachers', 'Teachers'),
   parents: loadRoute('./routes/parents', 'Parents'),
   staff: loadRoute('./routes/staff', 'Staff'),
+  staffAdvanced: loadRoute('./routes/staff-advanced', 'Staff Advanced'),
   roles: loadRoute('./routes/roles', 'Roles'),
   serialCodes: loadRoute('./routes/serial-codes', 'Serial Codes'),
   
@@ -327,6 +328,7 @@ const routes = {
   advisorUltra: loadRoute('./routes/advisor-ultra', 'Advisor Ultra'),
   dosUltra: loadRoute('./routes/dos-ultra', 'DOS Ultra'),
   dodUltra: loadRoute('./routes/dod-ultra', 'DOD Ultra'),
+  dodUltraAdvanced: loadRoute('./routes/dod-ultra-advanced', 'DOD Ultra Advanced'),
   
   // ULTRA-ADVANCED ROUTES (Feature-Complete, Modern, Production-Ready)
   dosUltraAdvanced: loadRoute('./routes/dos-ultra-advanced', 'DOS Ultra Advanced'),
@@ -358,6 +360,7 @@ if (routes.teachers) { app.use('/api/teachers', routes.teachers); mountedRoutes+
 if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
 if (routes.parents) { app.use('/api/parents', routes.parents); mountedRoutes++; }
 if (routes.staff) { app.use('/api/staff', routes.staff); mountedRoutes++; }
+if (routes.staffAdvanced) { app.use('/api/staff-advanced', routes.staffAdvanced); mountedRoutes++; }
 if (routes.roles) { app.use('/api/roles', routes.roles); mountedRoutes++; }
 
 // Academic Management
@@ -578,7 +581,17 @@ if (routes.unifiedIntegration) { app.use('/api/unified-integration', routes.unif
 if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodComprehensive); mountedRoutes++; }
 if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
 if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
-app.use('/api/dod', require('./routes/dod')); mountedRoutes++;
+
+// Prefer the global-student-sheet powered DOD
+if (routes.dodUltraAdvanced) {
+  app.use('/api/dod', routes.dodUltraAdvanced); mountedRoutes++;
+} else if (routes.dodUltra) {
+  app.use('/api/dod', routes.dodUltra); mountedRoutes++;
+} else {
+  app.use('/api/dod', require('./routes/dod')); mountedRoutes++;
+}
+// Keep legacy endpoints for compatibility
+app.use('/api/dod-legacy', require('./routes/dod')); mountedRoutes++;
 if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManagement); mountedRoutes++; }
 
 // DOS Comprehensive Management
@@ -642,6 +655,19 @@ if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.t
   // COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
   app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;
 
+// Headmaster Applications Management
+app.use('/api/headmaster-applications', require('./routes/headmaster-applications')); mountedRoutes++;
+
+// DOS Applications Management
+app.use('/api/dos-applications', require('./routes/dos-applications')); mountedRoutes++;
+
+// Location System
+app.use('/api/locations', require('./routes/locations')); mountedRoutes++;
+
+// Admin Content Management
+if (routes.adminContent) { app.use('/api/admin-content', routes.adminContent); mountedRoutes++; }
+else { app.use('/api/admin-content', require('./routes/admin-content')); mountedRoutes++; }
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -695,7 +721,8 @@ const startServer = (port) => {
     console.log('   /api/news                    - News Articles');
     console.log('   /api/search                  - Global Search');
     console.log('   /api/comprehensive-staff     - Staff Management');
-    console.log('   /api/system-updates          - System Management');
+    console.log('   /api/student-applications    - Student Applications');
+    console.log('   /api/locations               - Rwanda Location Data');
     console.log('   /api/advisor                 - Advisor Dashboard');
     console.log('   /api/discipline-management   - DOD/Matron/Patron Management');
     console.log('\n✅ All systems operational - Unified Integration Active');

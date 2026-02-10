@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '@/app/config/apiBase';
+import { apiFetch } from '@/app/utils/apiClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { Upload, Image as ImageIcon, Trash2, Edit, Save, X, Loader2, CheckCircle, AlertCircle, Download, Eye, Grid, List, Search, Filter, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -43,11 +45,7 @@ const AdminGalleryUpload: React.FC = () => {
   const fetchImages = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/gallery/images', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiFetch('/gallery/images');
       if (data.success) setImages(data.images);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -92,14 +90,7 @@ const AdminGalleryUpload: React.FC = () => {
       data.append('sort_order', formData.sort_order.toString());
 
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/gallery/upload', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: data
-        });
-
-        const result = await response.json();
+        const result = await apiFetch('/gallery/upload', { method: 'POST', body: data }, true);
         if (result.success) successCount++;
       } catch (error) {
         console.error('Upload error:', error);
@@ -123,12 +114,7 @@ const AdminGalleryUpload: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/gallery/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
+      const data = await apiFetch(`/gallery/${id}`, { method: 'DELETE' });
       if (data.success) {
         setMessage({ type: 'success', text: 'Image deleted!' });
         fetchImages();
@@ -271,7 +257,7 @@ const AdminGalleryUpload: React.FC = () => {
                     >
                       <div className="aspect-square rounded-xl overflow-hidden border-2 border-gray-200 hover:border-yellow-400 transition-all">
                         <img
-                          src={`http://localhost:5000${image.image_url}`}
+                          src={`${API_BASE_URL}${image.image_url}`}
                           alt={image.title}
                           className="w-full h-full object-cover"
                         />

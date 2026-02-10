@@ -1,10 +1,11 @@
 // Global Trades and Levels Configuration
 // Used across all staff management systems
+// ONLY 3 TRADES EXIST: BDC, SOD, AUT
 
 export const GLOBAL_TRADES = [
-  { id: 1, code: 'AUT', name: 'Automotive Technology', name_rw: 'Ikoranabuhanga rya Modoka' },
-  { id: 2, code: 'BDC', name: 'Building Construction', name_rw: 'Kubaka' },
-  { id: 3, code: 'SOD', name: 'Software Development', name_rw: 'Gutegura Porogaramu' }
+  { id: 1, code: 'BDC', name: 'Building Construction', name_rw: 'Kubaka' },
+  { id: 2, code: 'SOD', name: 'Software Development', name_rw: 'Gutegura Porogaramu' },
+  { id: 3, code: 'AUT', name: 'Automotive Technology', name_rw: 'Ikoranabuhanga rya Modoka' }
 ];
 
 export const GLOBAL_LEVELS = [
