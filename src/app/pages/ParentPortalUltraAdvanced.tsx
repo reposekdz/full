@@ -1,12 +1,13 @@
 import { API_BASE_URL } from '@/app/config/apiBase';
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Users, MessageSquare, Bell, FileText, DollarSign, Calendar, 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Users, MessageSquare, Bell, FileText, DollarSign, Calendar,
   BookOpen, Award, AlertCircle, CheckCircle, Clock, Search,
   ChevronRight, ChevronDown, User, Phone, Mail, MapPin,
   TrendingUp, TrendingDown, MinusCircle, PlusCircle, Send,
-  Settings, LogOut, Eye, EyeOff, Download, RefreshCw
+  Settings, LogOut, Eye, EyeOff, Download, RefreshCw, Shield,
+  PhoneIncoming, PhoneOutgoing, FileCheck, UserPlus, Lock, Unlock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -27,6 +28,9 @@ interface ParentChild {
     id: number;
     connection_id: string;
     relationship: string;
+    approved_by: string;
+    approved_by_role: string;
+    approved_at: string;
     permissions: {
       view_marks: boolean;
       view_attendance: boolean;
@@ -73,6 +77,7 @@ interface ParentData {
   phone: string;
   email: string;
   children_count: number;
+  verified: boolean;
 }
 
 interface Message {
@@ -102,6 +107,7 @@ const formatDateTime = (date: string) => new Date(date).toLocaleString('rw-RW');
 const ParentPortalUltraAdvanced: React.FC = () => {
   // State
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [parentPhone, setParentPhone] = useState('');
   const [parentData, setParentData] = useState<ParentData | null>(null);
@@ -110,13 +116,18 @@ const ParentPortalUltraAdvanced: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isVerified, setIsVerified] = useState(false);
   
+  // Trades from database
+  const [trades, setTrades] = useState<any[]>([]);
+  const levels = [1, 2, 3];
+
   // UI State
   const [showLogin, setShowLogin] = useState(true);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [expandedChild, setExpandedChild] = useState<number | null>(null);
-  
+
   // Forms
   const [linkingRequest, setLinkingRequest] = useState({
     student_name: '',
@@ -131,12 +142,33 @@ const ParentPortalUltraAdvanced: React.FC = () => {
     category: 'general',
     urgency: 'normal'
   });
-  
+
   // Login
   const [loginPhone, setLoginPhone] = useState('');
+  
+  // Fetch trades from database
+  useEffect(() => {
+    const fetchTrades = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/trades`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.trades) {
+          setTrades(data.trades);
+        }
+      } catch (error) {
+        console.error('Error fetching trades:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    
+    fetchTrades();
+  }, []);
 
   useEffect(() => {
-    // Check for saved session
     const savedPhone = localStorage.getItem('parentPhone');
     if (savedPhone) {
       setParentPhone(savedPhone);
@@ -148,24 +180,33 @@ const ParentPortalUltraAdvanced: React.FC = () => {
   const loadParentData = async (phone: string) => {
     setLoading(true);
     try {
-      // Load parent dashboard
       const dashboardRes = await fetch(`${API_BASE_URL}/parent-linking/parent-dashboard/${phone}`);
       const dashboardData = await dashboardRes.json();
-      
+
       if (dashboardData.success) {
         setParentData(dashboardData.parent);
         setChildren(dashboardData.children);
+        setIsVerified(dashboardData.verified || true);
         if (dashboardData.children.length > 0) {
           setSelectedChild(dashboardData.children[0]);
         }
+      } else {
+        // Parent not verified or no connections yet
+        setIsVerified(false);
+        setParentData({
+          id: 0,
+          name: '',
+          phone: phone,
+          email: '',
+          children_count: 0,
+          verified: false
+        });
       }
-      
-      // Load messages
+
       const messagesRes = await fetch(`${API_BASE_URL}/parent-linking/messages/${phone}`);
       const messagesData = await messagesRes.json();
       if (messagesData.success) setMessages(messagesData.messages);
-      
-      // Load notifications
+
       const notifRes = await fetch(`${API_BASE_URL}/parent-linking/notifications/${phone}`);
       const notifData = await notifRes.json();
       if (notifData.success) {
@@ -194,6 +235,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
     setParentData(null);
     setChildren([]);
     setSelectedChild(null);
+    setIsVerified(false);
   };
 
   const submitLinkingRequest = async () => {
@@ -283,9 +325,9 @@ const ParentPortalUltraAdvanced: React.FC = () => {
             <CardContent className="p-6 space-y-4">
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  placeholder="+250788000000" 
+                <Input
+                  id="phone"
+                  placeholder="+250788000000"
                   value={loginPhone}
                   onChange={(e) => setLoginPhone(e.target.value)}
                   className="mt-1"
@@ -312,6 +354,132 @@ const ParentPortalUltraAdvanced: React.FC = () => {
     );
   }
 
+  // No verified children yet - show welcome/linking request
+  if (!isVerified || children.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-2 border-purple-200 shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-center">
+              <CardTitle className="text-2xl flex items-center justify-center gap-2">
+                <Shield className="w-8 h-8" />
+                Welcome to Parent Portal
+              </CardTitle>
+              <CardDescription className="text-white/90">
+                Complete the verification process to access your child's information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserPlus className="w-10 h-10 text-purple-600" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">No Linked Children</h2>
+                <p className="text-gray-600 mb-6">
+                  You don't have any linked children yet. Submit a linking request to get started.
+                </p>
+                <Button
+                  onClick={() => setShowRequestModal(true)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                  size="lg"
+                >
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Request to Link Child
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                {[
+                  { icon: Phone, title: '1. Request Code', desc: 'Submit linking request' },
+                  { icon: Lock, title: '2. Verify', desc: 'Enter verification code' },
+                  { icon: CheckCircle, title: '3. Get Access', desc: 'Wait for approval' }
+                ].map((step, idx) => (
+                  <Card key={idx} className="text-center p-4">
+                    <step.icon className="w-10 h-10 text-purple-600 mx-auto mb-2" />
+                    <h3 className="font-bold">{step.title}</h3>
+                    <p className="text-sm text-gray-500">{step.desc}</p>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Request Modal */}
+        <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request to Link New Student</DialogTitle>
+              <DialogDescription>Submit a request to connect with a student's account</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Student Full Name *</Label>
+                <Input value={linkingRequest.student_name} onChange={(e) => setLinkingRequest({...linkingRequest, student_name: e.target.value})} placeholder="Enter student's name" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Trade/Program</Label>
+                  <Select value={linkingRequest.student_trade} onValueChange={(v) => setLinkingRequest({...linkingRequest, student_trade: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {trades.length > 0 ? (
+                        trades.map((trade: any) => (
+                          <SelectItem key={trade.trade_id || trade.id} value={trade.trade_name || trade.name}>
+                            {trade.trade_name || trade.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="General Education">General Education</SelectItem>
+                          <SelectItem value="Agriculture">Agriculture</SelectItem>
+                          <SelectItem value="Carpentry">Carpentry</SelectItem>
+                          <SelectItem value="Masonry">Masonry</SelectItem>
+                          <SelectItem value="Electrical">Electrical</SelectItem>
+                          <SelectItem value="Plumbing">Plumbing</SelectItem>
+                          <SelectItem value="Hotel Management">Hotel Management</SelectItem>
+                          <SelectItem value="Food Production">Food Production</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Level</Label>
+                  <Select value={linkingRequest.student_level} onValueChange={(v) => setLinkingRequest({...linkingRequest, student_level: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Level 1</SelectItem>
+                      <SelectItem value="2">Level 2</SelectItem>
+                      <SelectItem value="3">Level 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Your Relationship</Label>
+                <Select value={linkingRequest.relationship} onValueChange={(v) => setLinkingRequest({...linkingRequest, relationship: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="father">Father</SelectItem>
+                    <SelectItem value="mother">Mother</SelectItem>
+                    <SelectItem value="guardian">Guardian</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Additional Message (Optional)</Label>
+                <Textarea value={linkingRequest.message} onChange={(e) => setLinkingRequest({...linkingRequest, message: e.target.value})} placeholder="Any additional information..." />
+              </div>
+              <Button onClick={submitLinkingRequest} className="w-full bg-purple-600">Submit Request</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
@@ -325,6 +493,10 @@ const ParentPortalUltraAdvanced: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Badge className="bg-green-500">
+              <Shield className="w-3 h-3 mr-1" />
+              Verified
+            </Badge>
             <Button variant="ghost" className="text-white hover:bg-white/20 relative" onClick={() => setActiveTab('notifications')}>
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -370,8 +542,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
               </motion.div>
             );
           })}
-          
-          {/* Add Child Card */}
+
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: children.length * 0.1 }}
             className="p-4 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50 cursor-pointer hover:bg-purple-100 flex flex-col items-center justify-center gap-2"
             onClick={() => setShowRequestModal(true)}
@@ -399,9 +570,14 @@ const ParentPortalUltraAdvanced: React.FC = () => {
                           <div>
                             <CardTitle className="text-xl">{selectedChild.student.full_name}</CardTitle>
                             <CardDescription>{selectedChild.student.student_code}</CardDescription>
+                            <Badge className="mt-1 bg-purple-500">{selectedChild.connection.relationship}</Badge>
                           </div>
                         </div>
-                        <Badge className="bg-purple-500">{selectedChild.connection.relationship}</Badge>
+                        <div className="text-right text-sm text-gray-500">
+                          <p>Approved by</p>
+                          <p className="font-medium">{selectedChild.connection.approved_by}</p>
+                          <p className="text-xs">({selectedChild.connection.approved_by_role})</p>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -551,20 +727,15 @@ const ParentPortalUltraAdvanced: React.FC = () => {
             )}
           </div>
 
-          {/* Sidebar - Messages & Notifications */}
+          {/* Sidebar */}
           <div className="space-y-6">
             {/* Messages */}
             <Card className="border-2 border-blue-200">
               <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5" />
-                    Messages
-                  </CardTitle>
-                  <Button size="sm" variant="ghost" className="text-white hover:bg-white/20" onClick={() => setShowMessageModal(true)}>
-                    <PlusCircle className="w-4 h-4" />
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Messages
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-64">
@@ -655,7 +826,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
         </div>
       </div>
 
-      {/* Request Linking Modal */}
+      {/* Request Modal */}
       <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -673,14 +844,24 @@ const ParentPortalUltraAdvanced: React.FC = () => {
                 <Select value={linkingRequest.student_trade} onValueChange={(v) => setLinkingRequest({...linkingRequest, student_trade: v})}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General Education">General Education</SelectItem>
-                    <SelectItem value="Agriculture">Agriculture</SelectItem>
-                    <SelectItem value=" carpentry">Carpentry</SelectItem>
-                    <SelectItem value="Masonry">Masonry</SelectItem>
-                    <SelectItem value="Electrical">Electrical</SelectItem>
-                    <SelectItem value="Plumbing">Plumbing</SelectItem>
-                    <SelectItem value="Hotel Management">Hotel Management</SelectItem>
-                    <SelectItem value="Food Production">Food Production</SelectItem>
+                    {trades.length > 0 ? (
+                      trades.map((trade: any) => (
+                        <SelectItem key={trade.trade_id || trade.id} value={trade.trade_name || trade.name}>
+                          {trade.trade_name || trade.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="General Education">General Education</SelectItem>
+                        <SelectItem value="Agriculture">Agriculture</SelectItem>
+                        <SelectItem value="Carpentry">Carpentry</SelectItem>
+                        <SelectItem value="Masonry">Masonry</SelectItem>
+                        <SelectItem value="Electrical">Electrical</SelectItem>
+                        <SelectItem value="Plumbing">Plumbing</SelectItem>
+                        <SelectItem value="Hotel Management">Hotel Management</SelectItem>
+                        <SelectItem value="Food Production">Food Production</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

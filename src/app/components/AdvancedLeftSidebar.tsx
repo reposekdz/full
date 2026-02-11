@@ -135,6 +135,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       ],
       director_of_study: [
         { key: 'academics', icon: BookOpen, label: 'Amasomo', color: 'from-blue-500 to-indigo-500' },
+        { key: 'application-management', icon: FileText, label: 'Ibyifuzo byo Kwiga', color: 'from-green-500 to-teal-500' },
         { key: 'curriculum', icon: GraduationCap, label: 'Integanyanyigisho', color: 'from-green-500 to-teal-500' },
         { key: 'teachers', icon: Users, label: 'Abarimu', color: 'from-purple-500 to-violet-500' },
         { key: 'performance', icon: TrendingUp, label: 'Imikorere', color: 'from-orange-500 to-red-500' },
@@ -154,7 +155,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       headmaster: [
         { key: 'overview', icon: Home, label: 'Incamake', color: 'from-blue-500 to-indigo-500' },
         { key: 'staff-management', icon: Users, label: 'Ubuyobozi bw\'Ishuri', color: 'from-purple-500 to-pink-500' },
-        { key: 'staff', icon: Users, label: 'Abakozi', color: 'from-green-500 to-teal-500' },
+        { key: 'application-management', icon: FileText, label: 'Ibyifuzo byo Kwiga', color: 'from-green-500 to-teal-500' },
         { key: 'students', icon: GraduationCap, label: 'Abanyeshuri', color: 'from-purple-500 to-violet-500' },
         { key: 'finances', icon: DollarSign, label: 'Amafaranga', color: 'from-orange-500 to-red-500' },
         { key: 'performance', icon: TrendingUp, label: 'Imikorere', color: 'from-yellow-500 to-amber-500' },

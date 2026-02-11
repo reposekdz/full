@@ -23,6 +23,7 @@ interface TradeDetailPageProps {
 }
 
 const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) => {
+  console.log('TradeDetailPage mounted with tradeCode:', tradeCode);
   const [trade, setTrade] = useState<any>(null);
   const [tradeData, setTradeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -36,21 +37,57 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [galleryFilter, setGalleryFilter] = useState('All');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [heroImages, setHeroImages] = useState<string[]>([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   // Save active tab to localStorage
   useEffect(() => {
     localStorage.setItem(`trade_${tradeCode}_active_tab`, activeTab);
   }, [activeTab, tradeCode]);
 
+  // Load hero images for AUTO trade
+  useEffect(() => {
+    const normalized = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
+    console.log('Trade code check:', tradeCode, '-> normalized:', normalized);
+    if (normalized === 'AUTO') {
+      const heroImageFiles = [
+        'IMG-20260128-WA0062.jpg', 'IMG-20260128-WA0067.jpg', 'IMG-20260128-WA0070.jpg',
+        'IMG-20260128-WA0076.jpg', 'IMG-20260128-WA0080.jpg', 'IMG-20260128-WA0082.jpg',
+        'IMG-20260128-WA0084.jpg', 'IMG-20260128-WA0087.jpg', 'IMG-20260128-WA0092.jpg',
+        'IMG-20260128-WA0095.jpg', 'IMG-20260128-WA0101.jpg', 'IMG-20260128-WA0105.jpg',
+        'IMG-20260128-WA0110.jpg', 'IMG-20260128-WA0116.jpg', 'IMG-20260128-WA0119.jpg'
+      ];
+      const images = heroImageFiles.map(img => `http://localhost:5000/uploads/hero/aut%20hero/${img}`);
+      setHeroImages(images);
+      console.log('Hero images loaded for AUTO:', images.length, images[0]);
+    }
+  }, [tradeCode]);
+
+  // Auto-rotate hero images
+  useEffect(() => {
+    if (heroImages.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroImages]);
+
   // Load gallery
   useEffect(() => {
     const loadGallery = async () => {
       try {
         setLoadingGallery(true);
-        const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${tradeCode}`);
+        // Normalize trade code - handle both AUT and AUTO
+        const normalizedCode = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
+        console.log('Loading gallery for trade:', tradeCode, '-> normalized:', normalizedCode);
+        const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${normalizedCode}`);
         const data = await response.json();
+        console.log('Gallery API response:', data);
         if (data.success && data.gallery) {
+          console.log('Setting gallery with', data.gallery.length, 'images');
           setGallery(data.gallery);
+        } else {
+          console.log('No gallery data or unsuccessful response');
         }
       } catch (error) {
         console.error('Error loading gallery:', error);
@@ -98,11 +135,15 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
             });
           });
 
-          const foundTrade = tradeGroups[tradeCode];
+          // Normalize tradeCode for lookup (AUT -> AUTO)
+          const normalizedTradeCode = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
+          const foundTrade = tradeGroups[normalizedTradeCode];
           if (foundTrade) {
+            console.log('Found trade:', foundTrade);
+            console.log('Trade code:', tradeCode, '-> normalized:', normalizedTradeCode);
             setTrade({
               ...foundTrade,
-              icon: getTradeIcon(tradeCode),
+              icon: getTradeIcon(normalizedTradeCode),
               statistics: {
                 students: foundTrade.levels.reduce((sum: number, l: any) => sum + (l.total_students || 0), 0),
                 successRate: 95,
@@ -133,16 +174,18 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
   }, [tradeCode]);
 
   const getTradeIcon = (code: string) => {
-    if (code === 'SOD') return Code;
-    if (code === 'BDC') return HardHat;
-    if (code === 'AUTO') return Wrench;
+    const normalized = code === 'AUT' ? 'AUTO' : code;
+    if (normalized === 'SOD') return Code;
+    if (normalized === 'BDC') return HardHat;
+    if (normalized === 'AUTO') return Wrench;
     return Code;
   };
 
   const getGradientColors = (code: string) => {
-    if (code === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
-    if (code === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
-    if (code === 'AUTO') return 'from-green-600 via-emerald-500 to-teal-400';
+    const normalized = code === 'AUT' ? 'AUTO' : code;
+    if (normalized === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
+    if (normalized === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
+    if (normalized === 'AUTO') return 'from-green-600 via-emerald-500 to-teal-400';
     return 'from-green-600 to-yellow-400';
   };
 
@@ -172,12 +215,37 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      {/* Hero Section with Gradient */}
+      {/* Hero Section with Gradient and Image Carousel */}
       <div className={`relative bg-gradient-to-r ${getGradientColors(tradeCode)} text-white overflow-hidden`}>
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        {/* Debug info */}
+        {(tradeCode === 'AUTO' || tradeCode === 'AUT') && (
+          <div className="absolute top-4 right-4 bg-black/50 text-white px-3 py-1 rounded text-xs" style={{ zIndex: 100 }}>
+            Hero: {heroImages.length} | Gallery: {gallery.length} | Loading: {loadingGallery ? 'Yes' : 'No'}
+          </div>
+        )}
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {(tradeCode === 'AUTO' || tradeCode === 'AUT') && heroImages.length > 0 && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentHeroIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.3 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }}
+              className="absolute inset-0"
+              style={{ zIndex: 0 }}
+            >
+              <div
+                className="w-full h-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${heroImages[currentHeroIndex]})` }}
+              />
+            </motion.div>
+          </AnimatePresence>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-900/70 via-teal-900/60 to-cyan-900/70" style={{ zIndex: 1 }}></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" style={{ zIndex: 2 }}></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20" style={{ zIndex: 10 }}>
           <Button 
             onClick={onBack}
             variant="ghost" 
@@ -342,11 +410,67 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
                     ))}
                   </div>
 
+                  {/* Tools & Equipment Section */}
+                  {(() => {
+                    const toolsImages = gallery.filter(item => item.category === 'Tools & Equipment');
+                    return toolsImages.length > 0 && (
+                      <div className="space-y-4 mb-8">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-2xl font-bold flex items-center gap-2">
+                            <Wrench className="w-6 h-6 text-green-600" />
+                            Ibikoresho n'Ibyuma ({toolsImages.length})
+                          </h3>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setActiveTab('gallery');
+                              setGalleryFilter('Tools & Equipment');
+                            }}
+                          >
+                            Reba Byose <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          {toolsImages.slice(0, 10).map((item, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.05 }}
+                              whileHover={{ scale: 1.05, y: -5 }}
+                              onClick={() => setSelectedImage(`http://localhost:5000${item.url}`)}
+                              className="aspect-square bg-gradient-to-br from-green-100 via-yellow-100 to-lime-100 rounded-xl overflow-hidden shadow-lg cursor-pointer relative group"
+                            >
+                              <ImageWithFallback
+                                src={`http://localhost:5000${item.url}`}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute bottom-2 left-2 right-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-xs font-semibold truncate">{item.title}</p>
+                              </div>
+                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="bg-white/90 rounded-full p-1.5">
+                                  <ZoomIn className="w-4 h-4 text-gray-800" />
+                                </div>
+                              </div>
+                              <Badge className="absolute top-2 left-2 bg-green-600 text-white text-xs">
+                                Tool
+                              </Badge>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Facility Images Gallery */}
                   <div className="space-y-4">
                     <h3 className="text-2xl font-bold flex items-center gap-2">
                       <ImageIcon className="w-6 h-6 text-green-600" />
-                      Ibikoresho Byacu n'Ibikorwa by'Abanyeshuri
+                      Amafoto Yose ({gallery.length})
                     </h3>
                     {loadingGallery ? (
                       <div className="text-center py-8">

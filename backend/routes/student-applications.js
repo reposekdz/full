@@ -1,245 +1,164 @@
 const express = require('express');
+const router = express.Router();
+const { pool } = require('../config/database');
 const multer = require('multer');
 const path = require('path');
-const { pool } = require('../config/database');
-const router = express.Router();
-
-// Validation functions
-const validatePhoneNumber = (phone) => {
-  const phoneRegex = /^(\+250|0)[7][0-9]{8}$/;
-  return phoneRegex.test(phone);
-};
-
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-const validateNationalId = (nationalId) => {
-  const idRegex = /^[0-9]{16}$/;
-  return idRegex.test(nationalId);
-};
-
-const validateAge = (dateOfBirth) => {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  const age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age >= 14 && age <= 35; // TVET age requirements
-};
-
-// Validate location hierarchy
-const validateLocation = async (province_id, district_id, sector_id, cell_id, village_id) => {
-  try {
-    const [result] = await pool.execute(`
-      SELECT COUNT(*) as count
-      FROM provinces p
-      LEFT JOIN districts d ON p.id = d.province_id
-      LEFT JOIN sectors s ON d.id = s.district_id
-      LEFT JOIN cells c ON s.id = c.sector_id
-      LEFT JOIN villages v ON c.id = v.cell_id
-      WHERE p.id = ? AND (? IS NULL OR d.id = ?) 
-        AND (? IS NULL OR s.id = ?) 
-        AND (? IS NULL OR c.id = ?)
-        AND (? IS NULL OR v.id = ?)
-    `, [province_id, district_id, district_id, sector_id, sector_id, cell_id, cell_id, village_id, village_id]);
-    
-    return result[0].count > 0;
-  } catch (error) {
-    console.error('Location validation error:', error);
-    return false;
-  }
-};
+const fs = require('fs').promises;
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/applications/');
+  destination: async (req, file, cb) => {
+    let uploadDir;
+    if (file.fieldname === 'profile_photo') {
+      uploadDir = path.join(__dirname, '../uploads/applications/photos');
+    } else if (file.fieldname === 'report_card') {
+      uploadDir = path.join(__dirname, '../uploads/applications/report-cards');
+    } else {
+      uploadDir = path.join(__dirname, '../uploads/applications/documents');
+    }
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const allowedTypes = /pdf|doc|docx|jpg|jpeg|png/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
+    if (extname && mimetype) {
+      cb(null, true);
     } else {
-      cb(new Error('Only images and documents are allowed'));
-    }
-  }
+      cb(new Error('Only PDF, DOC, DOCX, JPG, PNG files are allowed'));
+    }  }
 });
 
-// Submit application
-router.post('/submit', upload.array('documents', 10), async (req, res) => {
+// ============================================
+// PUBLIC ENDPOINTS - Application Submission
+// ============================================
+
+// Submit new application
+router.post('/submit', upload.fields([
+  { name: 'profile_photo', maxCount: 1 },
+  { name: 'report_card', maxCount: 1 },
+  { name: 'documents', maxCount: 10 }
+]), async (req, res) => {
   const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
     
-    // Comprehensive validation
-    const errors = [];
+    // Generate application number
+    const [appNumResult] = await connection.execute('CALL generate_application_number(@app_number)');
+    const [[{ '@app_number': applicationNumber }]] = await connection.execute('SELECT @app_number');
     
-    // Required fields validation
-    const requiredFields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone', 'province_id', 'district_id', 'sector_id', 'parent_name', 'parent_phone', 'previous_school', 'trade_code', 'level_number', 'reason_for_applying'];
+    // Validate required fields
+    const requiredFields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone', 
+                           'parent_name', 'parent_phone', 'previous_school', 'education_level',
+                           'trade_code', 'level_number', 'reason_for_applying', 'address'];
     
-    requiredFields.forEach(field => {
-      if (!req.body[field] || req.body[field].toString().trim() === '') {
-        errors.push(`${field} is required`);
-      }
-    });
-    
-    // Phone validation
-    if (req.body.phone && !validatePhoneNumber(req.body.phone)) {
-      errors.push('Invalid phone number format. Use +250XXXXXXXXX or 07XXXXXXXX');
-    }
-    
-    if (req.body.parent_phone && !validatePhoneNumber(req.body.parent_phone)) {
-      errors.push('Invalid parent phone number format');
-    }
-    
-    // Email validation
-    if (req.body.email && !validateEmail(req.body.email)) {
-      errors.push('Invalid email format');
-    }
-    
-    // National ID validation
-    if (req.body.national_id && !validateNationalId(req.body.national_id)) {
-      errors.push('National ID must be 16 digits');
-    }
-    
-    // Age validation
-    if (req.body.date_of_birth && !validateAge(req.body.date_of_birth)) {
-      errors.push('Age must be between 14 and 35 years');
-    }
-    
-    // Location validation
-    if (req.body.province_id && req.body.district_id && req.body.sector_id) {
-      const isValidLocation = await validateLocation(
-        req.body.province_id,
-        req.body.district_id,
-        req.body.sector_id,
-        req.body.cell_id || null,
-        req.body.village_id || null
-      );
-      
-      if (!isValidLocation) {
-        errors.push('Invalid location combination');
-      }
-    }
-    
-    // Check for duplicate applications
-    if (req.body.phone) {
-      const [existing] = await connection.execute(`
-        SELECT id FROM student_applications 
-        WHERE phone = ? AND status IN ('pending', 'under_review', 'approved')
-      `, [req.body.phone]);
-      
-      if (existing.length > 0) {
-        errors.push('An application with this phone number already exists');
-      }
-    }
-    
-    if (errors.length > 0) {
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    if (missingFields.length > 0) {
       await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors
+        message: 'Missing required fields',
+        errors: missingFields.map(f => `${f} is required`)
       });
     }
     
-    // Generate application number
-    const applicationNumber = 'APP' + Date.now() + Math.floor(Math.random() * 1000);
+    // Validate age (14-35 years)
+    const birthDate = new Date(req.body.date_of_birth);
+    const age = new Date().getFullYear() - birthDate.getFullYear();
+    if (age < 14 || age > 35) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Age must be between 14 and 35 years'
+      });
+    }
     
-    // Insert application with location data
+    // Validate phone number format
+    const phoneRegex = /^(\+250|0)[7][0-9]{8}$/;
+    if (!phoneRegex.test(req.body.phone)) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
+      });
+    }
+    
+    // Get uploaded files
+    const profilePhoto = req.files?.profile_photo?.[0];
+    const reportCard = req.files?.report_card?.[0];
+    const documents = req.files?.documents || [];
+    
+    // Insert application
     const [result] = await connection.execute(`
       INSERT INTO student_applications (
-        application_number, first_name, last_name, date_of_birth, gender, phone, email, 
-        national_id, address, province_id, district_id, sector_id, cell_id, village_id,
-        parent_name, parent_phone, parent_email, parent_occupation, parent_address, 
-        emergency_contact, emergency_phone, previous_school, education_level, completion_year, 
-        previous_grades, trade_code, level_number, preferred_start_date, reason_for_applying, 
-        career_goals, special_needs, medical_conditions, languages_spoken, computer_skills, 
-        work_experience, fee_payment_method, sponsor_name, sponsor_phone, financial_support, 
-        application_date, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        application_number, first_name, last_name, date_of_birth, gender, phone, email,
+        national_id, profile_photo, address, province_id, district_id, sector_id, cell_id, village_id,
+        parent_name, parent_phone, parent_email, parent_occupation, parent_address,
+        emergency_contact, emergency_phone, previous_school, education_level, completion_year,
+        previous_grades, report_card_image, trade_code, level_number, preferred_start_date, reason_for_applying,
+        career_goals, special_needs, medical_conditions, languages_spoken, computer_skills,
+        work_experience, fee_payment_method, sponsor_name, sponsor_phone, financial_support,
+        application_date, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
     `, [
       applicationNumber, req.body.first_name, req.body.last_name, req.body.date_of_birth,
-      req.body.gender, req.body.phone, req.body.email || null, req.body.national_id || null, 
-      req.body.address, req.body.province_id, req.body.district_id, req.body.sector_id,
-      req.body.cell_id || null, req.body.village_id || null, req.body.parent_name,
-      req.body.parent_phone, req.body.parent_email || null, req.body.parent_occupation || null,
-      req.body.parent_address || null, req.body.emergency_contact || null, req.body.emergency_phone || null,
+      req.body.gender, req.body.phone, req.body.email || null, req.body.national_id || null,
+      profilePhoto ? profilePhoto.path : null,
+      req.body.address, req.body.province_id || null, req.body.district_id || null,
+      req.body.sector_id || null, req.body.cell_id || null, req.body.village_id || null,
+      req.body.parent_name, req.body.parent_phone, req.body.parent_email || null,
+      req.body.parent_occupation || null, req.body.parent_address || null,
+      req.body.emergency_contact || null, req.body.emergency_phone || null,
       req.body.previous_school, req.body.education_level, req.body.completion_year || null,
-      req.body.previous_grades || null, req.body.trade_code, req.body.level_number,
-      req.body.preferred_start_date || null, req.body.reason_for_applying, req.body.career_goals || null,
-      req.body.special_needs || null, req.body.medical_conditions || null, req.body.languages_spoken || null,
-      req.body.computer_skills || null, req.body.work_experience || null, req.body.fee_payment_method || null,
-      req.body.sponsor_name || null, req.body.sponsor_phone || null, req.body.financial_support || null,
+      req.body.previous_grades || null,
+      reportCard ? reportCard.path : null,
+      req.body.trade_code, req.body.level_number,
+      req.body.preferred_start_date || null, req.body.reason_for_applying,
+      req.body.career_goals || null, req.body.special_needs || null,
+      req.body.medical_conditions || null, req.body.languages_spoken || null,
+      req.body.computer_skills || null, req.body.work_experience || null,
+      req.body.fee_payment_method || null, req.body.sponsor_name || null,
+      req.body.sponsor_phone || null, req.body.financial_support || null,
       new Date().toISOString().split('T')[0]
     ]);
     
     const applicationId = result.insertId;
     
-    // Insert documents if any
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
+    // Save uploaded documents
+    if (documents && documents.length > 0) {
+      for (const file of documents) {
         await connection.execute(`
-          INSERT INTO application_documents (application_id, document_name, document_path, document_type, file_size, uploaded_at)
-          VALUES (?, ?, ?, ?, ?, NOW())
-        `, [applicationId, file.originalname, file.path, file.mimetype, file.size]);
+          INSERT INTO application_documents (application_id, document_type, document_name, file_path, file_size, mime_type)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `, [applicationId, 'general', file.originalname, file.path, file.size, file.mimetype]);
       }
     }
     
-    // Log status change
+    // Send confirmation SMS/Email
     await connection.execute(`
-      INSERT INTO application_status_history (application_id, old_status, new_status, change_reason, changed_at)
-      VALUES (?, NULL, 'pending', 'Application submitted', NOW())
-    `, [applicationId]);
-    
-    // Send application submitted notifications
-    const { broadcastToRole } = require('../services/socketService');
-    const { sendSMS } = require('../services/africanTalkingService');
-    
-    // Notify DOS about new application
-    broadcastToRole('dos', 'application:new', {
-      application_id: applicationId,
-      application_number: applicationNumber,
-      student_name: `${req.body.first_name} ${req.body.last_name}`,
-      trade: req.body.trade_code,
-      phone: req.body.phone
-    });
-    
-    // Send confirmation SMS to student
-    await sendSMS(req.body.phone, `Ibyifuzo byawe byakiriwe neza. Nomero: ${applicationNumber}. Uzahamagariwa mu gihe cya wiki 2.`);
-    
-    // Send SMS to parent if provided
-    if (req.body.parent_phone) {
-      await sendSMS(req.body.parent_phone, `Ibyifuzo bya ${req.body.first_name} byakiriwe neza. Nomero: ${applicationNumber}`);
-    }
-    
-    // Update analytics
-    await connection.execute(`
-      INSERT INTO application_analytics (date, total_applications, pending_applications)
-      VALUES (CURDATE(), 1, 1)
-      ON DUPLICATE KEY UPDATE 
-        total_applications = total_applications + 1,
-        pending_applications = pending_applications + 1
-    `);
+      INSERT INTO application_notifications (application_id, recipient_type, recipient_phone, notification_type, message, sent_via)
+      VALUES (?, 'applicant', ?, 'application_received', ?, 'sms')
+    `, [
+      applicationId,
+      req.body.phone,
+      `Mwaramutse! Ibyifuzo byawe byo kwiga muri Garden TVET byakiriwe neza. Nomero yawe: ${applicationNumber}. Tuzabamenyesha mu gihe cya wiki 2.`
+    ]);
     
     await connection.commit();
     
@@ -247,8 +166,7 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
       success: true,
       message: 'Application submitted successfully',
       application_number: applicationNumber,
-      application_id: applicationId,
-      tracking_code: applicationNumber
+      application_id: applicationId
     });
     
   } catch (error) {
@@ -264,81 +182,76 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
   }
 });
 
-// Check application status by tracking code
-router.get('/status/:trackingCode', async (req, res) => {
+// Check application status (public)
+router.get('/status/:applicationNumber', async (req, res) => {
   try {
-    const { trackingCode } = req.params;
-    
     const [applications] = await pool.execute(`
-      SELECT sa.id, sa.application_number, sa.first_name, sa.last_name, sa.status, 
-             sa.created_at, sa.updated_at, t.trade_name, tl.description as level_description
-      FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
-      LEFT JOIN trade_levels tl ON sa.level_number = tl.level_number
-      WHERE sa.application_number = ?
-    `, [trackingCode]);
+      SELECT 
+        application_number, first_name, last_name, trade_code, level_number,
+        status, application_date, dos_reviewed_at, headmaster_reviewed_at,
+        interview_scheduled, interview_date, final_decision, decision_date
+      FROM student_applications
+      WHERE application_number = ?
+    `, [req.params.applicationNumber]);
     
     if (applications.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Application not found. Please check your tracking code.'
+        message: 'Application not found'
       });
     }
     
     const application = applications[0];
     
-    const statusMessages = {
-      'pending': 'Your application is being processed. Please wait for review.',
-      'under_review': 'Your application is currently under review by our admissions team.',
-      'approved': 'Congratulations! Your application has been approved.',
-      'rejected': 'Unfortunately, your application could not be approved at this time.'
-    };
+    // Get status history
+    const [history] = await pool.execute(`
+      SELECT old_status, new_status, changed_at, comments
+      FROM application_status_history
+      WHERE application_id = (SELECT id FROM student_applications WHERE application_number = ?)
+      ORDER BY changed_at DESC
+    `, [req.params.applicationNumber]);
     
     res.json({
       success: true,
-      application: {
-        tracking_code: application.application_number,
-        student_name: `${application.first_name} ${application.last_name}`,
-        status: application.status,
-        status_message: statusMessages[application.status],
-        trade: application.trade_name,
-        level: application.level_description,
-        submitted_date: application.created_at,
-        last_updated: application.updated_at
-      }
+      application,
+      history
     });
     
   } catch (error) {
-    console.error('Error checking application status:', error);
+    console.error('Status check error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to check application status',
+      message: 'Failed to check status',
       error: error.message
     });
   }
 });
 
-// Get all applications (for DOS/Headmaster)
-router.get('/all', async (req, res) => {
+// ============================================
+// ADMIN ENDPOINTS - All Applications
+// ============================================
+
+// Get all applications (admin only)
+router.get('/all', authenticateToken, requireRole(['admin', 'headmaster', 'director_of_study']), async (req, res) => {
   try {
-    const { status, trade_code, level_number, page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 50, search, trade_code, status } = req.query;
     const offset = (page - 1) * limit;
     
     let query = `
-      SELECT sa.*, t.trade_name, tl.description as level_description,
-             COUNT(ad.id) as document_count
+      SELECT 
+        sa.*, 
+        t.trade_name,
+        DATEDIFF(NOW(), sa.application_date) as days_pending
       FROM student_applications sa
       LEFT JOIN trades t ON sa.trade_code = t.trade_code
-      LEFT JOIN trade_levels tl ON sa.level_number = tl.level_number
-      LEFT JOIN application_documents ad ON sa.id = ad.application_id
       WHERE 1=1
     `;
     
     const params = [];
     
-    if (status) {
-      query += ' AND sa.status = ?';
-      params.push(status);
+    if (search) {
+      query += ' AND (sa.first_name LIKE ? OR sa.last_name LIKE ? OR sa.application_number LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     
     if (trade_code) {
@@ -346,13 +259,13 @@ router.get('/all', async (req, res) => {
       params.push(trade_code);
     }
     
-    if (level_number) {
-      query += ' AND sa.level_number = ?';
-      params.push(level_number);
+    if (status && status !== 'all') {
+      query += ' AND sa.status = ?';
+      params.push(status);
     }
     
-    query += ' GROUP BY sa.id ORDER BY sa.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
+    query += ' ORDER BY sa.application_date DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
     
     const [applications] = await pool.execute(query, params);
     
@@ -360,9 +273,9 @@ router.get('/all', async (req, res) => {
     let countQuery = 'SELECT COUNT(*) as total FROM student_applications WHERE 1=1';
     const countParams = [];
     
-    if (status) {
-      countQuery += ' AND status = ?';
-      countParams.push(status);
+    if (search) {
+      countQuery += ' AND (first_name LIKE ? OR last_name LIKE ? OR application_number LIKE ?)';
+      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     
     if (trade_code) {
@@ -370,27 +283,26 @@ router.get('/all', async (req, res) => {
       countParams.push(trade_code);
     }
     
-    if (level_number) {
-      countQuery += ' AND level_number = ?';
-      countParams.push(level_number);
+    if (status && status !== 'all') {
+      countQuery += ' AND status = ?';
+      countParams.push(status);
     }
     
-    const [countResult] = await pool.execute(countQuery, countParams);
-    const total = countResult[0].total;
+    const [[{ total }]] = await pool.execute(countQuery, countParams);
     
     res.json({
       success: true,
       applications,
       pagination: {
-        current_page: parseInt(page),
-        per_page: parseInt(limit),
         total,
-        total_pages: Math.ceil(total / limit)
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
       }
     });
     
   } catch (error) {
-    console.error('Error fetching applications:', error);
+    console.error('Get all applications error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch applications',
@@ -400,17 +312,22 @@ router.get('/all', async (req, res) => {
 });
 
 // Get single application details
-router.get('/:id', async (req, res) => {
+router.get('/details/:id', authenticateToken, requireRole(['admin', 'headmaster', 'director_of_study']), async (req, res) => {
   try {
-    const { id } = req.params;
-    
     const [applications] = await pool.execute(`
-      SELECT sa.*, t.trade_name, tl.description as level_description
+      SELECT 
+        sa.*,
+        t.trade_name,
+        p.name_rw as province_name,
+        d.name_rw as district_name,
+        s.name_rw as sector_name
       FROM student_applications sa
       LEFT JOIN trades t ON sa.trade_code = t.trade_code
-      LEFT JOIN trade_levels tl ON sa.level_number = tl.level_number
+      LEFT JOIN provinces p ON sa.province_id = p.id
+      LEFT JOIN districts d ON sa.district_id = d.id
+      LEFT JOIN sectors s ON sa.sector_id = s.id
       WHERE sa.id = ?
-    `, [id]);
+    `, [req.params.id]);
     
     if (applications.length === 0) {
       return res.status(404).json({
@@ -420,337 +337,388 @@ router.get('/:id', async (req, res) => {
     }
     
     // Get documents
-    const [documents] = await pool.execute(`
-      SELECT * FROM application_documents WHERE application_id = ?
-    `, [id]);
+    const [documents] = await pool.execute(
+      'SELECT * FROM application_documents WHERE application_id = ?',
+      [req.params.id]
+    );
     
-    // Get review history
-    const [reviews] = await pool.execute(`
-      SELECT ar.*, u.first_name, u.last_name, r.name as role_name
-      FROM application_reviews ar
-      LEFT JOIN users u ON ar.reviewed_by = u.id
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE ar.application_id = ?
-      ORDER BY ar.reviewed_at DESC
-    `, [id]);
+    // Get comments
+    const [comments] = await pool.execute(`
+      SELECT ac.*, u.first_name, u.last_name
+      FROM application_comments ac
+      LEFT JOIN users u ON ac.user_id = u.id
+      WHERE ac.application_id = ?
+      ORDER BY ac.created_at DESC
+    `, [req.params.id]);
+    
+    // Get status history
+    const [history] = await pool.execute(
+      'SELECT * FROM application_status_history WHERE application_id = ? ORDER BY changed_at DESC',
+      [req.params.id]
+    );
     
     res.json({
       success: true,
       application: applications[0],
       documents,
-      reviews
+      comments,
+      history
     });
     
   } catch (error) {
-    console.error('Error fetching application:', error);
+    console.error('Get application details error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch application',
+      message: 'Failed to fetch application details',
       error: error.message
     });
   }
 });
 
-// Update application status (DOS/Headmaster)
-router.put('/:id/status', async (req, res) => {
-  const connection = await pool.getConnection();
-  
-  try {
-    await connection.beginTransaction();
-    
-    const { id } = req.params;
-    const { status, comments, reviewed_by, decision_reason } = req.body;
-    
-    // Update application status
-    await connection.execute(`
-      UPDATE student_applications 
-      SET status = ?, updated_at = NOW() 
-      WHERE id = ?
-    `, [status, id]);
-    
-    // Add review record
-    await connection.execute(`
-      INSERT INTO application_reviews (
-        application_id, status, comments, reviewed_by, decision_reason, reviewed_at
-      ) VALUES (?, ?, ?, ?, ?, NOW())
-    `, [id, status, comments, reviewed_by, decision_reason]);
-    
-    // If approved, create student record
-    if (status === 'approved') {
-      const [application] = await connection.execute(`
-        SELECT * FROM student_applications WHERE id = ?
-      `, [id]);
-      
-      if (application.length > 0) {
-        const app = application[0];
-        
-        // Generate student ID
-        const studentId = 'STD' + Date.now();
-        
-        // Create student account
-        await connection.execute(`
-          INSERT INTO students (
-            student_id, first_name, last_name, date_of_birth, gender, phone, email,
-            national_id, address, province_id, district_id, sector_id, cell_id, village_id,
-            trade_code, level_number, enrollment_date, status, created_from_application
-          ) SELECT 
-            ?, first_name, last_name, date_of_birth, gender, phone, email,
-            national_id, address, province_id, district_id, sector_id, cell_id, village_id,
-            trade_code, level_number, NOW(), 'active', ?
-          FROM student_applications WHERE id = ?
-        `, [studentId, id, id]);
-        
-        // Send real-time notifications using existing services
-        const { sendNotification, broadcastToRole } = require('../services/socketService');
-        // SMS notification would be sent here
-        
-        // Send WebSocket notification to student
-        sendNotification({
-          type: 'application_approved',
-          title: 'Application Approved!',
-          message: `Congratulations! Your application has been approved. Student ID: ${studentId}`,
-          priority: 'high',
-          metadata: { application_id: id, student_id: studentId }
-        }, [app.phone]);
-        
-        // Send SMS notification to student
-        await sendSMS(app.phone, `Amashimwe! Ibyifuzo byawe byemewe. Student ID: ${studentId}. Uje ku ishuri vuba.`);
-      }
-    }
-    
-    // Send status change notifications for all status updates
-    const { sendSMS } = require('../services/africanTalkingService');
-    const [currentApp] = await connection.execute(`SELECT phone FROM student_applications WHERE id = ?`, [id]);
-    
-    if (currentApp.length > 0) {
-      if (status === 'approved') {
-        await sendSMS(currentApp[0].phone, 'Amashimwe! Ibyifuzo byawe byemewe.');
-      } else if (status === 'rejected') {
-        await sendSMS(currentApp[0].phone, `Ibyifuzo byawe ntibyemerewe. ${decision_reason || ''}`);
-      } else if (status === 'under_review') {
-        await sendSMS(currentApp[0].phone, 'Ibyifuzo byawe birasuzumwa. Uzahamagariwa vuba.');
-      }
-    }
-    
-    await connection.commit();
-    
-    res.json({
-      success: true,
-      message: 'Application status updated successfully',
-      new_status: status
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Status update error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update application status',
-      error: error.message
-    });
-  } finally {
-    connection.release();
-  }
-});
+// ============================================
+// DOS ENDPOINTS - Review Applications
+// ============================================
 
-// Get application analytics and statistics
-router.get('/analytics/dashboard', async (req, res) => {
+// Get pending applications for DOS review
+router.get('/dos/pending', authenticateToken, requireRole(['director_of_study', 'admin', 'headmaster']), async (req, res) => {
   try {
-    const { period = '30' } = req.query;
-    
-    // Overall statistics
-    const [overallStats] = await pool.execute(`
-      SELECT 
-        COUNT(*) as total_applications,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as under_review,
-        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
-        AVG(DATEDIFF(COALESCE(updated_at, NOW()), created_at)) as avg_processing_days
-      FROM student_applications
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-    `, [period]);
-    
-    // Applications by province
-    const [provinceStats] = await pool.execute(`
-      SELECT p.name_en as province, COUNT(sa.id) as count
-      FROM student_applications sa
-      JOIN provinces p ON sa.province_id = p.id
-      WHERE sa.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY p.id, p.name_en
-      ORDER BY count DESC
-    `, [period]);
-    
-    // Applications by trade
-    const [tradeStats] = await pool.execute(`
-      SELECT t.trade_name, COUNT(sa.id) as count
-      FROM student_applications sa
-      JOIN trades t ON sa.trade_code = t.trade_code
-      WHERE sa.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY t.trade_code, t.trade_name
-      ORDER BY count DESC
-    `, [period]);
-    
-    // Daily applications trend
-    const [dailyTrend] = await pool.execute(`
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as applications,
-        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved
-      FROM student_applications
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY DATE(created_at)
-      ORDER BY date DESC
-    `, [period]);
-    
-    // Recent applications requiring attention
-    const [urgentApplications] = await pool.execute(`
-      SELECT id, application_number, first_name, last_name, 
-             DATEDIFF(NOW(), created_at) as days_pending
-      FROM student_applications
-      WHERE status = 'pending' AND created_at <= DATE_SUB(NOW(), INTERVAL 7 DAY)
-      ORDER BY created_at ASC
-      LIMIT 10
-    `);
-    
-    res.json({
-      success: true,
-      analytics: {
-        overall: overallStats[0],
-        by_province: provinceStats,
-        by_trade: tradeStats,
-        daily_trend: dailyTrend,
-        urgent_applications: urgentApplications
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch analytics',
-      error: error.message
-    });
-  }
-});
-
-// Bulk operations
-router.post('/bulk/update-status', async (req, res) => {
-  const connection = await pool.getConnection();
-  
-  try {
-    await connection.beginTransaction();
-    
-    const { application_ids, status, comments, reviewed_by } = req.body;
-    
-    if (!application_ids || !Array.isArray(application_ids) || application_ids.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Application IDs are required'
-      });
-    }
-    
-    const placeholders = application_ids.map(() => '?').join(',');
-    
-    // Update all applications
-    await connection.execute(`
-      UPDATE student_applications 
-      SET status = ?, updated_at = NOW() 
-      WHERE id IN (${placeholders})
-    `, [status, ...application_ids]);
-    
-    // Add review records for each
-    for (const appId of application_ids) {
-      await connection.execute(`
-        INSERT INTO application_reviews (
-          application_id, status, comments, reviewed_by, reviewed_at
-        ) VALUES (?, ?, ?, ?, NOW())
-      `, [appId, status, comments, reviewed_by]);
-    }
-    
-    await connection.commit();
-    
-    res.json({
-      success: true,
-      message: `${application_ids.length} applications updated successfully`,
-      updated_count: application_ids.length
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Bulk update error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update applications',
-      error: error.message
-    });
-  } finally {
-    connection.release();
-  }
-});
-
-// Export applications data
-router.get('/export/csv', async (req, res) => {
-  try {
-    const { status, trade_code, province_id, date_from, date_to } = req.query;
+    const { page = 1, limit = 20, trade_code, search } = req.query;
+    const offset = (page - 1) * limit;
     
     let query = `
       SELECT 
-        sa.application_number, sa.first_name, sa.last_name, sa.date_of_birth,
-        sa.gender, sa.phone, sa.email, sa.status, sa.created_at,
-        p.name_en as province, d.name_en as district, s.name_en as sector,
-        t.trade_name, sa.level_number, sa.reason_for_applying
+        sa.*, 
+        t.trade_name,
+        DATEDIFF(NOW(), sa.application_date) as days_pending
       FROM student_applications sa
-      LEFT JOIN provinces p ON sa.province_id = p.id
-      LEFT JOIN districts d ON sa.district_id = d.id
-      LEFT JOIN sectors s ON sa.sector_id = s.id
       LEFT JOIN trades t ON sa.trade_code = t.trade_code
-      WHERE 1=1
+      WHERE sa.status IN ('pending', 'under_review_dos')
     `;
     
     const params = [];
-    
-    if (status) {
-      query += ' AND sa.status = ?';
-      params.push(status);
-    }
     
     if (trade_code) {
       query += ' AND sa.trade_code = ?';
       params.push(trade_code);
     }
     
-    if (province_id) {
-      query += ' AND sa.province_id = ?';
-      params.push(province_id);
+    if (search) {
+      query += ' AND (sa.first_name LIKE ? OR sa.last_name LIKE ? OR sa.application_number LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     
-    if (date_from) {
-      query += ' AND DATE(sa.created_at) >= ?';
-      params.push(date_from);
-    }
-    
-    if (date_to) {
-      query += ' AND DATE(sa.created_at) <= ?';
-      params.push(date_to);
-    }
-    
-    query += ' ORDER BY sa.created_at DESC';
+    query += ' ORDER BY sa.application_date ASC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
     
     const [applications] = await pool.execute(query, params);
     
-    // Convert to CSV format
-    const csvHeader = 'Application Number,First Name,Last Name,Date of Birth,Gender,Phone,Email,Status,Application Date,Province,District,Sector,Trade,Level,Reason\n';
-    const csvData = applications.map(app => 
-      `"${app.application_number}","${app.first_name}","${app.last_name}","${app.date_of_birth}","${app.gender}","${app.phone}","${app.email || ''}","${app.status}","${app.created_at}","${app.province || ''}","${app.district || ''}","${app.sector || ''}","${app.trade_name || ''}","${app.level_number || ''}","${app.reason_for_applying || ''}"`
-    ).join('\n');
+    // Get total count
+    let countQuery = 'SELECT COUNT(*) as total FROM student_applications WHERE status IN ("pending", "under_review_dos")';
+    const countParams = [];
     
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="applications_${new Date().toISOString().split('T')[0]}.csv"`);
-    res.send(csvHeader + csvData);
+    if (trade_code) {
+      countQuery += ' AND trade_code = ?';
+      countParams.push(trade_code);
+    }
+    
+    const [[{ total }]] = await pool.execute(countQuery, countParams);
+    
+    res.json({
+      success: true,
+      applications,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
     
   } catch (error) {
-    console.error('Export error:', error);
+    console.error('Get pending applications error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to export applications',
+      message: 'Failed to fetch applications',
+      error: error.message
+    });
+  }
+});
+
+// DOS review application
+router.post('/dos/review/:id', authenticateToken, requireRole(['director_of_study', 'admin']), async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { recommendation, score, comments } = req.body;
+    
+    if (!['approve', 'reject', 'needs_interview'].includes(recommendation)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid recommendation'
+      });
+    }
+    
+    const newStatus = recommendation === 'approve' ? 'approved_dos' : 
+                     recommendation === 'reject' ? 'rejected_dos' : 'under_review_dos';
+    
+    await connection.execute(`
+      UPDATE student_applications
+      SET 
+        status = ?,
+        dos_reviewed_by = ?,
+        dos_reviewed_at = NOW(),
+        dos_comments = ?,
+        dos_score = ?,
+        dos_recommendation = ?
+      WHERE id = ?
+    `, [newStatus, req.user.id, comments, score, recommendation, req.params.id]);
+    
+    // Add comment
+    await connection.execute(`
+      INSERT INTO application_comments (application_id, user_id, user_role, comment_type, comment)
+      VALUES (?, ?, 'director_of_study', 'recommendation', ?)
+    `, [req.params.id, req.user.id, comments]);
+    
+    // Send notification
+    const [[application]] = await connection.execute(
+      'SELECT application_number, phone, first_name FROM student_applications WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (application) {
+      const message = recommendation === 'approve' 
+        ? `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) byemejwe na DOS. Bizasuzumwa n'Umuyobozi Mukuru.`
+        : recommendation === 'reject'
+        ? `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) ntibyemejwe na DOS. Mwahamagara kuri +250788000000.`
+        : `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) birakeneye ikiganiro. Tuzabamenyesha itariki.`;
+      
+      await connection.execute(`
+        INSERT INTO application_notifications (application_id, recipient_type, recipient_phone, notification_type, message, sent_via)
+        VALUES (?, 'applicant', ?, 'dos_review', ?, 'sms')
+      `, [req.params.id, application.phone, message]);
+    }
+    
+    await connection.commit();
+    
+    res.json({
+      success: true,
+      message: 'Application reviewed successfully'
+    });
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('DOS review error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to review application',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// ============================================
+// HEADMASTER ENDPOINTS - Final Approval
+// ============================================
+
+// Get applications pending headmaster review
+router.get('/headmaster/pending', authenticateToken, requireRole(['headmaster', 'admin']), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, trade_code } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let query = `
+      SELECT 
+        sa.*, 
+        t.trade_name,
+        u.first_name as dos_first_name,
+        u.last_name as dos_last_name,
+        DATEDIFF(NOW(), sa.dos_reviewed_at) as days_since_dos_review
+      FROM student_applications sa
+      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN users u ON sa.dos_reviewed_by = u.id
+      WHERE sa.status IN ('approved_dos', 'under_review_headmaster')
+    `;
+    
+    const params = [];
+    
+    if (trade_code) {
+      query += ' AND sa.trade_code = ?';
+      params.push(trade_code);
+    }
+    
+    query += ' ORDER BY sa.dos_reviewed_at ASC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    
+    const [applications] = await pool.execute(query, params);
+    
+    const [[{ total }]] = await pool.execute(
+      'SELECT COUNT(*) as total FROM student_applications WHERE status IN ("approved_dos", "under_review_headmaster")'
+    );
+    
+    res.json({
+      success: true,
+      applications,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get headmaster pending error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch applications',
+      error: error.message
+    });
+  }
+});
+
+// Headmaster final decision
+router.post('/headmaster/decide/:id', authenticateToken, requireRole(['headmaster', 'admin']), async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { decision, comments, rejection_reason } = req.body;
+    
+    if (!['approved', 'rejected', 'needs_more_info'].includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid decision'
+      });
+    }
+    
+    const newStatus = decision === 'approved' ? 'approved' : 
+                     decision === 'rejected' ? 'rejected' : 'under_review_headmaster';
+    
+    const finalDecision = decision === 'approved' ? 'accepted' : 
+                         decision === 'rejected' ? 'rejected' : null;
+    
+    await connection.execute(`
+      UPDATE student_applications
+      SET 
+        status = ?,
+        headmaster_reviewed_by = ?,
+        headmaster_reviewed_at = NOW(),
+        headmaster_comments = ?,
+        headmaster_decision = ?,
+        final_decision = ?,
+        decision_date = ?,
+        rejection_reason = ?
+      WHERE id = ?
+    `, [
+      newStatus, req.user.id, comments, decision, finalDecision,
+      decision === 'approved' || decision === 'rejected' ? new Date().toISOString().split('T')[0] : null,
+      rejection_reason || null,
+      req.params.id
+    ]);
+    
+    // Add comment
+    await connection.execute(`
+      INSERT INTO application_comments (application_id, user_id, user_role, comment_type, comment)
+      VALUES (?, ?, 'headmaster', 'recommendation', ?)
+    `, [req.params.id, req.user.id, comments]);
+    
+    // Send notification
+    const [[application]] = await connection.execute(
+      'SELECT application_number, phone, first_name, parent_phone FROM student_applications WHERE id = ?',
+      [req.params.id]
+    );
+    
+    if (application) {
+      const message = decision === 'approved' 
+        ? `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) byemejwe n'Umuyobozi Mukuru! Murakaza neza muri Garden TVET. Tuzabamenyesha igihe cyo kwiyandikisha.`
+        : decision === 'rejected'
+        ? `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) ntibyemejwe. Impamvu: ${rejection_reason || 'Hamagara +250788000000'}.`
+        : `Mwaramutse ${application.first_name}! Ibyifuzo byawe (${application.application_number}) birakeneye amakuru y'inyongera. Tuzabamenyesha.`;
+      
+      // Send to applicant
+      await connection.execute(`
+        INSERT INTO application_notifications (application_id, recipient_type, recipient_phone, notification_type, message, sent_via)
+        VALUES (?, 'applicant', ?, 'headmaster_decision', ?, 'sms')
+      `, [req.params.id, application.phone, message]);
+      
+      // Send to parent
+      await connection.execute(`
+        INSERT INTO application_notifications (application_id, recipient_type, recipient_phone, notification_type, message, sent_via)
+        VALUES (?, 'parent', ?, 'headmaster_decision', ?, 'sms')
+      `, [req.params.id, application.parent_phone, message]);
+    }
+    
+    await connection.commit();
+    
+    res.json({
+      success: true,
+      message: 'Decision recorded successfully'
+    });
+    
+  } catch (error) {
+    await connection.rollback();
+    console.error('Headmaster decision error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record decision',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// ============================================
+// STATISTICS & REPORTS
+// ============================================
+
+// Get application statistics
+router.get('/statistics', authenticateToken, requireRole(['director_of_study', 'headmaster', 'admin']), async (req, res) => {
+  try {
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_applications,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status IN ('under_review_dos', 'approved_dos') THEN 1 ELSE 0 END) as under_review,
+        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+        SUM(CASE WHEN status IN ('rejected', 'rejected_dos') THEN 1 ELSE 0 END) as rejected,
+        SUM(CASE WHEN enrolled = TRUE THEN 1 ELSE 0 END) as enrolled,
+        AVG(DATEDIFF(decision_date, application_date)) as avg_processing_days
+      FROM student_applications
+      WHERE application_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+    `);
+    
+    const [byTrade] = await pool.execute(`
+      SELECT trade_code, COUNT(*) as count
+      FROM student_applications
+      WHERE application_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      GROUP BY trade_code
+    `);
+    
+    const [byStatus] = await pool.execute(`
+      SELECT status, COUNT(*) as count
+      FROM student_applications
+      WHERE application_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      GROUP BY status
+    `);
+    
+    res.json({
+      success: true,
+      statistics: stats,
+      by_trade: byTrade,
+      by_status: byStatus
+    });
+    
+  } catch (error) {
+    console.error('Statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch statistics',
       error: error.message
     });
   }

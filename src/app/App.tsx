@@ -114,6 +114,7 @@ import DODManagement from '@/app/pages/dashboards/DODManagement';
 import DOSManagementUltraAdvanced from '@/app/pages/dos/DOSManagementUltraAdvanced';
 import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
 import StaffManagementPage from '@/app/pages/StaffManagementPage';
+import ApplicationManagementDashboard from '@/app/pages/admin/ApplicationManagementDashboard';
 
 const AppContent: React.FC = () => {
   // Mirror role-based navigation visibility used in Header
@@ -140,8 +141,8 @@ const AppContent: React.FC = () => {
     school_owner: ['profile','student-sheets'],
     admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
     super_admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
-    headmaster: ['profile','headmaster-students','student-sheets','dashboard-headmaster'],
-    director_study: ['profile','dos-students','dos-report-cards','dos-teacher-marks','dos-parent-access','dos-sms','student-sheets','dashboard-director-study','dashboard-dos'],
+    headmaster: ['profile','headmaster-students','student-sheets','dashboard-headmaster','application-management'],
+    director_study: ['profile','dos-students','dos-report-cards','dos-teacher-marks','dos-parent-access','dos-sms','student-sheets','dashboard-director-study','dashboard-dos','application-management'],
     director_discipline: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline'],
     dod: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline'],
     accountant: ['profile','student-sheets','dashboard-accountant','payments-management','expenses-management','invoices-management','budgets-management','salaries-management','transactions-management','financial-reports','timetable-view','students-management','student-payments-management'],
@@ -463,8 +464,8 @@ const AppContent: React.FC = () => {
       if (currentPage === 'library-system') return <LibraryManagementSystem />;
       if (currentPage === 'exam-management') return <ExamManagementSystem />;
       if (currentPage === 'hostel-management') return <HostelManagementSystem />;
-      if (currentPage === 'staff-management') return <StaffManagementPage onNavigate={handleNavigate} />;
       if (currentPage === 'staff-management-advanced') return <StaffManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'application-management') return <ApplicationManagementDashboard />;
       
       // Role selection pages
       if (currentPage === 'role-selection') {

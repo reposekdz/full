@@ -103,11 +103,36 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           });
         }
 
-        // Fetch slides
-        const slidesResponse = await fetch('http://localhost:5000/api/homepage/hero-slides');
-        const slidesData = await slidesResponse.json();
-        if (slidesData.success && slidesData.slides && slidesData.slides.length > 0) {
-          setSlides(slidesData.slides);
+        // Fetch trade images from backend uploads folder
+        const tradeImages = [];
+        const tradeCodes = ['AUTO', 'BDC', 'SOD'];
+        
+        for (const code of tradeCodes) {
+          try {
+            const response = await fetch(`http://localhost:5000/uploads/trades/${code.toLowerCase()}.jpg`);
+            if (response.ok) {
+              const tradeName = code === 'AUTO' ? 'Automobile Technology' : 
+                               code === 'BDC' ? 'Building Construction' : 
+                               'Software Development';
+              const tradeNameRw = code === 'AUTO' ? 'Ikoranabuhanga ry\'Imodoka' : 
+                                 code === 'BDC' ? 'Ubwubatsi bw\'Inyubako' : 
+                                 'Iterambere rya Porogaramu';
+              
+              tradeImages.push({
+                id: tradeImages.length + 1,
+                title: tradeName,
+                title_rw: tradeNameRw,
+                image_url: `http://localhost:5000/uploads/trades/${code.toLowerCase()}.jpg`,
+                trade_code: code
+              });
+            }
+          } catch (err) {
+            console.log(`Failed to load ${code} image`);
+          }
+        }
+
+        if (tradeImages.length > 0) {
+          setSlides(tradeImages);
         } else {
           setSlides(defaultSlides);
         }
@@ -178,7 +203,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="relative min-h-[500px] sm:min-h-[600px] lg:h-[700px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="relative w-full h-[500px] sm:h-[550px] md:h-[600px] lg:h-[650px] overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Background Slides with Parallax Effect */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -192,7 +217,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <img
             src={activeSlides[currentSlide % activeSlides.length]?.image_url || defaultSlides[0].image_url}
             alt={activeSlides[currentSlide % activeSlides.length]?.title || defaultSlides[0].title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = defaultSlides[currentSlide % defaultSlides.length]?.image_url || sodSlide;
@@ -228,8 +253,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Content - Split Layout */}
-      <div className="relative z-10 h-full py-4 sm:py-6 lg:py-8">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 h-full">
+      <div className="relative z-10 h-full py-4 sm:py-6 md:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center h-full">
             
             {/* Left Side - Text Content */}
@@ -237,7 +262,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="space-y-3 sm:space-y-4 lg:space-y-5"
+              className="space-y-3 sm:space-y-4 md:space-y-5"
             >
               {/* Badge */}
               <motion.div
@@ -258,7 +283,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-tight text-center lg:text-left"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight text-center lg:text-left"
               >
                 <span className="bg-gradient-to-r from-yellow-400 via-green-400 to-yellow-400 bg-clip-text text-transparent">
                   {language === 'rw' ? 'Garden TVET' : 'Garden TVET'}
@@ -274,7 +299,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 leading-relaxed max-w-xl mx-auto lg:mx-0 text-center lg:text-left px-2 sm:px-0"
+                className="text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
               >
                 {language === 'rw' 
                   ? 'Twigisha ubumenyi bw\'ikoranabuhanga buzakugeza ku ntsinzi. Hitamo umwuga wawe maze utangire urugendo rwawe rwo gutsinda.' 
@@ -291,22 +316,22 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400 mx-auto mb-1" />
                   <p className="text-xl sm:text-2xl font-black text-white">{stats.students}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abanyeshuri' : 'Students'}</p>
                 </div>
                 <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
                   <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 mx-auto mb-1" />
                   <p className="text-xl sm:text-2xl font-black text-white">{stats.teachers}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Abarimu' : 'Teachers'}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Abarimu' : 'Teachers'}</p>
                 </div>
                 <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1" />
                   <p className="text-xl sm:text-2xl font-black text-white">{stats.employmentRate}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Gushirwa mu kazi' : 'Employment'}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Gushirwa mu kazi' : 'Employment'}</p>
                 </div>
                 <div className="text-center p-2 sm:p-3 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/20 hover:bg-white/20 transition-all">
                   <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 mx-auto mb-1" />
                   <p className="text-xl sm:text-2xl font-black text-white">{stats.awards}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-300">{language === 'rw' ? 'Ibihembo' : 'Awards'}</p>
+                  <p className="text-xs text-gray-300">{language === 'rw' ? 'Ibihembo' : 'Awards'}</p>
                 </div>
               </motion.div>
 
@@ -315,31 +340,31 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 lg:gap-4 justify-center lg:justify-start"
+                className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 justify-center lg:justify-start"
               >
                 <Button
                   size="lg"
                   onClick={() => setShowApplicationForm(true)}
-                  className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
+                  className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
-                  <span className="truncate">{language === 'rw' ? 'Saba Kwiga' : 'Apply Now'}</span>
+                  {language === 'rw' ? 'Saba Kwiga' : 'Apply Now'}
                 </Button>
                 <Button
                   size="lg"
                   onClick={() => window.open('/check-status', '_blank')}
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  <span className="truncate">{language === 'rw' ? 'Reba Status' : 'Check Status'}</span>
+                  {language === 'rw' ? 'Reba Status' : 'Check Status'}
                 </Button>
                 <Button
                   size="lg"
                   onClick={() => onNavigate && onNavigate('trades')}
-                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
+                  className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white rounded-full px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  <span className="truncate">{language === 'rw' ? 'Reba Amahugurwa' : 'View Trades'}</span>
+                  {language === 'rw' ? 'Reba Amahugurwa' : 'View Trades'}
                 </Button>
               </motion.div>
             </motion.div>
@@ -487,7 +512,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
       </div>
 
       {/* Navigation Controls */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-2 sm:space-x-4">
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-2 sm:space-x-3">
         <div className="flex space-x-2">
           {activeSlides.map((_, index) => (
             <button
@@ -496,10 +521,10 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               className="group"
             >
               <motion.div 
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 sm:h-2.5 rounded-full transition-all ${
                   currentSlide === index 
-                    ? 'bg-gradient-to-r from-yellow-400 to-green-400 w-10' 
-                    : 'bg-white/50 w-2 group-hover:w-4 group-hover:bg-white/70'
+                    ? 'bg-gradient-to-r from-yellow-400 to-green-400 w-10 sm:w-12' 
+                    : 'bg-white/50 w-2 sm:w-2.5 group-hover:w-4 sm:group-hover:w-5 group-hover:bg-white/70'
                 }`}
               />
             </button>
@@ -510,9 +535,9 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           size="icon"
           variant="ghost"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20"
+          className="rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/20 w-9 h-9 sm:w-10 sm:h-10"
         >
-          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5" />}
         </Button>
       </div>
 

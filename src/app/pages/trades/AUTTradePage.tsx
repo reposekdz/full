@@ -458,6 +458,8 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
   const [jobPlacements, setJobPlacements] = useState<any[]>([]);
   const [researchProjects, setResearchProjects] = useState<any[]>([]);
   const [innovations, setInnovations] = useState<any[]>([]);
+  const [heroImages, setHeroImages] = useState<string[]>([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   
   // Refs for advanced interactions
   const containerRef = useRef<HTMLDivElement>(null);
@@ -467,6 +469,27 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.8]);
   const isStatsInView = useInView(statsRef, { once: true, margin: '-100px' });
+
+  // Load hero images
+  useEffect(() => {
+    const heroImageFiles = [
+      'IMG-20260128-WA0062.jpg', 'IMG-20260128-WA0067.jpg', 'IMG-20260128-WA0070.jpg',
+      'IMG-20260128-WA0076.jpg', 'IMG-20260128-WA0080.jpg', 'IMG-20260128-WA0082.jpg',
+      'IMG-20260128-WA0084.jpg', 'IMG-20260128-WA0087.jpg', 'IMG-20260128-WA0092.jpg',
+      'IMG-20260128-WA0095.jpg', 'IMG-20260128-WA0101.jpg', 'IMG-20260128-WA0105.jpg',
+      'IMG-20260128-WA0110.jpg', 'IMG-20260128-WA0116.jpg', 'IMG-20260128-WA0119.jpg'
+    ];
+    setHeroImages(heroImageFiles.map(img => `http://localhost:5000/uploads/hero/aut hero/${img}`));
+  }, []);
+
+  // Auto-rotate hero images
+  useEffect(() => {
+    if (heroImages.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroImages]);
 
   // Advanced Data Loading with AI and Real-time Features
   useEffect(() => {
@@ -2038,19 +2061,24 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-cyan-50">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-green-600 via-teal-600 to-cyan-600 text-white">
-        <div className="absolute inset-0 opacity-20">
+        <AnimatePresence mode="wait">
           <motion.div
-            animate={{ 
-              backgroundPosition: ['0% 0%', '100% 100%'],
-            }}
-            transition={{ duration: 20, repeat: Infinity, repeatType: 'reverse' }}
-            className="w-full h-full"
-            style={{
-              backgroundImage: 'url(http://localhost:5000/uploads/trades/auto.jpg)',
-              backgroundSize: 'cover'
-            }}
-          />
-        </div>
+            key={currentHeroIndex}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+            className="absolute inset-0"
+          >
+            <div
+              className="w-full h-full bg-cover bg-center"
+              style={{
+                backgroundImage: heroImages.length > 0 ? `url(${heroImages[currentHeroIndex]})` : 'url(http://localhost:5000/uploads/trades/auto.jpg)'
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
+        <div className="absolute inset-0 bg-gradient-to-r from-green-900/60 via-teal-900/50 to-cyan-900/60" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <motion.div

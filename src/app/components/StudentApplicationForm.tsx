@@ -41,6 +41,10 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
   const [applicationNumber, setApplicationNumber] = useState('');
   const [selectedTrade, setSelectedTrade] = useState('');
   const [documents, setDocuments] = useState<File[]>([]);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>('');
+  const [reportCard, setReportCard] = useState<File | null>(null);
+  const [reportCardPreview, setReportCardPreview] = useState<string>('');
   const [isValidating, setIsValidating] = useState(false);
   const [formData, setFormData] = useState({
     // Personal Information
@@ -294,6 +298,30 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
     }
   };
 
+  const handleProfilePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfilePhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleReportCardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setReportCard(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReportCardPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const removeDocument = (index: number) => {
     setDocuments(documents.filter((_, i) => i !== index));
   };
@@ -362,6 +390,16 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       Object.entries(formData).forEach(([key, value]) => {
         if (value) formDataToSend.append(key, value);
       });
+      
+      // Add profile photo
+      if (profilePhoto) {
+        formDataToSend.append('profile_photo', profilePhoto);
+      }
+      
+      // Add report card
+      if (reportCard) {
+        formDataToSend.append('report_card', reportCard);
+      }
       
       // Add documents
       documents.forEach((doc) => {
@@ -510,6 +548,30 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
                   <User className="w-6 h-6 text-blue-600" /> Amakuru yawe bwite
                 </h3>
+                
+                {/* Profile Photo Upload */}
+                <div className="mb-6 flex justify-center">
+                  <div className="relative">
+                    <div className="w-32 h-32 rounded-full border-4 border-blue-500 overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {profilePhotoPreview ? (
+                        <img src={profilePhotoPreview} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-16 h-16 text-gray-400" />
+                      )}
+                    </div>
+                    <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition shadow-lg">
+                      <Upload className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handleProfilePhotoUpload}
+                        className="hidden"
+                        required
+                      />
+                    </label>
+                  </div>
+                </div>
+                <p className="text-center text-sm text-gray-600 mb-6">Shyiraho ifoto yawe * (JPG, PNG - Max 2MB)</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
@@ -812,6 +874,41 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
                   <GraduationCap className="w-6 h-6 text-purple-600" /> Amakuru y'amasomo
                 </h3>
+
+                {/* Report Card Upload */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Shyiraho ifoto y'impamyabumenyi (Report Card) *</label>
+                  <div className="border-2 border-dashed border-purple-300 rounded-xl p-4 hover:border-purple-500 transition">
+                    {reportCardPreview ? (
+                      <div className="relative">
+                        <img src={reportCardPreview} alt="Report Card" className="w-full h-64 object-contain rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReportCard(null);
+                            setReportCardPreview('');
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center cursor-pointer py-8">
+                        <Upload className="w-12 h-12 text-purple-500 mb-2" />
+                        <span className="text-sm font-medium text-gray-700">Kanda hano ushyireho ifoto y'impamyabumenyi</span>
+                        <span className="text-xs text-gray-500 mt-1">JPG, PNG (Max 5MB)</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          onChange={handleReportCardUpload}
+                          className="hidden"
+                          required
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

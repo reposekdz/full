@@ -13,6 +13,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 
 interface Student {
   id: number;
@@ -56,11 +57,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterConduct, setFilterConduct] = useState('all');
   const [availableTrades, setAvailableTrades] = useState<Trade[]>([]);
-  const [availableLevels, setAvailableLevels] = useState<Level[]>([
-    { level_number: 1, level_suffix: 'L1', level_name: 'Level 1' },
-    { level_number: 2, level_suffix: 'L2', level_name: 'Level 2' },
-    { level_number: 3, level_suffix: 'L3', level_name: 'Level 3' }
-  ]);
+  const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [showConductModal, setShowConductModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -121,18 +118,22 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
     try {
       const token = localStorage.getItem('token');
       
-      // Fetch students and trades in parallel
-      const [studentsRes, tradesRes] = await Promise.all([
+      // Fetch students, trades, and levels in parallel
+      const [studentsRes, tradesRes, levelsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/global-student-management/students?limit=1000`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch(`${API_BASE_URL}/trades`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE_URL}/levels`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
       
       const studentsData = await studentsRes.json();
       const tradesData = await tradesRes.json();
+      const levelsData = await levelsRes.json();
       
       if (studentsData.success) {
         // Map the data to match expected format
@@ -148,6 +149,10 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
       
       if (tradesData.success) {
         setAvailableTrades(tradesData.trades || []);
+      }
+      
+      if (levelsData.success) {
+        setAvailableLevels(levelsData.levels || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -589,35 +594,19 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
                       {level.level_name}
                     </SelectItem>
                   ))}
-                  {/* Also add levels from students data as fallback */}
-                  {[...new Set(students.map(s => s.level_number).filter(Boolean))].map((levelNum) => (
-                    <SelectItem key={levelNum.toString()} value={levelNum.toString()}>
-                      Level {levelNum}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
-              </select>
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value)}
-                className="px-4 py-2 border rounded-lg"
-              >
-                <option value="all">All Levels</option>
-                {levels.map(level => (
-                  <option key={level} value={level}>Level {level}</option>
-                ))}
-              </select>
-              <select
-                value={filterConduct}
-                onChange={(e) => setFilterConduct(e.target.value)}
-                className="px-4 py-2 border rounded-lg"
-              >
-                <option value="all">All Conduct</option>
-                <option value="good">Good (≥32/40)</option>
-                <option value="average">Average (24-31/40)</option>
-                <option value="poor">Poor (&lt;24/40)</option>
-              </select>
+              <Select value={filterConduct} onValueChange={setFilterConduct}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All Conduct" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Conduct</SelectItem>
+                  <SelectItem value="good">Good (≥32/40)</SelectItem>
+                  <SelectItem value="average">Average (24-31/40)</SelectItem>
+                  <SelectItem value="poor">Poor (&lt;24/40)</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => {
                   setSearchQuery('');
