@@ -7,6 +7,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Badge } from '@/app/components/ui/badge';
 import { apiService } from '@/app/services/apiService';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 interface UniversalProfilePageProps {
   onNavigate?: (page: string) => void;
@@ -396,6 +397,14 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="Enter address"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-lg font-semibold text-blue-700">Your Location (Rwanda)</Label>
+                  <RwandaLocationSelector
+                    onLocationChange={(location) => setFormData({...formData, ...location})}
+                    required={true}
                   />
                 </div>
 

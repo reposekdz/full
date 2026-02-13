@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendUniversalMessage } = require('../services/smsService');
+const { notifyConductRemoval, notifyLeaveApproval } = require('../utils/parentNotifications');
 
 const router = express.Router();
 
@@ -36,37 +37,79 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
   try {
     const { student_id, conduct_type, severity, description, action_taken, conduct_points_deducted, new_conduct_score, removed_by_name } = req.body;
     
-    const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
-    if (student.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-    
-    const [result] = await pool.execute(`
-      INSERT INTO discipline_records 
-      (student_id, student_code, student_name, trade, class_level, conduct_type, severity, description, action_taken, conduct_points_deducted, new_conduct_score, removed_by, removed_by_name, parent_notified)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false)
-    `, [
-      student_id, student[0].student_id, `${student[0].first_name} ${student[0].last_name}`,
-      student[0].current_trade, student[0].current_level, conduct_type, severity,
-      description, action_taken, conduct_points_deducted, new_conduct_score,
-      req.user.userId, removed_by_name
-    ]);
-    
-    await pool.execute('UPDATE global_students SET conduct_score = ? WHERE id = ?', [new_conduct_score, student_id]);
-    
-    const [parents] = await pool.execute(
-      'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+    // Get student from global_student_sheets
+    const [students] = await pool.execute(
+      'SELECT * FROM global_student_sheets WHERE id = ?',
       [student_id]
     );
     
-    if (parents.length > 0 && parents[0].phone) {
-      const message = `ISHURI: Umwana wawe ${student[0].first_name} ${student[0].last_name} yakiriye igihano cya ${conduct_type} (${severity}). Impamvu: ${description}. Amanota yakuweho: ${conduct_points_deducted}. Amanota ashya: ${new_conduct_score}/40.`;
-      await sendUniversalMessage(parents[0].phone, message, req.user.userId, { type: 'conduct_removal' });
-      await pool.execute('UPDATE discipline_records SET parent_notified = true, sms_sent = true WHERE id = ?', [result.insertId]);
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
     }
     
-    res.json({ success: true, message: 'Conduct removed successfully', recordId: result.insertId });
+    const student = students[0];
+    
+    // Insert discipline record
+    const [result] = await pool.execute(`
+      INSERT INTO discipline_records 
+      (student_id, student_code, student_name, trade, class_level, conduct_type, severity, description, action_taken, conduct_points_deducted, new_conduct_score, removed_by, removed_by_name, parent_notified, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, NOW())
+    `, [
+      student_id, student.student_code, `${student.first_name} ${student.last_name}`,
+      student.trade_code, student.level_number, conduct_type, severity,
+      description, action_taken || '', conduct_points_deducted, new_conduct_score,
+      req.user?.id || 0, removed_by_name
+    ]);
+    
+    // Update conduct score
+    await pool.execute(
+      'UPDATE global_student_sheets SET conduct_score = ? WHERE id = ?',
+      [new_conduct_score, student_id]
+    );
+    
+    // Notify parents through parent linking system
+    const [connections] = await pool.execute(
+      `SELECT DISTINCT parent_phone FROM parent_connections 
+       WHERE student_id = ? AND status = 'active' AND can_receive_notifications = 1`,
+      [student_id]
+    );
+    
+    let notifiedCount = 0;
+    for (const conn of connections) {
+      if (conn.parent_phone) {
+        const message = `ISHURI: Umwana wawe ${student.first_name} ${student.last_name} yakiriye igihano cya ${conduct_type} (${severity}). Impamvu: ${description}. Amanota yakuweho: ${conduct_points_deducted}. Amanota ashya: ${new_conduct_score}/40.`;
+        try {
+          await sendUniversalMessage(conn.parent_phone, message, req.user?.id || 0, { type: 'conduct_removal' });
+          notifiedCount++;
+        } catch (err) {
+          console.error('Failed to send SMS:', err);
+        }
+      }
+    }
+    
+    if (notifiedCount > 0) {
+      await pool.execute(
+        'UPDATE discipline_records SET parent_notified = true, sms_sent = true WHERE id = ?',
+        [result.insertId]
+      );
+    }
+    
+    // Also use the comprehensive notification system
+    await notifyConductRemoval(student_id, {
+      conduct_type,
+      severity,
+      description,
+      action_taken
+    }, result.insertId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Conduct removed successfully', 
+      recordId: result.insertId,
+      parentsNotified: notifiedCount
+    });
   } catch (error) {
+    console.error('Error removing conduct:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -76,34 +119,71 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
   try {
     const { student_id, leave_type, reason, start_time, end_time, approved_by_name } = req.body;
     
-    const [student] = await pool.execute('SELECT * FROM global_students WHERE id = ?', [student_id]);
-    if (student.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-    
-    const [result] = await pool.execute(`
-      INSERT INTO student_leaves 
-      (student_id, student_code, student_name, trade, class_level, leave_type, reason, start_time, end_time, approved_by, approved_by_name, status, parent_notified)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false)
-    `, [
-      student_id, student[0].student_id, `${student[0].first_name} ${student[0].last_name}`,
-      student[0].current_trade, student[0].current_level, leave_type, reason,
-      start_time, end_time || start_time, req.user.userId, approved_by_name
-    ]);
-    
-    const [parents] = await pool.execute(
-      'SELECT p.phone FROM student_parents p WHERE p.student_id = ? AND p.is_active = true',
+    // Get student from global_student_sheets
+    const [students] = await pool.execute(
+      'SELECT * FROM global_student_sheets WHERE id = ?',
       [student_id]
     );
     
-    if (parents.length > 0 && parents[0].phone) {
-      const message = `ISHURI: Umwana wawe ${student[0].first_name} ${student[0].last_name} yahawe uruhushya rwo ${leave_type}. Impamvu: ${reason}. Kuva ${start_time} kugeza ${end_time || start_time}.`;
-      await sendUniversalMessage(parents[0].phone, message, req.user.userId, { type: 'leave_approval' });
-      await pool.execute('UPDATE student_leaves SET parent_notified = true, sms_sent = true WHERE id = ?', [result.insertId]);
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
     }
     
-    res.json({ success: true, message: 'Leave granted successfully', leaveId: result.insertId });
+    const student = students[0];
+    
+    // Insert leave record
+    const [result] = await pool.execute(`
+      INSERT INTO student_leaves 
+      (student_id, student_code, student_name, trade, class_level, leave_type, reason, start_time, end_time, approved_by, approved_by_name, status, parent_notified, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false, NOW())
+    `, [
+      student_id, student.student_code, `${student.first_name} ${student.last_name}`,
+      student.trade_code, student.level_number, leave_type, reason,
+      start_time, end_time || start_time, req.user?.id || 0, approved_by_name
+    ]);
+    
+    // Notify parents through parent linking system
+    const [connections] = await pool.execute(
+      `SELECT DISTINCT parent_phone FROM parent_connections 
+       WHERE student_id = ? AND status = 'active' AND can_receive_notifications = 1`,
+      [student_id]
+    );
+    
+    let notifiedCount = 0;
+    for (const conn of connections) {
+      if (conn.parent_phone) {
+        const message = `ISHURI: Umwana wawe ${student.first_name} ${student.last_name} yahawe uruhushya rwo ${leave_type}. Impamvu: ${reason}. Kuva ${start_time} kugeza ${end_time || start_time}.`;
+        try {
+          await sendUniversalMessage(conn.parent_phone, message, req.user?.id || 0, { type: 'leave_approval' });
+          notifiedCount++;
+        } catch (err) {
+          console.error('Failed to send SMS:', err);
+        }
+      }
+    }
+    
+    if (notifiedCount > 0) {
+      await pool.execute(
+        'UPDATE student_leaves SET parent_notified = true, sms_sent = true WHERE id = ?',
+        [result.insertId]
+      );
+    }
+    
+    // Also use the comprehensive notification system
+    await notifyLeaveApproval(student_id, {
+      leave_type,
+      reason,
+      start_time
+    }, result.insertId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Leave granted successfully', 
+      leaveId: result.insertId,
+      parentsNotified: notifiedCount
+    });
   } catch (error) {
+    console.error('Error granting leave:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

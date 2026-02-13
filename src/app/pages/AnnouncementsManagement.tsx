@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/componen
 import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Badge } from '@/app/components/ui/badge';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -538,6 +539,14 @@ const AnnouncementsManagement: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label className="text-lg font-semibold text-blue-700">Target Location (Rwanda)</Label>
+                <RwandaLocationSelector
+                  onLocationChange={(location) => setFormData({...formData, ...location})}
+                  required={false}
+                />
               </div>
 
               <div className="flex gap-2 pt-4">

@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/componen
 import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Badge } from '@/app/components/ui/badge';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -559,6 +560,14 @@ const ClubsManagement: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, meeting_location: e.target.value })}
                   placeholder="Enter meeting location"
                   required
+                />
+              </div>
+
+              <div>
+                <Label className="text-lg font-semibold text-purple-700">Club Location (Rwanda)</Label>
+                <RwandaLocationSelector
+                  onLocationChange={(location) => setFormData({...formData, ...location})}
+                  required={true}
                 />
               </div>
 

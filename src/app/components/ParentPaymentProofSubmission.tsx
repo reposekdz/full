@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 const ParentPaymentProofSubmission: React.FC = () => {
   const [children, setChildren] = useState<any[]>([]);
@@ -267,6 +268,14 @@ const ParentPaymentProofSubmission: React.FC = () => {
                       placeholder="Andika inyongera..."
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2">Aho Utuye (Rwanda)</label>
+                  <RwandaLocationSelector
+                    onLocationChange={(location) => setFormData({...formData, ...location})}
+                    required={true}
+                  />
                 </div>
 
                 <div className="flex gap-2">

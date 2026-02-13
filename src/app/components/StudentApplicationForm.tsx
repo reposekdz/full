@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, CheckCircle, AlertCircle, FileText, User, Phone, Mail, MapPin, Users, GraduationCap, BookOpen, Upload, Calendar, Clock, Star, Award, Target, Shield, Search, ChevronDown } from 'lucide-react';
+import { Send, CheckCircle, AlertCircle, FileText, User, Phone, Mail, MapPin, Users, GraduationCap, BookOpen, Upload, Calendar, Clock, Star, Award, Target, Shield, Search, ChevronDown, Trash2 } from 'lucide-react';
 import { API_BASE_URL } from '@/app/config/apiBase';
+import RwandaLocationSelector from './RwandaLocationSelector';
 
 interface ApplicationFormProps {
   onClose?: () => void;
@@ -99,15 +100,14 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
   useEffect(() => {
     fetchTrades();
     fetchLevels();
-    fetchProvinces();
     fetchValidationRules();
   }, []);
 
   const fetchTrades = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trades`);
+      const response = await fetch(`${API_BASE_URL}/student-applications-production/trades`);
       const data = await response.json();
-      if (data.success) setTrades(data.trades);
+      if (data.success) setTrades(data.data);
     } catch (error) {
       console.error('Error fetching trades:', error);
     }
@@ -123,80 +123,7 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
     }
   };
 
-  const fetchProvinces = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/provinces`);
-      const data = await response.json();
-      if (data.success) {
-        setLocationData(prev => ({ ...prev, provinces: data.provinces }));
-      }
-    } catch (error) {
-      console.error('Error fetching provinces:', error);
-    }
-  };
 
-  const fetchDistricts = async (provinceId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/districts/${provinceId}`);
-      const data = await response.json();
-      if (data.success) {
-        setLocationData(prev => ({ 
-          ...prev, 
-          districts: data.districts,
-          sectors: [],
-          cells: [],
-          villages: []
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching districts:', error);
-    }
-  };
-
-  const fetchSectors = async (districtId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/sectors/${districtId}`);
-      const data = await response.json();
-      if (data.success) {
-        setLocationData(prev => ({ 
-          ...prev, 
-          sectors: data.sectors,
-          cells: [],
-          villages: []
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching sectors:', error);
-    }
-  };
-
-  const fetchCells = async (sectorId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/cells/${sectorId}`);
-      const data = await response.json();
-      if (data.success) {
-        setLocationData(prev => ({ 
-          ...prev, 
-          cells: data.cells,
-          villages: []
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching cells:', error);
-    }
-  };
-
-  const fetchVillages = async (cellId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/villages/${cellId}`);
-      const data = await response.json();
-      if (data.success) {
-        setLocationData(prev => ({ ...prev, villages: data.villages }));
-      }
-    } catch (error) {
-      console.error('Error fetching villages:', error);
-    }
-  };
 
   const fetchValidationRules = async () => {
     try {
@@ -257,35 +184,7 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       setValidationErrors(prev => ({ ...prev, [name]: error }));
     }
     
-    // Handle location cascading
-    if (name === 'province_id') {
-      setFormData(prev => ({ 
-        ...prev, 
-        district_id: '', 
-        sector_id: '', 
-        cell_id: '', 
-        village_id: '' 
-      }));
-      if (value) fetchDistricts(value);
-    } else if (name === 'district_id') {
-      setFormData(prev => ({ 
-        ...prev, 
-        sector_id: '', 
-        cell_id: '', 
-        village_id: '' 
-      }));
-      if (value) fetchSectors(value);
-    } else if (name === 'sector_id') {
-      setFormData(prev => ({ 
-        ...prev, 
-        cell_id: '', 
-        village_id: '' 
-      }));
-      if (value) fetchCells(value);
-    } else if (name === 'cell_id') {
-      setFormData(prev => ({ ...prev, village_id: '' }));
-      if (value) fetchVillages(value);
-    }
+
     
     if (name === 'trade_code') {
       setSelectedTrade(value);
@@ -409,7 +308,7 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       formDataToSend.append('application_date', new Date().toISOString().split('T')[0]);
       formDataToSend.append('status', 'pending');
 
-      const response = await fetch(`${API_BASE_URL}/student-applications/submit`, {
+      const response = await fetch(`${API_BASE_URL}/student-applications-production/submit`, {
         method: 'POST',
         body: formDataToSend
       });
@@ -417,7 +316,7 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       const data = await response.json();
 
       if (data.success) {
-        setApplicationNumber(data.application_number);
+        setApplicationNumber(data.data.application_number);
         setSubmitted(true);
       } else {
         if (data.errors && Array.isArray(data.errors)) {
@@ -674,112 +573,13 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Intara *</label>
-                    <select
-                      name="province_id"
-                      value={formData.province_id}
-                      onChange={handleChange}
-                      required
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        validationErrors.province_id ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Hitamo intara</option>
-                      {locationData.provinces.map((province) => (
-                        <option key={province.id} value={province.id}>
-                          {province.name_rw} ({province.name_en})
-                        </option>
-                      ))}
-                    </select>
-                    {validationErrors.province_id && (
-                      <p className="text-red-500 text-xs mt-1">{validationErrors.province_id}</p>
-                    )}
-                  </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Akarere *</label>
-                    <select
-                      name="district_id"
-                      value={formData.district_id}
-                      onChange={handleChange}
-                      required
-                      disabled={!formData.province_id}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 ${
-                        validationErrors.district_id ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Hitamo akarere</option>
-                      {locationData.districts.map((district) => (
-                        <option key={district.id} value={district.id}>
-                          {district.name_rw} ({district.name_en})
-                        </option>
-                      ))}
-                    </select>
-                    {validationErrors.district_id && (
-                      <p className="text-red-500 text-xs mt-1">{validationErrors.district_id}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Umurenge *</label>
-                    <select
-                      name="sector_id"
-                      value={formData.sector_id}
-                      onChange={handleChange}
-                      required
-                      disabled={!formData.district_id}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 ${
-                        validationErrors.sector_id ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Hitamo umurenge</option>
-                      {locationData.sectors.map((sector) => (
-                        <option key={sector.id} value={sector.id}>
-                          {sector.name_rw} ({sector.name_en})
-                        </option>
-                      ))}
-                    </select>
-                    {validationErrors.sector_id && (
-                      <p className="text-red-500 text-xs mt-1">{validationErrors.sector_id}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Akagari</label>
-                    <select
-                      name="cell_id"
-                      value={formData.cell_id}
-                      onChange={handleChange}
-                      disabled={!formData.sector_id}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                    >
-                      <option value="">Hitamo akagari (optional)</option>
-                      {locationData.cells.map((cell) => (
-                        <option key={cell.id} value={cell.id}>
-                          {cell.name_rw} ({cell.name_en})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Umudugudu</label>
-                    <select
-                      name="village_id"
-                      value={formData.village_id}
-                      onChange={handleChange}
-                      disabled={!formData.cell_id}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                    >
-                      <option value="">Hitamo umudugudu (optional)</option>
-                      {locationData.villages.map((village) => (
-                        <option key={village.id} value={village.id}>
-                          {village.name_rw} ({village.name_en})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="mt-4">
+                  <RwandaLocationSelector
+                    onLocationChange={(location) => setFormData({...formData, ...location})}
+                    required={true}
+                  />
                 </div>
 
                 <div className="mt-4">
@@ -997,15 +797,15 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
                     >
                       <option value="">Hitamo umwuga</option>
                       {trades.map((trade) => (
-                        <option key={trade.trade_code} value={trade.trade_code}>
-                          {trade.trade_name} ({trade.trade_code})
+                        <option key={trade.code} value={trade.code}>
+                          {trade.name} ({trade.code})
                         </option>
                       ))}
                     </select>
                     {selectedTrade && (
                       <div className="mt-2 p-3 bg-yellow-100 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                          {trades.find(t => t.trade_code === selectedTrade)?.description}
+                          {trades.find(t => t.code === selectedTrade)?.description}
                         </p>
                       </div>
                     )}

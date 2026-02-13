@@ -13,11 +13,12 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Badge } from '@/app/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
-import { Select, SelecbatContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Switch } from '@/app/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/app/components/ui/table';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { DashboardWrapper } from '@/app/components/DashboardWrapper';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -866,7 +867,8 @@ const RoleBasedDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <DashboardWrapper user={user}>
+      <div className="min-h-screen bg-gray-50">
       <div className="flex">
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-lg">
@@ -902,9 +904,7 @@ const RoleBasedDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {renderModal()}
-    </div>
+    </DashboardWrapper>
   );
 };
 

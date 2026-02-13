@@ -1,13 +1,177 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const bcrypt = require('bcrypt');
+const multer = require('multer');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
-const path = require('path');
 const router = express.Router();
+
+// Configure multer for profile uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/profiles/'),
+  filename: (req, file, cb) => cb(null, `dos-${Date.now()}${path.extname(file.originalname)}`)
+});
+const upload = multer({ storage });
 
 // Helper: Calculate grade
 const calcGrade = (p) => p >= 90 ? 'A' : p >= 80 ? 'B' : p >= 70 ? 'C' : p >= 60 ? 'D' : 'F';
+
+// ==================== PROFILE MANAGEMENT ====================
+
+// Get DOS profile
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const [users] = await pool.execute(
+      'SELECT id, first_name, last_name, email, phone, username, profile_image, date_of_birth, gender, address FROM users WHERE id = ?',
+      [req.user.userId]
+    );
+    if (users.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, profile: users[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update DOS profile
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, date_of_birth, gender, address } = req.body;
+    await pool.execute(
+      'UPDATE users SET first_name=?, last_name=?, email=?, phone=?, date_of_birth=?, gender=?, address=? WHERE id=?',
+      [first_name, last_name, email, phone, date_of_birth, gender, address, req.user.userId]
+    );
+    res.json({ success: true, message: 'Profile updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Upload profile image
+router.post('/profile/image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No image uploaded' });
+    const imageUrl = `/uploads/profiles/${req.file.filename}`;
+    await pool.execute('UPDATE users SET profile_image=? WHERE id=?', [imageUrl, req.user.userId]);
+    res.json({ success: true, message: 'Image updated', image_url: imageUrl });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Change password
+router.post('/profile/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json({ success: false, message: 'Passwords required' });
+    
+    const [users] = await pool.execute('SELECT password FROM users WHERE id=?', [req.user.userId]);
+    if (users.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const validPassword = await bcrypt.compare(current_password, users[0].password);
+    if (!validPassword) return res.status(401).json({ success: false, message: 'Current password incorrect' });
+    
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    await pool.execute('UPDATE users SET password=? WHERE id=?', [hashedPassword, req.user.userId]);
+    res.json({ success: true, message: 'Password changed' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Dashboard stats
+router.get('/dashboard/stats', authenticateToken, async (req, res) => {
+  try {
+    const [[studentStats]] = await pool.execute('SELECT COUNT(*) as total_students, COUNT(CASE WHEN status="active" THEN 1 END) as active_students, AVG(gpa) as avg_gpa FROM global_student_sheets');
+    const [[teacherStats]] = await pool.execute('SELECT COUNT(*) as total_teachers FROM users WHERE role="teacher" AND is_active=1');
+    const [[classStats]] = await pool.execute('SELECT COUNT(*) as total_classes FROM trade_classes WHERE is_active=1');
+    const [[examStats]] = await pool.execute('SELECT COUNT(*) as upcoming_exams FROM exams WHERE exam_date >= CURDATE()');
+    const [recentActivities] = await pool.execute('SELECT "student_enrolled" as type, created_at, CONCAT(first_name," ",last_name," enrolled") as description FROM global_student_sheets WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY created_at DESC LIMIT 10');
+    
+    res.json({ success: true, stats: { students: studentStats, teachers: teacherStats, classes: classStats, exams: examStats, recent_activities: recentActivities } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get courses
+router.get('/courses', authenticateToken, async (req, res) => {
+  try {
+    const [courses] = await pool.execute('SELECT c.*, COUNT(DISTINCT ctl.trade_level_id) as assigned_levels FROM courses c LEFT JOIN course_trade_levels ctl ON c.id=ctl.course_id GROUP BY c.id ORDER BY c.name');
+    res.json({ success: true, courses });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Create course
+router.post('/courses', authenticateToken, async (req, res) => {
+  try {
+    const { code, name, description, duration_months, fee_amount } = req.body;
+    const [result] = await pool.execute('INSERT INTO courses (code, name, description, duration_months, fee_amount, is_active, created_at) VALUES (?,?,?,?,?,1,NOW())', [code, name, description, duration_months || 36, fee_amount || 0]);
+    res.json({ success: true, message: 'Course created', course_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get sports
+router.get('/sports', authenticateToken, async (req, res) => {
+  try {
+    const [sports] = await pool.execute('SELECT s.*, COUNT(DISTINCT st.id) as team_count, COUNT(DISTINCT sp.id) as player_count FROM sports s LEFT JOIN sports_teams st ON s.id=st.sport_id LEFT JOIN sports_players sp ON st.id=sp.team_id GROUP BY s.id ORDER BY s.name');
+    res.json({ success: true, sports });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get teams
+router.get('/teams', authenticateToken, async (req, res) => {
+  try {
+    const [teams] = await pool.execute('SELECT st.*, s.name as sport_name, CONCAT(u.first_name," ",u.last_name) as coach_name, COUNT(DISTINCT sp.id) as player_count FROM sports_teams st LEFT JOIN sports s ON st.sport_id=s.id LEFT JOIN users u ON st.coach_id=u.id LEFT JOIN sports_players sp ON st.id=sp.team_id GROUP BY st.id ORDER BY st.name');
+    res.json({ success: true, teams });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get exams
+router.get('/exams', authenticateToken, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = 'SELECT e.*, s.name as subject_name, tl.trade_name, tl.level_number, COUNT(DISTINCT em.student_id) as registered_students FROM exams e LEFT JOIN subjects s ON e.subject_id=s.id LEFT JOIN trades_levels tl ON e.trade_level_id=tl.id LEFT JOIN exam_marks em ON e.id=em.exam_id WHERE 1=1';
+    if (status === 'upcoming') query += ' AND e.exam_date >= CURDATE()';
+    else if (status === 'past') query += ' AND e.exam_date < CURDATE()';
+    query += ' GROUP BY e.id ORDER BY e.exam_date DESC';
+    const [exams] = await pool.execute(query);
+    res.json({ success: true, exams });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get reports
+router.get('/reports', authenticateToken, async (req, res) => {
+  try {
+    const { academic_year } = req.query;
+    const [reports] = await pool.execute('SELECT gr.*, tl.trade_name, tl.level_number, CONCAT(u.first_name," ",u.last_name) as generated_by_name FROM generated_reports gr LEFT JOIN trades_levels tl ON gr.trade_level_id=tl.id LEFT JOIN users u ON gr.generated_by=u.id WHERE gr.academic_year=? ORDER BY gr.generated_at DESC LIMIT 50', [academic_year || new Date().getFullYear()]);
+    res.json({ success: true, reports });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get marks
+router.get('/marks', authenticateToken, async (req, res) => {
+  try {
+    const { academic_year, term } = req.query;
+    const [marks] = await pool.execute('SELECT sm.*, s.name as subject_name, CONCAT(gss.first_name," ",gss.last_name) as student_name, gss.student_code, CASE WHEN sm.marks >= 90 THEN "A" WHEN sm.marks >= 80 THEN "B" WHEN sm.marks >= 70 THEN "C" WHEN sm.marks >= 60 THEN "D" ELSE "F" END as grade FROM student_marks sm LEFT JOIN subjects s ON sm.subject_id=s.id LEFT JOIN global_student_sheets gss ON sm.student_id=gss.student_id WHERE sm.academic_year=? AND sm.term=? ORDER BY sm.recorded_at DESC LIMIT 100', [academic_year || new Date().getFullYear(), term || 'Term 1']);
+    res.json({ success: true, marks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // ==================== TEACHER ASSIGNMENTS ====================
 

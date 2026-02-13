@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import RwandaLocationSelector from '../components/RwandaLocationSelector';
 import { Settings, HelpCircle, Trophy, Plus, Edit, Trash2, Save, Upload, Image as ImageIcon } from 'lucide-react';
 
 const AdminContentManager = () => {
@@ -392,6 +393,15 @@ const AdminContentManager = () => {
                     onChange={(e) => setImageFile(e.target.files[0])}
                     className="w-full"
                   />
+                  {(modalType === 'team' || modalType === 'player') && (
+                    <div>
+                      <Label className="text-lg font-semibold text-indigo-700">Location (Rwanda)</Label>
+                      <RwandaLocationSelector
+                        onLocationChange={(location) => setFormData({...formData, ...location})}
+                        required={true}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 

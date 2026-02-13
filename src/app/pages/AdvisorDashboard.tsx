@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import RwandaLocationSelector from '../components/RwandaLocationSelector';
 import { Users, Phone, Calendar, ClipboardList, AlertTriangle, MessageSquare, Home, BookOpen, TrendingUp, Plus, Edit, Trash2, Search, Filter, X, Save, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 const AdvisorDashboard = () => {
@@ -306,6 +307,10 @@ const renderModalForm = (type, formData, setFormData) => {
         <Input placeholder="Indangamuntu" value={formData.national_id || ''} onChange={(e) => updateField('national_id', e.target.value)} />
         <Input placeholder="Aderesi" value={formData.address || ''} onChange={(e) => updateField('address', e.target.value)} />
         <Input placeholder="Akazi" value={formData.occupation || ''} onChange={(e) => updateField('occupation', e.target.value)} />
+        <RwandaLocationSelector
+          onLocationChange={(location) => updateField('location_data', location)}
+          required={true}
+        />
         <select className="w-full p-2 border rounded" value={formData.relationship_type || ''} onChange={(e) => updateField('relationship_type', e.target.value)} required>
           <option value="">Ubusabane</option>
           <option value="father">Se</option>

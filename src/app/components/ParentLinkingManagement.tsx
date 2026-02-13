@@ -3,20 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, UserPlus, CheckCircle, XCircle, Clock, Search,
-  ChevronRight, ChevronDown, User, Phone, Mail, MessageSquare,
-  AlertCircle, Eye, EyeOff, RefreshCw, Filter, Download, MoreVertical
+  ChevronRight, User, Phone, Mail, MessageSquare,
+  AlertCircle, RefreshCw, Filter, Download, Shield,
+  UserCheck, Award, TrendingUp, Activity, Bell
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Textarea } from '@/app/components/ui/textarea';
-import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { useAuth } from '@/app/contexts/AuthContext';
 
 // Types
@@ -103,6 +103,7 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Check if user can approve
   const canApprove = APPROVER_ROLES.includes(userRole);
@@ -163,9 +164,11 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
       });
       const data = await res.json();
       if (data.success) {
+        setSuccessMessage('Request approved successfully!');
         setShowApprovalModal(false);
         setApprovalNote('');
         loadData();
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error approving request:', error);
@@ -184,9 +187,11 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
       });
       const data = await res.json();
       if (data.success) {
+        setSuccessMessage('Request rejected successfully!');
         setShowRejectModal(false);
         setRejectNote('');
         loadData();
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -206,9 +211,11 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
       });
       const data = await res.json();
       if (data.success) {
+        setSuccessMessage(`Successfully approved ${data.approved} requests!`);
         setSelectedIds([]);
         setBulkMode(false);
         loadData();
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error in bulk approve:', error);
@@ -248,95 +255,117 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-2 border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-orange-600">Pending Requests</p>
-                <p className="text-3xl font-bold text-orange-700">{pendingCount}</p>
-              </div>
-              <Clock className="w-10 h-10 text-orange-300" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-2 border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-600">Active Connections</p>
-                <p className="text-3xl font-bold text-green-700">{connections.filter(c => c.status === 'active').length}</p>
-              </div>
-              <Users className="w-10 h-10 text-green-300" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-2 border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-600">Total Requests</p>
-                <p className="text-3xl font-bold text-blue-700">{allRequests.length}</p>
-              </div>
-              <UserPlus className="w-10 h-10 text-blue-300" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-2 border-purple-200 bg-purple-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-600">Your Role</p>
-                <p className="text-lg font-bold text-purple-700 uppercase">{userRole}</p>
-              </div>
-              <Badge className="bg-purple-500">{canApprove ? 'Can Approve' : 'View Only'}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-6">
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3"
+          >
+            <CheckCircle className="w-6 h-6" />
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main Content */}
-      <Card className="border-2 border-purple-200 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-6 h-6" />
+              <h1 className="text-4xl font-black text-gray-900 flex items-center gap-3">
+                <Shield className="w-10 h-10 text-purple-600" />
                 Parent Linking Management
-              </CardTitle>
-              <CardDescription className="text-white/90">
-                Approve or reject parent requests to link with students
-              </CardDescription>
+              </h1>
+              <p className="text-gray-600 mt-2">Approve and manage parent-student connections</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={loadData}>
+            <div className="flex gap-3">
+              <Button onClick={loadData} variant="outline" className="gap-2">
                 <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+              <Button className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600">
+                <Download className="w-4 h-4" />
+                Export
               </Button>
             </div>
           </div>
-        </CardHeader>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 bg-purple-100 m-4 mb-0">
-            <TabsTrigger value="pending" className="relative">
-              Pending
-              {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {pendingCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="all">All Requests</TabsTrigger>
-            <TabsTrigger value="connections">Connections</TabsTrigger>
-          </TabsList>
+        </motion.div>
 
-          {/* Pending Tab */}
-          <TabsContent value="pending" className="p-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {[
+            { title: 'Pending Requests', value: pendingCount, icon: Clock, color: 'from-orange-500 to-red-500', bgColor: 'bg-orange-50', textColor: 'text-orange-700' },
+            { title: 'Active Connections', value: connections.filter(c => c.status === 'active').length, icon: Users, color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+            { title: 'Total Requests', value: allRequests.length, icon: UserPlus, color: 'from-blue-500 to-indigo-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+            { title: 'Your Role', value: userRole.toUpperCase(), icon: Award, color: 'from-purple-500 to-pink-500', bgColor: 'bg-purple-50', textColor: 'text-purple-700' }
+          ].map((stat, idx) => (
+            <motion.div
+              key={stat.title}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: idx * 0.1 }}
+            >
+              <Card className="overflow-hidden hover:shadow-xl transition-all border-2">
+                <CardContent className="p-0">
+                  <div className={`bg-gradient-to-br ${stat.color} p-6 text-white`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-white/90 text-sm mb-2">{stat.title}</p>
+                        <p className="text-4xl font-black">{typeof stat.value === 'number' ? stat.value : stat.value}</p>
+                      </div>
+                      <stat.icon className="w-12 h-12 opacity-90" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Main Content */}
+        <Card className="border-2 border-purple-200 shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <UserCheck className="w-7 h-7" />
+                  Parent Linking Requests
+                </CardTitle>
+                <CardDescription className="text-white/90 mt-1">
+                  Review and approve parent requests to access student information
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={loadData}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-3 bg-purple-100 mb-4">
+                <TabsTrigger value="pending" className="relative">
+                  Pending
+                  {pendingCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {pendingCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="all">All Requests</TabsTrigger>
+                <TabsTrigger value="connections">Connections</TabsTrigger>
+              </TabsList>
+
+              {/* Pending Tab */}
+              <TabsContent value="pending">
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
@@ -462,127 +491,128 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
             )}
           </TabsContent>
 
-          {/* All Requests Tab */}
-          <TabsContent value="all" className="p-4">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search by parent name, phone, or student name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* All Requests Tab */}
+              <TabsContent value="all">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by parent name, phone, or student name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              {filteredRequests.map((request, idx) => (
-                <motion.div
-                  key={request.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-gray-200 text-gray-700">
-                          {request.parent_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900">{request.parent_name}</p>
-                          <Badge className={
-                            request.status === 'approved' ? 'bg-green-100 text-green-700' :
-                            request.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }>
-                            {request.status}
-                          </Badge>
+                <div className="space-y-2">
+                  {filteredRequests.map((request, idx) => (
+                    <motion.div
+                      key={request.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="w-10 h-10">
+                            <AvatarFallback className="bg-gray-200 text-gray-700">
+                              {request.parent_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-900">{request.parent_name}</p>
+                              <Badge className={
+                                request.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                request.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                'bg-yellow-100 text-yellow-700'
+                              }>
+                                {request.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              {request.student_first_name} {request.student_last_name} • {request.relationship_type}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500">
-                          {request.student_first_name} {request.student_last_name} • {request.relationship_type}
-                        </p>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="text-right text-sm">
+                            <p className="text-gray-500">{formatDate(request.created_at)}</p>
+                            {request.reviewed_by_name && (
+                              <p className="text-xs text-gray-400">
+                                by {request.reviewed_by_name} ({request.reviewed_by_role})
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="text-right text-sm">
-                        <p className="text-gray-500">{formatDate(request.created_at)}</p>
-                        {request.reviewed_by_name && (
-                          <p className="text-xs text-gray-400">
-                            by {request.reviewed_by_name} ({request.reviewed_by_role})
-                          </p>
-                        )}
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </TabsContent>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
 
-          {/* Connections Tab */}
-          <TabsContent value="connections" className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {connections.map((conn, idx) => (
-                <motion.div
-                  key={conn.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="p-4 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-blue-100 text-blue-700">
-                        {conn.parent_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{conn.parent_name}</p>
-                      <p className="text-sm text-gray-500">{conn.parent_phone}</p>
-                      
-                      <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                        <p className="font-medium">{conn.first_name} {conn.last_name}</p>
-                        <p className="text-xs text-gray-500">{conn.trade_code} - Level {conn.level_number}</p>
+              {/* Connections Tab */}
+              <TabsContent value="connections">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {connections.map((conn, idx) => (
+                    <motion.div
+                      key={conn.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="p-4 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-blue-100 text-blue-700">
+                            {conn.parent_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{conn.parent_name}</p>
+                          <p className="text-sm text-gray-500">{conn.parent_phone}</p>
+                          
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                            <p className="font-medium">{conn.first_name} {conn.last_name}</p>
+                            <p className="text-xs text-gray-500">{conn.trade_code} - Level {conn.level_number}</p>
+                          </div>
+                          
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            <Badge variant="outline" className="text-xs">{conn.relationship}</Badge>
+                            <Badge variant={conn.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                              {conn.status}
+                            </Badge>
+                          </div>
+                          
+                          <p className="mt-2 text-xs text-gray-400">
+                            Approved by {conn.approved_by} ({conn.approved_by_role})
+                          </p>
+                        </div>
                       </div>
-                      
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        <Badge variant="outline" className="text-xs">{conn.relationship}</Badge>
-                        <Badge variant={conn.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                          {conn.status}
-                        </Badge>
-                      </div>
-                      
-                      <p className="mt-2 text-xs text-gray-400">
-                        Approved by {conn.approved_by} ({conn.approved_by_role})
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
       {/* Approval Modal */}
       <Dialog open={showApprovalModal} onOpenChange={setShowApprovalModal}>
@@ -627,7 +657,7 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
               <Textarea
                 value={rejectNote}
                 onChange={(e) => setRejectNote(e.target.value)}
-                placeholder="Explain why this request is being rejected..."
+                placeholder="Enter reason for rejection"
                 required
               />
             </div>
@@ -644,6 +674,7 @@ const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

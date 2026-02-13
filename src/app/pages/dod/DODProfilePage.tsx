@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { useAuth } from '@/app/contexts/AuthContext';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 const DODProfilePage = () => {
   const { user } = useAuth();
@@ -184,6 +185,13 @@ const DODProfilePage = () => {
                   <div>
                     <Label>Phone</Label>
                     <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-lg font-semibold text-green-700">Your Location (Rwanda)</Label>
+                    <RwandaLocationSelector
+                      onLocationChange={(location) => setFormData({...formData, ...location})}
+                      required={true}
+                    />
                   </div>
                   <Button type="submit" disabled={loading} className="w-full">
                     <Save className="w-4 h-4 mr-2" />

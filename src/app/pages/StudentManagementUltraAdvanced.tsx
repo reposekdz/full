@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { Textarea } from '@/app/components/ui/textarea';
 import { PowerfulStudentSelector } from '@/app/components/PowerfulStudentSelector';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 // ==================== TYPES ====================
 
@@ -1055,6 +1056,14 @@ const StudentManagementUltraAdvanced: React.FC = () => {
             <div><Label>Date of Birth</Label><Input type="date" value={newStudent.date_of_birth} onChange={(e) => setNewStudent({ ...newStudent, date_of_birth: e.target.value })} /></div>
             <div><Label>Phone</Label><Input value={newStudent.phone} onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })} /></div>
             <div><Label>Email</Label><Input type="email" value={newStudent.email} onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })} /></div>
+
+            <div className="col-span-3 mt-4">
+              <h4 className="font-bold text-gray-700 mb-2">Location Information</h4>
+              <RwandaLocationSelector
+                onLocationChange={(location) => setNewStudent({...newStudent, ...location})}
+                required={true}
+              />
+            </div>
 
             <div className="col-span-3 mt-4"><h4 className="font-bold text-gray-700 mb-2">Academic Information</h4></div>
             <div>

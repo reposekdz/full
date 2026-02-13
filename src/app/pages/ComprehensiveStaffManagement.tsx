@@ -6,6 +6,7 @@ import {
   RefreshCw, Upload, FileText, MoreVertical
 } from 'lucide-react';
 import StaffRoleSelection from '../components/StaffRoleSelection';
+import RwandaLocationSelector from '../components/RwandaLocationSelector';
 
 const ComprehensiveStaffManagement = () => {
   const [staff, setStaff] = useState([]);
@@ -398,6 +399,15 @@ const AddStaffModal = ({ onClose, onSuccess }) => {
               value={formData.hire_date}
               onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            />
+          </div>
+
+          {/* Location Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">Aho Utuye *</label>
+            <RwandaLocationSelector
+              onLocationChange={(location) => setFormData({...formData, ...location})}
+              required={true}
             />
           </div>
 

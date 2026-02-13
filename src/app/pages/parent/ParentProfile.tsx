@@ -8,6 +8,7 @@ import { Label } from '@/app/components/ui/label';
 import { Badge } from '@/app/components/ui/badge';
 import { useAuth } from '@/app/contexts/AuthContext';
 import apiService from '@/app/services/apiService';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 export default function ParentProfile() {
   const { user } = useAuth();
@@ -19,7 +20,12 @@ export default function ParentProfile() {
     email: '',
     phone: '',
     address: '',
-    emergency_contact: ''
+    emergency_contact: '',
+    province_id: null,
+    district_id: null,
+    sector_id: null,
+    cell_id: null,
+    village_id: null
   });
 
   useEffect(() => {
@@ -37,7 +43,12 @@ export default function ParentProfile() {
           email: data.email || '',
           phone: data.phone || '',
           address: data.address || '',
-          emergency_contact: data.emergency_contact || ''
+          emergency_contact: data.emergency_contact || '',
+          province_id: data.province_id || null,
+          district_id: data.district_id || null,
+          sector_id: data.sector_id || null,
+          cell_id: data.cell_id || null,
+          village_id: data.village_id || null
         });
       }
     } catch (err) {
@@ -176,7 +187,33 @@ export default function ParentProfile() {
               <div className="space-y-2 md:col-span-2">
                 <Label className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  Aderesi
+                  Aho Utuye
+                </Label>
+                {isEditing ? (
+                  <RwandaLocationSelector
+                    onLocationChange={(location) => setProfileData({...profileData, ...location})}
+                    initialValues={{
+                      province_id: profileData.province_id,
+                      district_id: profileData.district_id,
+                      sector_id: profileData.sector_id,
+                      cell_id: profileData.cell_id,
+                      village_id: profileData.village_id
+                    }}
+                    required={false}
+                  />
+                ) : (
+                  <Input
+                    value={profileData.address}
+                    disabled
+                    className="border-2 border-purple-100"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Aderesi Yuzuye
                 </Label>
                 <Input
                   value={profileData.address}

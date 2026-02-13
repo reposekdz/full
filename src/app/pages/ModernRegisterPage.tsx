@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { apiService } from '@/app/services/apiService';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 interface ModernRegisterPageProps {
   onNavigate: (page: string) => void;
@@ -360,10 +361,9 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                   {formData.role === 'parent' && (
                     <div>
                       <Label>{translations.location}</Label>
-                      <Input
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        placeholder={translations.districtPlaceholder}
+                      <RwandaLocationSelector
+                        onLocationChange={(location) => setFormData({...formData, ...location})}
+                        required={true}
                       />
                     </div>
                   )}

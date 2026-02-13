@@ -22,7 +22,7 @@ router.post('/register', [
       return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
     }
 
-    const { email, password, first_name, last_name, phone, address } = req.body;
+    const { email, password, first_name, last_name, phone, address, province_id, district_id, sector_id, cell_id, village_id } = req.body;
 
     const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
@@ -38,9 +38,9 @@ router.post('/register', [
 
     const username = email.split('@')[0] + '_parent';
     const [result] = await pool.execute(`
-      INSERT INTO users (username, email, password_hash, first_name, last_name, phone, address, role_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [username, email, hashedPassword, first_name, last_name, phone, address, parentRole[0].id]);
+      INSERT INTO users (username, email, password_hash, first_name, last_name, phone, address, province_id, district_id, sector_id, cell_id, village_id, role_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [username, email, hashedPassword, first_name, last_name, phone, address, province_id || null, district_id || null, sector_id || null, cell_id || null, village_id || null, parentRole[0].id]);
 
     const token = jwt.sign(
       { userId: result.insertId, username, role: 'parent' },

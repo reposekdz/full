@@ -11,6 +11,7 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Badge } from '@/app/components/ui/badge';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 const AdminTradesManagement: React.FC = () => {
   const [trades, setTrades] = useState<any[]>([]);
@@ -378,6 +379,13 @@ const AdminTradesManagement: React.FC = () => {
                 value={formData.image_url}
                 onChange={(e) => setFormData({...formData, image_url: e.target.value})}
               />
+              <div>
+                <Label className="text-lg font-semibold text-green-700">Aho Umwuga Utekenera (Rwanda)</Label>
+                <RwandaLocationSelector
+                  onLocationChange={(location) => setFormData({...formData, ...location})}
+                  required={true}
+                />
+              </div>
               <div className="flex gap-2">
                 <Button 
                   onClick={editMode ? handleUpdateTrade : handleCreateTrade}

@@ -276,6 +276,7 @@ const routes = {
   
   // DOD Comprehensive System
   dodComprehensive: loadRoute('./routes/dod-comprehensive', 'DOD Comprehensive'),
+  dodAdvanced: loadRoute('./routes/dod-advanced', 'DOD Advanced'),
   dodProfile: loadRoute('./routes/dod-profile', 'DOD Profile'),
   dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
   dod: loadRoute('./routes/dod', 'DOD Management'),
@@ -579,6 +580,7 @@ if (routes.unifiedIntegration) { app.use('/api/unified-integration', routes.unif
 
 // DOD Comprehensive System
 if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodComprehensive); mountedRoutes++; }
+if (routes.dodAdvanced) { app.use('/api/dod-advanced', routes.dodAdvanced); mountedRoutes++; }
 if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
 if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
 
@@ -596,6 +598,7 @@ if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManag
 
 // DOS Comprehensive Management
 app.use('/api/dos-management', require('./routes/dos-management')); mountedRoutes++;
+if (routes.dosComprehensiveManagement) { app.use('/api/dos-comprehensive', routes.dosComprehensiveManagement); mountedRoutes++; }
 
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
@@ -663,6 +666,17 @@ app.use('/api/dos-applications', require('./routes/dos-applications')); mountedR
 
 // Location System
 app.use('/api/locations', require('./routes/locations')); mountedRoutes++;
+app.use('/api/rwanda-locations', require('./routes/rwanda-locations')); mountedRoutes++;
+
+// Student Applications System
+app.use('/api/student-applications', require('./routes/student-applications')); mountedRoutes++;
+app.use('/api/student-applications-production', require('./routes/student-applications-production')); mountedRoutes++;
+
+// Force Credential Change
+app.use('/api/auth', require('./routes/force-credential-change')); mountedRoutes++;
+
+// Staff Access Codes Management
+app.use('/api/staff-access-codes', require('./routes/staff-access-codes')); mountedRoutes++;
 
 // Admin Content Management
 if (routes.adminContent) { app.use('/api/admin-content', routes.adminContent); mountedRoutes++; }
@@ -722,7 +736,9 @@ const startServer = (port) => {
     console.log('   /api/search                  - Global Search');
     console.log('   /api/comprehensive-staff     - Staff Management');
     console.log('   /api/student-applications    - Student Applications');
+    console.log('   /api/student-applications    - Student Applications');
     console.log('   /api/locations               - Rwanda Location Data');
+    console.log('   /api/rwanda-locations        - Rwanda Provinces/Districts/Sectors/Cells/Villages');
     console.log('   /api/advisor                 - Advisor Dashboard');
     console.log('   /api/discipline-management   - DOD/Matron/Patron Management');
     console.log('\n✅ All systems operational - Unified Integration Active');

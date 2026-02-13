@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Progress } from '@/app/components/ui/progress';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/app/config/apiBase';
+import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
 // Role configurations with colors and labels
 const ROLE_CONFIGS = {
@@ -954,6 +955,13 @@ export default function EnhancedStaffManagement() {
                 <Textarea
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-lg font-semibold text-indigo-700">Location (Rwanda) *</Label>
+                <RwandaLocationSelector
+                  onLocationChange={(location) => setFormData({...formData, ...location})}
+                  required={true}
                 />
               </div>
               <div className="md:col-span-2">

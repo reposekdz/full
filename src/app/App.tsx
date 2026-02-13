@@ -57,6 +57,7 @@ import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
 import DOSDashboard from '@/app/pages/dashboards/DOSDashboard';
+import DOSDashboardUltraAdvanced from '@/app/pages/dashboards/DOSDashboardUltraAdvanced';
 import ModernHeadmasterDashboard from '@/app/pages/dashboards/ModernHeadmasterDashboard';
 import ModernStockManagerDashboard from '@/app/pages/dashboards/ModernStockManagerDashboard';
 import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';

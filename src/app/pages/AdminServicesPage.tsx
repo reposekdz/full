@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import RwandaLocationSelector from '../components/RwandaLocationSelector';
 import { Plus, Edit, Trash2, Save, X, Upload, Image as ImageIcon, BookOpen, Users, Shield, Award, Mail, Phone, MapPin, Star, Trophy, Target, Briefcase } from 'lucide-react';
 
 const AdminServicesPage = () => {
@@ -677,6 +678,13 @@ const AdminServicesPage = () => {
                       value={formData.office_location || ''}
                       onChange={(e) => setFormData({ ...formData, office_location: e.target.value })}
                     />
+                    <div>
+                      <Label className="text-lg font-semibold text-indigo-700">Aho Utuye (Rwanda) *</Label>
+                      <RwandaLocationSelector
+                        onLocationChange={(location) => setFormData({...formData, ...location})}
+                        required={true}
+                      />
+                    </div>
                   </>
                 )}
 
