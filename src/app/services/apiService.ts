@@ -2004,23 +2004,23 @@ class ApiService {
   }
 
   // DOD - Parent Management
-  async getAllParents(params = {}) {
+  async getDODParents(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/dod/parents?${query}`);
   }
 
-  async getParentDetailsWithChildren(parentId: number) {
+  async getDODParentDetails(parentId: number) {
     return this.request(`/management/dod/parents/${parentId}`);
   }
 
-  async sendParentMessage(parentId: number, messageData: { subject: string; message: string; priority?: string; send_sms?: boolean }) {
+  async sendDODParentMessage(parentId: number, messageData: { subject: string; message: string; priority?: string; send_sms?: boolean }) {
     return this.request(`/management/dod/parents/${parentId}/message`, {
       method: 'POST',
       body: JSON.stringify(messageData)
     });
   }
 
-  async sendBulkParentMessage(messageData: { parent_ids: number[]; subject: string; message: string; priority?: string; send_sms?: boolean }) {
+  async sendDODBulkParentMessage(messageData: { parent_ids: number[]; subject: string; message: string; priority?: string; send_sms?: boolean }) {
     return this.request('/management/dod/parents/bulk-message', {
       method: 'POST',
       body: JSON.stringify(messageData)
@@ -2028,19 +2028,19 @@ class ApiService {
   }
 
   // DOD - Leave Management
-  async getLeaveRequests(params = {}) {
+  async getDODLeaveRequests(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/dod/leave-requests?${query}`);
   }
 
-  async createLeaveRequest(leaveData: { student_id: number; leave_type: string; reason: string; start_date: string; end_date: string }) {
+  async createDODLeaveRequest(leaveData: { student_id: number; leave_type: string; reason: string; start_date: string; end_date: string }) {
     return this.request('/management/dod/leave-requests', {
       method: 'POST',
       body: JSON.stringify(leaveData)
     });
   }
 
-  async updateLeaveStatus(leaveId: number, statusData: { status: string; notes?: string }) {
+  async updateDODLeaveStatus(leaveId: number, statusData: { status: string; notes?: string }) {
     return this.request(`/management/dod/leave-requests/${leaveId}/status`, {
       method: 'PUT',
       body: JSON.stringify(statusData)
@@ -2048,26 +2048,26 @@ class ApiService {
   }
 
   // DOD - Enhanced Discipline Management
-  async getDisciplineRecords(params = {}) {
+  async getDODDisciplineRecords(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/dod/discipline-records?${query}`);
   }
 
-  async createDisciplineRecord(disciplineData: { student_id: number; incident_type: string; incident_date?: string; description: string; severity?: string; action_taken?: string; notify_parent?: boolean }) {
+  async createDODDisciplineRecord(disciplineData: { student_id: number; incident_type: string; incident_date?: string; description: string; severity?: string; action_taken?: string; notify_parent?: boolean }) {
     return this.request('/management/dod/discipline-records', {
       method: 'POST',
       body: JSON.stringify(disciplineData)
     });
   }
 
-  async updateDisciplineRecord(recordId: number, updateData: { incident_type?: string; description?: string; severity?: string; action_taken?: string; status?: string }) {
+  async updateDODDisciplineRecord(recordId: number, updateData: { incident_type?: string; description?: string; severity?: string; action_taken?: string; status?: string }) {
     return this.request(`/management/dod/discipline-records/${recordId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData)
     });
   }
 
-  async deleteDisciplineRecord(recordId: number, permanent: boolean = false) {
+  async deleteDODDisciplineRecord(recordId: number, permanent: boolean = false) {
     return this.request(`/management/dod/discipline-records/${recordId}?permanent=${permanent}`, {
       method: 'DELETE'
     });
@@ -2080,19 +2080,19 @@ class ApiService {
 
   // Legacy DOD methods (for backward compatibility)
   async getDODDisciplineCases() {
-    return this.getDisciplineRecords();
+    return this.getDODDisciplineRecords();
   }
 
   async updateDODDisciplineCase(id: number, data: any) {
-    return this.updateDisciplineRecord(id, data);
+    return this.updateDODDisciplineRecord(id, data);
   }
 
   async deleteDODDisciplineCase(id: number) {
-    return this.deleteDisciplineRecord(id, false);
+    return this.deleteDODDisciplineRecord(id, false);
   }
 
   async notifyParentMarkLoss(studentId: number, marks: number, description: string) {
-    return this.createDisciplineRecord({
+    return this.createDODDisciplineRecord({
       student_id: studentId,
       incident_type: 'Marks Deduction',
       description: `${description} - Marks Lost: ${marks}`,
@@ -2295,12 +2295,12 @@ class ApiService {
     });
   }
 
-  async getPayments(params = {}) {
+  async getAccountantPayments(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/accountant-comprehensive/payments?${query}`);
   }
 
-  async recordPayment(paymentData: any) {
+  async recordAccountantPayment(paymentData: any) {
     return this.request('/accountant-comprehensive/payments', {
       method: 'POST',
       body: JSON.stringify(paymentData)
@@ -2336,12 +2336,12 @@ class ApiService {
     return this.request(`/accountant-comprehensive/reports/collection-efficiency?academicYear=${academicYear}`);
   }
 
-  async getBudgets(params = {}) {
+  async getAccountantBudgets(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/accountant-comprehensive/budgets?${query}`);
   }
 
-  async createBudget(budgetData: any) {
+  async createAccountantBudget(budgetData: any) {
     return this.request('/accountant-comprehensive/budgets', {
       method: 'POST',
       body: JSON.stringify(budgetData)
@@ -2378,7 +2378,7 @@ class ApiService {
     return this.request(`/stock-advanced/inventory/${id}`);
   }
 
-  async addInventoryItem(itemData: any) {
+  async addStockInventoryItem(itemData: any) {
     return this.request('/stock-advanced/inventory', {
       method: 'POST',
       body: JSON.stringify(itemData)
@@ -2465,16 +2465,16 @@ class ApiService {
     return this.request('/teacher-portal-advanced/dashboard');
   }
 
-  async getTeacherClasses(params = {}) {
+  async getTeacherPortalClasses(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/teacher-portal-advanced/classes?${query}`);
   }
 
-  async getClassStudents(classId: number) {
+  async getTeacherPortalClassStudents(classId: number) {
     return this.request(`/teacher-portal-advanced/classes/${classId}/students`);
   }
 
-  async markAttendance(attendanceData: any) {
+  async markTeacherPortalAttendance(attendanceData: any) {
     return this.request('/teacher-portal-advanced/attendance', {
       method: 'POST',
       body: JSON.stringify(attendanceData)
@@ -2507,19 +2507,19 @@ class ApiService {
     });
   }
 
-  async getClassPerformance(classId: number, params = {}) {
+  async getTeacherPortalClassPerformance(classId: number, params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/teacher-portal-advanced/classes/${classId}/performance?${query}`);
   }
 
-  async createAssignment(assignmentData: any) {
+  async createTeacherPortalAssignment(assignmentData: any) {
     return this.request('/teacher-portal-advanced/assignments', {
       method: 'POST',
       body: JSON.stringify(assignmentData)
     });
   }
 
-  async getAssignmentSubmissions(assignmentId: number) {
+  async getTeacherPortalAssignmentSubmissions(assignmentId: number) {
     // Keep consistent return shape with TeacherGradingPage (expects a raw array)
     return this.request(`/advanced-assignments/assignments/${assignmentId}/submissions`);
   }
@@ -2542,7 +2542,7 @@ class ApiService {
 
   // ==================== STUDENT PORTAL COMPREHENSIVE ====================
   
-  async getStudentDashboard() {
+  async getStudentPortalDashboard() {
     return this.request('/student-portal-comprehensive/dashboard');
   }
 
@@ -2551,21 +2551,21 @@ class ApiService {
     return this.request(`/student-portal-comprehensive/academic/marks?${query}`);
   }
 
-  async getStudentAttendance(params = {}) {
+  async getStudentPortalAttendance(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/student-portal-comprehensive/academic/attendance?${query}`);
   }
 
-  async getStudentTimetable() {
+  async getStudentPortalTimetable() {
     return this.request('/student-portal-comprehensive/academic/timetable');
   }
 
-  async getStudentAssignments(params = {}) {
+  async getStudentPortalAssignments(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/student-portal-comprehensive/assignments?${query}`);
   }
 
-  async submitAssignment(assignmentId: number, submissionData: any) {
+  async submitStudentPortalAssignment(assignmentId: number, submissionData: any) {
     return this.request(`/student-portal-comprehensive/assignments/${assignmentId}/submit`, {
       method: 'POST',
       body: JSON.stringify(submissionData)
@@ -2627,12 +2627,12 @@ class ApiService {
     return this.request(`/parent-portal-comprehensive/students/${studentId}/academics?${query}`);
   }
 
-  async getChildAttendance(studentId: string, params = {}) {
+  async getParentPortalChildAttendance(studentId: string, params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/parent-portal-comprehensive/students/${studentId}/attendance?${query}`);
   }
 
-  async getChildDiscipline(studentId: string) {
+  async getParentPortalChildDiscipline(studentId: string) {
     return this.request(`/parent-portal-comprehensive/students/${studentId}/discipline`);
   }
 
@@ -2641,7 +2641,7 @@ class ApiService {
     return this.request(`/parent-portal-comprehensive/students/${studentId}/activities?${query}`);
   }
 
-  async getChildFees(studentId: string) {
+  async getParentPortalChildFees(studentId: string) {
     return this.request(`/parent-portal-comprehensive/students/${studentId}/fees`);
   }
 
@@ -2664,7 +2664,7 @@ class ApiService {
     return this.request(`/parent-portal-comprehensive/communications?${query}`);
   }
 
-  async getParentNotifications(params = {}) {
+  async getParentPortalNotifications(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/parent-portal-comprehensive/notifications?${query}`);
   }
