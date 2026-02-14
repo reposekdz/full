@@ -30,6 +30,16 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
 
   const roles = [
     {
+      role: 'parent' as UserRole,
+      title: 'Umubyeyi',
+      subtitle: 'Parent Portal',
+      description: 'Kugenzura iterambere ry\'umwana wawe',
+      icon: Users,
+      color: 'from-pink-500 to-rose-600',
+      bgGradient: 'from-pink-50 to-rose-50',
+      features: ['Student Progress', 'Communication', 'Payments', 'Reports']
+    },
+    {
       role: 'school_owner' as UserRole,
       title: 'Umuyobozi w\'Ishuri',
       subtitle: 'School Owner',
@@ -46,26 +56,6 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
         'All Staff & Student Data'
       ],
       badge: 'SUPREME'
-    },
-    {
-      role: 'student' as UserRole,
-      title: 'Umunyeshuri',
-      subtitle: 'Student Portal',
-      description: 'Reba amanota yawe, imyitwarire, n\'ibikorwa byawe',
-      icon: User,
-      color: 'from-blue-500 to-indigo-600',
-      bgGradient: 'from-blue-50 to-indigo-50',
-      features: ['Grades & Reports', 'Attendance', 'Schedule', 'Assignments']
-    },
-    {
-      role: 'parent' as UserRole,
-      title: 'Umubyeyi',
-      subtitle: 'Parent Portal',
-      description: 'Kugenzura iterambere ry\'umwana wawe',
-      icon: Users,
-      color: 'from-pink-500 to-rose-600',
-      bgGradient: 'from-pink-50 to-rose-50',
-      features: ['Student Progress', 'Communication', 'Payments', 'Reports']
     },
     {
       role: 'advisor' as UserRole,
@@ -195,6 +185,7 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
           {roles.map((roleData, index) => {
             const Icon = roleData.icon;
             const isSelected = selectedRole === roleData.role;
+            const isParent = roleData.role === 'parent';
             
             return (
               <motion.div
@@ -204,6 +195,7 @@ const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ onNavigate, onRol
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.05, y: -8 }}
                 whileTap={{ scale: 0.98 }}
+                className={isParent ? 'lg:col-start-2' : ''}
               >
                 <Card 
                   className={`cursor-pointer border-4 transition-all duration-300 ${

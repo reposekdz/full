@@ -2,18 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, CheckCircle, AlertCircle, FileText, User, Phone, Mail, MapPin, Users, GraduationCap, BookOpen, Upload, Calendar, Clock, Star, Award, Target, Shield, Search, ChevronDown, Trash2 } from 'lucide-react';
 import { API_BASE_URL } from '@/app/config/apiBase';
-import RwandaLocationSelector from './RwandaLocationSelector';
+import RwandaLocationTextInput from './RwandaLocationTextInput';
 
 interface ApplicationFormProps {
   onClose?: () => void;
-}
-
-interface LocationData {
-  provinces: any[];
-  districts: any[];
-  sectors: any[];
-  cells: any[];
-  villages: any[];
 }
 
 interface ValidationRule {
@@ -28,13 +20,6 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
   const [step, setStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
   const [levels, setLevels] = useState<any[]>([]);
-  const [locationData, setLocationData] = useState<LocationData>({
-    provinces: [],
-    districts: [],
-    sectors: [],
-    cells: [],
-    villages: []
-  });
   const [validationRules, setValidationRules] = useState<{[key: string]: ValidationRule[]}>({});
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [loading, setLoading] = useState(false);
@@ -57,11 +42,13 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
     email: '',
     national_id: '',
     address: '',
-    province_id: '',
-    district_id: '',
-    sector_id: '',
-    cell_id: '',
-    village_id: '',
+    
+    // Text-based location fields (NEW - for writing instead of selecting)
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
+    village: '',
     
     // Parent/Guardian Information
     parent_name: '',
@@ -123,8 +110,6 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
     }
   };
 
-
-
   const fetchValidationRules = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/locations/validation-rules`);
@@ -184,8 +169,6 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       setValidationErrors(prev => ({ ...prev, [name]: error }));
     }
     
-
-    
     if (name === 'trade_code') {
       setSelectedTrade(value);
     }
@@ -230,11 +213,16 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
     
     switch (stepNumber) {
       case 1:
-        const step1Fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone', 'province_id', 'district_id', 'sector_id'];
+        const step1Fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone', 'province', 'district', 'sector'];
         step1Fields.forEach(field => {
           const error = validateField(field, formData[field as keyof typeof formData]);
           if (error) errors[field] = error;
         });
+        
+        // Check if location fields are filled
+        if (!formData.province) errors['province'] = 'Intara irakenewe';
+        if (!formData.district) errors['district'] = 'Akarere rakeneye';
+        if (!formData.sector) errors['sector'] = 'Umurenge urakenewe';
         
         // Age validation
         if (formData.date_of_birth) {
@@ -575,29 +563,35 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
 
                 </div>
 
-                <div className="mt-4">
-                  <RwandaLocationSelector
+                {/* Text-based Location Input - NEW! */}
+                <div className="mt-6">
+                  <RwandaLocationTextInput
                     onLocationChange={(location) => setFormData({...formData, ...location})}
+                    initialValues={{
+                      province: formData.province,
+                      district: formData.district,
+                      sector: formData.sector,
+                      cell: formData.cell,
+                      village: formData.village
+                    }}
                     required={true}
                   />
+                  {(validationErrors.province || validationErrors.district || validationErrors.sector) && (
+                    <p className="text-red-500 text-sm mt-2">* Amakuru y'aho utuye ni ngombwa</p>
+                  )}
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Aderesi yuzuye *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Aderesi yuzuye / Address *</label>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
                     required
                     rows={3}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      validationErrors.address ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    placeholder="Aderesi yuzuye (Intara, Akarere, Umurenge, Akagari, Umudugudu)"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Aderesi yuzuye (igihugu, agace k'umudugudu...)"
                   />
-                  {validationErrors.address && (
-                    <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>
-                  )}
                 </div>
               </div>
             </motion.div>

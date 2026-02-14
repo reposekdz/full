@@ -102,12 +102,14 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
   const fetchTrendingSearches = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/advanced-search/popular');
+      if (!response.ok) throw new Error('Not found');
       const data = await response.json();
       if (data.success) {
         setTrendingSearches(data.popular.map((p: any) => p.search_query).slice(0, 5));
       }
     } catch (error) {
-      console.error('Failed to fetch trending searches:', error);
+      // Silently fail - trending searches are optional
+      setTrendingSearches([]);
     }
   };
 

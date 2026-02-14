@@ -23,7 +23,6 @@ const UNIFIED_EMAIL = 'reponsekdz06@gmail.com';
 const MS_ACCESS_CODE = 'g@2026';
 
 const PUBLIC_ROLES = [
-  { value: 'student' as UserRole, label: 'Student', labelRw: 'Umunyeshuri', icon: User, color: 'from-yellow-500 to-green-600' },
   { value: 'parent' as UserRole, label: 'Parent', labelRw: 'Umubyeyi', icon: Users, color: 'from-green-500 to-yellow-600' },
 ];
 
@@ -68,27 +67,7 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
     try {
       let result;
       
-      if (selectedRole === 'student') {
-        const response = await fetch('http://localhost:5000/api/auth/login/student', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ serial_code: email, password })
-        });
-        result = await response.json();
-        
-        if (result.success) {
-          setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
-          if (result.token) {
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('user', JSON.stringify(result.user));
-          }
-          setTimeout(() => {
-            window.location.href = `/${getRoleDashboard(selectedRole)}`;
-          }, 500);
-        } else {
-          setError(result.message || 'Invalid serial code or password');
-        }
-      } else if (selectedRole === 'parent') {
+      if (selectedRole === 'parent') {
         const response = await fetch('http://localhost:5000/api/auth/login/parent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -248,48 +227,7 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
                     )}
 
                     <form onSubmit={handleLogin} className="space-y-4">
-                      {selectedRole === 'student' ? (
-                        <>
-                          <div>
-                            <Label htmlFor="serial">Nimero y'Umunyeshuri (Serial Code)</Label>
-                            <div className="relative mt-1">
-                              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                              <Input
-                                id="serial"
-                                type="text"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Andika nimero yawe"
-                                className="pl-10 h-12"
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label htmlFor="password">Ijambo ry'Ibanga (Password)</Label>
-                            <div className="relative mt-1">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                              <Input
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                className="pl-10 pr-10 h-12"
-                                required
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2"
-                              >
-                                {showPassword ? <EyeOff className="w-5 h-5 text-gray-400" /> : <Eye className="w-5 h-5 text-gray-400" />}
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      ) : selectedRole === 'parent' ? (
+                      {selectedRole === 'parent' ? (
                         <>
                           <div>
                             <Label htmlFor="phone">Phone Number</Label>
@@ -381,7 +319,7 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
                     </form>
 
 
-                    {(selectedRole === 'parent' || selectedRole === 'student') && (
+                    {selectedRole === 'parent' && (
                       <div className="mt-4 text-center">
                         <p className="text-sm text-gray-600">
                           Don't have an account?{' '}

@@ -96,19 +96,25 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
     await connection.beginTransaction();
     
     const errors = [];
+    // Support both text-based (province, district, sector) and ID-based (province_id, district_id, sector_id) location fields
     const requiredFields = [
       'first_name', 'last_name', 'date_of_birth', 'gender', 'phone',
-      'address', 'province_id', 'district_id', 'sector_id',
+      'address', 
+      // Text-based location fields (new)
+      'province', 'district', 'sector',
+      // OR ID-based location fields (old - for backward compatibility)
+      // 'province_id', 'district_id', 'sector_id',
       'parent_name', 'parent_phone', 'previous_school', 'education_level',
       'trade_code', 'level_number', 'reason_for_applying'
     ];
     
-    // Validate required fields
-    requiredFields.forEach(field => {
-      if (!req.body[field] || req.body[field].toString().trim() === '') {
-        errors.push(`${field.replace(/_/g, ' ')} is required`);
-      }
-    });
+    // Validate required fields - accept either text or ID based location
+    const hasLocationData = (req.body.province && req.body.district && req.body.sector) ||
+                           (req.body.province_id && req.body.district_id && req.body.sector_id);
+    
+    if (!hasLocationData) {
+      errors.push('Location information (province, district, sector) is required');
+    }
     
     // Validate formats
     if (req.body.phone && !validators.phone(req.body.phone)) {
@@ -195,11 +201,17 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
       national_id: req.body.national_id || null,
       passport_number: sanitize(req.body.passport_number) || null,
       address: sanitize(req.body.address),
-      province_id: parseInt(req.body.province_id),
-      district_id: parseInt(req.body.district_id),
-      sector_id: parseInt(req.body.sector_id),
+      province_id: parseInt(req.body.province_id) || null,
+      district_id: parseInt(req.body.district_id) || null,
+      sector_id: parseInt(req.body.sector_id) || null,
       cell_id: req.body.cell_id ? parseInt(req.body.cell_id) : null,
       village_id: req.body.village_id ? parseInt(req.body.village_id) : null,
+      // Text-based location fields
+      province: sanitize(req.body.province) || null,
+      district: sanitize(req.body.district) || null,
+      sector: sanitize(req.body.sector) || null,
+      cell: sanitize(req.body.cell) || null,
+      village: sanitize(req.body.village) || null,
       parent_name: sanitize(req.body.parent_name),
       parent_phone: req.body.parent_phone,
       parent_email: sanitize(req.body.parent_email) || null,
@@ -242,10 +254,13 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
     const verificationCode = generateVerificationCode();
     
     // Insert application
+    // Support both text-based (province, district, sector, cell, village) and ID-based location fields
     const [result] = await connection.execute(`
       INSERT INTO student_applications (
         application_number, first_name, last_name, date_of_birth, gender, phone, email,
-        national_id, passport_number, address, province_id, district_id, sector_id, cell_id, village_id,
+        national_id, passport_number, address, 
+        province_name, district_name, sector_name, cell_name, village_name,
+        province_id, district_id, sector_id, cell_id, village_id,
         parent_name, parent_phone, parent_email, parent_occupation, parent_address, parent_national_id,
         emergency_contact, emergency_phone, emergency_relationship,
         previous_school, education_level, completion_year, previous_grades, academic_certificates,
@@ -255,13 +270,16 @@ router.post('/submit', upload.array('documents', 10), async (req, res) => {
         fee_payment_method, sponsor_name, sponsor_phone, sponsor_email, financial_support, scholarship_applied,
         application_date, status, verification_code, ip_address, user_agent, submission_source,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'pending', ?, ?, ?, ?, NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'pending', ?, ?, ?, ?, NOW())
     `, [
       applicationNumber, sanitizedData.first_name, sanitizedData.last_name, sanitizedData.date_of_birth,
       sanitizedData.gender, sanitizedData.phone, sanitizedData.email, sanitizedData.national_id,
-      sanitizedData.passport_number, sanitizedData.address, sanitizedData.province_id, sanitizedData.district_id,
-      sanitizedData.sector_id, sanitizedData.cell_id, sanitizedData.village_id, sanitizedData.parent_name,
-      sanitizedData.parent_phone, sanitizedData.parent_email, sanitizedData.parent_occupation,
+      sanitizedData.passport_number, sanitizedData.address, 
+      // Text-based location fields
+      sanitizedData.province, sanitizedData.district, sanitizedData.sector, sanitizedData.cell, sanitizedData.village,
+      // ID-based location fields
+      sanitizedData.province_id, sanitizedData.district_id, sanitizedData.sector_id, sanitizedData.cell_id, sanitizedData.village_id,
+      sanitizedData.parent_name, sanitizedData.parent_phone, sanitizedData.parent_email, sanitizedData.parent_occupation,
       sanitizedData.parent_address, sanitizedData.parent_national_id, sanitizedData.emergency_contact,
       sanitizedData.emergency_phone, sanitizedData.emergency_relationship, sanitizedData.previous_school,
       sanitizedData.education_level, sanitizedData.completion_year, sanitizedData.previous_grades,

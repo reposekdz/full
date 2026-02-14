@@ -27,11 +27,9 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
       SELECT 
         t.*,
         c.class_name,
-        c.class_code,
-        s.subject_name
+        c.class_code
       FROM timetable t
       JOIN classes c ON t.class_id = c.id
-      LEFT JOIN subjects s ON t.subject_id = s.id
       WHERE t.teacher_id = ? AND t.day_of_week = ?
       ORDER BY t.start_time
     `, [teacherId, today]);
@@ -110,11 +108,9 @@ router.get('/classes', authenticateToken, requireRole(['teacher']), async (req, 
     const [classes] = await pool.execute(`
       SELECT 
         c.*,
-        s.subject_name,
         COUNT(DISTINCT ce.student_id) as student_count,
         ROUND(AVG(CASE WHEN sa.status = 'present' THEN 100 ELSE 0 END), 2) as avg_attendance
       FROM classes c
-      LEFT JOIN subjects s ON c.subject_id = s.id
       LEFT JOIN class_enrollments ce ON c.id = ce.class_id
       LEFT JOIN student_attendance sa ON c.id = sa.class_id AND sa.attendance_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       ${whereClause}
@@ -468,12 +464,10 @@ router.get('/assignments', authenticateToken, requireRole(['teacher']), async (r
         a.*,
         c.class_name,
         c.class_code,
-        s.subject_name,
         COUNT(DISTINCT asub.id) as submission_count,
         SUM(CASE WHEN asub.status = 'graded' THEN 1 ELSE 0 END) as graded_count
       FROM assignments a
       LEFT JOIN classes c ON a.class_id = c.id
-      LEFT JOIN subjects s ON a.subject_id = s.id
       LEFT JOIN assignment_submissions asub ON a.id = asub.assignment_id
       ${whereClause}
       GROUP BY a.id

@@ -8,7 +8,7 @@ import { Label } from '@/app/components/ui/label';
 import { Badge } from '@/app/components/ui/badge';
 import { useAuth } from '@/app/contexts/AuthContext';
 import apiService from '@/app/services/apiService';
-import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
+import RwandaLocationTextInput from '@/app/components/RwandaLocationTextInput';
 
 export default function ParentProfile() {
   const { user } = useAuth();
@@ -21,6 +21,11 @@ export default function ParentProfile() {
     phone: '',
     address: '',
     emergency_contact: '',
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
+    village: '',
     province_id: null,
     district_id: null,
     sector_id: null,
@@ -44,11 +49,11 @@ export default function ParentProfile() {
           phone: data.phone || '',
           address: data.address || '',
           emergency_contact: data.emergency_contact || '',
-          province_id: data.province_id || null,
-          district_id: data.district_id || null,
-          sector_id: data.sector_id || null,
-          cell_id: data.cell_id || null,
-          village_id: data.village_id || null
+          province: data.province || '',
+          district: data.district || '',
+          sector: data.sector || '',
+          cell: data.cell || '',
+          village: data.village || ''
         });
       }
     } catch (err) {
@@ -190,20 +195,20 @@ export default function ParentProfile() {
                   Aho Utuye
                 </Label>
                 {isEditing ? (
-                  <RwandaLocationSelector
+                  <RwandaLocationTextInput
                     onLocationChange={(location) => setProfileData({...profileData, ...location})}
                     initialValues={{
-                      province_id: profileData.province_id,
-                      district_id: profileData.district_id,
-                      sector_id: profileData.sector_id,
-                      cell_id: profileData.cell_id,
-                      village_id: profileData.village_id
+                      province: profileData.province,
+                      district: profileData.district,
+                      sector: profileData.sector,
+                      cell: profileData.cell,
+                      village: profileData.village
                     }}
                     required={false}
                   />
                 ) : (
                   <Input
-                    value={profileData.address}
+                    value={`${profileData.province || ''} > ${profileData.district || ''} > ${profileData.sector || ''} > ${profileData.cell || ''} > ${profileData.village || ''}`}
                     disabled
                     className="border-2 border-purple-100"
                   />

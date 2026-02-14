@@ -309,8 +309,8 @@ const ModernUniversalSidebar: React.FC<ModernUniversalSidebarProps> = ({
                 <School className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900">IPRC Kigali</h2>
-                <p className="text-xs text-gray-600">Management System</p>
+                <h2 className="font-bold text-gray-900">Garden TVET School</h2>
+                <p className="text-xs text-gray-600">Excellence in Education</p>
               </div>
             </div>
           )}

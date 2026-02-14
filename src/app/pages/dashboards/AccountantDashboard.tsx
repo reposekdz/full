@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { DollarSign, TrendingUp, Users, AlertCircle, Plus, Search, Download, CreditCard, Wallet, PieChart, Upload, Columns, Phone, Bell, Filter, FileText, Send } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, AlertCircle, Plus, Search, Download, CreditCard, Wallet, PieChart, Upload, Columns, Phone, Bell, Filter, FileText, Send, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -13,6 +13,7 @@ import apiService from '@/app/services/apiService';
 import AccountantPaymentProofs from '@/app/components/AccountantPaymentProofs';
 import AccountantDynamicColumns from '@/app/components/AccountantDynamicColumns';
 import { GLOBAL_TRADES, GLOBAL_LEVELS } from '@/app/constants/tradesAndLevels';
+import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 
 export default function AccountantDashboard() {
   const [activeTab, setActiveTab] = useState('overview');

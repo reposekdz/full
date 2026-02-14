@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { GraduationCap, Users, BookOpen, TrendingUp, Plus, Search, UserPlus, BarChart2, Award, Target } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, TrendingUp, Plus, Search, UserPlus, BarChart2, Award, Target, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
+import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 
 export default function DOSDashboard() {
   const [activeTab, setActiveTab] = useState('overview');

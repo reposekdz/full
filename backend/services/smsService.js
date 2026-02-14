@@ -24,10 +24,16 @@ async function sendSMS(to, message, senderId, metadata = {}) {
       return { success: false, error: 'Insufficient balance or API error' };
     }
 
-    const result = await sms.send({
+    const options = {
       to: [phoneNumber],
       message: message
-    });
+    };
+    
+    if (process.env.AFRICATALKING_SENDER_ID) {
+      options.from = process.env.AFRICATALKING_SENDER_ID;
+    }
+    
+    const result = await sms.send(options);
 
     await logMessage({
       recipient: phoneNumber,
@@ -145,11 +151,17 @@ async function sendBulkSMS(recipients, message, senderId, metadata = {}) {
   try {
     const phoneNumbers = recipients.map(formatPhoneNumber);
     
-    const result = await sms.send({
+    const options = {
       to: phoneNumbers,
       message: message,
-      enqueue: true // Queue for bulk sending
-    });
+      enqueue: true
+    };
+    
+    if (process.env.AFRICATALKING_SENDER_ID) {
+      options.from = process.env.AFRICATALKING_SENDER_ID;
+    }
+    
+    const result = await sms.send(options);
 
     // Log each message
     for (const recipient of phoneNumbers) {

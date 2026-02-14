@@ -24,6 +24,15 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Security headers - Content Security Policy
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob:;"
+  );
+  next();
+});
+
 // Security middleware
 // app.use(generalLimiter); // DISABLED for high-load testing
 app.use(sanitizeMiddleware);
@@ -61,7 +70,6 @@ const routes = {
   roleAuth: loadRoute('./routes/role-auth', 'Role Auth'),
   staffAuth: loadRoute('./routes/staff-auth', 'Staff Auth'),
   userAuth: loadRoute('./routes/user-auth', 'User Auth'),
-  studentAuth: loadRoute('./routes/student-auth', 'Student Auth'),
   
   // User Management
   users: loadRoute('./routes/users', 'Users'),
@@ -277,6 +285,7 @@ const routes = {
   // DOD Comprehensive System
   dodComprehensive: loadRoute('./routes/dod-comprehensive', 'DOD Comprehensive'),
   dodAdvanced: loadRoute('./routes/dod-advanced', 'DOD Advanced'),
+  dodComplete: loadRoute('./routes/dod-complete', 'DOD Complete'),
   dodProfile: loadRoute('./routes/dod-profile', 'DOD Profile'),
   dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
   dod: loadRoute('./routes/dod', 'DOD Management'),
@@ -284,6 +293,7 @@ const routes = {
   
   // DOS Comprehensive Management
   dosComprehensiveManagement: loadRoute('./routes/dos-comprehensive-management', 'DOS Comprehensive Management'),
+  dosAdvancedManagement: loadRoute('./routes/dos-advanced-management', 'DOS Advanced Management'),
   
   // NEW MISSING ROUTES - Full Feature Set
   curriculum: loadRoute('./routes/curriculum', 'Curriculum'),
@@ -345,13 +355,14 @@ const routes = {
 let mountedRoutes = 0;
 
 // Authentication & Authorization
+app.use('/api/fee-reminders', require('./routes/fee-reminders')); mountedRoutes++;
+app.use('/api/messaging', require('./routes/unified-messaging')); mountedRoutes++;
 if (routes.auth) { app.use('/api/auth', routes.auth); mountedRoutes++; }
 if (routes.authEnhanced) { app.use('/api/auth-enhanced', require('./routes/auth-enhanced')); mountedRoutes++; }
 if (routes.comprehensiveAuth) { app.use('/api/comprehensive-auth', routes.comprehensiveAuth); mountedRoutes++; }
 if (routes.roleAuth) { app.use('/api/role-auth', routes.roleAuth); mountedRoutes++; }
 if (routes.staffAuth) { app.use('/api/staff-auth', routes.staffAuth); mountedRoutes++; }
 if (routes.userAuth) { app.use('/api/user-auth', routes.userAuth); mountedRoutes++; }
-if (routes.studentAuth) { app.use('/api/student-auth', routes.studentAuth); mountedRoutes++; }
 
 // User Management
 if (routes.users) { app.use('/api/users', routes.users); mountedRoutes++; }
@@ -410,6 +421,9 @@ if (routes.parentDashboard) { app.use('/api/parent-dashboard', routes.parentDash
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
 if (routes.parentMonitoring) { app.use('/api/parent-monitoring', routes.parentMonitoring); mountedRoutes++; }
 
+// Parent Payment Portal - GT Bank, BPR, Equity Bank Integration
+app.use('/api/parent-payment-portal', require('./routes/parent-payment-portal')); mountedRoutes++;
+
 // Class Management
 if (routes.classManagement) { app.use('/api/class-management', routes.classManagement); mountedRoutes++; }
 if (routes.classSheets) { app.use('/api/class-sheets', routes.classSheets); mountedRoutes++; }
@@ -460,6 +474,7 @@ if (routes.teams) { app.use('/api/teams', routes.teams); mountedRoutes++; }
 // Trades & Services (Unified: trades + courses + classes)
 if (routes.trades) { app.use('/api/trades', routes.trades); mountedRoutes++; }
 if (routes.tradesCourses) { app.use('/api/trades-courses', routes.tradesCourses); mountedRoutes++; }
+app.use('/api/trade-courses-api', require('./routes/trade-courses-api')); mountedRoutes++;
 if (routes.tradeImages) { app.use('/api/trade-images', routes.tradeImages); mountedRoutes++; }
 if (routes.levels) { app.use('/api/levels', routes.levels); mountedRoutes++; }
 app.use('/api/trades-levels', require('./routes/trades-levels')); mountedRoutes++;
@@ -581,6 +596,7 @@ if (routes.unifiedIntegration) { app.use('/api/unified-integration', routes.unif
 // DOD Comprehensive System
 if (routes.dodComprehensive) { app.use('/api/dod-comprehensive', routes.dodComprehensive); mountedRoutes++; }
 if (routes.dodAdvanced) { app.use('/api/dod-advanced', routes.dodAdvanced); mountedRoutes++; }
+if (routes.dodComplete) { app.use('/api/dod-complete', routes.dodComplete); mountedRoutes++; }
 if (routes.dodProfile) { app.use('/api/dod-profile', routes.dodProfile); mountedRoutes++; }
 if (routes.dodActions) { app.use('/api/dod-actions', routes.dodActions); mountedRoutes++; }
 
@@ -599,6 +615,7 @@ if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManag
 // DOS Comprehensive Management
 app.use('/api/dos-management', require('./routes/dos-management')); mountedRoutes++;
 if (routes.dosComprehensiveManagement) { app.use('/api/dos-comprehensive', routes.dosComprehensiveManagement); mountedRoutes++; }
+if (routes.dosAdvancedManagement) { app.use('/api/dos-advanced', routes.dosAdvancedManagement); mountedRoutes++; }
 
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
@@ -663,6 +680,9 @@ app.use('/api/headmaster-applications', require('./routes/headmaster-application
 
 // DOS Applications Management
 app.use('/api/dos-applications', require('./routes/dos-applications')); mountedRoutes++;
+
+// DOS Dashboard Ultra Advanced API
+app.use('/api/dos-dashboard', require('./routes/dos-dashboard-api')); mountedRoutes++;
 
 // Location System
 app.use('/api/locations', require('./routes/locations')); mountedRoutes++;

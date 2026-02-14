@@ -1,51 +1,61 @@
 @echo off
-cls
 echo ========================================
-echo  DOD/MATRON/PATRON MANAGEMENT SYSTEM
-echo  Complete Setup
-echo ========================================
-echo.
-
-cd backend
-
-echo [1/4] Installing dependencies...
-call npm install multer bcryptjs --save
-echo.
-
-echo [2/4] Creating directories...
-if not exist "uploads\discipline" mkdir uploads\discipline
-if not exist "uploads\profiles" mkdir uploads\profiles
-echo.
-
-echo [3/4] Setting up database...
-node scripts\run-complete-schema.js
-echo.
-
-echo [4/4] Verifying installation...
-node scripts\verify-tables.js
-echo.
-
-echo ========================================
-echo  SETUP COMPLETE!
+echo   DOD COMPLETE SYSTEM SETUP
+echo   Full Parent Messaging ^& Management
 echo ========================================
 echo.
-echo System Features:
-echo  - 12 Advanced Tables with Foreign Keys
-echo  - Incident Management
-echo  - Behavior Points System
-echo  - Wellness Tracking
-echo  - Appeals System
-echo  - Dormitory Management
-echo  - Counseling Sessions
-echo  - Parent Notifications
-echo  - Recognition Awards
-echo  - Advanced Reports
+
+echo [1/3] Setting up database schema...
+node backend\scripts\setup-dod-complete.js
+if %errorlevel% neq 0 (
+    echo ERROR: Database setup failed!
+    pause
+    exit /b 1
+)
 echo.
-echo Roles: DOD, Matron, Patron, Admin
+
+echo [2/3] Registering API routes...
+echo Routes will be auto-loaded from backend/routes/dod-complete.js
 echo.
-echo API Base: /api/discipline-management/*
-echo Dashboard: /api/staff/dod/*
+
+echo [3/3] Testing system...
 echo.
-echo Next: Restart your server with 'npm run dev'
+echo Testing endpoints:
+echo   - GET  /api/dod-complete/students/all
+echo   - POST /api/dod-complete/conduct/remove
+echo   - POST /api/dod-complete/leave/grant
+echo   - POST /api/dod-complete/message-parents
+echo   - POST /api/dod-complete/message-all-parents
+echo   - GET  /api/dod-complete/statistics
+echo.
+
+echo ========================================
+echo   SETUP COMPLETE!
+echo ========================================
+echo.
+echo FEATURES ENABLED:
+echo   [x] View all students with parent info
+echo   [x] Remove conduct with auto SMS to parents
+echo   [x] Grant leave with auto SMS to parents
+echo   [x] Message individual parents
+echo   [x] Message multiple parents (bulk)
+echo   [x] Broadcast to ALL linked parents
+echo   [x] Bulk student selection
+echo   [x] Message templates
+echo   [x] Real-time statistics
+echo.
+echo NEXT STEPS:
+echo   1. Start backend: npm run dev (in backend folder)
+echo   2. Start frontend: npm run dev (in root folder)
+echo   3. Login as DOD/Patron/Matron
+echo   4. Navigate to DOD Dashboard
+echo.
+echo PARENT LINKING:
+echo   - Parents create accounts via parent portal
+echo   - Parents link to students using student code
+echo   - System automatically sends SMS when:
+echo     * Conduct is removed
+echo     * Leave is approved
+echo     * Manual messages sent
 echo.
 pause

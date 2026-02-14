@@ -1,9 +1,154 @@
 const express = require('express');
 const { pool } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
+// Middleware to check if user has permission to access global sheets
+const checkGlobalSheetsPermission = async (req, res, next) => {
+  try {
+    const userRole = req.user.role;
+    
+    // All staff roles have access to global sheets
+    const allowedRoles = ['accountant', 'dos', 'dod', 'headmaster', 'teacher', 'advisor', 'stock_manager', 'matron', 'patron', 'admin'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    // Check specific permissions from database
+    const [permissions] = await pool.execute(
+      `SELECT can_view, can_edit, can_delete, can_export 
+       FROM role_permissions 
+       WHERE role_name = ? AND permission_name = 'global_student_sheets'`,
+      [userRole]
+    );
+    
+    if (permissions.length === 0) {
+      // Default permissions if not found
+      req.permissions = { can_view: true, can_edit: false, can_delete: false, can_export: true };
+    } else {
+      req.permissions = permissions[0];
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Permission check error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Get all students - accessible to all staff roles
+router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (req, res) => {
+  try {
+    const { trade_id, level_id, status, search } = req.query;
+    
+    let query = `
+      SELECT * FROM v_global_student_sheets
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (trade_id) {
+      query += ' AND trade_id = ?';
+      params.push(trade_id);
+    }
+    
+    if (level_id) {
+      query += ' AND level_id = ?';
+      params.push(level_id);
+    }
+    
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+    
+    if (search) {
+      query += ' AND (full_name LIKE ? OR student_code LIKE ? OR email LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    query += ' ORDER BY last_name, first_name';
+    
+    const [students] = await pool.execute(query, params);
+    
+    res.json({ 
+      success: true, 
+      students,
+      permissions: req.permissions,
+      userRole: req.user.role
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get single student details
+router.get('/students/:id', authenticateToken, checkGlobalSheetsPermission, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [students] = await pool.execute(
+      'SELECT * FROM v_global_student_sheets WHERE student_id = ?',
+      [id]
+    );
+    
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      student: students[0],
+      permissions: req.permissions
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get statistics
+router.get('/statistics', authenticateToken, checkGlobalSheetsPermission, async (req, res) => {
+  try {
+    const [stats] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_students,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_students,
+        COUNT(CASE WHEN payment_status = 'paid' THEN 1 END) as paid_students,
+        COUNT(CASE WHEN payment_status = 'unpaid' THEN 1 END) as unpaid_students,
+        AVG(average_marks) as avg_marks,
+        AVG(attendance_percentage) as avg_attendance,
+        AVG(conduct_score) as avg_conduct,
+        SUM(total_fees) as total_fees,
+        SUM(paid_amount) as total_paid,
+        SUM(balance) as total_balance
+      FROM global_student_sheets
+    `);
+    
+    res.json({ success: true, statistics: stats[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Sync global sheets (admin/headmaster only)
+router.post('/sync', authenticateToken, async (req, res) => {
+  try {
+    if (!['admin', 'headmaster'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    await pool.execute('CALL sp_sync_global_student_sheets()');
+    
+    res.json({ success: true, message: 'Global student sheets synced successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Get role-specific columns
-router.get('/columns/:role', async (req, res) => {
+router.get('/columns/:role', authenticateToken, async (req, res) => {
   try {
     const { role } = req.params;
     

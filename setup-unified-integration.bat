@@ -1,4 +1,8 @@
 @echo off
+
+REM Set working directory to script location
+cd /d "%~dp0"
+
 echo ========================================
 echo  UNIFIED SYSTEM INTEGRATION
 echo  Powerful School Management System

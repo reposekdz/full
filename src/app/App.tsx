@@ -32,6 +32,7 @@ import SearchPage from '@/app/pages/SearchPage';
 import AdvancedSearchPage from '@/app/pages/AdvancedSearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import RoleLoginPage from '@/app/pages/RoleLoginPage';
+import StaffRolesPage from '@/app/pages/StaffRolesPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
 import ModernTradesPage from '@/app/pages/ModernTradesPage';
 import TradeDetailPage from '@/app/pages/TradeDetailPage';
@@ -48,7 +49,6 @@ import ModernTeamDetailPage from '@/app/pages/ModernTeamDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
-import StudentDashboard from '@/app/pages/dashboards/StudentDashboard';
 import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
 import ModernParentDashboard from '@/app/pages/dashboards/ModernParentDashboard';
 import PowerfulParentDashboard from '@/app/pages/dashboards/PowerfulParentDashboard';
@@ -134,8 +134,7 @@ const AppContent: React.FC = () => {
     patron: ['home','academics','leadership','contactUs','supports'],
     matron: ['home','academics','leadership','contactUs','supports'],
     support_staff: ['home','services','supports','contactUs'],
-    parent: ['home','academics','sports','supports','contactUs'],
-    student: ['home','academics','sports','services','trades','supports','contactUs']
+    parent: ['home','academics','sports','supports','contactUs']
   };
 
   const roleExtraAllowed: Record<string, string[]> = {
@@ -151,7 +150,6 @@ const AppContent: React.FC = () => {
     teacher: ['profile','search','notifications','classes','students','gradebook','attendance','assignments','resources','schedule','teacher-grading','teacher-create-assignment','student-sheets','dashboard-teacher'],
     advisor: ['profile','student-sheets','dashboard-advisor'],
     parent: ['profile','dashboard-parent'],
-    student: ['profile','dashboard-student'],
     patron: ['profile'],
     matron: ['profile'],
     support_staff: ['profile'],
@@ -261,9 +259,6 @@ const AppContent: React.FC = () => {
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="admin" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets onNavigate={handleNavigate} />;
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
-      case 'student':
-        if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-student" />;
-        return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
         return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -352,7 +347,6 @@ const AppContent: React.FC = () => {
   const renderPage = () => {
     // Check for dashboard routes first
     if (currentPage === 'admin' && user?.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-student' && user?.role === 'student') return <StudentDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -443,6 +437,8 @@ const AppContent: React.FC = () => {
         return <ModernLoginPage onNavigate={handleNavigate} />;
       case 'register':
         return <ModernRegisterPage onNavigate={handleNavigate} />;
+      case 'staff-roles':
+        return <StaffRolesPage onNavigate={handleNavigate} />;
       case 'search':
         return <AdvancedSearchPage onNavigate={handleNavigate} />;
     }
@@ -485,6 +481,8 @@ const AppContent: React.FC = () => {
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
       case 'role-login':
         return <RoleLoginPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} selectedRole={selectedRole} />;
+      case 'staff-roles':
+        return <StaffRolesPage onNavigate={handleNavigate} />;
       case 'admin-panel':
         return <AdminPage />;
       case 'admin-developers':

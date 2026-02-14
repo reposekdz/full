@@ -110,6 +110,12 @@ const OverviewTab = ({ trades }) => {
       const res = await fetch('/api/global-sheets/analytics', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
+      
+      if (!res.ok) {
+        console.error('API returned error:', res.status);
+        return;
+      }
+      
       const data = await res.json();
       if (data.success) {
         setStats({

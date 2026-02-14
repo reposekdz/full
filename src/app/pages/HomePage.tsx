@@ -96,9 +96,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       return trade.image_url.startsWith('/uploads') ? `http://localhost:5000${trade.image_url}` : trade.image_url;
     }
     if (trade.image) return trade.image;
-    if (trade.code === 'SOD') return sodImage;
-    if (trade.code === 'BDC') return bdcImage;
-    if (trade.code === 'AUT') return autImage;
+    const code = trade.code?.toUpperCase();
+    if (code === 'SOD') return sodImage;
+    if (code === 'BDC') return bdcImage;
+    if (code === 'AUT' || code === 'AUTO') return autImage;
     return `http://localhost:5000/uploads/trades/${trade.code?.toLowerCase()}.jpg`;
   };
 
@@ -286,7 +287,12 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         try {
           const tradesData = await tradesRes.json();
           if (tradesData.success && tradesData.trades && tradesData.trades.length > 0) {
-            setTrades(tradesData.trades);
+            // Map database trades to include proper codes
+            const mappedTrades = tradesData.trades.map((trade: any) => ({
+              ...trade,
+              code: trade.code?.replace(/L[345]/g, '') || trade.code // Remove level suffixes
+            }));
+            setTrades(mappedTrades);
           } else {
             setTrades(defaultTrades);
           }
@@ -408,7 +414,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </motion.h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-            {(trades.length > 0 ? trades : defaultTrades).slice(0, 6).map((trade, index) => (
+            {(trades.length > 0 ? trades : defaultTrades).filter(trade => {
+              const code = trade.code?.toUpperCase();
+              return ['SOD', 'BDC', 'AUT', 'AUTO'].includes(code);
+            }).slice(0, 3).map((trade, index) => (
               <motion.div
                 key={trade.id || trade.code}
                 initial={{ opacity: 0, y: 50 }}
@@ -448,7 +457,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             ))}
           </div>
 
-          {trades.length > 6 && (
+          {trades.filter(t => {
+            const code = t.code?.toUpperCase();
+            return ['SOD', 'BDC', 'AUT', 'AUTO'].includes(code);
+          }).length > 3 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -459,7 +471,10 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate('trades')}
                 className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105"
               >
-                Reba Amahugurwa Yose ({trades.length})
+                Reba Amahugurwa Yose ({trades.filter(t => {
+                  const code = t.code?.toUpperCase();
+                  return ['SOD', 'BDC', 'AUT', 'AUTO'].includes(code);
+                }).length})
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </motion.div>

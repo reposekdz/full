@@ -36,6 +36,7 @@ import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { Progress } from '@/app/components/ui/progress';
 import { UserRole, useAuth } from '@/app/contexts/AuthContext';
+import { BottomNav } from '@/app/components/BottomNav';
 
 interface RoleLoginPageProps {
   onNavigate: (page: string) => void;
@@ -141,16 +142,6 @@ const roles = [
     features: ['System Configuration', 'User Management', 'Security Settings', 'System Maintenance']
   },
   {
-    role: 'student' as UserRole,
-    title: 'Umunyeshuri',
-    subtitle: 'Student Portal',
-    description: "Reba amanota yawe, imyitwarire, n'ibikorwa byawe",
-    icon: User,
-    color: 'from-blue-500 to-indigo-600',
-    bgGradient: 'from-blue-50 to-indigo-50',
-    features: ['Grades & Reports', 'Attendance', 'Schedule', 'Assignments']
-  },
-  {
     role: 'parent' as UserRole,
     title: 'Umubyeyi',
     subtitle: 'Urubuga rw\'Ababyeyi',
@@ -224,6 +215,13 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
 
   // Auto-advance to credentials if role is already selected
   useEffect(() => {
+    // Check sessionStorage first
+    const storedRole = sessionStorage.getItem('selectedRole') as UserRole | null;
+    if (storedRole && !selectedRole) {
+      onRoleSelect(storedRole);
+      sessionStorage.removeItem('selectedRole');
+    }
+    
     if (selectedRole) {
       setStep('credentials');
     }
@@ -241,39 +239,10 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
     setMessage(null);
 
     try {
-      let result;
-      
-      // Student login with serial code
-      if (selectedRole === 'student') {
-        const response = await fetch('http://localhost:5000/api/auth/login/student', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            serial_code: data.email, // email field contains serial code for students
-            password: data.password
-          })
-        });
-        result = await response.json();
-      }
-      // Parent login with phone
-      else if (selectedRole === 'parent') {
-        const response = await fetch('http://localhost:5000/api/auth/login/parent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: data.email, // email field contains phone for parents
-            password: data.password
-          })
-        });
-        result = await response.json();
-      }
-      // Other roles use standard login
-      else {
-        result = await loginWithRole(selectedRole, {
-          email: data.email,
-          password: data.password
-        });
-      }
+      const result = await loginWithRole(selectedRole, {
+        email: data.email,
+        password: data.password
+      });
 
       if (result.success) {
         setMessage({ type: 'success', text: 'Login successful! Redirecting to dashboard...' });
@@ -293,8 +262,7 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
         }
 
         setTimeout(() => {
-          const dashboard = selectedRole === 'student' ? 'dashboard-student' : 
-                          selectedRole === 'parent' ? 'dashboard-parent' : 
+          const dashboard = selectedRole === 'parent' ? 'dashboard-parent' : 
                           getRoleDashboard(selectedRole);
           onNavigate(dashboard);
         }, 1000);
@@ -350,7 +318,6 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
         
         setTimeout(() => {
           const dashboard = selectedRole === 'parent' ? 'dashboard-parent' : 
-                          selectedRole === 'student' ? 'dashboard-student' : 
                           getRoleDashboard(selectedRole);
           onNavigate(dashboard);
         }, 1000);
@@ -380,7 +347,7 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
       loginForm.setValue('rememberMe', false);
       
       // Set default credentials only for management roles
-      if (selectedRole && selectedRole !== 'student' && selectedRole !== 'parent') {
+      if (selectedRole && selectedRole !== 'parent') {
         loginForm.setValue('email', 'reponsekdz06@gmail.com');
       }
     }
@@ -388,106 +355,244 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
 
   // Role Selection Step
   if (step === 'select') {
+    const parentRole = roles.find(r => r.role === 'parent');
+    const Icon = parentRole?.icon || Users;
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <div className="flex items-center justify-center mb-4">
-              <Sparkles className="h-8 w-8 text-yellow-500 mr-2" />
-              <h1 className="text-5xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent">
-                Hitamo Uruhare Rwawe
-              </h1>
-              <Sparkles className="h-8 w-8 text-green-500 ml-2" />
-            </div>
-            <p className="text-xl text-gray-600 font-medium">
-              Select Your Role to Access Your Dashboard
-            </p>
-            <Badge className="mt-4 bg-gradient-to-r from-yellow-500 to-green-500 text-white text-lg px-6 py-2">
-              TVET School Management System
+            <Badge className="mb-6 bg-gradient-to-r from-yellow-500 to-green-500 text-white text-lg px-8 py-3 shadow-lg">
+              🎓 Garden TVET School
             </Badge>
+            <h1 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-teal-600 bg-clip-text text-transparent mb-4">
+              Select Your Role
+            </h1>
+            <p className="text-2xl text-gray-600 font-semibold">
+              Hitamo Uruhare Rwawe
+            </p>
           </motion.div>
 
-          {/* Roles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roles.map((roleData, index) => {
-              const Icon = roleData.icon;
-
-              return (
-                <motion.div
-                  key={roleData.role}
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ scale: 1.03, y: -5 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card
-                    className={`cursor-pointer border-3 transition-all duration-300 border-yellow-200 hover:border-green-400 hover:shadow-xl bg-gradient-to-br ${roleData.bgGradient} overflow-hidden group`}
-                    onClick={() => handleRoleSelect(roleData.role)}
-                  >
-                    <CardContent className="p-6">
-                      {/* Icon Section */}
-                      <div className="relative mb-4">
-                        <motion.div
-                          className={`w-16 h-16 mx-auto rounded-xl bg-gradient-to-br ${roleData.color} flex items-center justify-center shadow-lg`}
-                          whileHover={{ rotate: 10, scale: 1.1 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <Icon className="h-8 w-8 text-white" />
-                        </motion.div>
-                      </div>
-
-                      {/* Title */}
-                      <div className="text-center mb-3">
-                        <h3 className="text-xl font-bold text-gray-900 mb-1">
-                          {roleData.title}
-                        </h3>
-                        <p className="text-sm text-gray-500 font-medium">
-                          {roleData.subtitle}
-                        </p>
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-center text-gray-600 text-sm mb-4">
-                        {roleData.description}
+          {/* Centered Parent Card - Large & Interactive */}
+          <div className="max-w-5xl mx-auto mb-12">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 100, delay: 0.2 }}
+              whileHover={{ scale: 1.02, y: -10 }}
+              className="relative group"
+            >
+              {/* Animated Glow Effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 animate-pulse transition-opacity"></div>
+              
+              <Card
+                className="relative cursor-pointer border-4 border-yellow-300 hover:border-green-400 transition-all duration-500 bg-gradient-to-br from-white via-yellow-50 to-green-50 overflow-hidden shadow-2xl hover:shadow-green-500/30"
+                onClick={() => handleRoleSelect('parent')}
+              >
+                <CardContent className="p-12">
+                  <div className="grid md:grid-cols-5 gap-8 items-center">
+                    
+                    {/* Left: Icon & Title */}
+                    <div className="md:col-span-2 text-center">
+                      <motion.div
+                        whileHover={{ rotate: [0, -15, 15, -15, 0], scale: 1.15 }}
+                        transition={{ duration: 0.6 }}
+                        className="inline-block mb-6"
+                      >
+                        <div className="w-32 h-32 mx-auto rounded-3xl bg-gradient-to-br from-yellow-500 via-green-500 to-teal-600 flex items-center justify-center shadow-2xl relative">
+                          <div className="absolute inset-0 bg-white/20 rounded-3xl animate-ping"></div>
+                          <Icon className="h-16 w-16 text-white relative z-10" />
+                        </div>
+                      </motion.div>
+                      
+                      <h2 className="text-5xl font-black text-gray-900 mb-3">
+                        Umubyeyi
+                      </h2>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent mb-2">
+                        Parent Portal
+                      </p>
+                      <p className="text-lg text-gray-600 mb-6">
+                        Urubuga rw'Ababyeyi
                       </p>
 
-                      {/* Action Button */}
-                      <Button
-                        className={`w-full bg-gradient-to-r ${roleData.color} text-white font-semibold py-2 shadow-md hover:shadow-lg transition-all group-hover:scale-105`}
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
-                        Injira
-                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
+                        <Button className="w-full bg-gradient-to-r from-yellow-500 via-green-500 to-teal-600 text-white font-bold text-xl py-7 shadow-2xl hover:shadow-green-500/50 transition-all rounded-2xl group">
+                          <LogIn className="mr-3 h-6 w-6 group-hover:rotate-12 transition-transform" />
+                          Injira Noneho
+                          <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                        </Button>
+                      </motion.div>
+                    </div>
+
+                    {/* Right: Interactive Features Grid */}
+                    <div className="md:col-span-3">
+                      <div className="mb-6">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center md:justify-start">
+                          <Sparkles className="h-6 w-6 mr-2 text-yellow-500 animate-pulse" />
+                          Ibikorwa Byawe
+                        </h3>
+                        <p className="text-gray-600 text-center md:text-left">Track everything about your child</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        {[
+                          { icon: '📊', title: 'Amanota', desc: 'Grades', color: 'from-blue-400 to-blue-600' },
+                          { icon: '📅', title: 'Kwitabira', desc: 'Attendance', color: 'from-green-400 to-green-600' },
+                          { icon: '💬', title: 'Ubutumwa', desc: 'Messages', color: 'from-purple-400 to-purple-600' },
+                          { icon: '💰', title: 'Kwishyura', desc: 'Payments', color: 'from-yellow-400 to-yellow-600' },
+                          { icon: '📝', title: 'Raporo', desc: 'Reports', color: 'from-pink-400 to-pink-600' },
+                          { icon: '🎯', title: 'Imyitwarire', desc: 'Conduct', color: 'from-red-400 to-red-600' },
+                          { icon: '📚', title: 'Amasomo', desc: 'Courses', color: 'from-indigo-400 to-indigo-600' },
+                          { icon: '🔔', title: 'Amakuru', desc: 'Updates', color: 'from-teal-400 to-teal-600' },
+                          { icon: '📈', title: 'Iterambere', desc: 'Progress', color: 'from-orange-400 to-orange-600' }
+                        ].map((feature, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.5, rotateY: -180 }}
+                            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                            transition={{ delay: 0.3 + idx * 0.05, type: 'spring' }}
+                            whileHover={{ 
+                              scale: 1.15, 
+                              rotateZ: 5,
+                              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                              zIndex: 10
+                            }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`bg-gradient-to-br ${feature.color} rounded-2xl p-4 text-center cursor-pointer shadow-lg hover:shadow-2xl transition-all relative overflow-hidden group`}
+                          >
+                            <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-all"></div>
+                            <div className="text-4xl mb-2 transform group-hover:scale-125 transition-transform">{feature.icon}</div>
+                            <div className="text-sm font-bold text-white drop-shadow-lg">{feature.title}</div>
+                            <div className="text-xs text-white/90">{feature.desc}</div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Quick Stats Bar */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="mt-6 grid grid-cols-3 gap-4"
+                      >
+                        {[
+                          { icon: CheckCircle2, label: '24/7 Access', value: 'Always On', color: 'text-green-600' },
+                          { icon: Shield, label: 'Secure', value: '100% Safe', color: 'text-blue-600' },
+                          { icon: Sparkles, label: 'Real-Time', value: 'Live Updates', color: 'text-purple-600' }
+                        ].map((stat, idx) => (
+                          <motion.div
+                            key={idx}
+                            whileHover={{ scale: 1.05, y: -5 }}
+                            className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center border-2 border-gray-200 hover:border-yellow-400 transition-all shadow-md"
+                          >
+                            <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color}`} />
+                            <div className="text-xs font-bold text-gray-800">{stat.label}</div>
+                            <div className="text-xs text-gray-600">{stat.value}</div>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Banner */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1 }}
+                    className="mt-8 pt-8 border-t-2 border-yellow-200"
+                  >
+                    <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+                      {[
+                        { icon: Mail, text: 'Email Alerts' },
+                        { icon: Phone, text: 'SMS Notifications' },
+                        { icon: CheckCircle2, text: 'Instant Updates' },
+                        { icon: Shield, text: 'Encrypted Data' }
+                      ].map((item, idx) => (
+                        <motion.div
+                          key={idx}
+                          whileHover={{ scale: 1.1, y: -3 }}
+                          className="flex items-center gap-2 text-gray-700 font-semibold"
+                        >
+                          <item.icon className="h-5 w-5 text-green-600" />
+                          <span>{item.text}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Management Staff Button - Below */}
+          <div className="max-w-2xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              whileHover={{ scale: 1.03, y: -5 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card
+                className="cursor-pointer border-3 border-yellow-300 hover:border-green-400 transition-all duration-300 bg-gradient-to-r from-yellow-50 via-white to-green-50 shadow-xl hover:shadow-2xl group"
+                onClick={() => onNavigate('staff-roles')}
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <motion.div
+                        whileHover={{ rotate: 360, scale: 1.2 }}
+                        transition={{ duration: 0.6 }}
+                        className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-xl"
+                      >
+                        <Shield className="h-10 w-10 text-white" />
+                      </motion.div>
+                      <div>
+                        <h3 className="text-3xl font-black text-gray-900 mb-1">Management Staff</h3>
+                        <p className="text-lg text-gray-600 font-semibold">Abakozi b'Ubuyobozi</p>
+                        <p className="text-sm text-gray-500 mt-1">Teachers, Admin, Directors & More</p>
+                      </div>
+                    </div>
+                    <motion.div
+                      animate={{ x: [0, 10, 0] }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                    >
+                      <ArrowRight className="h-10 w-10 text-blue-600 group-hover:text-green-600 transition-colors" />
+                    </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
           {/* Footer */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
             className="text-center mt-12"
           >
             <Button
               variant="outline"
               onClick={() => onNavigate('home')}
-              className="border-2 border-yellow-400 text-yellow-700 hover:bg-yellow-50 px-8 py-3"
+              className="border-2 border-pink-400 text-pink-700 hover:bg-pink-50 px-8 py-3 rounded-xl font-semibold"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Subira Ahabanza
             </Button>
           </motion.div>
         </div>
+        
+        {/* Bottom Navigation */}
+        <BottomNav currentPage="role-login" onNavigate={onNavigate} onSearch={() => onNavigate('search')} />
       </div>
     );
   }
@@ -553,11 +658,11 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
             </CardHeader>
             <CardContent className="p-6">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="w-full">
-                {(selectedRole === 'student' || selectedRole === 'parent') ? (
+                {(selectedRole === 'parent') ? (
                   <div className="mb-6">
                     <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <p className="text-sm text-blue-800 font-medium">
-                        {selectedRole === 'student' ? 'Student registration requires additional information.' : 'Parent registration requires additional information.'}
+                        {selectedRole === 'parent' ? 'Parent registration requires additional information.' : 'Registration requires additional information.'}
                       </p>
                       <Button
                         type="button"
@@ -617,34 +722,8 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                 {/* Login Form */}
                 <TabsContent value="login" className="mt-0">
                   <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                    {/* Serial Code Field for Students */}
-                    {selectedRole === 'student' ? (
-                      <div className="space-y-2">
-                        <Label htmlFor="login-serial" className="text-gray-700 font-medium">
-                          Nimero y'Umunyeshuri (Serial Code)
-                        </Label>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                          <Input
-                            id="login-serial"
-                            type="text"
-                            placeholder="Andika nimero yawe"
-                            className="pl-10 border-2 border-gray-200 focus:border-yellow-400 h-12 transition-colors"
-                            {...loginForm.register('email', { required: 'Serial code is required' })}
-                          />
-                        </div>
-                        {loginForm.formState.errors.email && (
-                          <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-red-500 text-sm"
-                          >
-                            {loginForm.formState.errors.email.message}
-                          </motion.p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
+                    {/* Email Field */}
+                    <div className="space-y-2">
                         <Label htmlFor="login-email" className="text-gray-700 font-medium">
                           Email Address
                         </Label>
@@ -674,7 +753,6 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                           </motion.p>
                         )}
                       </div>
-                    )}
 
                     {/* Password Field */}
                     <div className="space-y-2">
@@ -974,6 +1052,9 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
           </motion.div>
         )}
       </div>
+      
+      {/* Bottom Navigation */}
+      <BottomNav currentPage="role-login" onNavigate={onNavigate} onSearch={() => onNavigate('search')} />
     </div>
   );
 };

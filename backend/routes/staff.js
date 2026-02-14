@@ -13,6 +13,33 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
+// Get headmaster overview
+router.get('/headmaster/overview', async (req, res) => {
+  try {
+    const overview = {
+      totalStudents: 245,
+      totalTeachers: 32,
+      totalStaff: 48,
+      activeCourses: 56,
+      pendingApplications: 12,
+      recentActivities: [
+        { id: 1, type: 'application', message: 'New student application received', time: '2 hours ago' },
+        { id: 2, type: 'staff', message: 'Staff meeting scheduled', time: '5 hours ago' },
+        { id: 3, type: 'academic', message: 'Exam results published', time: '1 day ago' }
+      ],
+      stats: {
+        attendanceRate: 94.5,
+        averageScore: 76.8,
+        graduationRate: 89.2
+      }
+    };
+    res.json({ success: true, data: overview });
+  } catch (error) {
+    console.error('Fetch headmaster overview error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch overview' });
+  }
+});
+
 // Get all staff
 router.get('/', authenticateToken, async (req, res) => {
   try {

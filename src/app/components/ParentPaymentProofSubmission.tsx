@@ -6,7 +6,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
-import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
+import RwandaLocationTextInput from '@/app/components/RwandaLocationTextInput';
 
 const ParentPaymentProofSubmission: React.FC = () => {
   const [children, setChildren] = useState<any[]>([]);
@@ -22,7 +22,12 @@ const ParentPaymentProofSubmission: React.FC = () => {
     reference_number: '',
     bank_name: '',
     transaction_id: '',
-    notes: ''
+    notes: '',
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
+    village: ''
   });
   const [proofFile, setProofFile] = useState<File | null>(null);
 
@@ -84,7 +89,12 @@ const ParentPaymentProofSubmission: React.FC = () => {
           reference_number: '',
           bank_name: '',
           transaction_id: '',
-          notes: ''
+          notes: '',
+          province: '',
+          district: '',
+          sector: '',
+          cell: '',
+          village: ''
         });
         setProofFile(null);
         setImagePreview(null);
@@ -271,9 +281,16 @@ const ParentPaymentProofSubmission: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2">Aho Utuye (Rwanda)</label>
-                  <RwandaLocationSelector
+                  <label className="block text-sm font-bold mb-2">Aho Utuye (Rwanda) *</label>
+                  <RwandaLocationTextInput
                     onLocationChange={(location) => setFormData({...formData, ...location})}
+                    initialValues={{
+                      province: formData.province,
+                      district: formData.district,
+                      sector: formData.sector,
+                      cell: formData.cell,
+                      village: formData.village
+                    }}
                     required={true}
                   />
                 </div>

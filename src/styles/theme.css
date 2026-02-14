@@ -42,6 +42,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: #fde047;
   --sidebar-ring: #EAB308;
+
+  /* DOD Dashboard tokens */
+  --dod-primary: #1565C0;
+  --dod-dark: #0D47A1;
+  --dod-accent: #667eea;
+  --dod-stat-purple: #667eea;
+  --dod-stat-pink: #f093fb;
+  --dod-severity-critical: #EF4444;
+  --dod-severity-high: #F97316;
+  --dod-severity-medium: #EAB308;
+  --dod-severity-low: #22C55E;
+  --dod-success: #4CAF50;
 }
 
 .dark {
@@ -120,6 +132,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* DOD Dashboard */
+  --color-dod-primary: var(--dod-primary);
+  --color-dod-dark: var(--dod-dark);
+  --color-dod-accent: var(--dod-accent);
+  --color-dod-stat-purple: var(--dod-stat-purple);
+  --color-dod-stat-pink: var(--dod-stat-pink);
+  --color-dod-severity-critical: var(--dod-severity-critical);
+  --color-dod-severity-high: var(--dod-severity-high);
+  --color-dod-severity-medium: var(--dod-severity-medium);
+  --color-dod-severity-low: var(--dod-severity-low);
+  --color-dod-success: var(--dod-success);
 }
 
 @layer base {

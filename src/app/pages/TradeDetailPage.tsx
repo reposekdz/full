@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Code, HardHat, Wrench, ArrowLeft, BookOpen, Users, Trophy, 
@@ -22,14 +22,12 @@ interface TradeDetailPageProps {
   onBack: () => void;
 }
 
-const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) => {
-  console.log('TradeDetailPage mounted with tradeCode:', tradeCode);
+const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeCode, onBack }) => {
   const [trade, setTrade] = useState<any>(null);
   const [tradeData, setTradeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(() => {
-    // Restore active tab from localStorage
     const saved = localStorage.getItem(`trade_${tradeCode}_active_tab`);
     return saved || 'overview';
   });
@@ -40,16 +38,15 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
+  const normalizedTradeCode = useMemo(() => tradeCode === 'AUT' ? 'AUTO' : tradeCode, [tradeCode]);
+
   // Save active tab to localStorage
   useEffect(() => {
     localStorage.setItem(`trade_${tradeCode}_active_tab`, activeTab);
   }, [activeTab, tradeCode]);
 
-  // Load hero images for AUTO trade
   useEffect(() => {
-    const normalized = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
-    console.log('Trade code check:', tradeCode, '-> normalized:', normalized);
-    if (normalized === 'AUTO') {
+    if (normalizedTradeCode === 'AUTO') {
       const heroImageFiles = [
         'IMG-20260128-WA0062.jpg', 'IMG-20260128-WA0067.jpg', 'IMG-20260128-WA0070.jpg',
         'IMG-20260128-WA0076.jpg', 'IMG-20260128-WA0080.jpg', 'IMG-20260128-WA0082.jpg',
@@ -57,11 +54,9 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
         'IMG-20260128-WA0095.jpg', 'IMG-20260128-WA0101.jpg', 'IMG-20260128-WA0105.jpg',
         'IMG-20260128-WA0110.jpg', 'IMG-20260128-WA0116.jpg', 'IMG-20260128-WA0119.jpg'
       ];
-      const images = heroImageFiles.map(img => `http://localhost:5000/uploads/hero/aut%20hero/${img}`);
-      setHeroImages(images);
-      console.log('Hero images loaded for AUTO:', images.length, images[0]);
+      setHeroImages(heroImageFiles.map(img => `http://localhost:5000/uploads/hero/aut%20hero/${img}`));
     }
-  }, [tradeCode]);
+  }, [normalizedTradeCode]);
 
   // Auto-rotate hero images
   useEffect(() => {
@@ -72,122 +67,127 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
     return () => clearInterval(interval);
   }, [heroImages]);
 
-  // Load gallery
   useEffect(() => {
+    let isMounted = true;
     const loadGallery = async () => {
       try {
         setLoadingGallery(true);
-        // Normalize trade code - handle both AUT and AUTO
-        const normalizedCode = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
-        console.log('Loading gallery for trade:', tradeCode, '-> normalized:', normalizedCode);
-        const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${normalizedCode}`);
+        const response = await fetch(`http://localhost:5000/api/trade-images/gallery/${normalizedTradeCode}`);
         const data = await response.json();
-        console.log('Gallery API response:', data);
-        if (data.success && data.gallery) {
-          console.log('Setting gallery with', data.gallery.length, 'images');
+        if (isMounted && data.success && data.gallery) {
           setGallery(data.gallery);
-        } else {
-          console.log('No gallery data or unsuccessful response');
         }
       } catch (error) {
         console.error('Error loading gallery:', error);
       } finally {
-        setLoadingGallery(false);
+        if (isMounted) setLoadingGallery(false);
       }
     };
     loadGallery();
-  }, [tradeCode]);
+    return () => { isMounted = false; };
+  }, [normalizedTradeCode]);
 
   useEffect(() => {
+    let isMounted = true;
     const loadTradeDetails = async () => {
       try {
         setLoading(true);
         const response = await fetch('http://localhost:5000/api/trades/all');
         const data = await response.json();
         
-        if (data.success && data.trades) {
-          const tradeGroups: any = {};
-          
-          data.trades.forEach((t: any) => {
-            const baseType = t.code.replace(/L[345]/, '');
-            if (!tradeGroups[baseType]) {
-              const nameRw = baseType === 'SOD' ? 'Iterambere rya Software' : 
-                            baseType === 'BDC' ? 'Ubwubatsi n\'Inyubako' : 
-                            baseType === 'AUTO' ? 'Ikoranabuhanga ry\'Ibinyabiziga' : t.name;
-              tradeGroups[baseType] = {
-                baseType,
-                name: nameRw,
-                description: t.description_rw || t.description,
-                levels: [],
-                tradeId: t.id
-              };
-            }
-            
-            const level = t.code.match(/L[345]/)?.[0] || '';
-            tradeGroups[baseType].levels.push({
-              level: `Urwego rwa ${level.replace('L', '')}`,
-              code: t.code,
-              duration: `Imyaka ${t.duration_years || 2}`,
+        if (!isMounted || !data.success || !data.trades) return;
+        
+        // Fetch courses for the base trade code
+        const coursesResponse = await fetch(`http://localhost:5000/api/trade-courses-api/trade/${normalizedTradeCode}`);
+        const coursesData = await coursesResponse.json();
+        const allCourses = coursesData.success ? coursesData.courses : [];
+        
+        const tradeGroups: any = {};
+        data.trades.forEach((t: any) => {
+          const baseType = t.code.replace(/L[345]/, '');
+          if (!tradeGroups[baseType]) {
+            const nameRw = baseType === 'SOD' ? 'Iterambere rya Software' : 
+                          baseType === 'BDC' ? 'Ubwubatsi n\'Inyubako' : 
+                          baseType === 'AUTO' ? 'Ikoranabuhanga ry\'Ibinyabiziga' : t.name;
+            tradeGroups[baseType] = {
+              baseType,
+              name: nameRw,
               description: t.description_rw || t.description,
-              courses: t.courses || [],
-              hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
-              classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Itsinda A', 'Itsinda B'] : ['Itsinda Rimwe']
-            });
+              levels: [],
+              tradeId: t.id
+            };
+          }
+          
+          const level = t.code.match(/L[345]/)?.[0] || '';
+          if (!level) return; // Skip if no level found
+          
+          const levelNumber = parseInt(level.replace('L', ''));
+          const levelCourses = allCourses.filter((c: any) => c.level_number === levelNumber).map((c: any) => ({
+            name: c.course_name,
+            code: c.course_code || c.course_name
+          }));
+          
+          console.log(`Level ${levelNumber} (${t.code}): ${levelCourses.length} courses`);
+          
+          tradeGroups[baseType].levels.push({
+            level: `Urwego rwa ${levelNumber}`,
+            code: t.code,
+            duration: `Imyaka ${t.duration_years || 2}`,
+            description: t.description_rw || t.description,
+            courses: levelCourses,
+            hasClasses: baseType === 'AUTO' && (level === 'L4' || level === 'L5'),
+            classes: baseType === 'AUTO' && (level === 'L4' || level === 'L5') ? ['Itsinda A', 'Itsinda B'] : ['Itsinda Rimwe']
           });
+        });
 
-          // Normalize tradeCode for lookup (AUT -> AUTO)
-          const normalizedTradeCode = tradeCode === 'AUT' ? 'AUTO' : tradeCode;
-          const foundTrade = tradeGroups[normalizedTradeCode];
-          if (foundTrade) {
-            console.log('Found trade:', foundTrade);
-            console.log('Trade code:', tradeCode, '-> normalized:', normalizedTradeCode);
-            setTrade({
-              ...foundTrade,
-              icon: getTradeIcon(normalizedTradeCode),
-              statistics: {
-                students: foundTrade.levels.reduce((sum: number, l: any) => sum + (l.total_students || 0), 0),
-                successRate: 95,
-                graduationRate: 92,
-                employmentRate: 88
-              }
-            });
-            setSelectedLevel(foundTrade.levels[0]);
-            
-            // Fetch full trade details with instructors
-            if (foundTrade.tradeId) {
-              const detailResponse = await fetch(`http://localhost:5000/api/trades/${foundTrade.tradeId}`);
-              const detailData = await detailResponse.json();
-              if (detailData.success) {
-                setTradeData(detailData);
-              }
+        const foundTrade = tradeGroups[normalizedTradeCode];
+        if (foundTrade && isMounted) {
+          setTrade({
+            ...foundTrade,
+            icon: getTradeIcon(normalizedTradeCode),
+            statistics: {
+              students: foundTrade.levels.reduce((sum: number, l: any) => sum + (l.total_students || 0), 0),
+              successRate: 95,
+              graduationRate: 92,
+              employmentRate: 88
+            }
+          });
+          setSelectedLevel(foundTrade.levels[0]);
+          
+          if (foundTrade.tradeId) {
+            const detailResponse = await fetch(`http://localhost:5000/api/trades/${foundTrade.tradeId}`);
+            const detailData = await detailResponse.json();
+            if (isMounted && detailData.success) {
+              setTradeData(detailData);
             }
           }
         }
       } catch (error) {
         console.error('Error loading trade:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     loadTradeDetails();
-  }, [tradeCode]);
+    return () => { isMounted = false; };
+  }, [normalizedTradeCode]);
 
-  const getTradeIcon = (code: string) => {
+  const getTradeIcon = useCallback((code: string) => {
     const normalized = code === 'AUT' ? 'AUTO' : code;
     if (normalized === 'SOD') return Code;
     if (normalized === 'BDC') return HardHat;
     if (normalized === 'AUTO') return Wrench;
     return Code;
-  };
+  }, []);
 
-  const getGradientColors = (code: string) => {
+  const getGradientColors = useCallback((code: string) => {
     const normalized = code === 'AUT' ? 'AUTO' : code;
     if (normalized === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
     if (normalized === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
     if (normalized === 'AUTO') return 'from-green-600 via-emerald-500 to-teal-400';
     return 'from-green-600 to-yellow-400';
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -998,6 +998,6 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = ({ tradeCode, onBack }) 
       )}
     </div>
   );
-};
+});
 
 export default TradeDetailPage;

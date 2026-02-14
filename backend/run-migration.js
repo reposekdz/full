@@ -19,7 +19,16 @@ async function runMigration() {
 
     console.log('✓ Connected to database\n');
 
-    const sqlPath = path.join(__dirname, 'migrations', 'comprehensive-system-migration.sql');
+    // Get migration file from command line argument
+    const args = process.argv.slice(2);
+    const fileIndex = args.indexOf('--file');
+    let migrationFile = 'comprehensive-system-migration.sql';
+    
+    if (fileIndex !== -1 && args[fileIndex + 1]) {
+      migrationFile = args[fileIndex + 1];
+    }
+
+    const sqlPath = path.join(__dirname, migrationFile);
     const sql = fs.readFileSync(sqlPath, 'utf8');
 
     console.log('Running migration...\n');

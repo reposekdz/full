@@ -349,6 +349,7 @@ import {
   TradePartnersSection,
   ScheduleVisitModal 
 } from '@/app/components/trades';
+import TradeCourses from '@/app/components/TradeCourses';
 
 interface AUTTradePageProps {
   onNavigate: (page: string) => void;
@@ -2317,6 +2318,22 @@ const AUTTradePage: React.FC<AUTTradePageProps> = ({ onNavigate }) => {
                     </motion.div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Courses Section */}
+            <Card className="border-2 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center">
+                  <BookOpen className="w-7 h-7 mr-3 text-green-600" />
+                  Program Courses
+                </CardTitle>
+                <CardDescription>
+                  Complete course structure across all levels (3, 4A, 4B, 5A, 5B)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TradeCourses tradeCode="AUT" />
               </CardContent>
             </Card>
 

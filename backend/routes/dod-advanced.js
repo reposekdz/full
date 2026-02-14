@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendUniversalMessage } = require('../services/smsService');
 const { notifyConductRemoval, notifyLeaveApproval } = require('../utils/parentNotifications');
+const { sendConductRemovalSMS, sendLeaveApprovalSMS } = require('../services/gardenSMSService');
 
 const router = express.Router();
 
@@ -77,10 +78,38 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
     let notifiedCount = 0;
     for (const conn of connections) {
       if (conn.parent_phone) {
-        const message = `ISHURI: Umwana wawe ${student.first_name} ${student.last_name} yakiriye igihano cya ${conduct_type} (${severity}). Impamvu: ${description}. Amanota yakuweho: ${conduct_points_deducted}. Amanota ashya: ${new_conduct_score}/40.`;
+        // Send rich, detailed SMS using Garden SMS Service
         try {
-          await sendUniversalMessage(conn.parent_phone, message, req.user?.id || 0, { type: 'conduct_removal' });
-          notifiedCount++;
+          const smsResult = await sendConductRemovalSMS(
+            conn.parent_phone,
+            {
+              name: `${student.first_name} ${student.last_name}`,
+              code: student.student_code,
+              trade: student.trade_code,
+              level: student.level_number,
+              parentName: conn.parent_name || 'Mubyeyi'
+            },
+            {
+              type: conduct_type,
+              severity: severity,
+              description: description,
+              action: action_taken || 'Igihano cyatanzwe',
+              pointsDeducted: conduct_points_deducted,
+              newScore: new_conduct_score
+            },
+            {
+              name: removed_by_name,
+              role: removed_by_name.includes('Patron') ? 'Patron - Umuyobozi w\'Abahungu' : 
+                    removed_by_name.includes('Matron') ? 'Matron - Umuyobozi w\'Abakobwa' : 
+                    'DOD - Umuyobozi w\'Indero',
+              phone: '+250783407691'
+            }
+          );
+          
+          if (smsResult.success) {
+            notifiedCount++;
+            console.log(`✅ SMS sent to ${conn.parent_phone}: ${smsResult.messageId}`);
+          }
         } catch (err) {
           console.error('Failed to send SMS:', err);
         }
@@ -152,10 +181,36 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
     let notifiedCount = 0;
     for (const conn of connections) {
       if (conn.parent_phone) {
-        const message = `ISHURI: Umwana wawe ${student.first_name} ${student.last_name} yahawe uruhushya rwo ${leave_type}. Impamvu: ${reason}. Kuva ${start_time} kugeza ${end_time || start_time}.`;
+        // Send rich, detailed SMS using Garden SMS Service
         try {
-          await sendUniversalMessage(conn.parent_phone, message, req.user?.id || 0, { type: 'leave_approval' });
-          notifiedCount++;
+          const smsResult = await sendLeaveApprovalSMS(
+            conn.parent_phone,
+            {
+              name: `${student.first_name} ${student.last_name}`,
+              code: student.student_code,
+              trade: student.trade_code,
+              level: student.level_number,
+              parentName: conn.parent_name || 'Mubyeyi'
+            },
+            {
+              type: leave_type,
+              reason: reason,
+              startTime: start_time,
+              endTime: end_time || start_time
+            },
+            {
+              name: approved_by_name,
+              role: approved_by_name.includes('Patron') ? 'Patron - Umuyobozi w\'Abahungu' : 
+                    approved_by_name.includes('Matron') ? 'Matron - Umuyobozi w\'Abakobwa' : 
+                    'DOD - Umuyobozi w\'Indero',
+              phone: '+250783407691'
+            }
+          );
+          
+          if (smsResult.success) {
+            notifiedCount++;
+            console.log(`✅ SMS sent to ${conn.parent_phone}: ${smsResult.messageId}`);
+          }
         } catch (err) {
           console.error('Failed to send SMS:', err);
         }

@@ -45,6 +45,7 @@ import {
   TradePartnersSection,
   ScheduleVisitModal 
 } from '@/app/components/trades';
+import TradeCourses from '@/app/components/TradeCourses';
 
 interface BDCTradePageProps {
   onNavigate: (page: string) => void;
@@ -462,6 +463,22 @@ const BDCTradePage: React.FC<BDCTradePageProps> = ({ onNavigate }) => {
                     </motion.div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Courses Section */}
+            <Card className="border-2 border-orange-200">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center">
+                  <BookOpen className="w-7 h-7 mr-3 text-orange-600" />
+                  Program Courses
+                </CardTitle>
+                <CardDescription>
+                  Complete course structure across all levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TradeCourses tradeCode="BDC" />
               </CardContent>
             </Card>
 

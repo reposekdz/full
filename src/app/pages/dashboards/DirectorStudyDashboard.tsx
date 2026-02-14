@@ -143,10 +143,13 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       if (selectedLevel !== 'all') params.level = selectedLevel;
       
       const response = await apiService.getDOSStudents(params);
-      setStudents(response.data.students);
-      setPagination(response.data.pagination);
+      const studentsData = response.students || response.data?.students || [];
+      const paginationData = response.pagination || response.data?.pagination || pagination;
+      setStudents(studentsData);
+      setPagination(paginationData);
     } catch (error) {
       console.error('Error loading students:', error);
+      setStudents([]);
     }
   };
 

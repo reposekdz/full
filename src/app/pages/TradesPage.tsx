@@ -517,7 +517,7 @@ const TradesPage: React.FC<TradesPageProps> = ({ onNavigate }) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">Ibyiciro Byose</SelectItem>
-                      {trades.map((trade) => (
+                      {trades.filter(t => ['SOD', 'BDC', 'AUT'].includes(t.code)).map((trade) => (
                         <SelectItem key={trade.code} value={trade.code}>
                           {trade.code} - {trade.title}
                         </SelectItem>

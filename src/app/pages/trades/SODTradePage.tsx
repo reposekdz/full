@@ -44,6 +44,7 @@ import {
   TradePartnersSection,
   ScheduleVisitModal 
 } from '@/app/components/trades';
+import TradeCourses from '@/app/components/TradeCourses';
 
 interface SODTradePageProps {
   onNavigate: (page: string) => void;
@@ -462,6 +463,22 @@ const SODTradePage: React.FC<SODTradePageProps> = ({ onNavigate }) => {
                     </motion.div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Courses Section */}
+            <Card className="border-2 border-blue-200">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center">
+                  <BookOpen className="w-7 h-7 mr-3 text-blue-600" />
+                  Program Courses
+                </CardTitle>
+                <CardDescription>
+                  Complete course structure across all levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TradeCourses tradeCode="SOD" />
               </CardContent>
             </Card>
 

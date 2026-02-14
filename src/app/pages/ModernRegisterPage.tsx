@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { apiService } from '@/app/services/apiService';
-import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
+import RwandaLocationTextInput from '@/app/components/RwandaLocationTextInput';
 
 interface ModernRegisterPageProps {
   onNavigate: (page: string) => void;
@@ -74,11 +74,17 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
     phone: '',
     password: '',
     confirmPassword: '',
-    role: '' as 'student' | 'parent' | '',
+    role: '' as 'parent' | '',
     address: '',
     date_of_birth: '',
     gender: '' as 'Male' | 'Female' | '',
-    serial_code: ''
+    serial_code: '',
+    // Text-based location fields
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
+    village: ''
   });
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,15 +118,10 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
       setError(translations.selectRoleErr);
       return;
     }
-    if (formData.role === 'student' && !formData.serial_code) {
-      setError(isKinyarwanda ? 'Wibagiwe gushyiramo nimero y\'umunyeshuri' : 'Please enter your serial code');
-      return;
-    }
 
     setLoading(true);
     try {
-      if (formData.role === 'parent') {
-        const result = await apiService.parentPhoneRegister({
+      const result = await apiService.parentPhoneRegister({
           phone: formData.phone,
           password: formData.password,
           first_name: formData.first_name,
@@ -135,34 +136,6 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
         } else {
           setError(result.message || 'Registration failed');
         }
-      } else {
-        const response = await fetch('http://localhost:5000/api/auth/register/student-serial', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            serial_code: formData.serial_code,
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            password: formData.password,
-            date_of_birth: formData.date_of_birth || undefined,
-            gender: formData.gender || undefined,
-            address: formData.address || undefined
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.token) {
-          localStorage.setItem('token', result.token);
-          setSuccess(isKinyarwanda ? `Kwiyandikisha byagenze neza! Nimero yawe ni: ${formData.serial_code}` : `Registration successful! Your serial code: ${formData.serial_code}`);
-          setTimeout(() => {
-            window.location.href = '/dashboard-student';
-          }, 2000);
-        } else {
-          setError(result.message || 'Registration failed');
-        }
-      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -263,12 +236,11 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <Label>{translations.iam}</Label>
-                    <Select value={formData.role} onValueChange={(value: 'student' | 'parent') => setFormData({ ...formData, role: value })}>
+                    <Select value={formData.role} onValueChange={(value: 'parent') => setFormData({ ...formData, role: value })}>
                       <SelectTrigger className="border-2">
                         <SelectValue placeholder={translations.selectRole} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="student">{translations.student} ({translations.studentDesc})</SelectItem>
                         <SelectItem value="parent">{translations.parent} ({translations.parentDesc})</SelectItem>
                       </SelectContent>
                     </Select>
@@ -293,31 +265,14 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                     </div>
                   </div>
 
-                  {formData.role === 'student' && (
-                    <div>
-                      <Label>{isKinyarwanda ? 'Nimero y\'Umunyeshuri (Serial Code) *' : 'Student Serial Code *'}</Label>
-                      <Input
-                        value={formData.serial_code}
-                        onChange={(e) => setFormData({ ...formData, serial_code: e.target.value })}
-                        placeholder={isKinyarwanda ? 'Shyiramo nimero yawe' : 'Enter your serial code'}
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {isKinyarwanda ? 'Nimero yawe yaje kuri email y\'ababyeyi bawe cyangwa yakwerekanwe n\'ishuri' : 'Your serial code was sent to your parent\'s email or provided by the school'}
-                      </p>
-                    </div>
-                  )}
-
-                  {formData.role === 'parent' && (
-                    <div>
-                      <Label>{translations.email} {translations.optional}</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <Label>{translations.email} {translations.optional}</Label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
 
                   <div>
                     <Label>{translations.phone}</Label>
@@ -330,43 +285,20 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
                     />
                   </div>
 
-                  {formData.role === 'student' && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>{translations.dob}</Label>
-                          <Input
-                            type="date"
-                            value={formData.date_of_birth}
-                            onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>{translations.gender}</Label>
-                          <Select value={formData.gender} onValueChange={(value: 'Male' | 'Female') => setFormData({ ...formData, gender: value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder={translations.selectGender} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Male">{translations.male}</SelectItem>
-                              <SelectItem value="Female">{translations.female}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                    </>
-                  )}
-
-                  {formData.role === 'parent' && (
-                    <div>
-                      <Label>{translations.location}</Label>
-                      <RwandaLocationSelector
+                  <div>
+                    <Label>{translations.location}</Label>
+                      <RwandaLocationTextInput
                         onLocationChange={(location) => setFormData({...formData, ...location})}
-                        required={true}
+                        initialValues={{
+                          province: formData.province,
+                          district: formData.district,
+                          sector: formData.sector,
+                          cell: formData.cell,
+                          village: formData.village
+                        }}
+                        required={false}
                       />
                     </div>
-                  )}
 
                   <div>
                     <Label>{translations.password}</Label>

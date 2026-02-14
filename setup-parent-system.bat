@@ -1,4 +1,8 @@
 @echo off
+
+REM Set working directory to script location
+cd /d "%~dp0"
+
 echo ========================================
 echo  ADVANCED Parent Management System Setup
 echo ========================================

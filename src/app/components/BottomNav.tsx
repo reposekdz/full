@@ -27,7 +27,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, onSearch, curr
 
   return (
     <>
-      {/* Bottom Navigation - Mobile & Tablet Only */}
+      {/* Bottom Navigation - Mobile Only */}
       <motion.nav
         initial={{ y: 100 }}
         animate={{ y: 0 }}

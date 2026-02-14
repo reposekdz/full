@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/app/config/apiBase';
 
 export type UserRole = 
-  | 'student' 
   | 'parent' 
   | 'advisor'
   | 'director_study' 
@@ -60,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getRoleDashboard = (role: string): string => {
     const dashboardMap: Record<string, string> = {
-      student: 'dashboard-student',
       parent: 'dashboard-parent',
       advisor: 'dashboard-advisor',
       director_study: 'dashboard-director-study',
@@ -131,8 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const dashboardPage = getRoleDashboard(data.user.role);
         
-        // Auto-redirect for students and parents
-        if (data.user.role === 'student' || data.user.role === 'parent') {
+        if (data.user.role === 'parent') {
           setTimeout(() => {
             window.location.href = `/${dashboardPage}`;
           }, 100);
@@ -151,7 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithRole = async (role: UserRole, credentials?: { email: string; password: string }): Promise<{ success: boolean; dashboardPage?: string }> => {
     if (credentials) {
-      // Use role-based authentication
       try {
         const response = await fetch(`${API_BASE}/role-auth/login-role`, {
           method: 'POST',
@@ -175,8 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           const dashboardPage = getRoleDashboard(data.user.role);
           
-          // Auto-redirect for students and parents
-          if (data.user.role === 'student' || data.user.role === 'parent') {
+          if (data.user.role === 'parent') {
             setTimeout(() => {
               window.location.href = `/${dashboardPage}`;
             }, 100);
@@ -193,7 +188,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     
-    // Fallback to unified credentials
     return login(UNIFIED_EMAIL, UNIFIED_PASSWORD);
   };
 
@@ -274,8 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const dashboardPage = getRoleDashboard(data.user.role);
         
-        // Auto-redirect for students and parents
-        if (data.user.role === 'student' || data.user.role === 'parent') {
+        if (data.user.role === 'parent') {
           setTimeout(() => {
             window.location.href = `/${dashboardPage}`;
           }, 100);

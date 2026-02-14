@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
         COUNT(DISTINCT tc.id) as course_count
       FROM trades t
       LEFT JOIN trade_instructors ti ON t.id = ti.trade_id
-      LEFT JOIN trade_courses tc ON t.id = tc.trade_id
+      LEFT JOIN trade_courses tc ON t.code COLLATE utf8mb4_unicode_ci = tc.trade_code COLLATE utf8mb4_unicode_ci
       WHERE 1=1
     `;
     const params = [];
@@ -124,7 +124,7 @@ router.get('/all', async (req, res) => {
         COUNT(DISTINCT tc.id) as course_count
       FROM trades t
       LEFT JOIN trade_instructors ti ON t.id = ti.trade_id
-      LEFT JOIN trade_courses tc ON t.id = tc.trade_id
+      LEFT JOIN trade_courses tc ON t.code COLLATE utf8mb4_unicode_ci = tc.trade_code COLLATE utf8mb4_unicode_ci
       GROUP BY t.id
       ORDER BY t.code
     `);
@@ -154,7 +154,7 @@ router.get('/level/:level', async (req, res) => {
         COUNT(DISTINCT tc.id) as course_count
       FROM trades t
       LEFT JOIN trade_instructors ti ON t.id = ti.trade_id
-      LEFT JOIN trade_courses tc ON t.id = tc.trade_id
+      LEFT JOIN trade_courses tc ON t.code COLLATE utf8mb4_unicode_ci = tc.trade_code COLLATE utf8mb4_unicode_ci
       WHERE t.level = ?
       GROUP BY t.id
       ORDER BY t.code
@@ -187,7 +187,7 @@ router.get('/:id', async (req, res) => {
     );
     
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code', 
+      'SELECT * FROM trade_courses WHERE trade_code = (SELECT code FROM trades WHERE id = ?) ORDER BY course_code', 
       [req.params.id]
     );
 
@@ -245,8 +245,8 @@ router.get('/code/:code', async (req, res) => {
     );
     
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code', 
-      [tradeId]
+      'SELECT * FROM trade_courses WHERE trade_code = ? ORDER BY course_code', 
+      [trades[0].code]
     );
 
     const [students] = await pool.query(
@@ -279,11 +279,24 @@ router.get('/code/:code', async (req, res) => {
   }
 });
 
+// Get all courses for a trade by code
+router.get('/code/:code/courses', async (req, res) => {
+  try {
+    const [courses] = await pool.query(
+      'SELECT * FROM trade_courses WHERE trade_code = ? ORDER BY level_number, course_name',
+      [req.params.code]
+    );
+    res.json({ success: true, courses });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get all courses for a trade
 router.get('/:id/courses', async (req, res) => {
   try {
     const [courses] = await pool.query(
-      'SELECT * FROM trade_courses WHERE trade_id = ? ORDER BY code',
+      'SELECT * FROM trade_courses WHERE trade_code = (SELECT code FROM trades WHERE id = ?) ORDER BY course_code',
       [req.params.id]
     );
     res.json({ success: true, courses });
