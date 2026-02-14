@@ -14,19 +14,6 @@ class ApiService {
     return headers;
   }
 
-  private async request(endpoint: string, options: any = {}) {
-    const isFormData = options.body instanceof FormData;
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(isFormData),
-        ...options.headers
-      }
-    });
-    return response.json();
-  }
-
-  // Public request method for external use
   async request(endpoint: string, options: any = {}) {
     const isFormData = options.body instanceof FormData;
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -239,15 +226,15 @@ class ApiService {
     return this.request(`/parent-dashboard/child/${studentId}/academics`);
   }
 
-  async getChildAttendance(studentId: number) {
+  async getParentChildAttendance(studentId: number) {
     return this.request(`/parent-dashboard/child/${studentId}/attendance`);
   }
 
-  async getChildDiscipline(studentId: number) {
+  async getParentChildDiscipline(studentId: number) {
     return this.request(`/parent-dashboard/child/${studentId}/discipline`);
   }
 
-  async getChildFees(studentId: number) {
+  async getParentChildFees(studentId: number) {
     return this.request(`/parent-dashboard/child/${studentId}/fees`);
   }
 
@@ -259,7 +246,7 @@ class ApiService {
     return this.request(`/parent-dashboard/child/${studentId}/assignments`);
   }
 
-  async getParentNotifications() {
+  async getParentDashboardNotifications() {
     return this.request('/parent-dashboard/notifications');
   }
 
@@ -384,7 +371,7 @@ class ApiService {
     return this.request('/staff/accountant/students');
   }
 
-  async recordPayment(paymentData: any) {
+  async recordAccountantStaffPayment(paymentData: any) {
     return this.request('/staff/accountant/payments/record', {
       method: 'POST',
       body: JSON.stringify(paymentData)
@@ -456,7 +443,7 @@ class ApiService {
     return this.request(`/staff/stock/items?${query}`);
   }
 
-  async addInventoryItem(itemData: any) {
+  async addStaffInventoryItem(itemData: any) {
     return this.request('/staff/stock/items/add', {
       method: 'POST',
       body: JSON.stringify(itemData)
@@ -471,7 +458,7 @@ class ApiService {
   }
 
   // Comprehensive Management APIs
-  async getTeachers(params = {}) {
+  async getManagementTeachers(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/teachers?${query}`);
   }
@@ -517,7 +504,7 @@ class ApiService {
     return this.request(`/management/teachers/${teacherId}/analytics`);
   }
 
-  async getStudents(params = {}) {
+  async getManagementStudents(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/students?${query}`);
   }
@@ -533,7 +520,7 @@ class ApiService {
     });
   }
 
-  async updateStudent(id: number, studentData: any) {
+  async updateManagementStudent(id: number, studentData: any) {
     return this.request(`/management/students/${id}`, {
       method: 'PUT',
       body: JSON.stringify(studentData)
@@ -570,17 +557,17 @@ class ApiService {
     });
   }
 
-  async getClasses(params = {}) {
+  async getManagementClasses(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/classes?${query}`);
   }
 
-  async getSubjects(params = {}) {
+  async getManagementSubjects(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/subjects?${query}`);
   }
 
-  async getAcademicYears() {
+  async getManagementAcademicYears() {
     return this.request('/management/academic-years');
   }
 
@@ -648,11 +635,11 @@ class ApiService {
   }
 
   // Teacher Management
-  async getTeacherClasses() {
+  async getTeacherClassesList() {
     return this.request('/teachers/classes');
   }
 
-  async getClassStudents(classId: number) {
+  async getTeacherClassStudents(classId: number) {
     return this.request(`/teachers/classes/${classId}/students`);
   }
 
@@ -663,7 +650,7 @@ class ApiService {
     });
   }
 
-  async markAttendanceBulk(attendance: any[], classId: number, subjectId: number, date: string) {
+  async markTeacherAttendanceBulk(attendance: any[], classId: number, subjectId: number, date: string) {
     return this.request('/teachers/attendance/bulk', {
       method: 'POST',
       body: JSON.stringify({ attendance, class_id: classId, subject_id: subjectId, attendance_date: date })
@@ -693,7 +680,7 @@ class ApiService {
     return this.request(`/advanced-assignments/assignments/teacher/${teacherId}`);
   }
 
-  async getAssignmentSubmissions(assignmentId: number) {
+  async getTeacherAssignmentSubmissions(assignmentId: number) {
     return this.request(`/advanced-assignments/assignments/${assignmentId}/submissions`);
   }
 
@@ -708,7 +695,7 @@ class ApiService {
     });
   }
 
-  async createAssignment(assignmentData: FormData) {
+  async createTeacherAssignment(assignmentData: FormData) {
     return this.request('/assignments/assignments', {
       method: 'POST',
       body: assignmentData
@@ -726,21 +713,21 @@ class ApiService {
   }
 
   // Student Management
-  async getStudentDashboard() {
+  async getBasicStudentDashboard() {
     return this.request('/students/dashboard');
   }
 
-  async getStudentGrades(params = {}) {
+  async getBasicStudentGrades(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/students/grades?${query}`);
   }
 
-  async getStudentAttendance(params = {}) {
+  async getBasicStudentAttendance(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/students/attendance?${query}`);
   }
 
-  async getStudentTimetable() {
+  async getBasicStudentTimetable() {
     return this.request('/students/timetable');
   }
 
@@ -748,11 +735,11 @@ class ApiService {
     return this.request('/students/performance');
   }
 
-  async getStudentAssignments(studentId: number) {
+  async getBasicStudentAssignments(studentId: number) {
     return this.request(`/advanced-assignments/assignments/student/${studentId}`);
   }
 
-  async submitAssignment(submissionData: FormData) {
+  async submitBasicAssignment(submissionData: FormData) {
     return this.request('/advanced-assignments/submissions', {
       method: 'POST',
       body: submissionData
@@ -765,7 +752,7 @@ class ApiService {
     return this.request(`/dos/students?${query}`);
   }
 
-  async getDOSTeachers() {
+  async getDOSAdvancedTeachers() {
     return this.request('/dos-advanced/teachers');
   }
 
@@ -856,30 +843,30 @@ class ApiService {
     return this.request('/dod-comprehensive/system/health');
   }
 
-  async getDODDisciplineCases(params = {}) {
+  async getDODComprehensiveDisciplineCases(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/dod-comprehensive/discipline/cases?${query}`);
   }
 
-  async deleteDODDisciplineCase(id: number) {
+  async deleteDODComprehensiveDisciplineCase(id: number) {
     return this.request(`/dod-comprehensive/discipline/cases/${id}`, { method: 'DELETE' });
   }
 
-  async notifyParentMarkLoss(studentId: number, marksLost: number, reason: string) {
+  async notifyParentMarkLossComprehensive(studentId: number, marksLost: number, reason: string) {
     return this.request('/dod-comprehensive/notify-parent-mark-loss', {
       method: 'POST',
       body: JSON.stringify({ student_id: studentId, marks_lost: marksLost, reason })
     });
   }
 
-  async createDODDisciplineCase(caseData: any) {
+  async createDODComprehensiveDisciplineCase(caseData: any) {
     return this.request('/dod-comprehensive/discipline/cases', {
       method: 'POST',
       body: JSON.stringify(caseData)
     });
   }
 
-  async updateDODDisciplineCase(id: number, caseData: any) {
+  async updateDODComprehensiveDisciplineCase(id: number, caseData: any) {
     return this.request(`/dod-comprehensive/discipline/cases/${id}`, {
       method: 'PUT',
       body: JSON.stringify(caseData)
@@ -1113,28 +1100,28 @@ class ApiService {
     });
   }
 
-  async getAllParents(params = {}) {
+  async getAllParentsList(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/users?role=parent&${query}`);
   }
 
-  async getParentDetailsWithChildren(parentId: number) {
+  async getParentDetailsWithChildrenList(parentId: number) {
     return this.request(`/users/${parentId}/children-details`);
   }
 
-  async getLeaveRequests(params = {}) {
+  async getDisciplineLeaveRequests(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/discipline/leaves?${query}`);
   }
 
-  async createLeaveRequest(leaveData: any) {
+  async createDisciplineLeaveRequest(leaveData: any) {
     return this.request('/discipline/leave/add', {
       method: 'POST',
       body: JSON.stringify(leaveData)
     });
   }
 
-  async sendMessage(messageData: any) {
+  async sendGeneralMessage(messageData: any) {
     return this.request('/messaging/send', {
       method: 'POST',
       body: JSON.stringify(messageData)
@@ -1385,12 +1372,12 @@ class ApiService {
   }
 
   // Financial Management
-  async getPayments(params = {}) {
+  async getFinancePayments(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/finance/payments?${query}`);
   }
 
-  async createPayment(paymentData: any) {
+  async createFinancePayment(paymentData: any) {
     return this.request('/finance/payments', {
       method: 'POST',
       body: JSON.stringify(paymentData)
