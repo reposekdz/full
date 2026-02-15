@@ -18,11 +18,15 @@ import { ImageWithFallback } from '@/app/components/figma/ImageWithFallback';
 import { TradeTeachers } from '@/app/components/trades/TradeTeachers';
 
 interface TradeDetailPageProps {
-  tradeCode: string;
-  onBack: () => void;
+  tradeId?: string;
+  tradeCode?: string;
+  onNavigate?: (page: string) => void;
+  onBack?: () => void;
 }
 
-const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeCode, onBack }) => {
+const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeId, tradeCode: tradeCodeProp, onNavigate, onBack }) => {
+  const tradeCode = tradeCodeProp ?? tradeId ?? '';
+  const onBackHandler = onBack ?? (() => onNavigate?.('trades') ?? (() => {}));
   const [trade, setTrade] = useState<any>(null);
   const [tradeData, setTradeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -205,7 +209,7 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeCode,
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Umwuga ntubonetse</h2>
-          <Button onClick={onBack}>Subira Inyuma</Button>
+          <Button onClick={onBackHandler}>Subira Inyuma</Button>
         </div>
       </div>
     );
@@ -247,7 +251,7 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeCode,
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20" style={{ zIndex: 10 }}>
           <Button 
-            onClick={onBack}
+            onClick={onBackHandler}
             variant="ghost" 
             className="mb-6 text-white hover:bg-white/20"
           >

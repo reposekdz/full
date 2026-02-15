@@ -127,15 +127,19 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
   const getRoleColor = (role: string) => {
     const colors: any = {
       admin: 'bg-red-100 text-red-800',
+      super_admin: 'bg-red-100 text-red-800',
       headmaster: 'bg-purple-100 text-purple-800',
       dos: 'bg-blue-100 text-blue-800',
+      director_study: 'bg-blue-100 text-blue-800',
       dod: 'bg-orange-100 text-orange-800',
+      director_discipline: 'bg-orange-100 text-orange-800',
       accountant: 'bg-green-100 text-green-800',
       advisor: 'bg-cyan-100 text-cyan-800',
       teacher: 'bg-indigo-100 text-indigo-800',
       student: 'bg-yellow-100 text-yellow-800',
       parent: 'bg-pink-100 text-pink-800',
-      stock: 'bg-teal-100 text-teal-800'
+      stock: 'bg-teal-100 text-teal-800',
+      stock_manager: 'bg-teal-100 text-teal-800'
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
@@ -143,15 +147,19 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
   const getRoleLabel = (role: string) => {
     const labels: any = {
       admin: 'Administrator',
+      super_admin: 'Super Administrator',
       headmaster: 'Headmaster',
       dos: 'Director of Studies',
+      director_study: 'Director of Studies',
       dod: 'Director of Discipline',
+      director_discipline: 'Director of Discipline',
       accountant: 'Accountant',
       advisor: 'Advisor',
       teacher: 'Teacher',
       student: 'Student',
       parent: 'Parent',
-      stock: 'Stock Manager'
+      stock: 'Stock Manager',
+      stock_manager: 'Stock Manager'
     };
     return labels[role] || role;
   };
@@ -349,7 +357,7 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
                   </div>
 
                   <div>
-                    <Label>Email *</Label>
+                    <Label>Email * (used for login; you can change it here)</Label>
                     <Input
                       type="email"
                       value={formData.email}
@@ -447,8 +455,9 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5" />
-              Change Password
+              Set / Change Password
             </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">Update your password; stored securely in the database. Use a strong password.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -473,7 +482,7 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
             </div>
 
             <div>
-              <Label>New Password * (min 6 characters)</Label>
+              <Label>New Password * (min 6 characters; use letters, numbers, symbols for strength)</Label>
               <div className="relative">
                 <Input
                   type={showNewPassword ? 'text' : 'password'}
@@ -491,6 +500,28 @@ const UniversalProfilePage: React.FC<UniversalProfilePageProps> = ({ onNavigate,
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {passwordForm.new_password && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        passwordForm.new_password.length >= 10 && /[A-Z]/.test(passwordForm.new_password) && /[0-9]/.test(passwordForm.new_password)
+                          ? 'bg-green-500 w-full'
+                          : passwordForm.new_password.length >= 6
+                            ? 'bg-yellow-500 w-2/3'
+                            : 'bg-red-400 w-1/3'
+                      }`}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-gray-600">
+                    {passwordForm.new_password.length >= 10 && /[A-Z]/.test(passwordForm.new_password) && /[0-9]/.test(passwordForm.new_password)
+                      ? 'Strong'
+                      : passwordForm.new_password.length >= 6
+                        ? 'Medium'
+                        : 'Weak'}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>

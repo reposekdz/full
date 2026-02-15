@@ -10,7 +10,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 
 interface LeaderDetailPageProps {
-  leaderId: number;
+  leaderId: number | string;
   onNavigate: (page: string) => void;
 }
 
@@ -30,7 +30,8 @@ interface LeadershipMember {
   display_order: number;
 }
 
-const LeaderDetailPage: React.FC<LeaderDetailPageProps> = ({ leaderId, onNavigate }) => {
+const LeaderDetailPage: React.FC<LeaderDetailPageProps> = ({ leaderId: leaderIdProp, onNavigate }) => {
+  const leaderId = typeof leaderIdProp === 'string' ? parseInt(leaderIdProp, 10) : leaderIdProp;
   const [leader, setLeader] = useState<LeadershipMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'biography' | 'achievements' | 'contact'>('biography');

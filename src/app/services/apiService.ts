@@ -45,6 +45,14 @@ class ApiService {
     });
   }
 
+  /** Force change email and password (e.g. after login with static credentials). Backend stores new credentials and clears must_change_password. */
+  async forceChangeCredentials(data: { current_password: string; new_email: string; new_password: string }) {
+    return this.request('/auth/force-change-credentials', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
   // User Management
   async getUsers(params = {}) {
     const query = new URLSearchParams(params).toString();
@@ -75,6 +83,56 @@ class ApiService {
 
   async getNotifications() {
     return this.request('/notifications');
+  }
+
+  // Rwanda locations (provinces → districts → sectors → cells → villages). Try API first; fallback to static data in components.
+  async getLocationsProvinces(): Promise<{ success: boolean; provinces?: { id: number; name_en: string; name_rw?: string; code?: string }[] }> {
+    try {
+      const data = await this.request('/locations/provinces');
+      if (data?.provinces && Array.isArray(data.provinces)) return { success: true, provinces: data.provinces };
+    } catch (_) {}
+    return { success: false };
+  }
+  async getLocationsDistricts(provinceId: number): Promise<{ success: boolean; districts?: { id: number; name_en: string; name_rw?: string }[] }> {
+    try {
+      const data = await this.request(`/locations/districts/${provinceId}`);
+      if (data?.districts && Array.isArray(data.districts)) return { success: true, districts: data.districts };
+    } catch (_) {}
+    return { success: false };
+  }
+  async getLocationsSectors(districtId: number): Promise<{ success: boolean; sectors?: { id: number; name_en: string; name_rw?: string }[] }> {
+    try {
+      const data = await this.request(`/locations/sectors/${districtId}`);
+      if (data?.sectors && Array.isArray(data.sectors)) return { success: true, sectors: data.sectors };
+    } catch (_) {}
+    return { success: false };
+  }
+  async getLocationsCells(sectorId: number): Promise<{ success: boolean; cells?: { id: number; name_en: string; name_rw?: string }[] }> {
+    try {
+      const data = await this.request(`/locations/cells/${sectorId}`);
+      if (data?.cells && Array.isArray(data.cells)) return { success: true, cells: data.cells };
+    } catch (_) {}
+    return { success: false };
+  }
+  async getLocationsVillages(cellId: number): Promise<{ success: boolean; villages?: { id: number; name_en: string; name_rw?: string }[] }> {
+    try {
+      const data = await this.request(`/locations/villages/${cellId}`);
+      if (data?.villages && Array.isArray(data.villages)) return { success: true, villages: data.villages };
+    } catch (_) {}
+    return { success: false };
+  }
+
+  /** Role-based dashboard overview - real data from /api/comprehensive/dashboard/overview */
+  async getDashboardOverview() {
+    return this.request('/comprehensive/dashboard/overview');
+  }
+
+  async getDashboardStats() {
+    return this.request('/comprehensive/dashboard/stats');
+  }
+
+  async getDashboardRecentActivities() {
+    return this.request('/comprehensive/dashboard/recent-activities');
   }
 
   // Academic Management
@@ -375,6 +433,22 @@ class ApiService {
     return this.request('/staff/accountant/payments/record', {
       method: 'POST',
       body: JSON.stringify(paymentData)
+    });
+  }
+
+  /** Record payment - uses staff accountant or comprehensive finance API */
+  async recordPayment(paymentData: any) {
+    return this.recordAccountantStaffPayment(paymentData);
+  }
+
+  async getFeeReminderSettings() {
+    return this.request('/fee-reminders/auto-reminder-settings');
+  }
+
+  async saveFeeReminderSettings(data: { enabled?: boolean; frequency?: string; minBalance?: number; time?: string; remind_after_days?: number }) {
+    return this.request('/fee-reminders/auto-reminder-settings', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   }
 
@@ -749,7 +823,7 @@ class ApiService {
   // DOS Management - Full Operations
   async getDOSStudents(params = {}) {
     const query = new URLSearchParams(params).toString();
-    return this.request(`/dos/students?${query}`);
+    return this.request(`/dos-management/students?${query}`);
   }
 
   async getDOSAdvancedTeachers() {
@@ -814,7 +888,9 @@ class ApiService {
   }
 
   async getTradesWithLevels() {
-    return this.request('/levels/trades-with-levels');
+    const r = await this.request('/levels/trades-with-levels').catch(() => ({}));
+    if (r?.trades?.length) return r;
+    return this.request('/dos-management/trades-levels');
   }
 
   async getDOSDashboardStats() {
@@ -957,6 +1033,27 @@ class ApiService {
   async getAccountantStudentPayments(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/accountant/student-payments?${query}`);
+  }
+
+  /** Send SMS reminders to parents of students with unpaid/partial fees. Uses real SMS API (e.g. Africa's Talking) from backend. */
+  async sendAccountantSmsRemindUnpaid(options?: { message_template?: string; student_ids?: number[] }) {
+    return this.request('/accountant/sms-remind-unpaid', {
+      method: 'POST',
+      body: JSON.stringify(options || {})
+    });
+  }
+
+  /** Accountant: get remind-parent settings (e.g. days overdue before reminder, time of day). Stored in DB. */
+  async getAccountantRemindSettings() {
+    return this.request('/accountant/remind-settings');
+  }
+
+  /** Accountant: update remind-parent time/settings. */
+  async updateAccountantRemindSettings(settings: { remind_days_overdue?: number; remind_time?: string; remind_enabled?: boolean }) {
+    return this.request('/accountant/remind-settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    });
   }
 
   async recordAccountantPayment(paymentData: any) {
@@ -1304,7 +1401,7 @@ class ApiService {
   }
 
   async dosCreateStudent(studentData: any) {
-    return this.request('/dos/students', {
+    return this.request('/dos-management/students', {
       method: 'POST',
       body: JSON.stringify(studentData)
     });
@@ -1634,6 +1731,11 @@ class ApiService {
     last_name: string;
     email?: string;
     address?: string;
+    province?: string;
+    district?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
   }) {
     const response = await fetch(`${API_BASE}/auth/register/parent-phone`, {
       method: 'POST',
@@ -2101,9 +2203,14 @@ class ApiService {
     });
   }
 
-  // Universal Profile Management (All Roles)
+  // Universal Profile Management (All Roles - accountant, stock_manager, DOS, DOD, headmaster, advisor, admin, teacher)
   async getMyProfile() {
-    return this.request('/management/profile/me');
+    const res = await this.request('/management/profile/me').catch(() => null);
+    if (res?.success && res?.user) return res;
+    const fallback = await this.request('/users/profile').catch(() => null);
+    if (fallback?.success && fallback?.user) return fallback;
+    if (fallback && typeof fallback === 'object' && (fallback as any).id) return { success: true, user: fallback };
+    return res || { success: false };
   }
 
   async updateMyProfile(profileData: {
@@ -2116,16 +2223,34 @@ class ApiService {
     address?: string;
     profile_image?: string;
   }) {
-    return this.request('/management/profile/me', {
+    const res = await this.request('/management/profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    }).catch(() => null);
+    if (res?.success) return res;
+    return this.request('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(profileData)
     });
   }
 
   async changeMyPassword(passwordData: { current_password: string; new_password: string }) {
-    return this.request('/management/profile/change-password', {
+    const res = await this.request('/management/profile/change-password', {
       method: 'PUT',
       body: JSON.stringify(passwordData)
+    }).catch(() => null);
+    if (res?.success) return res;
+    const userAuthRes = await this.request('/user-auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password
+      })
+    }).catch(() => null);
+    if (userAuthRes?.success) return userAuthRes;
+    return this.request('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ current_password: passwordData.current_password, new_password: passwordData.new_password })
     });
   }
 
@@ -2540,6 +2665,22 @@ class ApiService {
     return this.request(`/teacher-portal-advanced/analytics/class/${classId}/statistics`);
   }
 
+  async getTeacherConduct(classId?: number) {
+    const query = classId != null ? `?classId=${classId}` : '';
+    return this.request(`/teacher-portal-advanced/conduct${query}`);
+  }
+
+  async submitTeacherConduct(data: { student_id: number | string; class_id: number; description: string; severity?: string }) {
+    return this.request('/teacher-portal-advanced/conduct', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTeacherConduct(conductId: number) {
+    return this.request(`/teacher-portal-advanced/conduct/${conductId}`, { method: 'DELETE' });
+  }
+
   // ==================== STUDENT PORTAL COMPREHENSIVE ====================
   
   async getStudentPortalDashboard() {
@@ -2652,6 +2793,44 @@ class ApiService {
     });
   }
 
+  /** Parent: submit link request (phone, student name, level, trade). Stored in DB; staff must approve. */
+  async submitParentLinkRequest(data: { parent_phone: string; student_name: string; level: string; trade: string; relationship?: string; student_code?: string }) {
+    return this.request('/parent-portal-comprehensive/link-requests', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /** Parent: get my pending link requests status. */
+  async getMyParentLinkRequests() {
+    return this.request('/parent-portal-comprehensive/link-requests/my');
+  }
+
+  /** Staff: list pending parent link requests for approval. */
+  async getPendingParentLinkRequests() {
+    return this.request('/parent-portal-comprehensive/link-requests/pending');
+  }
+
+  /** Staff: approve a parent link request (grants access). */
+  async approveParentLinkRequest(requestId: number) {
+    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/approve`, { method: 'PUT' });
+  }
+
+  /** Staff: reject a parent link request. */
+  async rejectParentLinkRequest(requestId: number) {
+    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/reject`, { method: 'PUT' });
+  }
+
+  /** Parent: payment history for a linked student (real API). */
+  async getParentPaymentHistory(studentId: string) {
+    return this.request(`/parent-portal-comprehensive/payments/history/${studentId}`);
+  }
+
+  /** Parent: get receipt by receipt number (real API). */
+  async getParentReceipt(receiptNumber: string) {
+    return this.request(`/parent-portal-comprehensive/payments/receipt/${receiptNumber}`);
+  }
+
   async sendParentCommunication(commData: any) {
     return this.request('/parent-portal-comprehensive/communications', {
       method: 'POST',
@@ -2704,6 +2883,44 @@ class ApiService {
     return this.request(`/global-sheets/students?${query}`);
   }
 
+  /** Teacher: classes (fallback comprehensive-roles if /teachers/classes fails) */
+  async getTeacherClasses() {
+    const r = await this.request('/teachers/classes').catch(() => null);
+    if (r?.success && r?.classes) return r;
+    return this.request('/comprehensive-roles/teacher/classes');
+  }
+
+  /** Teacher: students in a class */
+  async getClassStudents(classId: number) {
+    const r = await this.request(`/teachers/classes/${classId}/students`).catch(() => null);
+    if (r?.success && Array.isArray(r?.students)) return r;
+    return this.request(`/comprehensive-roles/teacher/classes/${classId}/students`);
+  }
+
+  /** Courses for a trade/level (timetable & report cards) */
+  async getCoursesByTradeLevel(tradeCode: string, levelNumber?: number, levelSuffix?: string) {
+    const params = new URLSearchParams({ trade_code: tradeCode });
+    if (levelNumber != null) params.set('level_number', String(levelNumber));
+    if (levelSuffix) params.set('level_suffix', levelSuffix);
+    return this.request(`/academics/courses/by-trade-level?${params}`);
+  }
+
+  /** Save/update a single mark on global sheet (teacher) */
+  async saveGlobalSheetMark(sheetId: number, assessmentKey: string, obtainedMarks: number, maxMarks: number, options?: { subject_id?: number; term?: string; academic_year?: string }) {
+    return this.request('/global-sheets/sheets/' + sheetId + '/marks', {
+      method: 'POST',
+      body: JSON.stringify({ assessment_key: assessmentKey, obtained_marks: obtainedMarks, max_marks: maxMarks, ...options })
+    });
+  }
+
+  /** Bulk save marks for a level (teacher) */
+  async saveGlobalSheetMarksBulk(tradeCode: string, levelNumber: number, levelSuffix: string, marks: { student_id: number; subject_id: number; obtained_marks: number; max_marks: number }[], options?: { term?: string; academic_year?: string }) {
+    return this.request('/global-sheets/marks/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ trade_code: tradeCode, level_number: levelNumber, level_suffix: levelSuffix, marks, ...options })
+    });
+  }
+
   // Parent Contact & Reminders
   async contactParent(studentId: number, messageData: { message: string; subject?: string; send_sms?: boolean }) {
     return this.request(`/accountant/students/${studentId}/contact-parent`, {
@@ -2716,6 +2933,14 @@ class ApiService {
     return this.request('/accountant/bulk-remind-parents', {
       method: 'POST',
       body: JSON.stringify({ student_ids: studentIds })
+    });
+  }
+
+  /** Africa's Talking: send event-based SMS to parent(s) linked with student */
+  async notifyParentSms(studentId: number, eventType: 'leave_granted' | 'conduct_removed' | 'sick_alert' | 'sick_sent_home' | 'discipline_alert' | 'fee_overdue' | 'general_announcement', variables: Record<string, string | number> = {}) {
+    return this.request('/sms/notify-parent', {
+      method: 'POST',
+      body: JSON.stringify({ student_id: studentId, event_type: eventType, ...variables })
     });
   }
 }

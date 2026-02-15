@@ -127,7 +127,12 @@ const ModernRegisterPage: React.FC<ModernRegisterPageProps> = ({ onNavigate }) =
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email || undefined,
-          address: formData.address || undefined
+          address: formData.address || undefined,
+          province: formData.province || undefined,
+          district: formData.district || undefined,
+          sector: formData.sector || undefined,
+          cell: formData.cell || undefined,
+          village: formData.village || undefined,
         });
         
         if (result.success && result.token) {

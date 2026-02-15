@@ -75,7 +75,7 @@ interface ParentLinkingManagementProps {
 const formatDate = (date: string) => new Date(date).toLocaleDateString('rw-RW');
 const formatDateTime = (date: string) => new Date(date).toLocaleString('rw-RW');
 
-const APPROVER_ROLES = ['admin', 'headmaster', 'dod', 'accountant', 'patron', 'matron'];
+const APPROVER_ROLES = ['admin', 'headmaster', 'dod', 'director_study', 'director_discipline', 'accountant', 'advisor', 'patron', 'matron'];
 
 const ParentLinkingManagement: React.FC<ParentLinkingManagementProps> = ({
   userRole,

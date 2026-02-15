@@ -57,6 +57,7 @@ import { Label } from '@/app/components/ui/label';
 import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 import DOSManagementDashboard from '@/app/components/dos/DOSManagementDashboard';
 import { ApplicationManagementDashboard } from '@/app/components/ApplicationManagementDashboard';
+import { toast } from 'sonner';
 
 interface DirectorStudyDashboardProps {
   onNavigate: (page: string) => void;
@@ -73,7 +74,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
     first_name: '',
     last_name: '',
     email: '',
-    trade_id: '',
+    trade_code: '',
     level: '',
     parent_phone: ''
   });
@@ -117,9 +118,17 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       ]);
       
       setAnalytics(analyticsData.analytics || analyticsData.data);
-      const tradesResult = tradesData.success ? tradesData.trades : (Array.isArray(tradesData) ? tradesData : tradesData.data || []);
+      const rawTrades = tradesData.success ? tradesData.trades : (Array.isArray(tradesData) ? tradesData : tradesData.data || tradesData.trades || []);
+      const tradesResult = (rawTrades || []).map((t: any) => ({
+        ...t,
+        id: t.id ?? t.trade_id,
+        code: t.trade_code ?? t.code,
+        trade_code: t.trade_code ?? t.code,
+        name: t.trade_name ?? t.name,
+        trade_name: t.trade_name ?? t.name,
+        levels: t.levels || []
+      }));
       setTrades(tradesResult);
-      console.log('Loaded trades:', tradesResult);
       setTeachers(Array.isArray(teachersData) ? teachersData : teachersData.teachers || teachersData.data || []);
       setExams(examsData.exams || examsData.data || []);
       setCurriculum(curriculumData.curriculum || curriculumData.data || []);
@@ -139,8 +148,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
       };
       
       if (searchQuery) params.search = searchQuery;
-      if (selectedTrade !== 'all') params.trade = selectedTrade;
-      if (selectedLevel !== 'all') params.level = selectedLevel;
+      if (selectedTrade !== 'all') params.trade_code = selectedTrade;
+      if (selectedLevel !== 'all') params.level_number = selectedLevel;
       
       const response = await apiService.getDOSStudents(params);
       const studentsData = response.students || response.data?.students || [];
@@ -154,49 +163,52 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
   };
 
   const handleCreateStudent = async (studentData: any) => {
+    const tradeCode = studentData.trade_code || studentData.trade_id;
+    if (!tradeCode || !studentData.level) {
+      toast.error('Hitamo umwuga n\'urwego');
+      return;
+    }
+    const levelStr = String(studentData.level);
+    const match = levelStr.match(/^(\d+)(.*)$/);
+    const level_number = match ? parseInt(match[1], 10) : parseInt(levelStr, 10);
+    const level_suffix = match ? match[2] : '';
     try {
-      // Auto-generate student code based on trade and level
-      const trade = trades.find(t => t.id.toString() === studentData.trade_id);
-      const year = new Date().getFullYear().toString().slice(-2);
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const studentCode = `${trade?.code || 'STD'}${studentData.level}${year}${randomNum}`;
-      
       const payload = {
-        ...studentData,
-        student_code: studentCode,
-        enrollment_status: 'active'
+        first_name: studentData.first_name,
+        last_name: studentData.last_name,
+        email: studentData.email || undefined,
+        parent_phone: studentData.parent_phone || undefined,
+        trade_code: tradeCode,
+        level_number,
+        level_suffix: level_suffix || undefined
       };
-      
       const res = await apiService.dosCreateStudent(payload);
       if (res.success) {
-        alert(`✅ Student added successfully!\nStudent Code: ${studentCode}`);
+        const code = res.student?.student_code || res.student_code;
+        toast.success(`Umunyeshuri yongewe. Code: ${code}`);
         setIsAddDialogOpen(false);
-        setNewStudent({
-          first_name: '',
-          last_name: '',
-          email: '',
-          trade_id: '',
-          level: '',
-          parent_phone: ''
-        });
+        setNewStudent({ first_name: '', last_name: '', email: '', trade_code: '', level: '', parent_phone: '' });
         loadStudents();
         loadDashboardData();
+      } else {
+        toast.error(res.message || 'Ntibyakunze');
       }
     } catch (error) {
       console.error('Error creating student:', error);
-      alert('Failed to create student');
+      toast.error('Ntibyakunze kongera umunyeshuri');
     }
   };
 
   const handleDeleteStudent = async (studentId: number) => {
-    if (confirm('Are you sure you want to remove this student?')) {
-      try {
-        await apiService.dosDeleteStudent(studentId);
-        loadStudents();
-        loadDashboardData(); // Refresh analytics
-      } catch (error) {
-        console.error('Error deleting student:', error);
-      }
+    if (!window.confirm('Urakomeye gukuraho umunyeshuri?')) return;
+    try {
+      await apiService.dosDeleteStudent(studentId);
+      toast.success('Umunyeshuri yakuritswe');
+      loadStudents();
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      toast.error('Ntibyakunze gukuraho umunyeshuri');
     }
   };
 
@@ -293,9 +305,12 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
 
   const getAvailableLevels = () => {
     if (selectedTrade === 'all') return [];
-    const trade = trades.find(t => t.trade_code === selectedTrade);
+    const trade = trades.find((t: any) => (t.trade_code || t.code) === selectedTrade);
     if (!trade) return [];
-    return trades.filter(t => t.trade_code === selectedTrade).map(t => `${t.level_number}${t.level_suffix || ''}`);
+    if (trade.levels && trade.levels.length) {
+      return trade.levels.map((l: any) => `${l.level_number ?? l}${l.level_suffix ?? ''}`);
+    }
+    return trades.filter((t: any) => (t.trade_code || t.code) === selectedTrade).map((t: any) => `${t.level_number ?? t}${t.level_suffix ?? ''}`);
   };
 
   if (loading) {
@@ -562,8 +577,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                             <div className="space-y-2">
                               <Label htmlFor="trade">Umwuga</Label>
                               <Select 
-                                value={newStudent.trade_id} 
-                                onValueChange={(value) => setNewStudent({...newStudent, trade_id: value})}
+                                value={newStudent.trade_code} 
+                                onValueChange={(value) => setNewStudent({...newStudent, trade_code: value, level: ''})}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo umwuga" />
@@ -572,10 +587,10 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                   {trades.length === 0 ? (
                                     <div className="p-4 text-center text-gray-500">Nta myuga ihari</div>
                                   ) : (
-                                    trades.map((trade) => (
+                                    [...new Map((trades as any[]).map(t => [t.trade_code || t.code, t])).values()].map((trade) => (
                                       <SelectItem 
-                                        key={trade.id || trade.trade_id || trade.code || trade.trade_code} 
-                                        value={(trade.id || trade.trade_id || trade.code || trade.trade_code).toString()}
+                                        key={trade.trade_code || trade.code} 
+                                        value={String(trade.trade_code || trade.code)}
                                         className="cursor-pointer hover:bg-yellow-50"
                                       >
                                         <div className="flex items-center gap-2">
@@ -598,8 +613,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                   <SelectValue placeholder="Hitamo urwego" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {[3, 4, 5].map((l) => (
-                                    <SelectItem key={l} value={l.toString()}>Level {l}</SelectItem>
+                                  {getAvailableLevels().map((l) => (
+                                    <SelectItem key={l} value={l}>Level {l}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>

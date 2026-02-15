@@ -4,7 +4,7 @@ import {
   Layers, Image, FileText, Users, Trophy, Briefcase, Code, Newspaper, 
   GraduationCap, BookOpen, Calendar, MapPin, Award, Target, Sparkles,
   Upload, Edit, Trash2, Eye, Search, Filter, Plus, Save, X, Check,
-  ChevronRight, Settings, Grid, List, BarChart, TrendingUp, Zap
+  ChevronRight, Settings, Grid, List, BarChart, TrendingUp, Zap, RefreshCw, AlertCircle, Download
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -17,7 +17,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Switch } from '@/app/components/ui/switch';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
+import { toast } from 'sonner';
 import axios from 'axios';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
+const API_BASE = API_BASE_URL;
+const IMAGE_ORIGIN = API_BASE.replace(/\/api\/?$/, '') || 'http://localhost:5000';
+
+function authHeaders(): Record<string, string> {
+  const t = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+function toArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object' && 'data' in raw) return Array.isArray((raw as any).data) ? (raw as any).data : [];
+  if (raw && typeof raw === 'object' && 'items' in raw) return Array.isArray((raw as any).items) ? (raw as any).items : [];
+  return [];
+}
 
 interface ContentItem {
   id: number;
@@ -41,6 +58,9 @@ const ComprehensiveContentManagement: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   
   // Content states
   const [heroSlides, setHeroSlides] = useState<ContentItem[]>([]);
@@ -89,129 +109,211 @@ const ComprehensiveContentManagement: React.FC = () => {
     fetchAllContent();
   }, []);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab]);
+
   const fetchAllContent = async () => {
     setLoading(true);
+    setFetchError(null);
+    const headers = authHeaders();
     try {
       const [heroRes, newsRes, sportsRes, teamsRes, playersRes, coachesRes, achievementsRes, 
              leadershipRes, tradesRes, devsRes, coursesRes, galleryRes, eventsRes, testimonialsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/sports-hero/hero-slides').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/news').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/content-management/sports').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/sports-hero/teams').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/sports-hero/players').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/sports-hero/coaches').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/sports-hero/achievements').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/content-management/leadership').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/content-management/trades').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/content-management/developers').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/unified-content/courses').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/unified-content/gallery').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/unified-content/events').catch(() => ({ data: [] })),
-        axios.get('http://localhost:5000/api/unified-content/testimonials').catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/sports-hero/hero-slides`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/news`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/content-management/sports`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/sports-hero/teams`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/sports-hero/players`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/sports-hero/coaches`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/sports-hero/achievements`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/content-management/leadership`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/content-management/trades`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/content-management/developers`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/unified-content/courses`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/unified-content/gallery`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/unified-content/events`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/unified-content/testimonials`, { headers }).catch(() => ({ data: [] })),
       ]);
 
-      setHeroSlides(heroRes.data);
-      setNewsArticles(newsRes.data);
-      setSports(sportsRes.data);
-      setTeams(teamsRes.data);
-      setPlayers(playersRes.data);
-      setCoaches(coachesRes.data);
-      setAchievements(achievementsRes.data);
-      setLeadership(leadershipRes.data);
-      setTrades(tradesRes.data);
-      setDevelopers(devsRes.data);
-      setCourses(coursesRes.data);
-      setGallery(galleryRes.data);
-      setEvents(eventsRes.data);
-      setTestimonials(testimonialsRes.data);
+      setHeroSlides(toArray<ContentItem>(heroRes?.data));
+      setNewsArticles(toArray<ContentItem>(newsRes?.data));
+      setSports(toArray<ContentItem>(sportsRes?.data));
+      setTeams(toArray<ContentItem>(teamsRes?.data));
+      setPlayers(toArray<ContentItem>(playersRes?.data));
+      setCoaches(toArray<ContentItem>(coachesRes?.data));
+      setAchievements(toArray<ContentItem>(achievementsRes?.data));
+      setLeadership(toArray<ContentItem>(leadershipRes?.data));
+      setTrades(toArray<ContentItem>(tradesRes?.data));
+      setDevelopers(toArray<ContentItem>(devsRes?.data));
+      setCourses(toArray<ContentItem>(coursesRes?.data));
+      setGallery(toArray<ContentItem>(galleryRes?.data));
+      setEvents(toArray<ContentItem>(eventsRes?.data));
+      setTestimonials(toArray<ContentItem>(testimonialsRes?.data));
     } catch (error) {
       console.error('Error fetching content:', error);
+      setFetchError(error instanceof Error ? error.message : 'Failed to load content');
+      toast.error('Failed to load content. Use Refresh to retry.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreate = async (type: string) => {
+    if (!formData.title?.trim()) {
+      toast.error('Umutwe / Title is required');
+      return;
+    }
     const formDataToSend = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key === 'metadata') {
-        formDataToSend.append(key, JSON.stringify(value));
-      } else if (key === 'image' && value) {
-        formDataToSend.append(key, value);
-      } else {
-        formDataToSend.append(key, value as string);
-      }
-    });
+    formDataToSend.append('title', formData.title);
+    formDataToSend.append('description', formData.description || '');
+    formDataToSend.append('status', formData.status);
+    formDataToSend.append('featured', String(formData.featured));
+    if (formData.metadata && Object.keys(formData.metadata).length) {
+      formDataToSend.append('metadata', JSON.stringify(formData.metadata));
+    }
+    if (formData.image) formDataToSend.append('image', formData.image);
 
+    setUploading(true);
     try {
       const endpoint = getEndpoint(type);
       await axios.post(endpoint, formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
       });
+      toast.success('Ibikubiyemo byongewe / Content added');
       fetchAllContent();
       setIsDialogOpen(false);
       resetForm();
     } catch (error) {
       console.error('Error creating content:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add content');
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleUpdate = async (type: string, id: number) => {
     const formDataToSend = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key === 'metadata') {
-        formDataToSend.append(key, JSON.stringify(value));
-      } else if (key === 'image' && value) {
-        formDataToSend.append(key, value);
-      } else if (value !== null) {
-        formDataToSend.append(key, value as string);
-      }
-    });
+    formDataToSend.append('title', formData.title);
+    formDataToSend.append('description', formData.description || '');
+    formDataToSend.append('status', formData.status);
+    formDataToSend.append('featured', String(formData.featured));
+    if (formData.metadata && Object.keys(formData.metadata).length) {
+      formDataToSend.append('metadata', JSON.stringify(formData.metadata));
+    }
+    if (formData.image) formDataToSend.append('image', formData.image);
 
+    setUploading(true);
     try {
       const endpoint = `${getEndpoint(type)}/${id}`;
       await axios.put(endpoint, formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
       });
+      toast.success('Impinduka zibikinze / Changes saved');
       fetchAllContent();
       setIsDialogOpen(false);
       setEditingItem(null);
       resetForm();
     } catch (error) {
       console.error('Error updating content:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save changes');
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleDelete = async (type: string, id: number) => {
-    if (!confirm('Urashaka gusiba ibi bikubiyemo? / Are you sure you want to delete this content?')) return;
-    
+    if (!window.confirm('Urashaka gusiba ibi bikubiyemo? / Are you sure you want to delete this content?')) return;
     try {
       const endpoint = `${getEndpoint(type)}/${id}`;
-      await axios.delete(endpoint);
+      await axios.delete(endpoint, { headers: authHeaders() });
+      toast.success('Ibikubiyemo bisibwe / Content deleted');
+      setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
       fetchAllContent();
     } catch (error) {
       console.error('Error deleting content:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete');
     }
+  };
+
+  const handleBulkDelete = async (type: string) => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Gusiba ${selectedIds.size} ibikubiyemo? / Delete ${selectedIds.size} items?`)) return;
+    const base = getEndpoint(type);
+    let ok = 0, fail = 0;
+    for (const id of selectedIds) {
+      try {
+        await axios.delete(`${base}/${id}`, { headers: authHeaders() });
+        ok++;
+      } catch { fail++; }
+    }
+    setSelectedIds(new Set());
+    fetchAllContent();
+    if (ok) toast.success(`${ok} bisibwe / ${ok} deleted`);
+    if (fail) toast.error(`${fail} byanze nabi / ${fail} failed`);
+  };
+
+  const handleExportCurrent = (type: string) => {
+    const data = getData(type);
+    if (!Array.isArray(data) || data.length === 0) {
+      toast.info('Nta bikubiyemo / No content to export');
+      return;
+    }
+    const headers = ['id', 'title', 'description', 'status', 'featured', 'created_at'];
+    const csv = [headers.join(',')].concat(
+      data.map((r: any) => headers.map((h) => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `content-${type}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export yabitswe / Export done');
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleSelectAll = (type: string) => {
+    const data = getData(type);
+    if (!Array.isArray(data)) return;
+    const ids = data.map((r: any) => r.id).filter(Boolean);
+    if (selectedIds.size >= ids.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(ids));
   };
 
   const getEndpoint = (type: string) => {
     const endpoints: Record<string, string> = {
-      hero: 'http://localhost:5000/api/sports-hero/hero-slides',
-      news: 'http://localhost:5000/api/news',
-      sports: 'http://localhost:5000/api/content-management/sports',
-      teams: 'http://localhost:5000/api/sports-hero/teams',
-      players: 'http://localhost:5000/api/sports-hero/players',
-      coaches: 'http://localhost:5000/api/sports-hero/coaches',
-      achievements: 'http://localhost:5000/api/sports-hero/achievements',
-      leadership: 'http://localhost:5000/api/content-management/leadership',
-      trades: 'http://localhost:5000/api/content-management/trades',
-      developers: 'http://localhost:5000/api/content-management/developers',
-      courses: 'http://localhost:5000/api/unified-content/courses',
-      gallery: 'http://localhost:5000/api/unified-content/gallery',
-      events: 'http://localhost:5000/api/unified-content/events',
-      testimonials: 'http://localhost:5000/api/unified-content/testimonials',
+      hero: `${API_BASE}/sports-hero/hero-slides`,
+      news: `${API_BASE}/news`,
+      sports: `${API_BASE}/content-management/sports`,
+      teams: `${API_BASE}/sports-hero/teams`,
+      players: `${API_BASE}/sports-hero/players`,
+      coaches: `${API_BASE}/sports-hero/coaches`,
+      achievements: `${API_BASE}/sports-hero/achievements`,
+      leadership: `${API_BASE}/content-management/leadership`,
+      trades: `${API_BASE}/content-management/trades`,
+      developers: `${API_BASE}/content-management/developers`,
+      courses: `${API_BASE}/unified-content/courses`,
+      gallery: `${API_BASE}/unified-content/gallery`,
+      events: `${API_BASE}/unified-content/events`,
+      testimonials: `${API_BASE}/unified-content/testimonials`,
     };
     return endpoints[type] || '';
+  };
+
+  const imageUrl = (item: ContentItem | any) => {
+    const src = item?.image || item?.image_url || item?.url;
+    if (!src) return '';
+    if (src.startsWith('http')) return src;
+    return src.startsWith('/') ? `${IMAGE_ORIGIN}${src}` : `${IMAGE_ORIGIN}/${src}`;
   };
 
   const getData = (type: string) => {
@@ -236,16 +338,16 @@ const ComprehensiveContentManagement: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (item: ContentItem) => {
+  const openEditDialog = (item: ContentItem, contentType?: string) => {
     setEditingItem(item);
     setFormData({
-      type: item.type,
+      type: contentType || (item as any).type || activeTab,
       title: item.title,
-      description: item.description,
+      description: item.description ?? '',
       image: null,
-      status: item.status,
-      featured: item.featured,
-      metadata: item.metadata || {}
+      status: (item as any).status ?? 'active',
+      featured: (item as any).featured ?? false,
+      metadata: (item as any).metadata || {}
     });
     setIsDialogOpen(true);
   };
@@ -267,11 +369,19 @@ const ComprehensiveContentManagement: React.FC = () => {
       animate={{ opacity: 1, scale: 1 }}
       className="group"
     >
-      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 hover:border-yellow-400">
-        {item.image && (
+      <Card className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 border-2 hover:border-yellow-400 ${selectedIds.has(item.id) ? 'ring-2 ring-yellow-500' : ''}`}>
+        <div className="absolute top-2 left-2 z-10 bg-white/90 rounded p-1">
+          <input
+            type="checkbox"
+            checked={selectedIds.has(item.id)}
+            onChange={() => toggleSelect(item.id)}
+            className="rounded border-yellow-500 text-yellow-600 focus:ring-yellow-500"
+          />
+        </div>
+        {(item.image || (item as any).image_url || (item as any).url) && (
           <div className="relative h-48 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
             <img 
-              src={`http://localhost:5000${item.image}`} 
+              src={imageUrl(item)} 
               alt={item.title}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
             />
@@ -283,7 +393,7 @@ const ComprehensiveContentManagement: React.FC = () => {
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
               <div className="flex space-x-2">
-                <Button size="sm" variant="secondary" onClick={() => openEditDialog(item)}>
+                <Button size="sm" variant="secondary" onClick={() => openEditDialog(item, type)}>
                   <Edit className="w-4 h-4" />
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => handleDelete(type, item.id)}>
@@ -302,9 +412,9 @@ const ComprehensiveContentManagement: React.FC = () => {
           </div>
           <p className="text-sm text-gray-600 line-clamp-2 mb-3">{item.description}</p>
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{new Date(item.created_at).toLocaleDateString()}</span>
+            <span>{(item as any).created_at ? new Date((item as any).created_at).toLocaleDateString() : '—'}</span>
             <div className="flex space-x-2">
-              <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)}>
+              <Button size="sm" variant="ghost" onClick={() => openEditDialog(item, type)}>
                 <Edit className="w-3 h-3 mr-1" />
                 Hindura
               </Button>
@@ -319,14 +429,38 @@ const ComprehensiveContentManagement: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-lime-50 p-6">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        {fetchError && (
+          <Card className="mb-4 border-red-200 bg-red-50">
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span>{fetchError}</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={fetchAllContent} className="border-red-300 text-red-700">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent mb-2">
               Gucunga Ibikubiyemo / Content Management
             </h1>
             <p className="text-gray-600">Gucunga ibikubiyemo byose bya sisitemu / Manage all system content</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchAllContent}
+              disabled={loading}
+              className="border-yellow-300"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button
               variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="sm"
@@ -453,7 +587,7 @@ const ComprehensiveContentManagement: React.FC = () => {
           <TabsContent key={type.id} value={type.id}>
             <Card className="border-2 border-yellow-200">
               <CardHeader className="bg-gradient-to-r from-yellow-500 to-green-600 text-white">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center space-x-3">
                     <type.icon className="w-8 h-8" />
                     <div>
@@ -463,13 +597,43 @@ const ComprehensiveContentManagement: React.FC = () => {
                       </CardDescription>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => openCreateDialog(type.id)}
-                    className="bg-white text-green-600 hover:bg-yellow-50"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ongeraho / Add New
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => toggleSelectAll(type.id)}
+                      className="bg-white/20 text-white hover:bg-white/30"
+                    >
+                      {selectedIds.size >= (getData(type.id) as any[])?.length ? 'Gukuraho byose' : 'Hitamo byose'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleExportCurrent(type.id)}
+                      className="bg-white/20 text-white hover:bg-white/30"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    {selectedIds.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleBulkDelete(type.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Gusiba {selectedIds.size}
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={() => openCreateDialog(type.id)}
+                      className="bg-white text-green-600 hover:bg-yellow-50"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ongeraho / Add New
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
@@ -530,6 +694,12 @@ const ComprehensiveContentManagement: React.FC = () => {
             </div>
             <div>
               <Label>Ishusho / Image</Label>
+              {editingItem && (editingItem.image || (editingItem as any).image_url || (editingItem as any).url) && (
+                <div className="mb-2 rounded-lg overflow-hidden border border-yellow-200 max-w-xs">
+                  <img src={imageUrl(editingItem)} alt="Current" className="w-full h-32 object-cover" />
+                  <p className="text-xs text-gray-500 p-2 bg-gray-50">Current image</p>
+                </div>
+              )}
               <Input
                 type="file"
                 accept="image/*"
@@ -561,16 +731,21 @@ const ComprehensiveContentManagement: React.FC = () => {
             </div>
           </div>
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={uploading}>
               <X className="w-4 h-4 mr-2" />
               Hagarika / Cancel
             </Button>
             <Button 
               onClick={() => editingItem ? handleUpdate(formData.type, editingItem.id) : handleCreate(formData.type)}
               className="bg-gradient-to-r from-yellow-500 to-green-600"
+              disabled={uploading || !formData.title?.trim()}
             >
-              <Save className="w-4 h-4 mr-2" />
-              {editingItem ? 'Bika Impinduka / Save Changes' : 'Ongeraho / Add'}
+              {uploading ? (
+                <><div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" /> {editingItem ? 'Bika...' : 'Ongeraho...'}
+                </>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" /> {editingItem ? 'Bika Impinduka / Save Changes' : 'Ongeraho / Add'}</>
+              )}
             </Button>
           </div>
         </DialogContent>

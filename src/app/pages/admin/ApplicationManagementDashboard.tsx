@@ -14,6 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { API_BASE_URL } from '@/app/config/apiBase';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { toast } from 'sonner';
+import { RWANDA_PROVINCES, getDistrictsForProvince, getSectorsForDistrict } from '@/app/data/rwandaLocations';
+
+interface ApplicationManagementDashboardProps {
+  onNavigate?: (page: string) => void;
+  onLogout?: () => void;
+}
 
 interface Application {
   id: number;
@@ -35,7 +42,7 @@ interface Application {
   dos_comments?: string;
 }
 
-const ApplicationManagementDashboard: React.FC = () => {
+const ApplicationManagementDashboard: React.FC<ApplicationManagementDashboardProps> = ({ onNavigate, onLogout }) => {
   const { user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
@@ -46,7 +53,10 @@ const ApplicationManagementDashboard: React.FC = () => {
   const [filters, setFilters] = useState({
     search: '',
     trade_code: '',
-    status: 'all'
+    status: 'all',
+    province: '',
+    district: '',
+    sector: ''
   });
   const [reviewData, setReviewData] = useState({
     recommendation: '',
@@ -59,7 +69,7 @@ const ApplicationManagementDashboard: React.FC = () => {
     rejection_reason: ''
   });
 
-  const isDOS = user?.role === 'director_of_study' || user?.role === 'admin';
+  const isDOS = user?.role === 'director_study' || user?.role === 'director_of_study' || user?.role === 'admin';
   const isHeadmaster = user?.role === 'headmaster' || user?.role === 'admin';
 
   useEffect(() => {
@@ -71,23 +81,32 @@ const ApplicationManagementDashboard: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const endpoint = isDOS 
+      const endpoint = isDOS
         ? '/student-applications/dos/pending'
         : isHeadmaster
         ? '/student-applications/headmaster/pending'
         : '/student-applications/all';
-
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
       if (filters.trade_code) params.append('trade_code', filters.trade_code);
+      if (filters.province) params.append('province', filters.province);
+      if (filters.district) params.append('district', filters.district);
+      if (filters.sector) params.append('sector', filters.sector);
 
-      const response = await fetch(`${API_BASE_URL}${endpoint}?${params}`, {
+      let response = await fetch(`${API_BASE_URL}${endpoint}?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await response.json();
-
+      let data = await response.json();
+      if (!data.success) {
+        const fallback = await fetch(`${API_BASE_URL}/student-applications-production/list?${params}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+        if (fallback.success && fallback.data) {
+          data = { success: true, applications: fallback.data };
+        }
+      }
       if (data.success) {
-        setApplications(data.applications);
+        setApplications(data.applications || data.data || []);
       }
     } catch (error) {
       console.error('Error fetching applications:', error);
@@ -98,13 +117,18 @@ const ApplicationManagementDashboard: React.FC = () => {
   const fetchStatistics = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/student-applications/statistics`, {
+      let response = await fetch(`${API_BASE_URL}/student-applications/statistics`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await response.json();
-
+      let data = await response.json();
+      if (!data.success) {
+        const fallback = await fetch(`${API_BASE_URL}/student-applications-production/statistics`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+        if (fallback.success && fallback.data) data = { success: true, statistics: fallback.data };
+      }
       if (data.success) {
-        setStatistics(data.statistics);
+        setStatistics(data.statistics || data.data);
       }
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -129,16 +153,16 @@ const ApplicationManagementDashboard: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        alert('Application reviewed successfully!');
+        toast.success('Application reviewed successfully');
         setShowReviewModal(false);
         fetchApplications();
         fetchStatistics();
       } else {
-        alert(data.message || 'Failed to review application');
+        toast.error(data.message || 'Failed to review application');
       }
     } catch (error) {
       console.error('Error reviewing application:', error);
-      alert('Failed to review application');
+      toast.error('Failed to review application');
     }
   };
 
@@ -160,16 +184,16 @@ const ApplicationManagementDashboard: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        alert('Decision recorded successfully!');
+        toast.success('Decision recorded successfully');
         setShowReviewModal(false);
         fetchApplications();
         fetchStatistics();
       } else {
-        alert(data.message || 'Failed to record decision');
+        toast.error(data.message || 'Failed to record decision');
       }
     } catch (error) {
       console.error('Error recording decision:', error);
-      alert('Failed to record decision');
+      toast.error('Failed to record decision');
     }
   };
 
@@ -207,12 +231,24 @@ const ApplicationManagementDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-8 flex flex-wrap items-center justify-between gap-4"
         >
-          <h1 className="text-4xl font-black text-gray-900 mb-2">
-            {isDOS ? 'DOS - Application Review' : isHeadmaster ? 'Headmaster - Final Approval' : 'Application Management'}
-          </h1>
-          <p className="text-gray-600">Manage and review student applications</p>
+          <div>
+            <h1 className="text-4xl font-black text-gray-900 mb-2">
+              {isDOS ? 'DOS - Application Review' : isHeadmaster ? 'Headmaster - Final Approval' : 'Application Management'}
+            </h1>
+            <p className="text-gray-600">Manage and review student applications — real data from database</p>
+          </div>
+          <div className="flex gap-2">
+            {onNavigate && (
+              <Button variant="outline" onClick={() => onNavigate(isHeadmaster ? 'dashboard-headmaster' : isDOS ? 'dashboard-director-study' : 'dashboard')}>
+                Back to Dashboard
+              </Button>
+            )}
+            {onLogout && (
+              <Button variant="destructive" onClick={onLogout}>Logout</Button>
+            )}
+          </div>
         </motion.div>
 
         {/* Statistics Cards */}
@@ -279,7 +315,7 @@ const ApplicationManagementDashboard: React.FC = () => {
         {/* Filters */}
         <Card className="mb-6 border-2 border-gray-200 shadow-lg">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
@@ -297,8 +333,42 @@ const ApplicationManagementDashboard: React.FC = () => {
                 <option value="">All Trades</option>
                 <option value="SOD">Software Development</option>
                 <option value="BDC">Building Construction</option>
-                <option value="AUTO">Automobile Technology</option>
+                <option value="AUT">Automotive Technology</option>
               </select>
+              <select
+                value={filters.province}
+                onChange={(e) => setFilters({ ...filters, province: e.target.value, district: '', sector: '' })}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Provinces</option>
+                {RWANDA_PROVINCES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              <select
+                value={filters.district}
+                onChange={(e) => setFilters({ ...filters, district: e.target.value, sector: '' })}
+                disabled={!filters.province}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                <option value="">All Districts</option>
+                {getDistrictsForProvince(filters.province).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select
+                value={filters.sector}
+                onChange={(e) => setFilters({ ...filters, sector: e.target.value })}
+                disabled={!filters.district}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                <option value="">All Sectors</option>
+                {getSectorsForDistrict(filters.district).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-4 flex justify-end">
               <Button onClick={fetchApplications} className="bg-blue-600 hover:bg-blue-700">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh

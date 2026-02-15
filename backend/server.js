@@ -693,6 +693,8 @@ app.use('/api/student-applications', require('./routes/student-applications')); 
 app.use('/api/student-applications-production', require('./routes/student-applications-production')); mountedRoutes++;
 
 // Force Credential Change
+const forceCredentialChange = loadRoute('./routes/force-credential-change', 'Force Credential Change');
+if (forceCredentialChange) { app.use('/api/force-credential-change', forceCredentialChange); mountedRoutes++; }
 app.use('/api/auth', require('./routes/force-credential-change')); mountedRoutes++;
 
 // Staff Access Codes Management

@@ -105,12 +105,21 @@ router.post('/login', [
           { expiresIn: process.env.JWT_EXPIRE }
         );
 
-        // Update last login
-        await pool.execute(
-          'UPDATE users SET last_login = NOW() WHERE id = ?',
-          [user.id]
-        );
-
+        const defaultStaffEmail = process.env.UNIFIED_STAFF_EMAIL || 'reponse@gmail.com';
+        const isDefaultEmail = (user.email || '').trim() === defaultStaffEmail;
+        const mustChangeFromDb = user.must_change_password === 1 || user.must_change_password === true;
+        const mustChange = mustChangeFromDb || isDefaultEmail;
+        if (isDefaultEmail && !mustChangeFromDb) {
+          await pool.execute(
+            'UPDATE users SET last_login = NOW(), must_change_password = 1 WHERE id = ?',
+            [user.id]
+          ).catch(() => pool.execute('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]));
+        } else {
+          await pool.execute(
+            'UPDATE users SET last_login = NOW() WHERE id = ?',
+            [user.id]
+          );
+        }
         return res.json({
           success: true,
           message: 'Login successful',
@@ -123,7 +132,8 @@ router.post('/login', [
             first_name: user.first_name,
             last_name: user.last_name,
             student_id: user.student_id,
-            user_type: 'user'
+            user_type: 'user',
+            must_change_password: mustChange
           }
         });
       }
@@ -1124,31 +1134,43 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     let user = null;
 
+    const defaultStaffEmail = process.env.UNIFIED_STAFF_EMAIL || 'reponse@gmail.com';
+
     // Try admin_users first
     const [adminUsers] = await pool.execute(
       'SELECT id, username, email, role, first_name, last_name FROM admin_users WHERE id = ?',
       [req.user.id]
     );
-
     if (adminUsers.length > 0) {
+      const au = adminUsers[0];
+      const [auWithFlag] = await pool.execute('SELECT must_change_password FROM admin_users WHERE id = ?', [req.user.id]).catch(() => [[]]);
+      const dbMustChange = auWithFlag[0] && (auWithFlag[0].must_change_password === 1 || auWithFlag[0].must_change_password === true);
       user = {
-        ...adminUsers[0],
-        user_type: 'admin'
+        ...au,
+        user_type: 'admin',
+        must_change_password: dbMustChange || (au.email || '').trim() === defaultStaffEmail
       };
     } else {
-      // Try users table
       const [users] = await pool.execute(`
-        SELECT u.*, COALESCE(r.name, u.role) as role_name 
-        FROM users u 
-        LEFT JOIN roles r ON u.role_id = r.id 
+        SELECT u.*, COALESCE(r.name, u.role) as role_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
         WHERE u.id = ?
       `, [req.user.id]);
 
       if (users.length > 0) {
+        const u0 = users[0];
+        const dbMustChange = u0.must_change_password === 1 || u0.must_change_password === true;
         user = {
-          ...users[0],
-          role: users[0].role_name,
-          user_type: 'user'
+          id: u0.id,
+          username: u0.username,
+          email: u0.email,
+          first_name: u0.first_name,
+          last_name: u0.last_name,
+          student_id: u0.student_id,
+          role: u0.role_name,
+          user_type: 'user',
+          must_change_password: dbMustChange || ((u0.email || '').trim() === defaultStaffEmail)
         };
         delete user.password_hash;
       }
@@ -1171,6 +1193,72 @@ router.get('/me', authenticateToken, async (req, res) => {
       success: false,
       message: 'Server error'
     });
+  }
+});
+
+// Force change email & password (staff first login – blocking; credentials stored in DB)
+router.put('/force-change-credentials', [
+  authenticateToken,
+  body('current_password').notEmpty().withMessage('Current password is required'),
+  body('new_email').isEmail().withMessage('Valid new email is required'),
+  body('new_password').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: errors.array()[0]?.msg || 'Validation failed' });
+    }
+    const userId = req.user.userId || req.user.id;
+    const { current_password, new_email, new_password } = req.body;
+
+    const [adminUsers] = await pool.execute('SELECT id, password FROM admin_users WHERE id = ?', [userId]);
+    if (adminUsers.length > 0) {
+      const valid = await bcrypt.compare(current_password, adminUsers[0].password);
+      if (!valid) {
+        return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+      }
+      const hashed = await bcrypt.hash(new_password, 10);
+      await pool.execute(
+        'UPDATE admin_users SET email = ?, password = ?, updated_at = NOW(), must_change_password = 0 WHERE id = ?',
+        [new_email.trim(), hashed, userId]
+      ).catch(() => pool.execute('UPDATE admin_users SET email = ?, password = ?, updated_at = NOW() WHERE id = ?', [new_email.trim(), hashed, userId]));
+      const [updated] = await pool.execute('SELECT id, username, email, role, first_name, last_name FROM admin_users WHERE id = ?', [userId]);
+      return res.json({
+        success: true,
+        message: 'Email and password updated. Please sign in with your new credentials.',
+        user: { ...updated[0], user_type: 'admin', must_change_password: false }
+      });
+    }
+
+    const [users] = await pool.execute('SELECT id, password_hash FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const valid = await bcrypt.compare(current_password, users[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.execute(
+      'UPDATE users SET email = ?, password_hash = ?, updated_at = COALESCE(updated_at, NOW()), must_change_password = 0 WHERE id = ?',
+      [new_email.trim(), hashed, userId]
+    ).catch(() => pool.execute(
+      'UPDATE users SET email = ?, password_hash = ?, updated_at = COALESCE(updated_at, NOW()) WHERE id = ?',
+      [new_email.trim(), hashed, userId]
+    ));
+    const [updated] = await pool.execute(`
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.student_id, COALESCE(r.name, u.role) as role
+      FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = ?
+    `, [userId]);
+    const out = { ...updated[0], user_type: 'user', must_change_password: false };
+    return res.json({
+      success: true,
+      message: 'Email and password updated. Please sign in with your new credentials.',
+      user: out
+    });
+  } catch (error) {
+    console.error('Force change credentials error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 

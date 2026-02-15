@@ -271,6 +271,93 @@ router.get('/attendance/class/:classId', authenticateToken, requireRole(['teache
   }
 });
 
+// ==================== CONDUCT / IMYITWARIRE (real API, stored in DB) ====================
+
+// Get conduct records for teacher's class students
+router.get('/conduct', authenticateToken, requireRole(['teacher']), async (req, res) => {
+  try {
+    const teacherId = req.user.userId;
+    const { classId } = req.query;
+    let sql = `
+      SELECT scr.id, scr.student_id, scr.incident_date, scr.description, scr.severity, scr.status,
+             scr.created_at, scr.handled_by,
+             CONCAT(u.first_name, ' ', u.last_name) as student_name,
+             u.student_id as student_code
+      FROM student_conduct_records scr
+      JOIN users u ON scr.student_id = u.id
+      JOIN class_enrollments ce ON ce.student_id = u.id
+      JOIN classes c ON c.id = ce.class_id AND c.teacher_id = ?
+      WHERE 1=1
+    `;
+    const params = [teacherId];
+    if (classId) {
+      sql += ' AND c.id = ?';
+      params.push(classId);
+    }
+    sql += ' ORDER BY scr.incident_date DESC LIMIT 100';
+    const [records] = await pool.execute(sql, params).catch(() => [[], []]);
+    res.json({ success: true, records: Array.isArray(records) ? records : [] });
+  } catch (error) {
+    console.error('Teacher conduct list error:', error);
+    res.json({ success: true, records: [] });
+  }
+});
+
+// Teacher report conduct (record stored in database; matches discipline table columns)
+// student_id can be users.id or student code (resolved to users.id)
+router.post('/conduct', authenticateToken, requireRole(['teacher']), async (req, res) => {
+  try {
+    const teacherId = req.user.userId;
+    const { student_id, class_id, description, severity } = req.body;
+    if (!student_id || !description) {
+      return res.status(400).json({ success: false, message: 'Student and description required' });
+    }
+    const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [class_id, teacherId]);
+    if (!classCheck) {
+      return res.status(403).json({ success: false, message: 'Unauthorized for this class' });
+    }
+    const [[userRow]] = await pool.execute('SELECT id FROM users WHERE id = ? OR student_id = ? LIMIT 1', [student_id, String(student_id)]);
+    const uid = userRow?.id;
+    if (!uid) {
+      return res.status(400).json({ success: false, message: 'Student not found' });
+    }
+    await pool.execute(`
+      INSERT INTO student_conduct_records (student_id, incident_date, description, severity, status, reported_by, handled_by, incident_type)
+      VALUES (?, CURDATE(), ?, ?, 'pending', ?, ?, 'teacher_report')
+    `, [uid, description, severity || 'minor', teacherId, teacherId]);
+    res.json({ success: true, message: 'Conduct report submitted. DOD will review.' });
+  } catch (error) {
+    console.error('Teacher conduct report error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Teacher cancel/remove own conduct report (pending only; stored in DB as status=cancelled)
+router.delete('/conduct/:id', authenticateToken, requireRole(['teacher']), async (req, res) => {
+  try {
+    const teacherId = req.user.userId;
+    const recordId = req.params.id;
+    const [[row]] = await pool.execute(
+      'SELECT id, reported_by, status FROM student_conduct_records WHERE id = ?',
+      [recordId]
+    );
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Conduct record not found' });
+    }
+    if (String(row.reported_by) !== String(teacherId)) {
+      return res.status(403).json({ success: false, message: 'You can only cancel your own report' });
+    }
+    if (row.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending reports can be cancelled' });
+    }
+    await pool.execute('UPDATE student_conduct_records SET status = ? WHERE id = ?', ['cancelled', recordId]);
+    res.json({ success: true, message: 'Conduct report cancelled.' });
+  } catch (error) {
+    console.error('Teacher conduct cancel error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ==================== GRADES & MARKS ====================
 
 // Add/Update student marks

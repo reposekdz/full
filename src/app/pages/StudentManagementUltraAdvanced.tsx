@@ -156,7 +156,11 @@ interface StudentPerformance {
 
 // ==================== COMPONENT ====================
 
-const StudentManagementUltraAdvanced: React.FC = () => {
+interface StudentManagementUltraAdvancedProps {
+  onNavigate?: (page: string) => void;
+}
+
+const StudentManagementUltraAdvanced: React.FC<StudentManagementUltraAdvancedProps> = ({ onNavigate }) => {
   // ==================== STATE ====================
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);

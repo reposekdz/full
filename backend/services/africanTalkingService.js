@@ -229,23 +229,41 @@ class AfricanTalkingService {
    * @param {Object} variables - Template variables
    */
   async sendTemplateSMS(phone, templateId, variables) {
-    // Templates mapping (in production, this would be database-stored)
+    // Templates mapping - full set for parent notifications (leave, conduct, sick, etc.)
     const templates = {
       'attendance_alert': 'Dear {{parent}}, {{student}} was absent on {{date}}. Please contact the school.',
       'payment_reminder': 'Dear {{parent}}, {{student}}\'s payment of {{amount}} is due. Please pay by {{due_date}}.',
       'marks_notification': 'Dear {{parent}}, {{student}}\'s marks for {{subject}} have been posted. Log in to view.',
       'exam_schedule': 'Dear {{parent}}, {{student}} has exams starting {{date}}. Timetable available at school.',
-      'general_announcement': '{{message}}'
+      'general_announcement': '{{message}}',
+      'leave_granted': 'Muraho {{parent}}. Umwana wanyu {{student}} yemewe gusohoka (leave) kuva {{start}} kugeza {{end}}. Icyifuzo: {{reason}}. Murakoze.',
+      'conduct_removed': 'Muraho {{parent}}. Turabamenyesha ko {{student}} yahannywe amanota y\'imico (conduct) kubera: {{reason}}. Amanota yahannywe: {{points}}. Subira mwiyunge n\'ishuri.',
+      'sick_alert': 'Muraho {{parent}}. Umwana wanyu {{student}} yabonye ubuvuzi mu ishuri kubera {{reason}}. Nimuza kubaza nibura.',
+      'sick_sent_home': 'Muraho {{parent}}. {{student}} yoherejwe mu rugo kubera indwara. Nimuza kubona n\'umwana n\'ubuvuzi.',
+      'discipline_alert': 'Muraho {{parent}}. Habonetse igitekerezo cy\'imico kuri {{student}} ({{reason}}). Mwiyunge n\'ishuri.',
+      'fee_overdue': 'Muraho {{parent}}. {{student}} afite amafaranga atishyurwa: {{amount}} RWF. Kwishyura vuba bishoboka.'
     };
 
     const template = templates[templateId] || templates['general_announcement'];
     let message = template;
 
-    for (const [key, value] of Object.entries(variables)) {
-      message = message.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    if (variables) {
+      for (const [key, value] of Object.entries(variables)) {
+        message = message.replace(new RegExp(`{{${key}}}`, 'g'), String(value ?? ''));
+      }
     }
 
     return this.sendSMS(phone, message);
+  }
+
+  /**
+   * Send parent notification by event type (used by DOD, leave, medical, etc.)
+   * @param {string} phone - Parent phone
+   * @param {string} eventType - leave_granted | conduct_removed | sick_alert | sick_sent_home | discipline_alert | fee_overdue
+   * @param {Object} vars - { parent, student, reason, start, end, points, amount, ... }
+   */
+  async sendParentNotification(phone, eventType, vars = {}) {
+    return this.sendTemplateSMS(phone, eventType, vars);
   }
 }
 
@@ -259,6 +277,7 @@ module.exports = {
   sendBulkSMS: (phones, message) => africanTalkingService.sendBulkSMS(phones, message),
   sendGroupSMS: (recipients, message) => africanTalkingService.sendGroupSMS(recipients, message),
   sendTemplateSMS: (phone, templateId, variables) => africanTalkingService.sendTemplateSMS(phone, templateId, variables),
+  sendParentNotification: (phone, eventType, vars) => africanTalkingService.sendParentNotification(phone, eventType, vars),
   getBalance: () => africanTalkingService.getBalance(),
   getMessageStatus: (messageId) => africanTalkingService.getMessageStatus(messageId),
   isReady: () => africanTalkingService.isReady()

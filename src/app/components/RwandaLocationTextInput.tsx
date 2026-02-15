@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  RWANDA_PROVINCES,
+  getDistrictsForProvince,
+  getSectorsForDistrict,
+  getCellsForSector,
+  getVillagesForCell,
+} from '@/app/data/rwandaLocations';
 
 interface LocationTextInputProps {
   onLocationChange: (location: {
@@ -21,38 +28,6 @@ interface LocationTextInputProps {
   className?: string;
 }
 
-// Rwanda administrative divisions - common names for reference
-const RWANDA_PROVINCES = [
-  'Kigali City',
-  'Southern Province',
-  'Northern Province',
-  'Eastern Province',
-  'Western Province',
-  'Kigali'
-];
-
-const RWANDA_DISTRICTS: { [key: string]: string[] } = {
-  'Kigali City': ['Gasabo', 'Kicukiro', 'Nyarugenge'],
-  'Southern Province': ['Gisagara', 'Huye', 'Muhanga', 'Nyamagabe', 'Nyanza', 'Nyaruguru', 'Ruhango', 'Kamonyi'],
-  'Northern Province': ['Burera', 'Gicumbi', 'Musanze', 'Rulindo'],
-  'Eastern Province': ['Bugesera', 'Gatsibo', 'Kirehe', 'Ngoma', 'Nyagatare', 'Rwamagana'],
-  'Western Province': ['Karongi', 'Ngororero', 'Nyabihu', 'Nyamasheke', 'Rubavu', 'Rutsiro']
-};
-
-const RWANDA_SECTORS: { [key: string]: string[] } = {
-  // Kigali City - Gasabo
-  'Gasabo': ['Bumbogo', 'Gatsata', 'Jabana', 'Kacyiru', 'Kimihurura', 'Kimironko', 'Kinyinya', 'Ndera', 'Paintura', 'Remera', 'Rusororo', 'Gikomero'],
-  // Kigali City - Kicukiro
-  'Kicukiro': ['Gahanga', 'Gatenga', 'Gikondo', 'Kagarama', 'Kicukiro', 'Kigarama', 'Masaka', 'Niboye', 'Nyarugunga', 'Kanombe'],
-  // Kigali City - Nyarugenge
-  'Nyarugenge': ['Gitega', 'Kanyinya', 'Kigali', 'Munyina', 'Nyakabanda', 'Nyarugenge', 'Ruhango', 'Gatsibu'],
-  // Add more sectors as needed - this is a partial list for reference
-  'Gisagara': ['Gikongoro', 'Kibilizi', 'Kigembe', 'Muganza', 'Musanza', 'Nyanza', 'Rwimbogo'],
-  'Huye': ['Gishamvu', 'Huye', 'Karama', 'Kinazi', 'Kibirizi', 'Mbazi', 'Ngoma', 'Ruhashya', 'Rusatira', 'Tumba'],
-  'Muhanga': ['Cyeshiba', 'Kabacari', 'Kibangu', 'Kimunosoro', 'Mugunga', 'Muhanga', 'Nyabinoni', 'Nyarusange', 'Rongi', 'Shyogwe'],
-  // Note: For a complete list, all 416 sectors would be listed here
-};
-
 export const RwandaLocationTextInput: React.FC<LocationTextInputProps> = ({
   onLocationChange,
   initialValues,
@@ -70,22 +45,13 @@ export const RwandaLocationTextInput: React.FC<LocationTextInputProps> = ({
     village: initialValues?.village || ''
   });
 
-  // Get districts based on selected province
-  const getDistricts = () => {
-    if (!location.province) return [];
-    return RWANDA_DISTRICTS[location.province] || [];
-  };
-
-  // Get sectors based on selected district
-  const getSectors = () => {
-    if (!location.district) return [];
-    return RWANDA_SECTORS[location.district] || [];
-  };
+  const getDistricts = () => getDistrictsForProvince(location.province);
+  const getSectors = () => getSectorsForDistrict(location.district);
+  const getCells = () => getCellsForSector(location.district, location.sector);
+  const getVillages = () => getVillagesForCell(location.district, location.sector, location.cell);
 
   const handleChange = (field: string, value: string) => {
     const newLocation = { ...location, [field]: value };
-    
-    // Clear dependent fields when parent field changes
     if (field === 'province') {
       newLocation.district = '';
       newLocation.sector = '';
@@ -98,8 +64,9 @@ export const RwandaLocationTextInput: React.FC<LocationTextInputProps> = ({
     } else if (field === 'sector') {
       newLocation.cell = '';
       newLocation.village = '';
+    } else if (field === 'cell') {
+      newLocation.village = '';
     }
-    
     setLocation(newLocation);
     onLocationChange(newLocation);
   };
@@ -201,10 +168,16 @@ export const RwandaLocationTextInput: React.FC<LocationTextInputProps> = ({
               type="text"
               value={location.cell}
               onChange={(e) => handleChange('cell', e.target.value)}
-              placeholder="Andika akagari"
+              placeholder="Hitamo akagari"
               disabled={disabled || !location.sector}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              list={`cells-${location.district}-${location.sector}-list`}
             />
+            <datalist id={`cells-${location.district}-${location.sector}-list`}>
+              {getCells().map((cell) => (
+                <option key={cell} value={cell} />
+              ))}
+            </datalist>
           </div>
 
           {/* Village */}
@@ -216,10 +189,16 @@ export const RwandaLocationTextInput: React.FC<LocationTextInputProps> = ({
               type="text"
               value={location.village}
               onChange={(e) => handleChange('village', e.target.value)}
-              placeholder="Andika umudugudu"
+              placeholder="Hitamo umudugudu"
               disabled={disabled || !location.cell}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              list={`villages-${location.district}-${location.sector}-${location.cell}-list`}
             />
+            <datalist id={`villages-${location.district}-${location.sector}-${location.cell}-list`}>
+              {getVillages().map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
           </div>
         </div>
       )}

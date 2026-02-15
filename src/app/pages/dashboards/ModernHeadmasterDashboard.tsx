@@ -10,7 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import apiService from '@/app/services/apiService';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 
-export default function ModernHeadmasterDashboard() {
+interface ModernHeadmasterDashboardProps {
+  onNavigate?: (page: string) => void;
+  onLogout?: () => void;
+}
+
+export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: ModernHeadmasterDashboardProps = {}) {
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [reports, setReports] = useState<any>(null);

@@ -11,7 +11,12 @@ import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 
-export default function DOSDashboard() {
+interface DOSDashboardProps {
+  onNavigate?: (page: string) => void;
+  onLogout?: () => void;
+}
+
+export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps = {}) {
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [subjects, setSubjects] = useState<any[]>([]);

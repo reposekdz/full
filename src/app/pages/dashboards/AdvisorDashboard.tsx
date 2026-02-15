@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Users, Calendar, AlertTriangle, TrendingUp, Plus, Search, Filter, Clock, CheckCircle, XCircle, UserCheck } from 'lucide-react';
+import { Users, Calendar, AlertTriangle, TrendingUp, Plus, Search, Filter, Clock, CheckCircle, XCircle, UserCheck, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,8 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
+import { toast } from 'sonner';
 
-export default function AdvisorDashboard() {
+interface AdvisorDashboardProps {
+  onNavigate?: (page: string) => void;
+  onLogout?: () => void;
+}
+
+export default function AdvisorDashboard({ onNavigate, onLogout }: AdvisorDashboardProps = {}) {
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -28,16 +34,24 @@ export default function AdvisorDashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [overviewData, studentsData, meetingsData] = await Promise.all([
-        apiService.getAdvisorOverview(),
-        apiService.getAdvisorStudents(),
-        apiService.getAdvisorMeetings()
+      let overviewData: any = {};
+      try {
+        const res = await apiService.getAdvisorOverview();
+        overviewData = res?.data != null ? res : (res?.data ? { data: res.data } : {});
+      } catch {
+        const fallback = await apiService.getDashboardOverview();
+        if (fallback?.success && fallback?.data) overviewData = { data: fallback.data };
+      }
+      const [studentsData, meetingsData] = await Promise.all([
+        apiService.getAdvisorStudents().catch(() => ({ students: [] })),
+        apiService.getAdvisorMeetings().catch(() => ({ meetings: [] }))
       ]);
-      setOverview(overviewData.data);
-      setStudents(studentsData.students || []);
-      setMeetings(meetingsData.meetings || []);
+      setOverview(overviewData?.data ?? null);
+      setStudents(studentsData?.students || []);
+      setMeetings(meetingsData?.meetings || []);
     } catch (error) {
       console.error('Failed to fetch advisor data:', error);
+      toast.error('Failed to load advisor dashboard');
     } finally {
       setLoading(false);
     }
@@ -46,22 +60,22 @@ export default function AdvisorDashboard() {
   const handleCreateCase = async () => {
     try {
       await apiService.createStudentCase(newCase);
-      alert('Case created successfully!');
+      toast.success('Case created successfully!');
       setNewCase({ student_id: '', case_type: '', title: '', description: '', priority: 'medium' });
       fetchData();
     } catch (error: any) {
-      alert('Failed to create case: ' + error.message);
+      toast.error('Failed to create case: ' + (error?.message || ''));
     }
   };
 
   const handleScheduleMeeting = async () => {
     try {
       await apiService.scheduleMeeting(newMeeting);
-      alert('Meeting scheduled successfully!');
+      toast.success('Meeting scheduled successfully!');
       setNewMeeting({ student_id: '', meeting_date: '', meeting_time: '', purpose: '', location: 'Advisor Office' });
       fetchData();
     } catch (error: any) {
-      alert('Failed to schedule meeting: ' + error.message);
+      toast.error('Failed to schedule meeting: ' + (error?.message || ''));
     }
   };
 
@@ -89,6 +103,10 @@ export default function AdvisorDashboard() {
             <p className="text-gray-600 mt-2">Manage student cases and advisory sessions</p>
           </div>
           <div className="flex gap-3">
+            <Button variant="outline" onClick={() => fetchData()} title="Refresh data">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">

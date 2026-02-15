@@ -20,7 +20,7 @@ const sendVerificationSMS = async (phone, code, studentName) => {
 };
 
 // ==================== ROLE-BASED APPROVAL PERMISSIONS ====================
-const APPROVER_ROLES = ['admin', 'headmaster', 'dod', 'accountant', 'patron', 'matron'];
+const APPROVER_ROLES = ['admin', 'headmaster', 'dod', 'director_study', 'director_discipline', 'accountant', 'advisor', 'patron', 'matron'];
 
 const canApproveRequests = (userRole) => {
   return APPROVER_ROLES.includes(userRole);
@@ -435,8 +435,12 @@ router.get('/pending-requests', authenticateToken, async (req, res) => {
     
     const [requests] = await pool.execute(
       `SELECT psr.*, 
-              gss.student_code, gss.trade_code, gss.level_number
+              gss.student_code, gss.trade_code, gss.level_number,
+              CONCAT(u.first_name, ' ', u.last_name) as parent_name,
+              u.phone as parent_phone,
+              u.email as parent_email
        FROM parent_student_requests psr
+       LEFT JOIN users u ON psr.parent_id = u.id
        LEFT JOIN global_student_sheets gss ON psr.student_id = gss.id
        WHERE psr.status = 'pending'
        ORDER BY psr.created_at DESC LIMIT 50`
@@ -467,23 +471,29 @@ router.get('/linking-requests', authenticateToken, async (req, res) => {
       });
     }
     
-    let query = 'SELECT * FROM parent_student_requests WHERE 1=1';
+    let query = `SELECT psr.*,
+                  CONCAT(u.first_name, ' ', u.last_name) as parent_name,
+                  u.phone as parent_phone,
+                  u.email as parent_email
+                  FROM parent_student_requests psr
+                  LEFT JOIN users u ON psr.parent_id = u.id
+                  WHERE 1=1`;
     const params = [];
     
     if (status) {
-      query += ' AND status = ?';
+      query += ' AND psr.status = ?';
       params.push(status);
     }
     
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY psr.created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
     
     const [requests] = await pool.execute(query, params);
     
     const [[{ total }]] = await pool.execute(
-      status 
-        ? "SELECT COUNT(*) as total FROM parent_student_requests WHERE status = ?" 
-        : "SELECT COUNT(*) as total FROM parent_student_requests",
+      status
+        ? 'SELECT COUNT(*) as total FROM parent_student_requests WHERE status = ?'
+        : 'SELECT COUNT(*) as total FROM parent_student_requests',
       status ? [status] : []
     );
     

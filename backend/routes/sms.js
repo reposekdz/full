@@ -10,7 +10,9 @@ let smsTemplates = [];
 const authMiddleware = require('./auth');
 
 // Import African Talking SMS Service
-const { sendSMS, sendBulkSMS, sendTemplateSMS, getBalance, isReady } = require('../services/africanTalkingService');
+const { sendSMS, sendBulkSMS, sendTemplateSMS, sendParentNotification, getBalance, isReady } = require('../services/africanTalkingService');
+const { authenticateToken } = require('../middleware/auth');
+const { pool } = require('../config/database');
 
 // ==================== SMS TEMPLATES ====================
 
@@ -547,6 +549,58 @@ router.delete('/demo/clear-history', authMiddleware, async (req, res) => {
     success: true,
     message: 'SMS history cleared'
   });
+});
+
+// ==================== PARENT NOTIFICATIONS (African Talking) ====================
+// POST /api/sms/notify-parent - Send event-based SMS to parent(s) linked with student
+// Body: { student_id, event_type, ...variables }
+// event_type: leave_granted | conduct_removed | sick_alert | sick_sent_home | discipline_alert | fee_overdue | general_announcement
+// variables: parent (name), student (name), reason, start, end, points, amount, message, etc.
+router.post('/notify-parent', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, event_type, ...variables } = req.body;
+    if (!student_id || !event_type) {
+      return res.status(400).json({ success: false, message: 'student_id and event_type required' });
+    }
+
+    let parentPhones = [];
+    try {
+      const [rows] = await pool.execute(
+        `SELECT p.phone, p.first_name, p.last_name, u.first_name as student_first, u.last_name as student_last
+         FROM users u
+         LEFT JOIN users p ON u.parent_id = p.id
+         WHERE u.id = ? AND (p.phone IS NOT NULL AND p.phone != '')`,
+        [student_id]
+      );
+      if (rows && rows.length > 0) {
+        parentPhones = rows.map((r) => ({ phone: r.phone, parent: `${r.first_name || ''} ${r.last_name || ''}`.trim(), student: `${r.student_first || ''} ${r.student_last || ''}`.trim() }));
+      }
+    } catch (e) {
+      return res.status(500).json({ success: false, message: 'Failed to resolve parent contact' });
+    }
+
+    if (parentPhones.length === 0) {
+      return res.status(404).json({ success: false, message: 'No parent phone found for this student' });
+    }
+
+    const results = [];
+    for (const { phone, parent, student } of parentPhones) {
+      const vars = { ...variables, parent: parent || 'Parent', student: student || 'Student' };
+      const result = await sendParentNotification(phone, event_type, vars);
+      results.push({ phone, success: result.success, messageId: result.messageId, error: result.error });
+    }
+
+    const sent = results.filter((r) => r.success).length;
+    res.json({
+      success: true,
+      message: `Notification sent to ${sent}/${parentPhones.length} parent(s)`,
+      results,
+      event_type
+    });
+  } catch (error) {
+    console.error('Notify parent error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
 });
 
 module.exports = router;

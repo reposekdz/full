@@ -27,7 +27,7 @@ import ComprehensiveContentManagement from '../admin/ComprehensiveContentManagem
 import ComprehensiveStaffManagement from '../admin/ComprehensiveStaffManagement';
 import StudentManagementPage from '../admin/StudentManagementPage';
 import DisciplineManagementPage from '../admin/DisciplineManagementPage';
-import AdminStudentSheetsPage from '../admin/AdminStudentSheetsPage';
+import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import HomeworkManagementPage from '../admin/HomeworkManagementPage';
 import AssignmentsManagementPage from '../admin/AssignmentsManagementPage';
 import LiveChatManagementPage from '../admin/LiveChatManagementPage';
@@ -87,7 +87,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
       case 'discipline-management':
         return <DisciplineManagementPage />;
       case 'student-sheets':
-        return <AdminStudentSheetsPage />;
+        return <GlobalStudentSheets userRole={user?.role ?? 'admin'} userId={user?.id ?? 0} onNavigate={(p) => (p.startsWith('dashboard') ? setCurrentView('dashboard') : setCurrentView(p))} />;
       case 'homework-management':
         return <HomeworkManagementPage />;
       case 'assignments-management':
@@ -138,12 +138,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
                   size="icon" 
                   className="border-green-200 hover:bg-green-50"
                   onClick={() => {
-                    const dashboardHome = document.querySelector('[data-dashboard-home]');
-                    if (dashboardHome) {
-                      // Trigger refresh via custom event or just let it re-mount if we had a key
-                      // For now, I'll just call the fetchData in DashboardHome if I can
+                    if (currentView === 'dashboard') {
+                      window.dispatchEvent(new CustomEvent('admin-dashboard-refresh'));
+                    } else {
+                      window.location.reload();
                     }
-                    window.location.reload(); // Simple way for now if no shared state
                   }}
                 >
                   <RefreshCw className="w-5 h-5 text-green-600" />
@@ -202,22 +201,46 @@ interface DashboardHomeProps {
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState({ students: 0, teachers: 0, parents: 0, staff: 0, courses: 0, revenue: 0, stock: 0 });
   const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const onRefresh = () => fetchData();
+    window.addEventListener('admin-dashboard-refresh', onRefresh);
+    return () => window.removeEventListener('admin-dashboard-refresh', onRefresh);
+  }, []);
+
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [analyticsRes, logsRes] = await Promise.all([
-        apiService.getAdminAnalytics(),
-        apiService.getSecurityLogs({ limit: 4 })
+      const [analyticsRes, logsRes, overviewRes] = await Promise.all([
+        apiService.getAdminAnalytics().catch(() => ({ success: false })),
+        apiService.getSecurityLogs({ limit: 4 }).catch(() => ({ success: false, logs: [] })),
+        apiService.getDashboardOverview().catch(() => ({ success: false }))
       ]);
-      
-      if (analyticsRes.success) setStats(analyticsRes.analytics);
-      if (logsRes.success) setActivities(logsRes.logs);
+
+      if (analyticsRes?.success && analyticsRes?.analytics) {
+        setStats(analyticsRes.analytics);
+      } else if (overviewRes?.success && overviewRes?.data?.stats) {
+        const s = overviewRes.data.stats;
+        setStats({
+          students: s.total_students ?? 0,
+          teachers: s.total_staff ?? 0,
+          parents: s.total_parents ?? 0,
+          staff: s.total_staff ?? 0,
+          courses: s.total_courses ?? 0,
+          revenue: 0,
+          stock: 0
+        });
+      }
+      if (logsRes?.success && Array.isArray(logsRes.logs)) setActivities(logsRes.logs);
     } catch (error) {
       console.error('Fetch error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -243,8 +266,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
     { title: 'Gucunga Ibikubiyemo', desc: 'All Content', icon: LayoutDashboard, color: 'from-yellow-500 to-green-500', link: 'comprehensive-content' },
     { title: 'Gucunga Abakozi', desc: 'Staff & Trades', icon: Users, color: 'from-green-500 to-yellow-500', link: 'comprehensive-staff' },
     { title: 'User Management', desc: 'Manage all users', icon: Users, color: 'from-yellow-600 to-green-600', link: 'users' },
+    { title: 'Student Sheets', desc: 'Global student data', icon: FileText, color: 'from-indigo-500 to-purple-500', link: 'student-sheets' },
+    { title: 'Class Level Sheets', desc: 'By class & level', icon: BookOpen, color: 'from-teal-500 to-cyan-500', link: 'class-sheets' },
     { title: 'Sports Management', desc: 'Manage sports', icon: Award, color: 'from-green-600 to-yellow-600', link: 'sports-management' },
-    { title: 'News Articles', desc: 'Manage articles', icon: Newspaper, color: 'from-yellow-500 to-green-500', link: 'articles' },
+    { title: 'Discipline', desc: 'Conduct & leave', icon: Shield, color: 'from-amber-500 to-orange-500', link: 'discipline-management' },
+    { title: 'News / Articles', desc: 'Manage articles', icon: Newspaper, color: 'from-yellow-500 to-green-500', link: 'articles' },
     { title: 'Analytics', desc: 'View statistics', icon: BarChart3, color: 'from-green-500 to-yellow-500', link: 'analytics' },
     { title: 'Reports', desc: 'Generate reports', icon: FileText, color: 'from-yellow-600 to-green-600', link: 'reports' },
     { title: 'Security', desc: 'Security logs', icon: Shield, color: 'from-green-600 to-yellow-600', link: 'security' },
@@ -267,7 +293,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" data-dashboard-home>
+      {loading && (
+        <div className="flex items-center justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-500 border-t-transparent" />
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <div key={stat.title}>
@@ -344,7 +375,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onNavigate }) => {
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">{activity.action || 'System activity'}</p>
-                        <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{activity.created_at ? new Date(activity.created_at).toLocaleString() : '—'}</p>
                       </div>
                     </div>
                   );

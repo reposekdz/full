@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Package, AlertTriangle, TrendingUp, DollarSign, Plus, Search, Filter, Download, Eye, Boxes, Truck, BarChart3, CheckCircle2, XCircle } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, DollarSign, Plus, Search, Filter, Download, Eye, Boxes, Truck, BarChart3, CheckCircle2, XCircle, RefreshCw, FileText, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -9,9 +9,16 @@ import { Badge } from '@/app/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Textarea } from '@/app/components/ui/textarea';
+import { toast } from 'sonner';
 import apiService from '@/app/services/apiService';
+import { stockApi } from '@/app/services/stockManagementApi';
 
-export default function ModernStockManagerDashboard() {
+interface ModernStockManagerDashboardProps {
+  onNavigate?: (page: string) => void;
+  onLogout?: () => void;
+}
+
+export default function ModernStockManagerDashboard({ onNavigate, onLogout }: ModernStockManagerDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
@@ -35,84 +42,134 @@ export default function ModernStockManagerDashboard() {
     unit_price: '',
     notes: ''
   });
+  const [movements, setMovements] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filterCategory, filterLowStock]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const params: any = {};
       if (filterCategory !== 'all') params.category = filterCategory;
-      if (filterLowStock) params.low_stock = 'true';
-      
-      const [overviewData, itemsData] = await Promise.all([
-        apiService.getStockOverview(),
-        apiService.getInventoryItems(params)
+      if (filterLowStock) params.low_stock = true;
+      const [staffOverview, staffItems, statsRes, itemsRes, movementsRes, alertsRes] = await Promise.all([
+        apiService.getStockOverview().catch(() => null),
+        apiService.getInventoryItems(params).catch(() => ({ items: [] })),
+        stockApi.getDashboardStats().catch(() => null),
+        stockApi.getItems({ category: filterCategory !== 'all' ? filterCategory : undefined, low_stock: filterLowStock || undefined }).catch(() => null),
+        stockApi.getMovements?.({ page: 1 })?.catch(() => null),
+        stockApi.getAlerts?.()?.catch(() => null)
       ]);
-      setOverview(overviewData.data);
-      setItems(itemsData.items || []);
+      const stats = statsRes?.stats ?? statsRes;
+      const inventoryList = itemsRes?.items ?? itemsRes?.data?.items ?? staffItems?.items ?? [];
+      const ov = stats ?? staffOverview?.data ?? staffOverview;
+      setOverview(ov ? {
+        total_items: ov.total_items ?? ov.totalItems ?? inventoryList.length,
+        low_stock_items: ov.low_stock_items ?? ov.lowStockCount ?? alertsRes?.length ?? 0,
+        total_inventory_value: ov.total_inventory_value ?? ov.totalValue ?? 0,
+        recent_transactions: ov.recent_transactions ?? movementsRes?.movements ?? movementsRes?.data ?? [],
+        categories: ov.categories ?? []
+      } : null);
+      setItems(Array.isArray(inventoryList) ? inventoryList : []);
+      setMovements(Array.isArray(movementsRes?.movements) ? movementsRes.movements : Array.isArray(movementsRes?.data) ? movementsRes.data : []);
+      setAlerts(Array.isArray(alertsRes) ? alertsRes : alertsRes?.alerts ?? []);
     } catch (error) {
       console.error('Failed to fetch stock data:', error);
+      toast.error('Failed to load stock data');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddItem = async () => {
+    if (!newItem.name?.trim() || !newItem.category?.trim()) {
+      toast.error('Name and category are required');
+      return;
+    }
     try {
+      const payload = {
+        name: newItem.name,
+        category: newItem.category,
+        description: newItem.description || undefined,
+        unit_price: parseFloat(newItem.unit_price) || 0,
+        quantity: parseInt(newItem.current_quantity, 10) || 0,
+        reorder_level: parseInt(newItem.reorder_level, 10) || 10,
+        supplier: newItem.supplier || undefined
+      };
+      const res = await stockApi.createItem(payload);
+      if (res?.success !== false && (res?.id != null || res?.item?.id != null)) {
+        toast.success('Item added successfully!');
+        setNewItem({ name: '', category: '', description: '', unit_price: '', current_quantity: '', reorder_level: '10', supplier: '' });
+        fetchData();
+        return;
+      }
       await apiService.addInventoryItem({
         ...newItem,
         unit_price: parseFloat(newItem.unit_price),
         current_quantity: parseInt(newItem.current_quantity),
         reorder_level: parseInt(newItem.reorder_level)
       });
-      alert('Item added successfully!');
-      setNewItem({
-        name: '',
-        category: '',
-        description: '',
-        unit_price: '',
-        current_quantity: '',
-        reorder_level: '10',
-        supplier: ''
-      });
+      toast.success('Item added successfully!');
+      setNewItem({ name: '', category: '', description: '', unit_price: '', current_quantity: '', reorder_level: '10', supplier: '' });
       fetchData();
     } catch (error: any) {
-      alert('Failed to add item: ' + error.message);
+      toast.error('Failed to add item: ' + (error?.message || ''));
     }
   };
 
   const handleRecordTransaction = async () => {
+    const itemId = parseInt(newTransaction.item_id, 10);
+    const qty = parseInt(newTransaction.quantity, 10);
+    if (!itemId || !qty) {
+      toast.error('Select an item and enter quantity');
+      return;
+    }
     try {
+      const adjustmentType = newTransaction.transaction_type === 'in' ? 'in' : 'out';
+      const res = await stockApi.adjustStock(itemId, { adjustment_type: adjustmentType, quantity: qty, reason: newTransaction.notes });
+      if (res?.success !== false) {
+        toast.success('Transaction recorded successfully!');
+        setNewTransaction({ item_id: '', transaction_type: 'in', quantity: '', unit_price: '', notes: '' });
+        fetchData();
+        return;
+      }
       await apiService.recordStockTransaction({
         ...newTransaction,
-        item_id: parseInt(newTransaction.item_id),
-        quantity: parseInt(newTransaction.quantity),
-        unit_price: parseFloat(newTransaction.unit_price)
+        item_id: itemId,
+        quantity: qty,
+        unit_price: parseFloat(newTransaction.unit_price) || 0
       });
-      alert('Transaction recorded successfully!');
-      setNewTransaction({
-        item_id: '',
-        transaction_type: 'in',
-        quantity: '',
-        unit_price: '',
-        notes: ''
-      });
+      toast.success('Transaction recorded successfully!');
+      setNewTransaction({ item_id: '', transaction_type: 'in', quantity: '', unit_price: '', notes: '' });
       fetchData();
     } catch (error: any) {
-      alert('Failed to record transaction: ' + error.message);
+      toast.error('Failed to record transaction: ' + (error?.message || ''));
     }
   };
 
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    const name = (item.name ?? item.item_name ?? '').toString().toLowerCase();
+    const cat = (item.category ?? '').toString().toLowerCase();
+    const q = searchQuery.toLowerCase();
+    return name.includes(q) || cat.includes(q);
   });
 
-  const categories = [...new Set(overview?.categories?.map((c: any) => c.category) || [])];
+  const recentTransactions = (overview?.recent_transactions ?? movements).slice(0, 20);
+
+  const categoriesFromItems = items.reduce((acc: { category: string; item_count: number; category_value: number }[], item) => {
+    const cat = item.category ?? 'Other';
+    const existing = acc.find(c => c.category === cat);
+    const val = Number(item.current_quantity ?? item.quantity ?? 0) * Number(item.unit_price ?? 0);
+    if (existing) {
+      existing.item_count += 1;
+      existing.category_value += val;
+    } else acc.push({ category: cat, item_count: 1, category_value: val });
+    return acc;
+  }, []);
+  const categories = overview?.categories?.length ? overview.categories : categoriesFromItems;
 
   if (loading) {
     return (
@@ -129,14 +186,34 @@ export default function ModernStockManagerDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-7xl mx-auto"
       >
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-black bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
               Stock Manager Dashboard
             </h1>
             <p className="text-gray-600 mt-2">Inventory management and stock control</p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
+            <Button variant="outline" onClick={() => fetchData()} disabled={loading} title="Refresh">
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            {onNavigate && (
+              <>
+                <Button variant="outline" className="border-indigo-600 text-indigo-700 hover:bg-indigo-50" onClick={() => onNavigate('student-sheets')}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Student Sheets
+                </Button>
+                <Button variant="ghost" onClick={() => onNavigate('dashboard-stock')}>
+                  Back to Dashboard
+                </Button>
+              </>
+            )}
+            {onLogout && (
+              <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={onLogout}>
+                Logout
+              </Button>
+            )}
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white">
@@ -239,8 +316,8 @@ export default function ModernStockManagerDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {items.map((item) => (
-                          <SelectItem key={item.id} value={item.id.toString()}>
-                            {item.name} (Stock: {item.current_quantity})
+                          <SelectItem key={item.id} value={String(item.id)}>
+                            {item.name ?? item.item_name} (Stock: {item.current_quantity ?? item.quantity ?? 0})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -298,12 +375,32 @@ export default function ModernStockManagerDashboard() {
           </div>
         </div>
 
+        {alerts.length > 0 && (
+          <Card className="mb-6 border-2 border-amber-200 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-800">
+                <AlertTriangle className="w-5 h-5" />
+                Low Stock Alerts ({alerts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {alerts.slice(0, 10).map((a: any, i: number) => (
+                  <Badge key={i} variant="destructive" className="bg-amber-200 text-amber-900 hover:bg-amber-300">
+                    {a.item_name ?? a.name ?? 'Item'} — {(a.current_quantity ?? a.quantity ?? 0)} left (reorder: {a.reorder_level ?? a.reorder_level ?? '?'})
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { title: 'Total Items', value: overview?.total_items || 0, icon: Package, color: 'from-blue-500 to-indigo-500', bg: 'bg-blue-50' },
-            { title: 'Low Stock Alerts', value: overview?.low_stock_items || 0, icon: AlertTriangle, color: 'from-orange-500 to-red-500', bg: 'bg-orange-50' },
-            { title: 'Inventory Value', value: `RWF ${(overview?.total_inventory_value || 0).toLocaleString()}`, icon: DollarSign, color: 'from-green-500 to-teal-500', bg: 'bg-green-50' },
-            { title: 'Recent Transactions', value: overview?.recent_transactions?.length || 0, icon: TrendingUp, color: 'from-purple-500 to-pink-500', bg: 'bg-purple-50' }
+            { title: 'Total Items', value: items.length || overview?.total_items || 0, icon: Package, color: 'from-blue-500 to-indigo-500', bg: 'bg-blue-50' },
+            { title: 'Low Stock Alerts', value: alerts.length || overview?.low_stock_items || 0, icon: AlertTriangle, color: 'from-orange-500 to-red-500', bg: 'bg-orange-50' },
+            { title: 'Inventory Value', value: `RWF ${(overview?.total_inventory_value || items.reduce((s, i) => s + (Number(i.current_quantity ?? i.quantity ?? 0) * Number(i.unit_price ?? 0)), 0)).toLocaleString()}`, icon: DollarSign, color: 'from-green-500 to-teal-500', bg: 'bg-green-50' },
+            { title: 'Recent Transactions', value: recentTransactions.length, icon: TrendingUp, color: 'from-purple-500 to-pink-500', bg: 'bg-purple-50' }
           ].map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -360,7 +457,7 @@ export default function ModernStockManagerDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {(overview?.recent_transactions || []).slice(0, 10).map((transaction: any, index: number) => (
+                    {recentTransactions.slice(0, 10).map((transaction: any, index: number) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, x: -20 }}
@@ -381,9 +478,9 @@ export default function ModernStockManagerDashboard() {
                             )}
                           </div>
                           <div>
-                            <div className="font-semibold">{transaction.item_name}</div>
+                            <div className="font-semibold">{transaction.item_name ?? transaction.item?.name ?? 'Item'}</div>
                             <div className="text-sm text-gray-600">
-                              {transaction.transaction_type} - {transaction.quantity} units
+                              {(transaction.transaction_type ?? transaction.adjustment_type ?? transaction.type) ?? '—'} — {transaction.quantity ?? transaction.quantity_adjusted ?? 0} units
                             </div>
                           </div>
                         </div>
@@ -392,7 +489,7 @@ export default function ModernStockManagerDashboard() {
                             RWF {((transaction.quantity || 0) * (transaction.unit_price || 0)).toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {new Date(transaction.transaction_date).toLocaleDateString()}
+                            {new Date(transaction.transaction_date ?? transaction.created_at ?? transaction.date ?? 0).toLocaleDateString()}
                           </div>
                         </div>
                       </motion.div>
@@ -457,18 +554,18 @@ export default function ModernStockManagerDashboard() {
                           transition={{ delay: index * 0.05 }}
                           className="border-b border-gray-100 hover:bg-teal-50"
                         >
-                          <td className="py-3 px-4 font-medium">{item.name}</td>
+                          <td className="py-3 px-4 font-medium">{item.name ?? item.item_name}</td>
                           <td className="py-3 px-4">
-                            <Badge className="bg-teal-100 text-teal-700">{item.category}</Badge>
+                            <Badge className="bg-teal-100 text-teal-700">{item.category ?? '—'}</Badge>
                           </td>
-                          <td className="py-3 px-4 text-right">{item.current_quantity}</td>
-                          <td className="py-3 px-4 text-right">{item.reorder_level}</td>
-                          <td className="py-3 px-4 text-right">RWF {item.unit_price?.toLocaleString()}</td>
+                          <td className="py-3 px-4 text-right">{item.current_quantity ?? item.quantity ?? 0}</td>
+                          <td className="py-3 px-4 text-right">{item.reorder_level ?? item.reorder_level ?? '—'}</td>
+                          <td className="py-3 px-4 text-right">RWF {(item.unit_price ?? 0).toLocaleString()}</td>
                           <td className="py-3 px-4 text-right font-semibold">
-                            RWF {(item.current_quantity * item.unit_price).toLocaleString()}
+                            RWF {((Number(item.current_quantity ?? item.quantity ?? 0)) * Number(item.unit_price ?? 0)).toLocaleString()}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            {item.current_quantity <= item.reorder_level ? (
+                            {(Number(item.current_quantity ?? item.quantity ?? 0)) <= Number(item.reorder_level ?? 0) ? (
                               <Badge className="bg-red-100 text-red-700">
                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                 Low Stock
@@ -498,7 +595,8 @@ export default function ModernStockManagerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(overview?.recent_transactions || []).map((transaction: any, index: number) => (
+                  {recentTransactions.length === 0 && <p className="text-gray-500 py-8 text-center">No transactions yet.</p>}
+                  {recentTransactions.map((transaction: any, index: number) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
@@ -519,9 +617,9 @@ export default function ModernStockManagerDashboard() {
                           )}
                         </div>
                         <div>
-                          <div className="font-semibold text-lg">{transaction.item_name}</div>
+                          <div className="font-semibold text-lg">{transaction.item_name ?? transaction.item?.name ?? 'Item'}</div>
                           <div className="text-sm text-gray-600">
-                            Type: <span className="font-medium capitalize">{transaction.transaction_type}</span>
+                            Type: <span className="font-medium capitalize">{transaction.transaction_type ?? transaction.adjustment_type ?? transaction.type ?? '—'}</span>
                             {' • '}
                             Quantity: <span className="font-medium">{transaction.quantity}</span>
                             {' • '}
@@ -534,7 +632,7 @@ export default function ModernStockManagerDashboard() {
                           RWF {((transaction.quantity || 0) * (transaction.unit_price || 0)).toLocaleString()}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {new Date(transaction.transaction_date).toLocaleString()}
+                          {new Date(transaction.transaction_date ?? transaction.created_at ?? transaction.date ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </motion.div>
@@ -556,7 +654,8 @@ export default function ModernStockManagerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(overview?.categories || []).map((cat: any, index: number) => (
+                  {categories.length === 0 && <p className="text-gray-500 col-span-full py-8 text-center">No categories yet. Add items to see breakdown.</p>}
+                  {categories.map((cat: any, index: number) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -564,10 +663,10 @@ export default function ModernStockManagerDashboard() {
                       transition={{ delay: index * 0.1 }}
                       className="bg-gradient-to-br from-teal-50 to-cyan-50 p-6 rounded-lg border-2 border-teal-200 hover:shadow-lg transition-all"
                     >
-                      <div className="text-sm text-gray-600 mb-2 uppercase font-semibold">{cat.category}</div>
-                      <div className="text-3xl font-black text-teal-600 mb-2">{cat.item_count} Items</div>
+                      <div className="text-sm text-gray-600 mb-2 uppercase font-semibold">{cat.category ?? cat.name}</div>
+                      <div className="text-3xl font-black text-teal-600 mb-2">{cat.item_count ?? cat.count ?? 0} Items</div>
                       <div className="text-lg font-semibold text-gray-700">
-                        RWF {(cat.category_value || 0).toLocaleString()}
+                        RWF {(cat.category_value ?? cat.value ?? 0).toLocaleString()}
                       </div>
                     </motion.div>
                   ))}

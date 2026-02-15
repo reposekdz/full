@@ -33,6 +33,7 @@ import { cn } from '@/app/components/ui/utils';
 // Types
 interface DODManagementProps {
   onNavigate: (page: string) => void;
+  onLogout?: () => void;
 }
 
 interface Student {
@@ -156,7 +157,7 @@ const navItems = [
   { id: 'sms', label: 'SMS', labelRw: 'Ubutumwa', icon: MessageSquare },
 ];
 
-const DODManagement: React.FC<DODManagementProps> = ({ onNavigate }) => {
+const DODManagement: React.FC<DODManagementProps> = ({ onNavigate, onLogout }) => {
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -347,10 +348,20 @@ const DODManagement: React.FC<DODManagementProps> = ({ onNavigate }) => {
     setProcessing(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/global-sheets/students/${newIncident.student_id}/discipline`, {
+      const res = await fetch(`${API_BASE_URL}/discipline-management/incidents/create`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newIncident, type: 'incident' })
+        body: JSON.stringify({
+          student_id: Number(newIncident.student_id),
+          incident_type: newIncident.incident_type || 'behavioral',
+          description: newIncident.description,
+          location: newIncident.location || '',
+          severity: (newIncident.severity === 'low' ? 'minor' : newIncident.severity === 'high' ? 'major' : 'moderate') || 'moderate',
+          category_id: null,
+          action_taken: '',
+          parent_notified: false,
+          follow_up_required: false
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -479,6 +490,28 @@ const DODManagement: React.FC<DODManagementProps> = ({ onNavigate }) => {
       const data = await res.json();
       if (data.success) {
         setSuccessMessage('Ikibazo cyasuzumewe!');
+        fetchInitialData();
+      } else {
+        setErrorMessage(data.message || 'Byanze');
+      }
+    } catch (error) {
+      setErrorMessage('Byanze');
+    }
+    setProcessing(false);
+  };
+
+  const handleCancelIncident = async (incidentId: string) => {
+    if (!window.confirm('Urukundo gukuraho / guhagarika raporo y\'imyitwarire? (Cancel/remove this conduct record?)')) return;
+    setProcessing(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/discipline-management/incidents/${incidentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Raporo y\'imyitwarire yahagaritswe.');
         fetchInitialData();
       } else {
         setErrorMessage(data.message || 'Byanze');
@@ -656,6 +689,9 @@ const DODManagement: React.FC<DODManagementProps> = ({ onNavigate }) => {
                   <Button size="sm" variant="outline" onClick={() => handleResolveIncident(incident.id)}>
                     Resolve
                   </Button>
+                  <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleCancelIncident(incident.id)}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
                 </div>
               </motion.div>
             ))}
@@ -773,6 +809,9 @@ const DODManagement: React.FC<DODManagementProps> = ({ onNavigate }) => {
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => handleResolveIncident(incident.id)}>
                         Resolve
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => handleCancelIncident(incident.id)}>
+                        <Trash2 className="w-4 h-4 mr-1" /> Cancel / Sibanguka
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleSendSMS('+250000000000', `Dear parent, ${incident.student_name} had an incident: ${incident.description}`)}>
                         <MessageSquare className="w-4 h-4" />

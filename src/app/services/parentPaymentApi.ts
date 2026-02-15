@@ -1,9 +1,11 @@
 /**
  * Garden TVET School - Parent Payment Portal API Service
- * Complete Real-API Integration
+ * Complete Real-API Integration – fee payments for linked parent–child
  */
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
+const API_BASE = API_BASE_URL;
 
 // Get auth headers
 const getAuthHeaders = (): HeadersInit => {
@@ -236,7 +238,7 @@ export const verifyPayment = async (referenceNumber: string): Promise<PaymentRec
 };
 
 /**
- * Request to link a new child
+ * Request to link a new child (legacy: student_code only)
  */
 export const requestLinkChild = async (studentCode: string, relationship: string): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(`${API_BASE}/parent-linking/request`, {
@@ -245,7 +247,27 @@ export const requestLinkChild = async (studentCode: string, relationship: string
     body: JSON.stringify({ student_code: studentCode, relationship }),
   });
   const data = await response.json();
-  
+  return data;
+};
+
+/**
+ * Request to link a child with full details. Requires staff approval. Stored in DB.
+ * Backend: POST /parent-portal-comprehensive/link-requests
+ */
+export const requestLinkChildWithDetails = async (payload: {
+  parent_phone: string;
+  student_name: string;
+  level: string;
+  trade: string;
+  relationship?: string;
+  student_code?: string;
+}): Promise<{ success: boolean; message?: string; request_id?: number }> => {
+  const response = await fetch(`${API_BASE}/parent-portal-comprehensive/link-requests`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
   return data;
 };
 

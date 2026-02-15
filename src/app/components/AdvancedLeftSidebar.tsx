@@ -94,6 +94,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       ],
       admin: [
         { key: 'users', icon: Users, label: 'Abakoresha', color: 'from-blue-500 to-indigo-500' },
+        { key: 'student-sheets', icon: FileText, label: 'Student Sheets (Global)', color: 'from-cyan-500 to-teal-500' },
         { key: 'comprehensive-content', icon: FileText, label: 'Gucunga Ibikubiyemo', color: 'from-yellow-500 to-green-500' },
         { key: 'student-management', icon: GraduationCap, label: 'Abanyeshuri & Abarimu', color: 'from-green-500 to-emerald-500' },
         { key: 'content-management', icon: Briefcase, label: 'Content (Old)', color: 'from-purple-500 to-pink-500' },
@@ -116,6 +117,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'hostel-management', icon: Bed, label: 'Hostel', color: 'from-orange-600 to-red-600' }
       ],
       accountant: [
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
         { key: 'fees', icon: DollarSign, label: 'Amafaranga', color: 'from-green-500 to-teal-500' },
         { key: 'payments', icon: CreditCard, label: 'Kwishyura', color: 'from-blue-500 to-indigo-500' },
         { key: 'invoices', icon: Receipt, label: 'Inyemezabuguzi', color: 'from-purple-500 to-violet-500' },
@@ -136,6 +138,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       director_of_study: [
         { key: 'academics', icon: BookOpen, label: 'Amasomo', color: 'from-blue-500 to-indigo-500' },
         { key: 'application-management', icon: FileText, label: 'Ibyifuzo byo Kwiga', color: 'from-green-500 to-teal-500' },
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
         { key: 'curriculum', icon: GraduationCap, label: 'Integanyanyigisho', color: 'from-green-500 to-teal-500' },
         { key: 'teachers', icon: Users, label: 'Abarimu', color: 'from-purple-500 to-violet-500' },
         { key: 'performance', icon: TrendingUp, label: 'Imikorere', color: 'from-orange-500 to-red-500' },
@@ -144,6 +147,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' }
       ],
       director_of_discipline: [
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
         { key: 'discipline-management', icon: Shield, label: 'Gucunga Indero', color: 'from-red-500 to-orange-500' },
         { key: 'incidents', icon: AlertTriangle, label: 'Ibibazo', color: 'from-yellow-500 to-amber-500' },
         { key: 'counseling', icon: Heart, label: 'Ubujyanama', color: 'from-pink-500 to-rose-500' },
@@ -156,6 +160,7 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'overview', icon: Home, label: 'Incamake', color: 'from-blue-500 to-indigo-500' },
         { key: 'staff-management', icon: Users, label: 'Ubuyobozi bw\'Ishuri', color: 'from-purple-500 to-pink-500' },
         { key: 'application-management', icon: FileText, label: 'Ibyifuzo byo Kwiga', color: 'from-green-500 to-teal-500' },
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
         { key: 'students', icon: GraduationCap, label: 'Abanyeshuri', color: 'from-purple-500 to-violet-500' },
         { key: 'finances', icon: DollarSign, label: 'Amafaranga', color: 'from-orange-500 to-red-500' },
         { key: 'performance', icon: TrendingUp, label: 'Imikorere', color: 'from-yellow-500 to-amber-500' },
@@ -165,6 +170,22 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'library-system', icon: BookOpen, label: 'Isomero', color: 'from-green-600 to-emerald-600' },
         { key: 'exam-management', icon: ClipboardList, label: 'Ibizamini', color: 'from-purple-600 to-pink-600' },
         { key: 'hostel-management', icon: Bed, label: 'Hostel', color: 'from-orange-600 to-red-600' }
+      ],
+      advisor: [
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
+        { key: 'student-sheets', icon: FileText, label: 'Student Sheets', color: 'from-cyan-500 to-teal-500' },
+        { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' }
+      ],
+      director_study: [
+        { key: 'academics', icon: BookOpen, label: 'Amasomo', color: 'from-blue-500 to-indigo-500' },
+        { key: 'application-management', icon: FileText, label: 'Ibyifuzo byo Kwiga', color: 'from-green-500 to-teal-500' },
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
+        { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-indigo-500 to-blue-500' }
+      ],
+      dod: [
+        { key: 'parent-applications', icon: UserCheck, label: 'Ibyifuzo by\'Ababyeyi', color: 'from-teal-500 to-cyan-500' },
+        { key: 'discipline-management', icon: Shield, label: 'Gucunga Indero', color: 'from-red-500 to-orange-500' },
+        { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-purple-500 to-violet-500' }
       ]
     };
 

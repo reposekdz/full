@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, TrendingUp, CheckCircle, XCircle, Clock, DollarSign, Users, AlertCircle, Download, Bell, Eye, Plus, RefreshCw, BarChart3, PieChart, Award, TrendingDown } from 'lucide-react';
+import { Search, TrendingUp, CheckCircle, XCircle, Clock, DollarSign, Users, AlertCircle, Download, Bell, Eye, Plus, RefreshCw, BarChart3, PieChart, Award, TrendingDown, MessageSquare, MapPin } from 'lucide-react';
 import AccountantSidebar from '@/app/components/AccountantSidebar';
 import apiService from '@/app/services/apiService';
+import { RWANDA_PROVINCES, getDistrictsForProvince, getSectorsForDistrict } from '@/app/data/rwandaLocations';
 
 const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate }) => {
   const [students, setStudents] = useState<any[]>([]);
@@ -13,6 +14,10 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedTrade, setSelectedTrade] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedSector, setSelectedSector] = useState('');
+  const [smsRemindLoading, setSmsRemindLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showFeesModal, setShowFeesModal] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -28,7 +33,7 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, selectedClass, selectedLevel, selectedTrade, selectedStatus]);
+  }, [students, searchTerm, selectedClass, selectedLevel, selectedTrade, selectedStatus, selectedProvince, selectedDistrict, selectedSector]);
 
   const fetchData = async () => {
     try {
@@ -62,7 +67,27 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
     if (selectedLevel !== 'all') filtered = filtered.filter(s => s.level === selectedLevel);
     if (selectedTrade !== 'all') filtered = filtered.filter(s => s.trade_code === selectedTrade);
     if (selectedStatus !== 'all') filtered = filtered.filter(s => s.payment_status === selectedStatus);
+    if (selectedProvince) filtered = filtered.filter(s => s.province === selectedProvince);
+    if (selectedDistrict) filtered = filtered.filter(s => s.district === selectedDistrict);
+    if (selectedSector) filtered = filtered.filter(s => s.sector === selectedSector);
     setFilteredStudents(filtered);
+  };
+
+  const handleSendSmsRemindUnpaid = async () => {
+    setSmsRemindLoading(true);
+    try {
+      const unpaidIds = filteredStudents.filter(s => s.payment_status === 'unpaid' || s.payment_status === 'partial').map(s => s.id).filter(Boolean);
+      const res = await apiService.sendAccountantSmsRemindUnpaid({ student_ids: unpaidIds.length ? unpaidIds : undefined });
+      if ((res as any)?.success) {
+        alert((res as any).message || `SMS reminders sent to ${(res as any).sent ?? 0} parents.`);
+      } else {
+        alert((res as any)?.message || 'Failed to send SMS reminders.');
+      }
+    } catch (e) {
+      alert('Failed to send SMS reminders. Ensure backend SMS API is configured.');
+    } finally {
+      setSmsRemindLoading(false);
+    }
   };
 
   const handleRecordPayment = async () => {
@@ -190,10 +215,14 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
             </div>
           </div>
 
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-wrap gap-4 mb-6">
             <button onClick={() => setShowAnalytics(!showAnalytics)} className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2">
               <BarChart3 size={20} />
               {showAnalytics ? 'Hisha' : 'Reba'} Isesengura
+            </button>
+            <button onClick={handleSendSmsRemindUnpaid} disabled={smsRemindLoading || stats.unpaidStudents + stats.partialStudents === 0} className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
+              <MessageSquare size={20} />
+              {smsRemindLoading ? 'Ohereza...' : `Ohereza SMS ku Babyeyi (${stats.unpaidStudents + stats.partialStudents} batishyura)`}
             </button>
           </div>
 
@@ -291,7 +320,7 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
           )}
 
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
               <div className="relative md:col-span-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input type="text" placeholder="Shakisha..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
@@ -314,6 +343,21 @@ const EnhancedStudentPayments: React.FC<{ onNavigate?: (page: string) => void }>
                 <RefreshCw size={18} />
                 Kuvugurura
               </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex items-center">
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-1"><MapPin size={16} /> Aho atuye:</span>
+              <select value={selectedProvince} onChange={(e) => { setSelectedProvince(e.target.value); setSelectedDistrict(''); setSelectedSector(''); }} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                <option value="">Intara Yose</option>
+                {RWANDA_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={selectedDistrict} onChange={(e) => { setSelectedDistrict(e.target.value); setSelectedSector(''); }} disabled={!selectedProvince} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:opacity-50">
+                <option value="">Akarere Yose</option>
+                {getDistrictsForProvince(selectedProvince).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={selectedSector} onChange={(e) => setSelectedSector(e.target.value)} disabled={!selectedDistrict} className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:opacity-50">
+                <option value="">Umurenge Wose</option>
+                {getSectorsForDistrict(selectedDistrict).map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
           </div>
 

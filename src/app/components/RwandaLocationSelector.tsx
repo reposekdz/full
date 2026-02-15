@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiService } from '@/app/services/apiService';
+import {
+  getProvincesList,
+  getDistrictsByProvinceId,
+  getSectorsByDistrictId,
+  getCellsBySectorId,
+  getVillagesByCellId,
+} from '@/app/data/rwandaLocations';
 
 interface LocationData {
   id: number;
   name_en: string;
-  name_rw: string;
-  code: string;
+  name_rw?: string;
+  code?: string;
 }
 
 interface RwandaLocationSelectorProps {
@@ -26,6 +33,12 @@ interface RwandaLocationSelectorProps {
   required?: boolean;
 }
 
+const toLocationData = (p: { id: number; name_en: string; name_rw?: string }): LocationData => ({
+  id: p.id,
+  name_en: p.name_en,
+  name_rw: p.name_rw ?? p.name_en,
+});
+
 const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
   onLocationChange,
   initialValues,
@@ -37,62 +50,76 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
   const [cells, setCells] = useState<LocationData[]>([]);
   const [villages, setVillages] = useState<LocationData[]>([]);
 
-  const [selectedProvince, setSelectedProvince] = useState<number | null>(initialValues?.province_id || null);
-  const [selectedDistrict, setSelectedDistrict] = useState<number | null>(initialValues?.district_id || null);
-  const [selectedSector, setSelectedSector] = useState<number | null>(initialValues?.sector_id || null);
-  const [selectedCell, setSelectedCell] = useState<number | null>(initialValues?.cell_id || null);
-  const [selectedVillage, setSelectedVillage] = useState<number | null>(initialValues?.village_id || null);
-
-  const API_URL = 'http://localhost:5000/api';
+  const [selectedProvince, setSelectedProvince] = useState<number | null>(initialValues?.province_id ?? null);
+  const [selectedDistrict, setSelectedDistrict] = useState<number | null>(initialValues?.district_id ?? null);
+  const [selectedSector, setSelectedSector] = useState<number | null>(initialValues?.sector_id ?? null);
+  const [selectedCell, setSelectedCell] = useState<number | null>(initialValues?.cell_id ?? null);
+  const [selectedVillage, setSelectedVillage] = useState<number | null>(initialValues?.village_id ?? null);
 
   useEffect(() => {
-    axios.get(`${API_URL}/locations/provinces`)
-      .then(res => setProvinces(res.data.provinces))
-      .catch(err => console.error('Error loading provinces:', err));
+    apiService.getLocationsProvinces().then((res) => {
+      if (res.success && res.provinces?.length) {
+        setProvinces(res.provinces.map(toLocationData));
+      } else {
+        setProvinces(getProvincesList().map(toLocationData));
+      }
+    });
   }, []);
 
   useEffect(() => {
-    if (selectedProvince) {
-      axios.get(`${API_URL}/locations/districts/${selectedProvince}`)
-        .then(res => setDistricts(res.data.districts))
-        .catch(err => console.error('Error loading districts:', err));
-    } else {
+    if (!selectedProvince) {
       setDistricts([]);
-      setSelectedDistrict(null);
+      return;
     }
+    apiService.getLocationsDistricts(selectedProvince).then((res) => {
+      if (res.success && res.districts?.length) {
+        setDistricts(res.districts.map(toLocationData));
+      } else {
+        setDistricts(getDistrictsByProvinceId(selectedProvince).map(toLocationData));
+      }
+    });
   }, [selectedProvince]);
 
   useEffect(() => {
-    if (selectedDistrict) {
-      axios.get(`${API_URL}/locations/sectors/${selectedDistrict}`)
-        .then(res => setSectors(res.data.sectors))
-        .catch(err => console.error('Error loading sectors:', err));
-    } else {
+    if (!selectedDistrict) {
       setSectors([]);
-      setSelectedSector(null);
+      return;
     }
+    apiService.getLocationsSectors(selectedDistrict).then((res) => {
+      if (res.success && res.sectors?.length) {
+        setSectors(res.sectors.map(toLocationData));
+      } else {
+        setSectors(getSectorsByDistrictId(selectedDistrict).map(toLocationData));
+      }
+    });
   }, [selectedDistrict]);
 
   useEffect(() => {
-    if (selectedSector) {
-      axios.get(`${API_URL}/locations/cells/${selectedSector}`)
-        .then(res => setCells(res.data.cells))
-        .catch(err => console.error('Error loading cells:', err));
-    } else {
+    if (!selectedSector) {
       setCells([]);
-      setSelectedCell(null);
+      return;
     }
+    apiService.getLocationsCells(selectedSector).then((res) => {
+      if (res.success && res.cells?.length) {
+        setCells(res.cells.map(toLocationData));
+      } else {
+        setCells(getCellsBySectorId(selectedSector).map(toLocationData));
+      }
+    });
   }, [selectedSector]);
 
   useEffect(() => {
-    if (selectedCell) {
-      axios.get(`${API_URL}/locations/villages/${selectedCell}`)
-        .then(res => setVillages(res.data.villages))
-        .catch(err => console.error('Error loading villages:', err));
-    } else {
+    if (!selectedCell) {
       setVillages([]);
-      setSelectedVillage(null);
+      return;
     }
+    apiService.getLocationsVillages(selectedCell).then((res) => {
+      if (res.success && res.villages?.length) {
+        setVillages(res.villages.map(toLocationData));
+      } else {
+        setVillages(getVillagesByCellId(selectedCell).map(toLocationData));
+      }
+    });
   }, [selectedCell]);
 
   useEffect(() => {
@@ -112,14 +139,21 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
           Intara / Province {required && <span className="text-red-500">*</span>}
         </label>
         <select
-          value={selectedProvince || ''}
-          onChange={(e) => setSelectedProvince(e.target.value ? Number(e.target.value) : null)}
+          value={selectedProvince ?? ''}
+          onChange={(e) => {
+            const id = e.target.value ? Number(e.target.value) : null;
+            setSelectedProvince(id);
+            setSelectedDistrict(null);
+            setSelectedSector(null);
+            setSelectedCell(null);
+            setSelectedVillage(null);
+          }}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           required={required}
         >
           <option value="">Hitamo Intara / Select Province</option>
-          {provinces.map(p => (
-            <option key={p.id} value={p.id}>{p.name_rw} / {p.name_en}</option>
+          {provinces.map((p) => (
+            <option key={p.id} value={p.id}>{p.name_rw ?? p.name_en} / {p.name_en}</option>
           ))}
         </select>
       </div>
@@ -130,14 +164,20 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
             Akarere / District {required && <span className="text-red-500">*</span>}
           </label>
           <select
-            value={selectedDistrict || ''}
-            onChange={(e) => setSelectedDistrict(e.target.value ? Number(e.target.value) : null)}
+            value={selectedDistrict ?? ''}
+            onChange={(e) => {
+              const id = e.target.value ? Number(e.target.value) : null;
+              setSelectedDistrict(id);
+              setSelectedSector(null);
+              setSelectedCell(null);
+              setSelectedVillage(null);
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required={required}
           >
             <option value="">Hitamo Akarere / Select District</option>
-            {districts.map(d => (
-              <option key={d.id} value={d.id}>{d.name_rw} / {d.name_en}</option>
+            {districts.map((d) => (
+              <option key={d.id} value={d.id}>{d.name_rw ?? d.name_en} / {d.name_en}</option>
             ))}
           </select>
         </div>
@@ -149,13 +189,18 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
             Umurenge / Sector
           </label>
           <select
-            value={selectedSector || ''}
-            onChange={(e) => setSelectedSector(e.target.value ? Number(e.target.value) : null)}
+            value={selectedSector ?? ''}
+            onChange={(e) => {
+              const id = e.target.value ? Number(e.target.value) : null;
+              setSelectedSector(id);
+              setSelectedCell(null);
+              setSelectedVillage(null);
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Hitamo Umurenge / Select Sector</option>
-            {sectors.map(s => (
-              <option key={s.id} value={s.id}>{s.name_rw} / {s.name_en}</option>
+            {sectors.map((s) => (
+              <option key={s.id} value={s.id}>{s.name_rw ?? s.name_en} / {s.name_en}</option>
             ))}
           </select>
         </div>
@@ -167,13 +212,17 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
             Akagari / Cell
           </label>
           <select
-            value={selectedCell || ''}
-            onChange={(e) => setSelectedCell(e.target.value ? Number(e.target.value) : null)}
+            value={selectedCell ?? ''}
+            onChange={(e) => {
+              const id = e.target.value ? Number(e.target.value) : null;
+              setSelectedCell(id);
+              setSelectedVillage(null);
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Hitamo Akagari / Select Cell</option>
-            {cells.map(c => (
-              <option key={c.id} value={c.id}>{c.name_rw} / {c.name_en}</option>
+            {cells.map((c) => (
+              <option key={c.id} value={c.id}>{c.name_rw ?? c.name_en} / {c.name_en}</option>
             ))}
           </select>
         </div>
@@ -185,13 +234,13 @@ const RwandaLocationSelector: React.FC<RwandaLocationSelectorProps> = ({
             Umudugudu / Village
           </label>
           <select
-            value={selectedVillage || ''}
+            value={selectedVillage ?? ''}
             onChange={(e) => setSelectedVillage(e.target.value ? Number(e.target.value) : null)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Hitamo Umudugudu / Select Village</option>
-            {villages.map(v => (
-              <option key={v.id} value={v.id}>{v.name_rw} / {v.name_en}</option>
+            {villages.map((v) => (
+              <option key={v.id} value={v.id}>{v.name_rw ?? v.name_en} / {v.name_en}</option>
             ))}
           </select>
         </div>

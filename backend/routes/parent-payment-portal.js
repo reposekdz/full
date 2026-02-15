@@ -71,7 +71,7 @@ const requireAuth = (req, res, next) => {
   }
   try {
     const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || 'garden-tvet-secret');
-    req.user = decoded;
+    req.user = { ...decoded, id: decoded.id ?? decoded.userId };
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Invalid token' });

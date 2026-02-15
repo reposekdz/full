@@ -9,17 +9,22 @@ import {
   MessageSquare,
   RefreshCw,
   ShieldAlert,
-  Users
+  Users,
+  UserPlus,
+  Loader2
 } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Textarea } from '@/app/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { toast } from 'sonner';
 import { API_BASE_URL } from '@/app/config/apiBase';
+import parentPaymentApi from '@/app/services/parentPaymentApi';
 
 type ChildDashboard = {
   student: {
@@ -41,13 +46,100 @@ const authHeaders = () => {
   return { Authorization: `Bearer ${token}` };
 };
 
+// Kinyarwanda – Parent dashboard (full, parent only)
+const RW = {
+  title: "Poritari y'Umubyeyi",
+  subtitle: "Amajyambere, amafaranga, imyitwarire n'ubutumwa",
+  refresh: "Ongera usuzuma",
+  profile: "Porofili",
+  logout: "Sohoka",
+  linkChild: "Huza Umwana Wawe",
+  linkChildDesc: "Gusaba guhuza umwana wawe na konti. Nyuma y'icyemezo cy'ishuri uza kubona amafaranga, amanota, kujya n'ibindi.",
+  requestSubmitted: "Gusaba byoherejwe.",
+  waitConfirm: "Tegereza ishuri kugira ngo riemeze. Uzabona umwana wawe hano.",
+  studentCode: "Kode cyangwa nimero y'umwana *",
+  relationship: "Isano",
+  parent: "Umubyeyi",
+  guardian: "Umurezi",
+  other: "Ikindi",
+  applyToLink: "Saba guhuza umwana",
+  submitting: "Ohereza...",
+  myChildren: "Abana Banjye",
+  selectChild: "Hitamo umwana",
+  linkAnother: "Huza undi mwana",
+  fees: "Amafaranga",
+  unread: "Ntibasomwe",
+  incidents: "Ibihe",
+  overview: "Incamake",
+  academics: "Amasomo",
+  attendance: "Kujya",
+  discipline: "Imyitwarire",
+  activities: "Ibikorwa",
+  notifications: "Amatangazo",
+  messages: "Ubutumwa",
+  recentGrades: "Amanota vuba",
+  noGrades: "Nta manota.",
+  present: "Yabaye",
+  absent: "Ntayabaye",
+  late: "Yaje nyuma",
+  total: "Igiteranyo",
+  balance: "Gusigara",
+  manageFees: "Gira neza amafaranga",
+  academicPerformance: "Amajyambere mu masomo",
+  subject: "Isomo",
+  grade: "Icyiciro",
+  points: "Amapointe",
+  noAcademicRecords: "Nta makuru y'amasomo.",
+  attendanceRecords: "Amakuru yo kujya",
+  rate: "Igipimo",
+  date: "Itariki",
+  status: "Imiterere",
+  noAttendance: "Nta makuru yo kujya.",
+  noDiscipline: "Nta makuru y'imytwarire.",
+  incident: "Icyabaye",
+  feeStatus: "Imiterere y'amafaranga",
+  totalPaid: "Yishyuwe",
+  totalFees: "Igiteranyo cy'amafaranga",
+  initiatePayment: "Tangira kwishyura",
+  amount: "Amafaranga",
+  phoneMobile: "Telefoni (Mobile Money)",
+  requestPayment: "Saba kwishyura",
+  activitiesAchievements: "Ibikorwa n'icyubahiro",
+  noActivities: "Nta bikorwa.",
+  noAchievements: "Nta cyubahiro.",
+  read: "Yasomwe",
+  unreadBadge: "Ntibasomwe",
+  noNotifications: "Nta matangazo.",
+  sendMessage: "Ohereza ubutumwa",
+  recipientType: "Uwo uohereza",
+  teacher: "Umwarimu",
+  admin: "Admin",
+  recipientId: "ID (bihitamo)",
+  subjectLabel: "Intego",
+  messageLabel: "Ubutumwa",
+  send: "Ohereza",
+  history: "Amakuru",
+  noMessages: "Nta butumwa.",
+  requestLinkAnother: "Saba guhuza undi mwana",
+  submitRequest: "Ohereza gusaba",
+  getReceipt: "Fata risiti",
+  viewReceipt: "Reba risiti",
+  downloadReceipt: "Kuramo risiti",
+  receiptNumber: "Nimero y'irisiti",
+  receiptNotFound: "Risiti ntiboneka.",
+  paymentHistory: "Amakuru yo kwishyura",
+  viewReceiptFor: "Reba risiti",
+};
+
+export interface ParentPortalComprehensiveDashboardProps {
+  onNavigate: (page: string) => void;
+  onLogout: () => void;
+}
+
 export default function ParentPortalComprehensiveDashboard({
   onNavigate,
   onLogout
-}: {
-  onNavigate: (page: string) => void;
-  onLogout: () => void;
-}) {
+}: ParentPortalComprehensiveDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -70,6 +162,11 @@ export default function ParentPortalComprehensiveDashboard({
   const [notifications, setNotifications] = useState<any[]>([]);
   const [communications, setCommunications] = useState<any[]>([]);
 
+  const [linkRequest, setLinkRequest] = useState({ student_code: '', relationship: 'Parent' });
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [linkRequestSent, setLinkRequestSent] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+
   const [commForm, setCommForm] = useState({
     recipient_type: 'Teacher',
     recipient_id: '',
@@ -85,21 +182,86 @@ export default function ParentPortalComprehensiveDashboard({
     fee_type: 'School Fees',
     description: 'School fees payment'
   });
+  const [receiptNumberInput, setReceiptNumberInput] = useState('');
+  const [receiptData, setReceiptData] = useState<any>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [paymentHistoryList, setPaymentHistoryList] = useState<any[]>([]);
 
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/parent-portal-comprehensive/dashboard`, { headers: authHeaders() });
-      const data = await res.json();
-      if (data?.success) {
-        setChildren(data.children || []);
-        const first = (data.children || [])[0];
-        if (first?.student?.id) setSelectedStudentId(String(first.student.id));
+      const [portalRes, linkedRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/parent-portal-comprehensive/dashboard`, { headers: authHeaders() }).then(r => r.json()).catch(() => ({ success: false })),
+        parentPaymentApi.fetchLinkedChildren().then((list) => ({ success: true, linked: list })).catch(() => ({ success: false, linked: [] }))
+      ]);
+
+      const portalChildren: ChildDashboard[] = portalRes?.success ? (portalRes.children || []) : [];
+      const linked = linkedRes?.success && Array.isArray(linkedRes.linked) ? linkedRes.linked : [];
+
+      if (linked.length > 0) {
+        const merged: ChildDashboard[] = linked.map((s: any) => ({
+          student: {
+            id: Number(s.student_id) || s.sheet_id || 0,
+            name: [s.first_name, s.last_name].filter(Boolean).join(' ') || s.student_code,
+            admission_number: s.student_code,
+            class: s.current_class || (s.trade_name && s.level_number ? `${s.trade_name} L${s.level_number}` : undefined)
+          },
+          feeBalance: s.balance,
+          unreadNotifications: 0,
+          recentIncidents: 0,
+          recentGrades: []
+        }));
+        if (portalChildren.length > 0) {
+          const byId = new Map(portalChildren.map(c => [String(c.student.id), c]));
+          merged.forEach(m => {
+            const existing = byId.get(String(m.student.id));
+            if (existing) {
+              m.attendance = existing.attendance;
+              m.recentGrades = existing.recentGrades;
+              m.unreadNotifications = existing.unreadNotifications;
+              m.recentIncidents = existing.recentIncidents;
+            }
+          });
+        }
+        setChildren(merged);
+        if (merged[0]?.student?.id) setSelectedStudentId(String(merged[0].student.id));
+      } else if (portalChildren.length > 0) {
+        setChildren(portalChildren);
+        if (portalChildren[0]?.student?.id) setSelectedStudentId(String(portalChildren[0].student.id));
       } else {
         setChildren([]);
+        setSelectedStudentId('');
       }
+    } catch (e) {
+      console.error(e);
+      setChildren([]);
+      toast.error('Failed to load dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const submitLinkRequest = async () => {
+    if (!linkRequest.student_code?.trim()) {
+      toast.error('Enter your child\'s student code');
+      return;
+    }
+    setLinkSubmitting(true);
+    try {
+      const result = await parentPaymentApi.requestLinkChild(linkRequest.student_code.trim(), linkRequest.relationship);
+      if (result.success) {
+        setLinkRequestSent(true);
+        setLinkRequest({ student_code: '', relationship: 'Parent' });
+        setShowLinkDialog(false);
+        toast.success('Request sent. You will see your child here once the school confirms the link.');
+      } else {
+        toast.error(result.message || 'Request failed');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to submit request');
+    } finally {
+      setLinkSubmitting(false);
     }
   };
 
@@ -126,6 +288,13 @@ export default function ParentPortalComprehensiveDashboard({
       setActivities(act?.success ? act : null);
       setNotifications(n?.success ? n.notifications || [] : []);
       setCommunications(c?.success ? c.communications || [] : []);
+
+      try {
+        const history = await parentPaymentApi.fetchPaymentHistory(sid);
+        setPaymentHistoryList(Array.isArray(history) ? history : []);
+      } catch {
+        setPaymentHistoryList([]);
+      }
     } catch (e) {
       console.error('Parent portal fetch error:', e);
     }
@@ -170,11 +339,42 @@ export default function ParentPortalComprehensiveDashboard({
         await fetchSelected();
         setActiveTab('communications');
       } else {
-        alert(data?.message || 'Failed to send message');
+        toast.error(data?.message || 'Failed to send message');
       }
     } catch (e: any) {
-      alert(e?.message || 'Failed to send message');
+      toast.error(e?.message || 'Failed to send message');
     }
+  };
+
+  const viewOrDownloadReceipt = async (receiptNum?: string) => {
+    const num = (receiptNum ?? receiptNumberInput)?.trim();
+    if (!num) {
+      toast.error(RW.receiptNumber + ' - Ongera usuzuma');
+      return;
+    }
+    setReceiptLoading(true);
+    setReceiptData(null);
+    setReceiptDialogOpen(true);
+    try {
+      const receipt = await parentPaymentApi.getReceipt(num);
+      setReceiptData(receipt);
+    } catch (e: any) {
+      toast.error(e?.message || RW.receiptNotFound);
+      setReceiptData(null);
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const printReceipt = () => {
+    const printEl = document.getElementById('receipt-print-area');
+    if (!printEl) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(printEl.innerHTML);
+    win.document.close();
+    win.print();
+    win.close();
   };
 
   const initiatePayment = async () => {
@@ -195,15 +395,15 @@ export default function ParentPortalComprehensiveDashboard({
       });
       const data = await res.json();
       if (data?.success) {
-        alert('Payment request created');
+        toast.success('Payment request created');
         setPaymentForm((p) => ({ ...p, amount: '' }));
         await fetchSelected();
         setActiveTab('fees');
       } else {
-        alert(data?.message || 'Failed to initiate payment');
+        toast.error(data?.message || 'Failed to initiate payment');
       }
     } catch (e: any) {
-      alert(e?.message || 'Failed to initiate payment');
+      toast.error(e?.message || 'Failed to initiate payment');
     }
   };
 
@@ -221,37 +421,88 @@ export default function ParentPortalComprehensiveDashboard({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-              Parent Portal (Comprehensive)
+              {RW.title}
             </h1>
-            <p className="text-gray-600 font-semibold">Real-time academics, attendance, fees, discipline, communication</p>
+            <p className="text-gray-600 font-semibold">{RW.subtitle}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={refreshAll} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              {RW.refresh}
             </Button>
             <Button variant="outline" onClick={() => onNavigate('profile')}>
-              Profile
+              {RW.profile}
             </Button>
             <Button onClick={onLogout} className="bg-gradient-to-r from-red-500 to-orange-500 text-white">
-              Logout
+              {RW.logout}
             </Button>
           </div>
         </div>
 
+        {children.length === 0 ? (
+          <Card className="border-2 border-amber-200 shadow-xl bg-gradient-to-br from-amber-50 to-yellow-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-amber-600" />
+                {RW.linkChild}
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                {RW.linkChildDesc}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-md">
+              {linkRequestSent ? (
+                <div className="p-4 rounded-xl bg-green-100 border border-green-200 text-green-800">
+                  <p className="font-medium">{RW.requestSubmitted}</p>
+                  <p className="text-sm mt-1">{RW.waitConfirm}</p>
+                </div>
+              ) : null}
+              <div>
+                <Label>{RW.studentCode}</Label>
+                <Input
+                  placeholder="e.g. STD12025001"
+                  value={linkRequest.student_code}
+                  onChange={(e) => setLinkRequest({ ...linkRequest, student_code: e.target.value })}
+                  className="border-2 mt-1"
+                />
+              </div>
+              <div>
+                <Label>{RW.relationship}</Label>
+                <Select value={linkRequest.relationship} onValueChange={(v) => setLinkRequest({ ...linkRequest, relationship: v })}>
+                  <SelectTrigger className="border-2 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Parent">{RW.parent}</SelectItem>
+                    <SelectItem value="Guardian">{RW.guardian}</SelectItem>
+                    <SelectItem value="Other">{RW.other}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-white"
+                onClick={submitLinkRequest}
+                disabled={linkSubmitting || !linkRequest.student_code.trim()}
+              >
+                {linkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {RW.submitting}</> : <><UserPlus className="h-4 w-4 mr-2" /> {RW.applyToLink}</>}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
         <Card className="border-2 border-yellow-200 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-yellow-600" />
-              My Children
+              {RW.myChildren}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col md:flex-row gap-4 md:items-end">
             <div className="flex-1">
-              <Label>Select Child</Label>
+              <Label>{RW.selectChild}</Label>
               <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                 <SelectTrigger className="border-2">
-                  <SelectValue placeholder="Select student..." />
+                  <SelectValue placeholder={RW.selectChild} />
                 </SelectTrigger>
                 <SelectContent>
                   {children.map((c) => (
@@ -262,11 +513,16 @@ export default function ParentPortalComprehensiveDashboard({
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)} title={RW.requestLinkAnother}>
+                <UserPlus className="h-4 w-4 mr-1" /> {RW.linkAnother}
+              </Button>
+            </div>
             {selectedChild && (
               <div className="flex flex-wrap gap-2">
-                <Badge className="bg-green-100 text-green-700">Fees: {Number(selectedChild.feeBalance || 0).toLocaleString()}</Badge>
-                <Badge className="bg-blue-100 text-blue-700">Unread: {selectedChild.unreadNotifications || 0}</Badge>
-                <Badge className="bg-red-100 text-red-700">Incidents: {selectedChild.recentIncidents || 0}</Badge>
+                <Badge className="bg-green-100 text-green-700">{RW.fees}: {Number(selectedChild.feeBalance || 0).toLocaleString()} RWF</Badge>
+                <Badge className="bg-blue-100 text-blue-700">{RW.unread}: {selectedChild.unreadNotifications || 0}</Badge>
+                <Badge className="bg-red-100 text-red-700">{RW.incidents}: {selectedChild.recentIncidents || 0}</Badge>
               </div>
             )}
           </CardContent>
@@ -275,14 +531,14 @@ export default function ParentPortalComprehensiveDashboard({
         {selectedChild && (
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
             <TabsList className="grid grid-cols-4 md:grid-cols-8 w-full bg-white border">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="academics">Academics</TabsTrigger>
-              <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="discipline">Discipline</TabsTrigger>
-              <TabsTrigger value="fees">Fees</TabsTrigger>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="communications">Messages</TabsTrigger>
+              <TabsTrigger value="overview">{RW.overview}</TabsTrigger>
+              <TabsTrigger value="academics">{RW.academics}</TabsTrigger>
+              <TabsTrigger value="attendance">{RW.attendance}</TabsTrigger>
+              <TabsTrigger value="discipline">{RW.discipline}</TabsTrigger>
+              <TabsTrigger value="fees">{RW.fees}</TabsTrigger>
+              <TabsTrigger value="activities">{RW.activities}</TabsTrigger>
+              <TabsTrigger value="notifications">{RW.notifications}</TabsTrigger>
+              <TabsTrigger value="communications">{RW.messages}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
@@ -291,7 +547,7 @@ export default function ParentPortalComprehensiveDashboard({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BookOpen className="w-5 h-5 text-blue-600" />
-                      Recent Grades
+                      {RW.recentGrades}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -301,7 +557,7 @@ export default function ParentPortalComprehensiveDashboard({
                         <Badge className="bg-blue-600 text-white">{g.grade}</Badge>
                       </div>
                     ))}
-                    {(selectedChild.recentGrades || []).length === 0 && <p className="text-gray-500">No grades yet.</p>}
+                    {(selectedChild.recentGrades || []).length === 0 && <p className="text-gray-500">{RW.noGrades}</p>}
                   </CardContent>
                 </Card>
 
@@ -309,14 +565,14 @@ export default function ParentPortalComprehensiveDashboard({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-green-600" />
-                      Attendance (30 days)
+                      {RW.attendance} (iminsi 30)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <div className="flex justify-between"><span>Present</span><b>{selectedChild.attendance?.present_days || 0}</b></div>
-                    <div className="flex justify-between"><span>Absent</span><b>{selectedChild.attendance?.absent_days || 0}</b></div>
-                    <div className="flex justify-between"><span>Late</span><b>{selectedChild.attendance?.late_days || 0}</b></div>
-                    <div className="flex justify-between"><span>Total</span><b>{selectedChild.attendance?.total_days || 0}</b></div>
+                    <div className="flex justify-between"><span>{RW.present}</span><b>{selectedChild.attendance?.present_days || 0}</b></div>
+                    <div className="flex justify-between"><span>{RW.absent}</span><b>{selectedChild.attendance?.absent_days || 0}</b></div>
+                    <div className="flex justify-between"><span>{RW.late}</span><b>{selectedChild.attendance?.late_days || 0}</b></div>
+                    <div className="flex justify-between"><span>{RW.total}</span><b>{selectedChild.attendance?.total_days || 0}</b></div>
                   </CardContent>
                 </Card>
 
@@ -324,13 +580,13 @@ export default function ParentPortalComprehensiveDashboard({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-yellow-600" />
-                      Fees
+                      {RW.fees}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <div className="flex justify-between"><span>Balance</span><b>{Number(selectedChild.feeBalance || 0).toLocaleString()}</b></div>
+                    <div className="flex justify-between"><span>{RW.balance}</span><b>{Number(selectedChild.feeBalance || 0).toLocaleString()}</b></div>
                     <Button className="w-full bg-gradient-to-r from-yellow-500 to-green-500 text-white" onClick={() => setActiveTab('fees')}>
-                      Manage Fees
+                      {RW.manageFees}
                     </Button>
                   </CardContent>
                 </Card>
@@ -449,13 +705,13 @@ export default function ParentPortalComprehensiveDashboard({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-yellow-600" />
-                      Fee Status
+                      {RW.feeStatus}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <div className="flex justify-between"><span>Balance</span><b>{Number(fees?.fee_balance || 0).toLocaleString()}</b></div>
-                    <div className="flex justify-between"><span>Total paid</span><b>{Number(fees?.total_paid || 0).toLocaleString()}</b></div>
-                    <div className="flex justify-between"><span>Total fees</span><b>{Number(fees?.total_fees || 0).toLocaleString()}</b></div>
+                    <div className="flex justify-between"><span>{RW.balance}</span><b>{Number(fees?.fee_balance || 0).toLocaleString()}</b></div>
+                    <div className="flex justify-between"><span>{RW.totalPaid}</span><b>{Number(fees?.total_paid || 0).toLocaleString()}</b></div>
+                    <div className="flex justify-between"><span>{RW.totalFees}</span><b>{Number(fees?.total_fees || 0).toLocaleString()}</b></div>
                   </CardContent>
                 </Card>
 
@@ -463,24 +719,125 @@ export default function ParentPortalComprehensiveDashboard({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="w-5 h-5 text-green-600" />
-                      Initiate Payment
+                      {RW.initiatePayment}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <Label>Amount</Label>
-                      <Input value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} />
+                      <Label>{RW.amount}</Label>
+                      <Input value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} placeholder="RWF" />
                     </div>
                     <div>
-                      <Label>Phone (Mobile Money)</Label>
-                      <Input value={paymentForm.phone} onChange={(e) => setPaymentForm({ ...paymentForm, phone: e.target.value })} />
+                      <Label>{RW.phoneMobile}</Label>
+                      <Input value={paymentForm.phone} onChange={(e) => setPaymentForm({ ...paymentForm, phone: e.target.value })} placeholder="078..." />
                     </div>
                     <Button className="w-full bg-gradient-to-r from-yellow-500 to-green-500 text-white" onClick={initiatePayment}>
-                      Request Payment
+                      {RW.requestPayment}
                     </Button>
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="border-2 border-blue-200 mt-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    {RW.getReceipt} / {RW.viewReceipt}
+                  </CardTitle>
+                  <CardDescription>Injiza nimero y'irisiti hanyuma ukande Reba cyangwa Kuramo (print).</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex-1 min-w-[200px]">
+                      <Label>{RW.receiptNumber}</Label>
+                      <Input
+                        value={receiptNumberInput}
+                        onChange={(e) => setReceiptNumberInput(e.target.value)}
+                        placeholder="RCP-..."
+                        onKeyDown={(e) => e.key === 'Enter' && viewOrDownloadReceipt()}
+                      />
+                    </div>
+                    <Button onClick={() => viewOrDownloadReceipt()} disabled={receiptLoading}>
+                      {receiptLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
+                      {RW.viewReceipt}
+                    </Button>
+                    {receiptData && (
+                      <Button variant="outline" onClick={printReceipt}>
+                        {RW.downloadReceipt}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {paymentHistoryList.length > 0 && (
+                <Card className="border-2 border-gray-200 mt-4">
+                  <CardHeader>
+                    <CardTitle>{RW.paymentHistory}</CardTitle>
+                    <CardDescription>Hitamo kwishyura hanyuma ukande &quot;{RW.viewReceipt}&quot; kugira ngo urebe risiti.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-2">Itariki</th>
+                            <th className="text-left p-2">Amafaranga</th>
+                            <th className="text-left p-2">Uburyo</th>
+                            <th className="text-left p-2">Risiti</th>
+                            <th className="text-left p-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paymentHistoryList.map((p: any) => (
+                            <tr key={p.id} className="border-b">
+                              <td className="p-2">{p.payment_date ? String(p.payment_date).slice(0, 10) : '-'}</td>
+                              <td className="p-2">{Number(p.amount || 0).toLocaleString()} RWF</td>
+                              <td className="p-2">{p.bank_name || p.payment_method || '-'}</td>
+                              <td className="p-2 font-mono">{p.receipt_number || '-'}</td>
+                              <td className="p-2">
+                                {p.receipt_number && (
+                                  <Button variant="outline" size="sm" onClick={() => { setReceiptNumberInput(p.receipt_number); viewOrDownloadReceipt(p.receipt_number); }}>
+                                    {RW.viewReceipt}
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Dialog open={receiptDialogOpen} onOpenChange={setReceiptDialogOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>{RW.viewReceipt}</DialogTitle>
+                  </DialogHeader>
+                  <div id="receipt-print-area" className="bg-white text-black p-6 rounded-lg border">
+                    {receiptLoading && <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}
+                    {!receiptLoading && receiptData && (
+                      <div className="space-y-2 text-sm">
+                        <p className="font-bold text-lg border-b pb-2">Risiti yo Kwishyura</p>
+                        <p><span className="font-medium">Nimero y'irisiti:</span> {receiptData.receipt_number}</p>
+                        <p><span className="font-medium">Umwana:</span> {receiptData.first_name} {receiptData.last_name} ({receiptData.student_code})</p>
+                        <p><span className="font-medium">Amafaranga:</span> {Number(receiptData.amount || 0).toLocaleString()} RWF</p>
+                        {receiptData.fee_amount != null && <p><span className="font-medium">Igiciro:</span> {Number(receiptData.fee_amount).toLocaleString()} RWF</p>}
+                        <p><span className="font-medium">Itariki:</span> {receiptData.payment_date ? String(receiptData.payment_date).slice(0, 10) : '-'}</p>
+                        <p><span className="font-medium">Uburyo:</span> {receiptData.payment_method || '-'}</p>
+                        <p><span className="font-medium">Imiterere:</span> {receiptData.status || 'completed'}</p>
+                      </div>
+                    )}
+                    {!receiptLoading && !receiptData && !receiptNumberInput && <p className="text-gray-500">{RW.receiptNumber} - Injiza nimero.</p>}
+                    {!receiptLoading && !receiptData && receiptNumberInput && <p className="text-gray-500">{RW.receiptNotFound}</p>}
+                  </div>
+                  {receiptData && (
+                    <Button className="w-full mt-4" onClick={printReceipt}>{RW.downloadReceipt}</Button>
+                  )}
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="activities">
@@ -609,6 +966,36 @@ export default function ParentPortalComprehensiveDashboard({
             </TabsContent>
           </Tabs>
         )}
+          </>
+        )}
+
+        <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{RW.requestLinkAnother}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label>{RW.studentCode}</Label>
+                <Input placeholder="STD12025001" value={linkRequest.student_code} onChange={(e) => setLinkRequest({ ...linkRequest, student_code: e.target.value })} className="border-2 mt-1" />
+              </div>
+              <div>
+                <Label>{RW.relationship}</Label>
+                <Select value={linkRequest.relationship} onValueChange={(v) => setLinkRequest({ ...linkRequest, relationship: v })}>
+                  <SelectTrigger className="border-2 mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Parent">{RW.parent}</SelectItem>
+                    <SelectItem value="Guardian">{RW.guardian}</SelectItem>
+                    <SelectItem value="Other">{RW.other}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-white" onClick={submitLinkRequest} disabled={linkSubmitting || !linkRequest.student_code.trim()}>
+                {linkSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {RW.submitting}</> : RW.submitRequest}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

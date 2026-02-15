@@ -140,25 +140,29 @@ router.get('/reminder-history', authenticateToken, async (req, res) => {
   }
 });
 
-// Configure auto-reminder settings
+// Configure auto-reminder settings (accountant can set remind parent after X days)
 router.post('/auto-reminder-settings', authenticateToken, async (req, res) => {
   try {
-    const { enabled, frequency, minBalance, time } = req.body;
+    const { enabled, frequency, minBalance, time, remind_after_days } = req.body;
     await pool.query(
       'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-      ['fee_reminder_enabled', enabled, enabled]
+      ['fee_reminder_enabled', enabled != null ? String(enabled) : 'true', enabled != null ? String(enabled) : 'true']
     );
     await pool.query(
       'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-      ['fee_reminder_frequency', frequency, frequency]
+      ['fee_reminder_frequency', frequency || 'daily', frequency || 'daily']
     );
     await pool.query(
       'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-      ['fee_reminder_min_balance', minBalance, minBalance]
+      ['fee_reminder_min_balance', minBalance != null ? String(minBalance) : '0', minBalance != null ? String(minBalance) : '0']
     );
     await pool.query(
       'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-      ['fee_reminder_time', time, time]
+      ['fee_reminder_time', time || '09:00', time || '09:00']
+    );
+    await pool.query(
+      'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+      ['fee_reminder_remind_after_days', remind_after_days != null ? String(remind_after_days) : '7', remind_after_days != null ? String(remind_after_days) : '7']
     );
     res.json({ success: true, message: 'Settings updated' });
   } catch (error) {

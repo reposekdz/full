@@ -320,16 +320,19 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
 
 
                     {selectedRole === 'parent' && (
-                      <div className="mt-4 text-center">
+                      <div className="mt-4 text-center space-y-2">
                         <p className="text-sm text-gray-600">
-                          Don't have an account?{' '}
+                          {language === 'rw' ? "Nta konti ufite?" : "Don't have an account?"}{' '}
                           <button
                             type="button"
-                            onClick={() => onNavigate('register')}
+                            onClick={() => onNavigate('parent-register')}
                             className="text-green-600 hover:text-green-700 font-semibold"
                           >
-                            Register here
+                            {language === 'rw' ? "Iyandikisha nk'Umubyeyi" : "Register as Parent"}
                           </button>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {language === 'rw' ? "Injiza telefoni, izina ry'umwana, urwego n'umwuga. Tegereza icyemezo cy'umukozi." : "Enter phone, student name, level & trade. Wait for staff approval."}
                         </p>
                       </div>
                     )}

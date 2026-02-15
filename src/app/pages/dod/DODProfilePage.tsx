@@ -8,7 +8,11 @@ import { Label } from '@/app/components/ui/label';
 import { useAuth } from '@/app/contexts/AuthContext';
 import RwandaLocationSelector from '@/app/components/RwandaLocationSelector';
 
-const DODProfilePage = () => {
+interface DODProfilePageProps {
+  onNavigate?: (page: string) => void;
+}
+
+const DODProfilePage: React.FC<DODProfilePageProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);

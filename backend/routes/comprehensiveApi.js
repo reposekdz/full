@@ -2,10 +2,22 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const {
+  getAdminDashboardData,
+  getHeadmasterDashboardData,
+  getDirectorStudyDashboardData,
+  getDirectorDisciplineDashboardData,
+  getTeacherDashboardData,
+  getStudentDashboardData,
+  getParentDashboardData,
+  getAccountantDashboardData,
+  getStockManagerDashboardData,
+  getAdvisorDashboardData
+} = require('../helpers/dashboardData');
 
 const router = express.Router();
 
-// ============================== DASHBOARD APIs (10 APIs) ===============================
+// ============================== DASHBOARD APIs (role-based real data) ===============================
 router.get('/dashboard/overview', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -25,6 +37,7 @@ router.get('/dashboard/overview', authenticateToken, async (req, res) => {
         data = await getDirectorStudyDashboardData();
         break;
       case 'director_discipline':
+      case 'dod':
         data = await getDirectorDisciplineDashboardData();
         break;
       case 'teacher':
@@ -42,6 +55,11 @@ router.get('/dashboard/overview', authenticateToken, async (req, res) => {
       case 'stock_manager':
         data = await getStockManagerDashboardData();
         break;
+      case 'advisor':
+        data = await getAdvisorDashboardData(userId);
+        break;
+      default:
+        data = await getAdminDashboardData();
     }
 
     res.json({ success: true, data });

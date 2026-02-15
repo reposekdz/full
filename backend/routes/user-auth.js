@@ -123,9 +123,12 @@ router.post('/parent/register', async (req, res) => {
       student_first_name, student_last_name, student_trade, student_level, student_id, relationship_type
     } = req.body;
     
-    const [existingEmail] = await connection.execute('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingEmail.length > 0) {
-      return res.status(400).json({ success: false, message: 'Email already registered' });
+    const emailVal = (email && String(email).trim()) || null;
+    if (emailVal) {
+      const [existingEmail] = await connection.execute('SELECT id FROM users WHERE email = ?', [emailVal]);
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ success: false, message: 'Email already registered' });
+      }
     }
     
     const [existingPhone] = await connection.execute('SELECT id FROM users WHERE phone = ?', [phone]);
@@ -139,7 +142,7 @@ router.post('/parent/register', async (req, res) => {
     const [result] = await connection.execute(`
       INSERT INTO users (username, email, password_hash, first_name, last_name, phone, address, date_of_birth, gender, national_id, role, is_active, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'parent', true, NOW())
-    `, [username, email, hashedPassword, first_name, last_name, phone, address, date_of_birth, gender, national_id]);
+    `, [username, emailVal, hashedPassword, first_name, last_name, phone, address || null, date_of_birth || null, gender || null, national_id || null]);
     
     const parentId = result.insertId;
     
@@ -220,6 +223,51 @@ router.post('/parent/login', async (req, res) => {
         last_name: user.last_name,
         linked_children: children[0].count
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Change password (parent, student, all roles using users table)
+const jwtAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access token required' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { userId: decoded.userId, id: decoded.userId, role: decoded.role };
+    next();
+  } catch (err) {
+    return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+  }
+};
+
+router.put('/change-password', jwtAuth, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+    const [users] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const valid = await bcrypt.compare(current_password, users[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.execute('UPDATE users SET password_hash = ?, updated_at = COALESCE(updated_at, NOW()) WHERE id = ?', [hashed, userId]);
+    return res.json({
+      success: true,
+      message: 'Password changed successfully. You can sign in with your new password.'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

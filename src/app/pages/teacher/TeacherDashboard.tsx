@@ -30,7 +30,9 @@ import {
   UserX,
   RefreshCw,
   MoreVertical,
-  Check
+  Check,
+  ShieldAlert,
+  FileWarning
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -66,6 +68,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [conductRecords, setConductRecords] = useState<any[]>([]);
+  const [conductLoading, setConductLoading] = useState(false);
+  const [conductClassFilter, setConductClassFilter] = useState<number | ''>('');
+  const [conductReportForm, setConductReportForm] = useState<{ classId: number | ''; studentId: string; description: string; severity: string }>({ classId: '', studentId: '', description: '', severity: 'minor' });
+  const [conductReportStudents, setConductReportStudents] = useState<any[]>([]);
+  const [conductReportSubmitting, setConductReportSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -76,6 +84,57 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
       fetchClassStudents(selectedClassId);
     }
   }, [selectedClassId]);
+
+  const fetchConduct = async () => {
+    try {
+      setConductLoading(true);
+      const classId = conductClassFilter || undefined;
+      const res = await apiService.getTeacherConduct(classId);
+      setConductRecords(res?.records ?? []);
+    } catch (e) {
+      setConductRecords([]);
+    } finally {
+      setConductLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'conduct') fetchConduct();
+  }, [activeTab, conductClassFilter]);
+
+  useEffect(() => {
+    if (!conductReportForm.classId) {
+      setConductReportStudents([]);
+      setConductReportForm(f => ({ ...f, studentId: '' }));
+      return;
+    }
+    apiService.getTeacherPortalClassStudents(Number(conductReportForm.classId))
+      .then((r: any) => {
+        const list = r?.students ?? [];
+        setConductReportStudents(list);
+        setConductReportForm(f => ({ ...f, studentId: '' }));
+      })
+      .catch(() => setConductReportStudents([]));
+  }, [conductReportForm.classId]);
+
+  const submitConductReport = async () => {
+    if (!conductReportForm.classId || !conductReportForm.studentId || !conductReportForm.description.trim()) return;
+    try {
+      setConductReportSubmitting(true);
+      await apiService.submitTeacherConduct({
+        student_id: conductReportForm.studentId,
+        class_id: Number(conductReportForm.classId),
+        description: conductReportForm.description.trim(),
+        severity: conductReportForm.severity || 'minor'
+      });
+      setConductReportForm({ classId: '', studentId: '', description: '', severity: 'minor' });
+      fetchConduct();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setConductReportSubmitting(false);
+    }
+  };
 
   const handleViewClass = (classId: number) => {
     setSelectedClassId(classId);
@@ -318,7 +377,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="flex items-center justify-between">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 bg-white border-2 border-yellow-200 p-1 gap-1">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 bg-white border-2 border-yellow-200 p-1 gap-1">
                 <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                   Incamake
                 </TabsTrigger>
@@ -333,6 +392,9 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
                 </TabsTrigger>
                 <TabsTrigger value="attendance" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                   Kwitabira
+                </TabsTrigger>
+                <TabsTrigger value="conduct" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
+                  Imyitwarire
                 </TabsTrigger>
                 <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                   Abanyeshuri
@@ -777,6 +839,159 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onNavigate, onLogou
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="conduct" className="space-y-6">
+              <Card className="border-2 border-yellow-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldAlert className="h-5 w-5 text-amber-600" />
+                    Imyitwarire (Conduct) – Raporo ziri mu database
+                  </CardTitle>
+                  <CardDescription>Reba raporo z'imyitwarire n'utanga izishya. Zose zibikwa mu database.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700">Filtre ikilasi:</label>
+                    <select
+                      className="bg-white border-2 border-yellow-200 rounded-md p-2 text-sm"
+                      value={conductClassFilter}
+                      onChange={(e) => setConductClassFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                    >
+                      <option value="">Zose</option>
+                      {teacherClasses.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <Button variant="outline" size="sm" onClick={fetchConduct} disabled={conductLoading}>
+                      <RefreshCw className={`h-4 w-4 mr-1 ${conductLoading ? 'animate-spin' : ''}`} />
+                      Kuvugurura
+                    </Button>
+                  </div>
+                  {conductLoading ? (
+                    <div className="flex justify-center py-8"><RefreshCw className="h-8 w-8 animate-spin text-yellow-600" /></div>
+                  ) : (
+                    <div className="rounded-lg border overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-yellow-50 border-b-2 border-yellow-200">
+                          <tr>
+                            <th className="p-3 text-left">Umwana</th>
+                            <th className="p-3 text-left">Itariki</th>
+                            <th className="p-3 text-left">Ibisobanuro</th>
+                            <th className="p-3 text-left">Ubukana</th>
+                            <th className="p-3 text-left">Status</th>
+                            <th className="p-3 text-left">Ibikorwa</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {conductRecords.length === 0 ? (
+                            <tr><td colSpan={6} className="p-6 text-center text-gray-500">Nta raporo z'imyitwarire.</td></tr>
+                          ) : (
+                            conductRecords.map((r: any) => (
+                              <tr key={r.id} className="border-b border-yellow-100 hover:bg-yellow-50/50">
+                                <td className="p-3">{r.student_name ?? `${r.student_code ?? r.student_id}`}</td>
+                                <td className="p-3">{r.incident_date ? new Date(r.incident_date).toLocaleDateString() : '-'}</td>
+                                <td className="p-3 max-w-xs truncate">{r.description ?? '-'}</td>
+                                <td className="p-3"><Badge variant={r.severity === 'major' || r.severity === 'severe' ? 'destructive' : 'secondary'}>{r.severity ?? 'minor'}</Badge></td>
+                                <td className="p-3">{r.status ?? 'pending'}</td>
+                                <td className="p-3">
+                                  {r.status === 'pending' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-red-600 border-red-200 hover:bg-red-50"
+                                      onClick={async () => {
+                                        try {
+                                          await apiService.deleteTeacherConduct(r.id);
+                                          fetchConduct();
+                                        } catch (e) { console.error(e); }
+                                      }}
+                                    >
+                                      Cancel / Sibanguka
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileWarning className="h-5 w-5 text-amber-600" />
+                    Tanga raporo nshya (bikwa mu database)
+                  </CardTitle>
+                  <CardDescription>Hitamo ikilasi, umwana, bisobanuro n'ubukana. DOD azasuzuma.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ikilasi</label>
+                      <select
+                        className="w-full bg-white border-2 border-yellow-200 rounded-md p-2 text-sm"
+                        value={conductReportForm.classId}
+                        onChange={(e) => setConductReportForm(f => ({ ...f, classId: e.target.value === '' ? '' : Number(e.target.value) }))}
+                      >
+                        <option value="">Hitamo ikilasi</option>
+                        {teacherClasses.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Umwana</label>
+                      <select
+                        className="w-full bg-white border-2 border-yellow-200 rounded-md p-2 text-sm"
+                        value={conductReportForm.studentId}
+                        onChange={(e) => setConductReportForm(f => ({ ...f, studentId: e.target.value }))}
+                        disabled={!conductReportForm.classId}
+                      >
+                        <option value="">Hitamo umwana</option>
+                        {conductReportStudents.map((s: any) => (
+                          <option key={String(s.id ?? s.student_id)} value={String(s.id ?? s.student_id)}>{(s.full_name ?? `${(s.first_name ?? '')} ${(s.last_name ?? '')}`.trim()) || s.student_id}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ibisobanuro</label>
+                    <textarea
+                      className="w-full bg-white border-2 border-yellow-200 rounded-md p-2 text-sm min-h-[80px]"
+                      placeholder="Sobanura icyaha cy'umwana..."
+                      value={conductReportForm.description}
+                      onChange={(e) => setConductReportForm(f => ({ ...f, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ubukana</label>
+                      <select
+                        className="bg-white border-2 border-yellow-200 rounded-md p-2 text-sm"
+                        value={conductReportForm.severity}
+                        onChange={(e) => setConductReportForm(f => ({ ...f, severity: e.target.value }))}
+                      >
+                        <option value="minor">Minor</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="major">Major</option>
+                        <option value="severe">Severe</option>
+                      </select>
+                    </div>
+                    <Button
+                      className="mt-6 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
+                      onClick={submitConductReport}
+                      disabled={conductReportSubmitting || !conductReportForm.classId || !conductReportForm.studentId || !conductReportForm.description.trim()}
+                    >
+                      {conductReportSubmitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <FileWarning className="h-4 w-4 mr-2" />}
+                      Ohereza raporo
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

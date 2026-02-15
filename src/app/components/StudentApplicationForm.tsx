@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Send, CheckCircle, AlertCircle, FileText, User, Phone, Mail, MapPin, Users, GraduationCap, BookOpen, Upload, Calendar, Clock, Star, Award, Target, Shield, Search, ChevronDown, Trash2 } from 'lucide-react';
 import { API_BASE_URL } from '@/app/config/apiBase';
 import RwandaLocationTextInput from './RwandaLocationTextInput';
+import { toast } from 'sonner';
 
 interface ApplicationFormProps {
   onClose?: () => void;
@@ -296,26 +297,33 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
       formDataToSend.append('application_date', new Date().toISOString().split('T')[0]);
       formDataToSend.append('status', 'pending');
 
-      const response = await fetch(`${API_BASE_URL}/student-applications-production/submit`, {
+      let response = await fetch(`${API_BASE_URL}/student-applications-production/submit`, {
         method: 'POST',
         body: formDataToSend
       });
-
-      const data = await response.json();
+      let data = await response.json();
+      if (!data.success) {
+        response = await fetch(`${API_BASE_URL}/student-applications/submit`, {
+          method: 'POST',
+          body: formDataToSend
+        });
+        data = await response.json();
+      }
 
       if (data.success) {
-        setApplicationNumber(data.data.application_number);
+        setApplicationNumber(data.data?.application_number || data.application_number || '');
         setSubmitted(true);
+        toast.success("Byakunze! Ibyifuzo byawe byakiriwe neza.");
       } else {
         if (data.errors && Array.isArray(data.errors)) {
-          alert('Habaye amakosa:\n' + data.errors.join('\n'));
+          toast.error('Habaye amakosa: ' + data.errors.join(', '));
         } else {
-          alert(data.message || 'Habaye ikosa. Ongera ugerageze.');
+          toast.error(data.message || 'Habaye ikosa. Ongera ugerageze.');
         }
       }
     } catch (error) {
       console.error('Submission error:', error);
-      alert('Habaye ikosa. Ongera ugerageze.');
+      toast.error('Habaye ikosa. Ongera ugerageze.');
     } finally {
       setLoading(false);
       setIsValidating(false);

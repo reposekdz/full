@@ -39,6 +39,14 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { toast } from 'sonner';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 import { BottomNav } from '@/app/components/BottomNav';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
+const API_BASE = API_BASE_URL;
+
+function authHeaders(): HeadersInit {
+  const t = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -167,9 +175,10 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, gradient, index
 
 interface DODDashboardAdvancedProps {
   onNavigate: (page: string) => void;
+  onLogout?: () => void;
 }
 
-const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate }) => {
+const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -217,23 +226,16 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const API_URL = 'http://localhost:5000';
-      
-      // Fetch students with parent info
-      const studentsRes = await fetch(`${API_URL}/api/dod-complete/students/all`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const [studentsRes, statsRes] = await Promise.all([
+        fetch(`${API_BASE}/dod-complete/students/all`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/dod-complete/statistics`, { headers: authHeaders() })
+      ]);
       const studentsData = await studentsRes.json();
-      if (studentsData.success) {
+      const statsData = await statsRes.json();
+      if (studentsData?.success && Array.isArray(studentsData.students)) {
         setStudents(studentsData.students);
       }
-
-      // Fetch statistics
-      const statsRes = await fetch(`${API_URL}/api/dod-complete/statistics`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const statsData = await statsRes.json();
-      if (statsData.success) {
+      if (statsData?.success && statsData.stats) {
         setStats(statsData.stats);
       }
     } catch (error) {
@@ -257,14 +259,12 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
 
     const newScore = selectedStudent.conduct_score - conductForm.conduct_points_deducted;
 
-    const API_URL = 'http://localhost:5000';
-    
     try {
-      const response = await fetch(`${API_URL}/api/dod-complete/conduct/remove`, {
+      const response = await fetch(`${API_BASE}/dod-complete/conduct/remove`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          ...authHeaders()
         },
         body: JSON.stringify({
           student_id: selectedStudent.id,
@@ -305,15 +305,10 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
       return;
     }
 
-    const API_URL = 'http://localhost:5000';
-    
     try {
-      const response = await fetch(`${API_URL}/api/dod-complete/leave/grant`, {
+      const response = await fetch(`${API_BASE}/dod-complete/leave/grant`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           student_id: selectedStudent.id,
           ...leaveForm
@@ -356,15 +351,10 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
       return;
     }
 
-    const API_URL = 'http://localhost:5000';
-    
     try {
-      const response = await fetch(`${API_URL}/api/dod-complete/message-parents`, {
+      const response = await fetch(`${API_BASE}/dod-complete/message-parents`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           ...messageForm,
           student_ids: studentIds
@@ -402,15 +392,10 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
       return;
     }
 
-    const API_URL = 'http://localhost:5000';
-    
     try {
-      const response = await fetch(`${API_URL}/api/dod-complete/message-all-parents`, {
+      const response = await fetch(`${API_BASE}/dod-complete/message-all-parents`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(messageForm)
       });
 
@@ -613,6 +598,17 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate 
               </TooltipTrigger>
               <TooltipContent>Settings</TooltipContent>
             </Tooltip>
+            {onLogout && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={onLogout} className="text-red-600 border-red-200 hover:bg-red-50">
+                    <LogOut className="size-[18px] mr-1" />
+                    Logout
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Logout</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </header>
 

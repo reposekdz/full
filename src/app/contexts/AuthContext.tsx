@@ -22,13 +22,15 @@ interface User {
   last_name: string;
   student_id?: string;
   user_type: 'admin' | 'user';
+  /** When true, user must change email/password before using the app (e.g. after login with static credentials). */
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (username: string, password: string) => Promise<{ success: boolean; dashboardPage?: string }>;
-  loginWithRole: (role: UserRole, credentials?: { email: string; password: string }) => Promise<{ success: boolean; dashboardPage?: string }>;
+  loginWithRole: (role: UserRole, credentials?: { email: string; password: string }) => Promise<{ success: boolean; dashboardPage?: string; token?: string; user?: User }>;
   updateProfile: (data: { email?: string; password?: string; first_name?: string; last_name?: string }) => Promise<boolean>;
   register: (userData: any) => Promise<boolean>;
   registerRole: (roleData: {
@@ -39,7 +41,7 @@ interface AuthContextType {
     first_name: string;
     last_name: string;
     phone?: string;
-  }) => Promise<{ success: boolean; dashboardPage?: string; message?: string }>;
+  }) => Promise<{ success: boolean; dashboardPage?: string; message?: string; token?: string; user?: User }>;
   setAuthFromRegistration: (token: string, user: User) => string;
   logout: () => void;
   loading: boolean;
@@ -87,7 +89,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (response.ok) {
             const data = await response.json();
             if (data.success) {
-              setUser(data.user);
+              const u = data.user as User;
+              // Backend already sets must_change_password, just use it
+              setUser(u);
               setToken(savedToken);
             } else {
               localStorage.removeItem('token');
@@ -122,19 +126,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await response.json();
       
       if (data.success) {
-        setUser(data.user);
+        const user = data.user as User;
+        // Backend already sets must_change_password, just use it
+        setUser(user);
         setToken(data.token);
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        const dashboardPage = getRoleDashboard(data.user.role);
-        
-        if (data.user.role === 'parent') {
+        localStorage.setItem('user', JSON.stringify(user));
+        const dashboardPage = getRoleDashboard(user.role);
+        if (user.role === 'parent') {
           setTimeout(() => {
             window.location.href = `/${dashboardPage}`;
           }, 100);
         }
-        
         return { success: true, dashboardPage };
       } else {
         console.error('Login failed:', data.message);
@@ -146,49 +149,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithRole = async (role: UserRole, credentials?: { email: string; password: string }): Promise<{ success: boolean; dashboardPage?: string }> => {
-    if (credentials) {
+  const loginWithRole = async (role: UserRole, credentials?: { email: string; password: string }): Promise<{ success: boolean; dashboardPage?: string; token?: string; user?: User }> => {
+    if (credentials?.email && credentials?.password) {
       try {
-        const response = await fetch(`${API_BASE}/role-auth/login-role`, {
+        let response = await fetch(`${API_BASE}/role-auth/login-role`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             roleName: role,
             email: credentials.email,
             password: credentials.password
           })
         });
+        let data = await response.json();
 
-        const data = await response.json();
-        
-        if (data.success) {
-          setUser(data.user);
-          setToken(data.token);
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          const dashboardPage = getRoleDashboard(data.user.role);
-          
-          if (data.user.role === 'parent') {
-            setTimeout(() => {
-              window.location.href = `/${dashboardPage}`;
-            }, 100);
-          }
-          
-          return { success: true, dashboardPage };
-        } else {
-          console.error('Role login failed:', data.message);
-          return { success: false };
+        if (!data.success && (role === 'parent' || response.status === 404)) {
+          response = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: credentials.email, password: credentials.password, role })
+          });
+          data = await response.json();
         }
+
+        if (data.success && data.user) {
+          const user = data.user as User;
+          const tok = data.token || data.accessToken;
+          // Backend already sets must_change_password, just use it
+          setUser(user);
+          setToken(tok);
+          if (tok) localStorage.setItem('token', tok);
+          localStorage.setItem('user', JSON.stringify(user));
+          const dashboardPage = getRoleDashboard(user.role);
+          return { success: true, dashboardPage, token: tok, user };
+        }
+        return { success: false };
       } catch (error) {
         console.error('Role login error:', error);
         return { success: false };
       }
     }
-    
-    return login(UNIFIED_EMAIL, UNIFIED_PASSWORD);
+    return login(UNIFIED_EMAIL, UNIFIED_PASSWORD).then(async (r) => {
+      if (!r.success) return { ...r, token: undefined, user: undefined };
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      // Backend already sets must_change_password, just use it
+      setUser(u);
+      return { success: true, dashboardPage: r.dashboardPage, token: undefined, user: u };
+    });
   };
 
   const updateProfile = async (data: { email?: string; password?: string; first_name?: string; last_name?: string }): Promise<boolean> => {
@@ -248,37 +255,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     first_name: string;
     last_name: string;
     phone?: string;
-  }): Promise<{ success: boolean; dashboardPage?: string; message?: string }> => {
+  }): Promise<{ success: boolean; dashboardPage?: string; message?: string; token?: string; user?: User }> => {
     try {
-      const response = await fetch(`${API_BASE}/role-auth/register-role`, {
+      let response = await fetch(`${API_BASE}/role-auth/register-role`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(roleData)
       });
+      let data = await response.json();
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        const dashboardPage = getRoleDashboard(data.user.role);
-        
-        if (data.user.role === 'parent') {
-          setTimeout(() => {
-            window.location.href = `/${dashboardPage}`;
-          }, 100);
-        }
-        
-        return { success: true, dashboardPage };
-      } else {
-        console.error('Role registration failed:', data.message);
-        return { success: false, message: data.message };
+      if (!data.success && (roleData.roleName === 'parent' || response.status === 404)) {
+        response = await fetch(`${API_BASE}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: roleData.email,
+            password: roleData.password,
+            first_name: roleData.first_name,
+            last_name: roleData.last_name,
+            phone: roleData.phone,
+            role: roleData.roleName
+          })
+        });
+        data = await response.json();
       }
+
+      if (data.success && data.user) {
+        const user = data.user;
+        const tok = data.token || data.accessToken;
+        setUser(user);
+        setToken(tok);
+        if (tok) localStorage.setItem('token', tok);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        const dashboardPage = getRoleDashboard(user.role);
+        return { success: true, dashboardPage, token: tok, user };
+      }
+      return { success: false, message: data.message || 'Registration failed' };
     } catch (error) {
       console.error('Role registration error:', error);
       return { success: false, message: 'Network error. Please try again.' };

@@ -658,39 +658,22 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
             </CardHeader>
             <CardContent className="p-6">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'register')} className="w-full">
-                {(selectedRole === 'parent') ? (
-                  <div className="mb-6">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-800 font-medium">
-                        {selectedRole === 'parent' ? 'Parent registration requires additional information.' : 'Registration requires additional information.'}
-                      </p>
-                      <Button
-                        type="button"
-                        onClick={() => onNavigate('register')}
-                        className="mt-3 bg-blue-500 hover:bg-blue-600 text-white"
-                      >
-                        Go to Registration Page
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
-                    <TabsTrigger
-                      value="login"
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white transition-all"
-                    >
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Login
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="register"
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Register
-                    </TabsTrigger>
-                  </TabsList>
-                )}
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
+                  <TabsTrigger
+                    value="login"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white transition-all"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="register"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Register
+                  </TabsTrigger>
+                </TabsList>
 
                 {/* Message Alert */}
                 <AnimatePresence mode="wait">
@@ -736,10 +719,7 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
                             className="pl-10 border-2 border-gray-200 focus:border-yellow-400 h-12 transition-colors"
                             {...loginForm.register('email', { 
                               required: 'Email is required',
-                              pattern: {
-                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                message: 'Invalid email address'
-                              }
+                              minLength: { value: 2, message: 'Enter your email or login' }
                             })}
                           />
                         </div>
