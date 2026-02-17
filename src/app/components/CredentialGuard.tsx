@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ForceCredentialChangeForm from './ForceCredentialChangeForm';
+import { API_BASE_URL } from '@/app/config/apiBase';
+
 
 interface CredentialGuardProps {
   children: React.ReactNode;
@@ -31,7 +33,7 @@ const CredentialGuard: React.FC<CredentialGuardProps> = ({ children }) => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -41,16 +43,23 @@ const CredentialGuard: React.FC<CredentialGuardProps> = ({ children }) => {
         const result = await response.json();
         if (result.success && result.user) {
           setUserInfo(result.user);
-          
+
           // Check if user needs to change credentials
-          const mustChange = result.user.must_change_password === true || 
-                           result.user.must_change_password === 1;
-          
-          // Also check for default email
-          const defaultEmail = 'reponse@gmail.com';
-          const hasDefaultEmail = result.user.email === defaultEmail || 
-                                 result.user.email === 'reponsekdz06@gmail.com';
-          
+          const mustChange = result.user.must_change_password === true ||
+            result.user.must_change_password === 1;
+
+          const defaultEmails = [
+            'reponse@gmail.com',
+            'reponsekdz06@gmail.com',
+            'dod@reponsekdz06.com',
+            'accountant@reponsekdz06@gmail.com',
+            'dos@reponsekdz06.com',
+            'advisor@reponsekdz06.com',
+            'headmaster@reponsekdz06.com',
+            'stockmanager@reponsekdz06.com'
+          ];
+          const hasDefaultEmail = defaultEmails.includes((result.user.email || '').trim().toLowerCase());
+
           setNeedsCredentialChange(mustChange || hasDefaultEmail);
         }
       } else if (response.status === 401) {

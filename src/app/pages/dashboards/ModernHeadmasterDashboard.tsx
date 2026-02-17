@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { School, Users, TrendingUp, DollarSign, BookOpen, Shield, Calendar, BarChart3, Plus, Search, Filter, Download, Eye, CheckCircle2, AlertCircle, Target, Activity, GraduationCap, MessageSquare, Award, Clock, Bell, Settings, Zap, TrendingDown, UserCheck, FileText, PieChart, LineChart } from 'lucide-react';
+import { School, Users, TrendingUp, DollarSign, Shield, Calendar, BarChart3, Download, CheckCircle2, AlertCircle, Target, Activity, GraduationCap, MessageSquare, Award, Clock, Bell, Settings, Zap, TrendingDown, UserCheck, PieChart, Package, LogOut, BookOpen, UserPlus, ClipboardList, Award as MedalIcon, Users2, BookMarked, FileText, BarChart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
+import { ScrollArea } from '@/app/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import apiService from '@/app/services/apiService';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 
@@ -15,17 +17,36 @@ interface ModernHeadmasterDashboardProps {
   onLogout?: () => void;
 }
 
-export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: ModernHeadmasterDashboardProps = {}) {
+export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: ModernHeadmasterDashboardProps) {
+  const handleSettingsClick = () => {
+    if (onNavigate) {
+      onNavigate('settings');
+    }
+  };
+
+  const handleLogoutClick = () => {
+    if (onLogout) {
+      onLogout();
+    }
+  };
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [reports, setReports] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [reportType, setReportType] = useState('academic');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notifications, setNotifications] = useState(12);
+  const [notifications] = useState(12);
   const [liveStats, setLiveStats] = useState({ online: 0, active: 0 });
+
+  // Enhanced state for advanced features
+  const [staff, setStaff] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [levels, setLevels] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -38,8 +59,42 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [overviewData] = await Promise.all([apiService.getHeadmasterOverview()]);
+      const [overviewData, staffData, studentsData, tradesData, levelsData, activitiesData] = await Promise.all([
+        apiService.getHeadmasterOverview(),
+        apiService.getUsers({ role: 'teacher', limit: 20 }),
+        apiService.getStudents({ limit: 50 }),
+        apiService.getAllTrades(),
+        apiService.getAllLevels(),
+        apiService.getDashboardRecentActivities()
+      ]);
       setOverview(overviewData.data);
+      if (staffData.success) setStaff(staffData.data || []);
+      if (studentsData.success) setStudents(studentsData.data || []);
+      if (tradesData.success) setTrades(tradesData.trades || []);
+      if (levelsData.success) setLevels(levelsData.levels || []);
+      if (activitiesData.success) setRecentActivities(activitiesData.data || []);
+
+      // Generate alerts from overview data
+      const newAlerts = [];
+      if (overviewData.data?.stock_stats) {
+        const lowStock = overviewData.data.stock_stats.find((s: any) => s.stat_name === 'low_stock_items');
+        if (lowStock && lowStock.stat_value > 0) {
+          newAlerts.push({ type: 'warning', msg: `Low stock: ${lowStock.stat_value} items need restocking`, time: 'Just now', id: 1 });
+        }
+      }
+      if (overviewData.data?.discipline_stats) {
+        const pendingLeaves = overviewData.data.discipline_stats.find((s: any) => s.stat_name === 'pending_leaves');
+        if (pendingLeaves && pendingLeaves.stat_value > 0) {
+          newAlerts.push({ type: 'info', msg: `${pendingLeaves.stat_value} leave requests pending approval`, time: '1h ago', id: 2 });
+        }
+      }
+      if (overviewData.data?.academic_stats) {
+        const avgPerf = overviewData.data.academic_stats.find((s: any) => s.stat_name === 'avg_performance');
+        if (avgPerf && avgPerf.stat_value < 70) {
+          newAlerts.push({ type: 'error', msg: 'Average performance below target', time: '2h ago', id: 3 });
+        }
+      }
+      setAlerts(newAlerts);
     } catch (error) {
       console.error('Failed to fetch headmaster data:', error);
     } finally {
@@ -75,14 +130,78 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
   }
 
   const statCards = [
-    { title: 'Total Students', value: overview?.total_students || 0, icon: Users, color: 'from-blue-500 to-cyan-500', bg: 'bg-gradient-to-br from-blue-50 to-cyan-50', trend: '+12%', trendUp: true },
-    { title: 'Total Teachers', value: overview?.total_teachers || 0, icon: GraduationCap, color: 'from-green-500 to-emerald-500', bg: 'bg-gradient-to-br from-green-50 to-emerald-50', trend: '+5%', trendUp: true },
-    { title: 'Total Staff', value: overview?.total_staff || 0, icon: UserCheck, color: 'from-orange-500 to-amber-500', bg: 'bg-gradient-to-br from-orange-50 to-amber-50', trend: '+3%', trendUp: true },
-    { title: 'Academic Avg', value: `${(overview?.academic_avg || 0).toFixed(1)}%`, icon: Award, color: 'from-purple-500 to-pink-500', bg: 'bg-gradient-to-br from-purple-50 to-pink-50', trend: '+8%', trendUp: true },
-    { title: 'Attendance Rate', value: '94.5%', icon: CheckCircle2, color: 'from-teal-500 to-green-500', bg: 'bg-gradient-to-br from-teal-50 to-green-50', trend: '+2%', trendUp: true },
-    { title: 'Active Classes', value: '48', icon: BookOpen, color: 'from-indigo-500 to-purple-500', bg: 'bg-gradient-to-br from-indigo-50 to-purple-50', trend: '+6', trendUp: true },
-    { title: 'Revenue (RWF)', value: '45.2M', icon: DollarSign, color: 'from-yellow-500 to-orange-500', bg: 'bg-gradient-to-br from-yellow-50 to-orange-50', trend: '+15%', trendUp: true },
-    { title: 'Satisfaction', value: '4.8/5', icon: Target, color: 'from-rose-500 to-red-500', bg: 'bg-gradient-to-br from-rose-50 to-red-50', trend: '+0.3', trendUp: true }
+    {
+      title: 'Total Students',
+      value: overview?.academic_stats?.find((s: any) => s.stat_name === 'total_students')?.stat_value || 0,
+      icon: Users,
+      color: 'from-blue-500 to-cyan-500',
+      bg: 'bg-gradient-to-br from-blue-50 to-cyan-50',
+      trend: '+12%',
+      trendUp: true
+    },
+    {
+      title: 'Total Teachers',
+      value: overview?.hr_stats?.find((s: any) => s.stat_name === 'total_teachers')?.stat_value || 0,
+      icon: GraduationCap,
+      color: 'from-green-500 to-emerald-500',
+      bg: 'bg-gradient-to-br from-green-50 to-emerald-50',
+      trend: '+5%',
+      trendUp: true
+    },
+    {
+      title: 'Pending Leaves',
+      value: overview?.discipline_stats?.find((s: any) => s.stat_name === 'pending_leaves')?.stat_value || 0,
+      icon: Clock,
+      color: 'from-orange-500 to-amber-500',
+      bg: 'bg-gradient-to-br from-orange-50 to-amber-50',
+      trend: 'New',
+      trendUp: true
+    },
+    {
+      title: 'General Avg',
+      value: `${(overview?.academic_stats?.find((s: any) => s.stat_name === 'avg_performance')?.stat_value || 0).toFixed(1)}%`,
+      icon: Award,
+      color: 'from-purple-500 to-pink-500',
+      bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
+      trend: '+8%',
+      trendUp: true
+    },
+    {
+      title: 'Attendance Rate',
+      value: '94.5%',
+      icon: CheckCircle2,
+      color: 'from-teal-500 to-green-500',
+      bg: 'bg-gradient-to-br from-teal-50 to-green-50',
+      trend: '+2%',
+      trendUp: true
+    },
+    {
+      title: 'Low Stock Items',
+      value: overview?.stock_stats?.find((s: any) => s.stat_name === 'low_stock_items')?.stat_value || 0,
+      icon: Package,
+      color: 'from-indigo-500 to-purple-500',
+      bg: 'bg-gradient-to-br from-indigo-50 to-purple-50',
+      trend: 'Alert',
+      trendUp: false
+    },
+    {
+      title: 'Total Revenue',
+      value: `${((overview?.finance_stats?.find((s: any) => s.stat_name === 'total_collections')?.stat_value || 0) / 1000000).toFixed(1)}M`,
+      icon: DollarSign,
+      color: 'from-yellow-500 to-orange-500',
+      bg: 'bg-gradient-to-br from-yellow-50 to-orange-50',
+      trend: '+15%',
+      trendUp: true
+    },
+    {
+      title: 'Satisfaction',
+      value: '4.8/5',
+      icon: Target,
+      color: 'from-rose-500 to-red-500',
+      bg: 'bg-gradient-to-br from-rose-50 to-red-50',
+      trend: '+0.3',
+      trendUp: true
+    }
   ];
 
   return (
@@ -95,7 +214,7 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
           <div>
-            <motion.h1 
+            <motion.h1
               initial={{ x: -50 }}
               animate={{ x: 0 }}
               className="text-5xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent mb-2"
@@ -166,9 +285,15 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
               </DialogContent>
             </Dialog>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="outline" className="border-purple-500 text-purple-400 hover:bg-purple-500/10">
+              <Button variant="outline" className="border-purple-500 text-purple-400 hover:bg-purple-500/10" onClick={handleSettingsClick}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-500/10" onClick={handleLogoutClick}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
             </motion.div>
           </div>
@@ -218,7 +343,7 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
                   <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="p-6 relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                      <motion.div 
+                      <motion.div
                         whileHover={{ rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.5 }}
                         className={`p-3 rounded-2xl bg-gradient-to-br ${stat.color} shadow-lg`}
@@ -230,7 +355,7 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
                         {stat.trend}
                       </Badge>
                     </div>
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.5 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: index * 0.1 + 0.2 }}
@@ -251,10 +376,12 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
           <div className="flex flex-wrap gap-2 bg-slate-800/50 backdrop-blur-xl p-2 rounded-2xl border border-purple-500/30">
             {[
               { id: 'overview', icon: BarChart3, label: 'Overview' },
+              { id: 'staff', icon: Users, label: 'Staff' },
+              { id: 'students', icon: GraduationCap, label: 'Students' },
+              { id: 'trades', icon: BookOpen, label: 'Trades' },
               { id: 'messaging', icon: MessageSquare, label: 'Messaging' },
               { id: 'financial', icon: DollarSign, label: 'Financial' },
               { id: 'discipline', icon: Shield, label: 'Discipline' },
-              { id: 'attendance', icon: Calendar, label: 'Attendance' },
               { id: 'analytics', icon: PieChart, label: 'Analytics' }
             ].map((tab) => {
               const TabIcon = tab.icon;
@@ -264,11 +391,10 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
                   onClick={() => setActiveTab(tab.id)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`px-6 py-3 font-semibold rounded-xl transition-all flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/50'
-                      : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
-                  }`}
+                  className={`px-6 py-3 font-semibold rounded-xl transition-all flex items-center gap-2 ${activeTab === tab.id
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/50'
+                    : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
                 >
                   <TabIcon className="h-4 w-4" />
                   {tab.label}
@@ -344,11 +470,10 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
                         transition={{ delay: i * 0.1 }}
                         className="flex items-start gap-3 p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors"
                       >
-                        <div className={`h-2 w-2 rounded-full mt-2 ${
-                          alert.type === 'warning' ? 'bg-yellow-400' :
+                        <div className={`h-2 w-2 rounded-full mt-2 ${alert.type === 'warning' ? 'bg-yellow-400' :
                           alert.type === 'info' ? 'bg-blue-400' :
-                          alert.type === 'success' ? 'bg-green-400' : 'bg-red-400'
-                        }`} />
+                            alert.type === 'success' ? 'bg-green-400' : 'bg-red-400'
+                          }`} />
                         <div className="flex-1">
                           <p className="text-sm text-gray-300">{alert.msg}</p>
                           <p className="text-xs text-gray-500 mt-1">{alert.time}</p>
@@ -361,6 +486,147 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
             </motion.div>
           )}
 
+          {activeTab === 'staff' && (
+            <motion.div
+              key="staff"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">Staff Management</h2>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search staff..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                  <Button className="bg-gradient-to-r from-purple-600 to-blue-600">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Staff
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {staff.length > 0 ? staff.slice(0, 12).map((member: any, i: number) => (
+                  <motion.div key={i} whileHover={{ scale: 1.02 }}>
+                    <Card className="bg-slate-800 border-purple-500/30 text-white">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                            {member.first_name?.[0]}{member.last_name?.[0]}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{member.first_name} {member.last_name}</p>
+                            <p className="text-sm text-gray-400">{member.email}</p>
+                            <Badge className="mt-1 bg-purple-500/20 text-purple-300">{member.role || 'Teacher'}</Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )) : (
+                  <div className="col-span-full text-center text-gray-400 py-8">
+                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No staff data available</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'students' && (
+            <motion.div
+              key="students"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">Student Management</h2>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search students..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                  <Button className="bg-gradient-to-r from-green-600 to-teal-600">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {students.length > 0 ? students.slice(0, 20).map((student: any, i: number) => (
+                  <motion.div key={i} whileHover={{ scale: 1.02 }}>
+                    <Card className="bg-slate-800 border-blue-500/30 text-white">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
+                            {student.first_name?.[0]}{student.last_name?.[0]}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm truncate">{student.first_name} {student.last_name}</p>
+                            <p className="text-xs text-gray-400">{student.student_code || 'N/A'}</p>
+                            {student.trade_name && <Badge className="mt-1 bg-blue-500/20 text-blue-300 text-xs">{student.trade_name}</Badge>}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )) : (
+                  <div className="col-span-full text-center text-gray-400 py-8">
+                    <GraduationCap className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No student data available</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'trades' && (
+            <motion.div
+              key="trades"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-bold text-white mb-4">Trades & Levels Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {trades.length > 0 ? trades.map((trade: any, i: number) => (
+                  <motion.div key={i} whileHover={{ scale: 1.02 }}>
+                    <Card className="bg-slate-800 border-green-500/30 text-white">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5 text-green-400" />
+                          {trade.trade_name || trade.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-400 text-sm mb-2">Code: {trade.trade_code || trade.code}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {trade.levels?.slice(0, 5).map((level: any, j: number) => (
+                            <Badge key={j} className="bg-green-500/20 text-green-300">L{level.level_number}</Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )) : (
+                  <div className="col-span-full text-center text-gray-400 py-8">
+                    <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No trades data available</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'messaging' && (
             <motion.div
               key="messaging"
@@ -368,7 +634,7 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <UnifiedMessaging />
+              <UnifiedMessaging userRole="headmaster" />
             </motion.div>
           )}
 

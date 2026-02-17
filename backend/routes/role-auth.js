@@ -10,6 +10,12 @@ const router = express.Router();
 // Create role_credentials table if it doesn't exist
 const initializeRoleCredentials = async () => {
   try {
+    // Test if pool is available first
+    if (!pool || !pool.execute) {
+      console.warn('⚠️ Database pool not available, skipping role credentials initialization');
+      return;
+    }
+    
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS role_credentials (
         id INT AUTO_INCREMENT PRIMARY KEY,

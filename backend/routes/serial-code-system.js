@@ -467,7 +467,7 @@ router.post('/bulk-generate', authenticateToken, requireRole(['dos', 'admin', 'h
         }
         
         const serialCode = generateSerialCode(
-          student.trade_code, 
+          student.code, 
           student.level_number, 
           student.level_suffix || ''
         );
@@ -479,7 +479,7 @@ router.post('/bulk-generate', authenticateToken, requireRole(['dos', 'admin', 'h
           ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR))`,
           [
             serialCode, studentId, student.student_code, 
-            student.trade_code, student.level_number, student.level_suffix || '',
+            student.code, student.level_number, student.level_suffix || '',
             req.user.id
           ]
         );

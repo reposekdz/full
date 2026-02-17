@@ -19,9 +19,9 @@ const upload = multer({ storage });
 
 // Health check endpoint
 router.get('/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    status: 'ok', 
+  res.json({
+    success: true,
+    status: 'ok',
     message: 'Authentication service is running',
     timestamp: new Date().toISOString()
   });
@@ -55,7 +55,7 @@ router.post('/login', [
     if (adminUsers.length > 0) {
       user = adminUsers[0];
       isValidPassword = await bcrypt.compare(password, user.password);
-      
+
       if (isValidPassword) {
         const token = jwt.sign(
           { userId: user.id, username: user.username, role: user.role },
@@ -97,7 +97,7 @@ router.post('/login', [
     if (users.length > 0) {
       user = users[0];
       isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
+
       if (isValidPassword) {
         const token = jwt.sign(
           { userId: user.id, username: user.username, role: user.role_name },
@@ -105,8 +105,18 @@ router.post('/login', [
           { expiresIn: process.env.JWT_EXPIRE }
         );
 
-        const defaultStaffEmail = process.env.UNIFIED_STAFF_EMAIL || 'reponse@gmail.com';
-        const isDefaultEmail = (user.email || '').trim() === defaultStaffEmail;
+        const defaultEmails = [
+          'reponse@gmail.com',
+          'reponsekdz06@gmail.com',
+          'dod@reponsekdz06.com',
+          'accountant@reponsekdz06@gmail.com',
+          'dos@reponsekdz06.com',
+          'advisor@reponsekdz06.com',
+          'headmaster@reponsekdz06.com',
+          'stockmanager@reponsekdz06.com'
+        ];
+        const userEmail = (user.email || '').trim().toLowerCase();
+        const isDefaultEmail = defaultEmails.includes(userEmail);
         const mustChangeFromDb = user.must_change_password === 1 || user.must_change_password === true;
         const mustChange = mustChangeFromDb || isDefaultEmail;
         if (isDefaultEmail && !mustChangeFromDb) {
@@ -258,7 +268,7 @@ router.post('/login/parent', [
     if (parents.length > 0) {
       parent = parents[0];
       isValidPassword = await bcrypt.compare(password, parent.password_hash);
-      
+
       if (isValidPassword) {
         const token = jwt.sign(
           { userId: parent.id, username: parent.username, role: 'parent' },
@@ -306,7 +316,7 @@ router.post('/login/parent', [
     if (users.length > 0) {
       parent = users[0];
       isValidPassword = await bcrypt.compare(password, parent.password_hash);
-      
+
       if (isValidPassword) {
         const token = jwt.sign(
           { userId: parent.id, username: parent.username, role: 'parent' },
@@ -927,7 +937,7 @@ router.post('/register/parent', [
 
     // Send welcome message via WhatsApp/SMS
     const welcomeMessage = `Muraho ${first_name} ${last_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umubyeyi yafunguwe neza. Mushobora gukurikirana imyigire y'abana banyu hano.`;
-    
+
     smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
       type: 'parent_registration',
       parentId: parent_id,
@@ -1134,7 +1144,16 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     let user = null;
 
-    const defaultStaffEmail = process.env.UNIFIED_STAFF_EMAIL || 'reponse@gmail.com';
+    const defaultEmails = [
+      'reponse@gmail.com',
+      'reponsekdz06@gmail.com',
+      'dod@reponsekdz06.com',
+      'accountant@reponsekdz06@gmail.com',
+      'dos@reponsekdz06.com',
+      'advisor@reponsekdz06.com',
+      'headmaster@reponsekdz06.com',
+      'stockmanager@reponsekdz06.com'
+    ];
 
     // Try admin_users first
     const [adminUsers] = await pool.execute(
@@ -1148,7 +1167,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       user = {
         ...au,
         user_type: 'admin',
-        must_change_password: dbMustChange || (au.email || '').trim() === defaultStaffEmail
+        must_change_password: dbMustChange || defaultEmails.includes((au.email || '').trim().toLowerCase())
       };
     } else {
       const [users] = await pool.execute(`
@@ -1170,7 +1189,7 @@ router.get('/me', authenticateToken, async (req, res) => {
           student_id: u0.student_id,
           role: u0.role_name,
           user_type: 'user',
-          must_change_password: dbMustChange || ((u0.email || '').trim() === defaultStaffEmail)
+          must_change_password: dbMustChange || defaultEmails.includes((u0.email || '').trim().toLowerCase())
         };
         delete user.password_hash;
       }
@@ -1379,7 +1398,7 @@ router.put('/change-password', [
         'SELECT password_hash FROM users WHERE id = ?',
         [userId]
       );
-      
+
       if (users.length > 0) {
         currentHashedPassword = users[0].password_hash;
         updateTable = 'users';
@@ -1459,7 +1478,7 @@ router.post('/login/student', [
 
     const user = users[0];
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -1536,7 +1555,7 @@ router.post('/login/parent', [
 
     const user = users[0];
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -1640,7 +1659,7 @@ router.post('/register/parent-phone', [
     const [parentRole] = await pool.execute(
       'SELECT id FROM roles WHERE name = "parent"'
     );
-    
+
     if (parentRole.length === 0) {
       return res.status(500).json({
         success: false,
@@ -1656,8 +1675,8 @@ router.post('/register/parent-phone', [
         username, email, password_hash, first_name, last_name, phone, address, 
         district, province, relationship_type, role_id, is_active
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)
-    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, address, 
-        district, province, relationship_type, parentRole[0].id]);
+    `, [username, parentEmail, hashedPassword, first_name, last_name, phone, address,
+      district, province, relationship_type, parentRole[0].id]);
 
     const token = jwt.sign(
       { userId: result.insertId, username, role: 'parent' },

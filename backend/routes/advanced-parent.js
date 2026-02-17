@@ -58,7 +58,7 @@ router.get('/students', verifyParent, async (req, res) => {
     const [students] = await pool.execute(`
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.student_id, u.date_of_birth,
-        t.trade_name, t.trade_code, u.level,
+        t.name, t.code, u.level,
         ps.relationship_type,
         (SELECT AVG(g.grade) FROM grades g WHERE g.student_id = u.id) as average_grade,
         (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id AND a.status = 'present') * 100.0 / 
@@ -69,7 +69,7 @@ router.get('/students', verifyParent, async (req, res) => {
         (SELECT COUNT(*) FROM behavior_records WHERE student_id = u.id AND type = 'negative') as negative_behavior
       FROM parent_student ps
       JOIN users u ON ps.student_id = u.id
-      LEFT JOIN trades t ON u.trade_code = t.trade_code
+      LEFT JOIN trades t ON u.trade_code = t.code
       WHERE ps.parent_id = ? AND ps.status = 'active'
     `, [req.userId]);
     

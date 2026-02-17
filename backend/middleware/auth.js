@@ -6,15 +6,15 @@ const authenticateToken = async (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Access token required' 
+    return res.status(401).json({
+      success: false,
+      message: 'Access token required'
     });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
     // First try admin_users table (for backward compatibility)
     let [users] = await pool.execute(
       'SELECT id, username, email, role, NULL as phone FROM admin_users WHERE id = ?',
@@ -22,19 +22,19 @@ const authenticateToken = async (req, res, next) => {
     );
 
     if (users.length === 0) {
-      // Try users table with role information
+      // Try users table with role information - also check the role column directly
       [users] = await pool.execute(`
-        SELECT u.id, u.username, u.email, u.phone, r.name as role, u.first_name, u.last_name, u.student_id
+        SELECT u.id, u.username, u.email, u.phone, COALESCE(r.name, u.role) as role, u.first_name, u.last_name, u.student_id
         FROM users u
-        JOIN roles r ON u.role_id = r.id
+        LEFT JOIN roles r ON u.role_id = r.id
         WHERE u.id = ? AND u.is_active = true
       `, [decoded.userId]);
     }
 
     if (users.length === 0) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found or inactive' 
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or inactive'
       });
     }
 
@@ -53,9 +53,9 @@ const authenticateToken = async (req, res, next) => {
     };
     next();
   } catch (error) {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Invalid or expired token' 
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid or expired token'
     });
   }
 };
@@ -67,8 +67,8 @@ const requireRole = (...roles) => {
       .filter(Boolean);
 
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
+      return res.status(403).json({
+        success: false,
         message: 'Insufficient permissions',
         required_roles: allowedRoles,
         user_role: req.user?.role || 'none'
@@ -82,9 +82,9 @@ const requireRole = (...roles) => {
 const requirePermission = (permission) => {
   return async (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required' 
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
       });
     }
 
@@ -110,8 +110,8 @@ const requirePermission = (permission) => {
       `, [req.user.id, permission, req.user.id, permission]);
 
       if (permissions.length === 0) {
-        return res.status(403).json({ 
-          success: false, 
+        return res.status(403).json({
+          success: false,
           message: 'Insufficient permissions',
           required_permission: permission,
           user_role: req.user.role
@@ -121,9 +121,9 @@ const requirePermission = (permission) => {
       next();
     } catch (error) {
       console.error('Permission check error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Permission check failed' 
+      return res.status(500).json({
+        success: false,
+        message: 'Permission check failed'
       });
     }
   };

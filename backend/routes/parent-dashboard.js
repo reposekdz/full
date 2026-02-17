@@ -3,15 +3,155 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
-// Get student linked to parent (one student only)
-router.get('/student', authenticateToken, async (req, res) => {
+// Get parent dashboard overview
+router.get('/overview', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    // Get linked students from parent_student_links table
+    const [students] = await pool.execute(`
+      SELECT 
+        gss.id,
+        gss.student_code,
+        gss.first_name,
+        gss.last_name,
+        gss.trade_name,
+        gss.level_number,
+        gss.gpa,
+        gss.attendance_percentage,
+        gss.balance as pending_fees,
+        gss.gender
+      FROM parent_student_links psl
+      JOIN global_student_sheets gss ON psl.student_id = gss.id
+      WHERE psl.parent_id = ? AND psl.status IN ('approved', 'pending')
+    `, [parentId]);
+
+    // Calculate stats
+    const stats = {
+      total_children: students.length,
+      average_grade: students.length > 0
+        ? (students.reduce((sum, s) => sum + (parseFloat(s.gpa) || 0), 0) / students.length).toFixed(2)
+        : 0,
+      attendance_rate: students.length > 0
+        ? (students.reduce((sum, s) => sum + (parseFloat(s.attendance_percentage) || 0), 0) / students.length).toFixed(1)
+        : 0,
+      pending_fees: students.reduce((sum, s) => sum + (parseFloat(s.pending_fees) || 0), 0)
+    };
+
+    // Format children for display
+    const children = students.map(s => ({
+      id: s.id,
+      name: `${s.first_name} ${s.last_name}`,
+      student_code: s.student_code,
+      class_name: `${s.trade_name} Level ${s.level_number}`,
+      average_grade: s.gpa || 'N/A',
+      attendance: s.attendance_percentage || 0,
+      pending_fees: s.pending_fees || 0
+    }));
+
+    res.json({
+      success: true,
+      stats,
+      children
+    });
+  } catch (error) {
+    console.error('Error fetching parent overview:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get children list for parent
+router.get('/children', authenticateToken, async (req, res) => {
   try {
     const parentId = req.user.userId;
 
     const [students] = await pool.execute(`
       SELECT 
+        gss.id,
+        gss.student_code,
+        gss.first_name,
+        gss.last_name,
+        gss.trade_name,
+        gss.level_number,
+        gss.gpa,
+        gss.attendance_percentage,
+        gss.balance as pending_fees,
+        gss.gender,
+        gss.trade_code,
+        psl.relationship_type,
+        psl.status as link_status
+      FROM parent_student_links psl
+      JOIN global_student_sheets gss ON psl.student_id = gss.id
+      WHERE psl.parent_id = ? AND psl.status IN ('approved', 'pending')
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      children: students.map(s => ({
+        id: s.id,
+        student_code: s.student_code,
+        name: `${s.first_name} ${s.last_name}`,
+        class_name: `${s.trade_name} Level ${s.level_number}`,
+        trade: s.trade_name,
+        level: s.level_number,
+        average_grade: s.gpa || 'N/A',
+        attendance: s.attendance_percentage || 0,
+        pending_fees: s.pending_fees || 0,
+        gender: s.gender,
+        relationship: s.relationship_type,
+        link_status: s.link_status
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching children:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get student linked to parent (one student only)
+router.get('/student', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    // First try parent_student_links table (new linking system)
+    const [linkedStudents] = await pool.execute(`
+      SELECT 
+        gss.id, gss.first_name, gss.last_name, gss.student_code, 
+        gss.trade_name, gss.trade_code, gss.level_number, gss.gender,
+        gss.gpa, gss.attendance_percentage, gss.balance,
+        psl.status as link_status
+      FROM parent_student_links psl
+      JOIN global_student_sheets gss ON psl.student_id = gss.id
+      WHERE psl.parent_id = ? AND psl.status IN ('approved', 'pending') AND gss.status = 'active'
+      LIMIT 1
+    `, [parentId]);
+
+    if (linkedStudents.length > 0) {
+      const s = linkedStudents[0];
+      return res.json({
+        success: true,
+        student: {
+          id: s.id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          student_code: s.student_code,
+          trade: s.trade_name,
+          trade_code: s.trade_code,
+          level: s.level_number,
+          gender: s.gender,
+          gpa: s.gpa,
+          attendance_percentage: s.attendance_percentage,
+          balance: s.balance,
+          link_status: s.link_status
+        }
+      });
+    }
+
+    // Fallback to parent_student table (legacy)
+    const [students] = await pool.execute(`
+      SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.student_id,
-        gss.trade_id, gss.level, t.trade_name
+        gss.trade_id, gss.level, t.name
       FROM parent_student ps
       JOIN users u ON ps.student_id = u.id
       LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_code
@@ -93,8 +233,8 @@ router.get('/student/:studentId/attendance', authenticateToken, async (req, res)
       WHERE student_id = ?
     `, [studentId]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       attendance: attendance[0] || { present: 0, absent: 0, late: 0, total: 0 }
     });
   } catch (error) {
@@ -128,8 +268,8 @@ router.get('/student/:studentId/fees', authenticateToken, async (req, res) => {
       WHERE student_id = ?
     `, [studentId]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       fees: fees[0] || { total: 0, paid: 0, balance: 0 }
     });
   } catch (error) {
@@ -489,7 +629,7 @@ router.post('/sms/send', authenticateToken, async (req, res) => {
   try {
     const { phone, message } = req.body;
     const smsService = require('../services/smsService');
-    
+
     await smsService.sendUniversalMessage(phone, message, 0, {
       type: 'parent_notification',
       userId: req.user.userId
@@ -546,9 +686,9 @@ router.post('/request-linking', authenticateToken, async (req, res) => {
       );
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Ubutumwa bwawe bwoherejwe neza. Uzasubizwa vuba.' 
+    res.json({
+      success: true,
+      message: 'Ubutumwa bwawe bwoherejwe neza. Uzasubizwa vuba.'
     });
   } catch (error) {
     console.error('Error requesting linking:', error);

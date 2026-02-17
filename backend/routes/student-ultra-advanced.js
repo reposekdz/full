@@ -375,7 +375,7 @@ router.get('/performance/ranking', authenticateToken, async (req, res) => {
       FROM global_student_sheets
       WHERE trade_code = ? AND level_number = ? AND level_suffix = ? AND status = 'active'
       ORDER BY gpa DESC, total_marks DESC`,
-      [student.trade_code, student.level_number, student.level_suffix || '']
+      [student.code, student.level_number, student.level_suffix || '']
     );
     
     let myRank = 0;

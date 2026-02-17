@@ -295,7 +295,7 @@ router.get('/dashboard/kinyarwanda', authenticateToken, requireRole('advisor', '
             impuzamashuri: (() => {
               const tradeGrades = grades.filter(g => {
                 const student = students.find(s => s.id === g.student_id);
-                return student && student.trade_code === trade.trade_code;
+                return student && student.code === trade.trade_code;
               });
               return tradeGrades.length > 0 ? 
                 (tradeGrades.reduce((sum, g) => sum + (g.grade_value || 0), 0) / tradeGrades.length).toFixed(1) : 'N/A';
@@ -303,7 +303,7 @@ router.get('/dashboard/kinyarwanda', authenticateToken, requireRole('advisor', '
             igipimo_cy_kwitabira: (() => {
               const tradeAttendance = attendance.filter(a => {
                 const student = students.find(s => s.id === a.student_id);
-                return student && student.trade_code === trade.trade_code;
+                return student && student.code === trade.trade_code;
               });
               return tradeAttendance.length > 0 ?
                 ((tradeAttendance.filter(a => a.status === 'present').length / tradeAttendance.length) * 100).toFixed(1) + '%' : 'N/A';

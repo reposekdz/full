@@ -8,10 +8,10 @@ const verifyParent = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false, message: 'No token provided' });
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== 'parent') return res.status(403).json({ success: false, message: 'Access denied' });
-    
+
     req.userId = decoded.userId;
     next();
   } catch (error) {
@@ -25,7 +25,7 @@ router.get('/students', verifyParent, async (req, res) => {
     const [students] = await pool.execute(`
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.student_id,
-        t.trade_name, u.level,
+        t.name as trade_name, u.level,
         ps.relationship_type,
         (SELECT AVG(g.grade) FROM grades g WHERE g.student_id = u.id) as average_grade,
         (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id AND a.status = 'present') * 100.0 / 
@@ -33,10 +33,10 @@ router.get('/students', verifyParent, async (req, res) => {
         (SELECT SUM(amount) FROM fees WHERE student_id = u.id AND status = 'pending') as fees_balance
       FROM parent_student ps
       JOIN users u ON ps.student_id = u.id
-      LEFT JOIN trades t ON u.trade_code = t.trade_code
+      LEFT JOIN trades t ON u.trade_code = t.code
       WHERE ps.parent_id = ? AND ps.status = 'active'
     `, [req.userId]);
-    
+
     res.json({ success: true, students });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -51,7 +51,7 @@ router.get('/connection-requests', verifyParent, async (req, res) => {
       WHERE parent_id = ?
       ORDER BY created_at DESC
     `, [req.userId]);
-    
+
     res.json({ success: true, requests });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -62,17 +62,17 @@ router.get('/connection-requests', verifyParent, async (req, res) => {
 router.get('/student/:studentId/performance', verifyParent, async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+
     // Verify parent has access to this student
     const [access] = await pool.execute(
       'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ? AND status = "active"',
       [req.userId, studentId]
     );
-    
+
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const [grades] = await pool.execute(`
       SELECT g.*, c.course_name, c.course_code
       FROM grades g
@@ -80,7 +80,7 @@ router.get('/student/:studentId/performance', verifyParent, async (req, res) => 
       WHERE g.student_id = ?
       ORDER BY g.exam_date DESC
     `, [studentId]);
-    
+
     res.json({ success: true, grades });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -91,16 +91,16 @@ router.get('/student/:studentId/performance', verifyParent, async (req, res) => 
 router.get('/student/:studentId/attendance', verifyParent, async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+
     const [access] = await pool.execute(
       'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ? AND status = "active"',
       [req.userId, studentId]
     );
-    
+
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const [attendance] = await pool.execute(`
       SELECT a.*, c.course_name
       FROM attendance a
@@ -109,7 +109,7 @@ router.get('/student/:studentId/attendance', verifyParent, async (req, res) => {
       ORDER BY a.date DESC
       LIMIT 30
     `, [studentId]);
-    
+
     res.json({ success: true, attendance });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -120,22 +120,22 @@ router.get('/student/:studentId/attendance', verifyParent, async (req, res) => {
 router.get('/student/:studentId/fees', verifyParent, async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+
     const [access] = await pool.execute(
       'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ? AND status = "active"',
       [req.userId, studentId]
     );
-    
+
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const [fees] = await pool.execute(`
       SELECT * FROM fees
       WHERE student_id = ?
       ORDER BY due_date DESC
     `, [studentId]);
-    
+
     res.json({ success: true, fees });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -146,21 +146,21 @@ router.get('/student/:studentId/fees', verifyParent, async (req, res) => {
 router.post('/message', verifyParent, async (req, res) => {
   try {
     const { student_id, teacher_id, subject, message } = req.body;
-    
+
     const [access] = await pool.execute(
       'SELECT id FROM parent_student WHERE parent_id = ? AND student_id = ? AND status = "active"',
       [req.userId, student_id]
     );
-    
+
     if (access.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     await pool.execute(`
       INSERT INTO messages (sender_id, receiver_id, subject, message, created_at)
       VALUES (?, ?, ?, ?, NOW())
     `, [req.userId, teacher_id, subject, message]);
-    
+
     res.json({ success: true, message: 'Message sent successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -180,7 +180,7 @@ router.get('/messages', verifyParent, async (req, res) => {
       WHERE m.sender_id = ? OR m.receiver_id = ?
       ORDER BY m.created_at DESC
     `, [req.userId, req.userId]);
-    
+
     res.json({ success: true, messages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -196,7 +196,7 @@ router.get('/notifications', verifyParent, async (req, res) => {
       ORDER BY created_at DESC
       LIMIT 20
     `, [req.userId]);
-    
+
     res.json({ success: true, notifications });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

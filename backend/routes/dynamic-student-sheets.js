@@ -260,7 +260,7 @@ router.post('/generate-report-cards/:classId', async (req, res) => {
         serial_code: student.student_id,
         name: `${student.first_name} ${student.last_name}`,
         class: student.class_name,
-        trade: student.trade_name,
+        trade: student.name,
         grades: grades,
         total_marks: totalMarks,
         max_marks: maxMarks,

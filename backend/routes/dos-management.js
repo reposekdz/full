@@ -16,12 +16,12 @@ router.get('/report-cards', authenticateToken, async (req, res) => {
       SELECT rc.*, 
         u.first_name, u.last_name, u.username,
         sp.admission_number,
-        t.trade_name,
-        CONCAT(t.trade_code, ' Level ', rc.level_number) as class_info
+        t.name,
+        CONCAT(t.code, ' Level ', rc.level_number) as class_info
       FROM report_cards rc
       LEFT JOIN users u ON rc.student_id = u.id
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
-      LEFT JOIN trades t ON rc.trade_code = t.trade_code
+      LEFT JOIN trades t ON rc.trade_code = t.code
       WHERE 1=1
     `;
     const params = [];
@@ -88,11 +88,11 @@ router.get('/report-cards/:id', authenticateToken, async (req, res) => {
       SELECT rc.*, 
         u.first_name, u.last_name, u.username, u.email,
         sp.admission_number, sp.date_of_birth,
-        t.trade_name
+        t.name
       FROM report_cards rc
       LEFT JOIN users u ON rc.student_id = u.id
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
-      LEFT JOIN trades t ON rc.trade_code = t.trade_code
+      LEFT JOIN trades t ON rc.trade_code = t.code
       WHERE rc.id = ?
     `;
     const [[report]] = await pool.execute(query, [id]);
@@ -339,12 +339,12 @@ router.get('/students', authenticateToken, async (req, res) => {
     let query = `
       SELECT DISTINCT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
         sp.admission_number, sp.date_of_birth, sp.gender,
-        t.trade_code, t.trade_name,
+        t.code, t.name,
         e.level_number, e.level_suffix
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE u.role = 'student'
     `;
     const params = [];
@@ -439,7 +439,7 @@ router.get('/trades-levels', authenticateToken, async (req, res) => {
     for (const t of trades) {
       const [tl] = await pool.execute(
         'SELECT level_number, level_suffix FROM trades_levels WHERE trade_code = ? AND is_active = 1 ORDER BY level_number',
-        [t.trade_code]
+        [t.code]
       ).catch(() => []);
       t.levels = (tl && tl.length) ? tl : levelsList.map(l => ({ level_number: typeof l === 'object' ? l.level_number : l, level_suffix: (l && l.level_suffix) || '' }));
     }
@@ -798,14 +798,14 @@ router.get('/student-sheets', authenticateToken, async (req, res) => {
     let query = `
       SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
         sp.admission_number, sp.date_of_birth, sp.gender, sp.address,
-        t.trade_code, t.trade_name,
+        t.code, t.name,
         e.level_number, e.level_suffix,
         (SELECT COUNT(*) FROM attendances a WHERE a.student_id = u.id AND a.status = 'present' AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as attendance_present,
         (SELECT COUNT(*) FROM attendances a WHERE a.student_id = u.id AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as attendance_total
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE u.role = 'student'
     `;
     const params = [];

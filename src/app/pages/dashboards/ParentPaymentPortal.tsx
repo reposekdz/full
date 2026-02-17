@@ -44,51 +44,51 @@ import { toast } from 'sonner';
 
 // Environment Configuration
 const CONFIG = {
-  API_BASE: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  
+  API_BASE: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+
   // Bank Configurations from Environment
   BANKS: {
     gt_bank: {
-      name: process.env.REACT_APP_GT_BANK_NAME || 'GT Bank Rwanda',
+      name: import.meta.env.VITE_GT_BANK_NAME || 'GT Bank Rwanda',
       code: 'gt_bank',
-      apiUrl: process.env.REACT_APP_GT_BANK_API_URL,
-      merchantId: process.env.REACT_APP_GT_BANK_MERCHANT_ID,
-      enabled: process.env.REACT_APP_GT_BANK_ENABLED === 'true',
+      apiUrl: import.meta.env.VITE_GT_BANK_API_URL,
+      merchantId: import.meta.env.VITE_GT_BANK_MERCHANT_ID,
+      enabled: import.meta.env.VITE_GT_BANK_ENABLED === 'true',
       color: '#1A237E'
     },
     bpr: {
-      name: process.env.REACT_APP_BPR_NAME || 'Bank of Kigali (BPR)',
+      name: import.meta.env.VITE_BPR_NAME || 'Bank of Kigali (BPR)',
       code: 'bpr',
-      apiUrl: process.env.REACT_APP_BPR_API_URL,
-      merchantId: process.env.REACT_APP_BPR_MERCHANT_ID,
-      enabled: process.env.REACT_APP_BPR_ENABLED === 'true',
+      apiUrl: import.meta.env.VITE_BPR_API_URL,
+      merchantId: import.meta.env.VITE_BPR_MERCHANT_ID,
+      enabled: import.meta.env.VITE_BPR_ENABLED === 'true',
       color: '#C62828'
     },
     equity_bank: {
-      name: process.env.REACT_APP_EQUITY_NAME || 'Equity Bank Rwanda',
+      name: import.meta.env.VITE_EQUITY_NAME || 'Equity Bank Rwanda',
       code: 'equity_bank',
-      apiUrl: process.env.REACT_APP_EQUITY_API_URL,
-      merchantId: process.env.REACT_APP_EQUITY_MERCHANT_ID,
-      enabled: process.env.REACT_APP_EQUITY_ENABLED === 'true',
+      apiUrl: import.meta.env.VITE_EQUITY_API_URL,
+      merchantId: import.meta.env.VITE_EQUITY_MERCHANT_ID,
+      enabled: import.meta.env.VITE_EQUITY_ENABLED === 'true',
       color: '#1565C0'
     },
     mtn_money: {
-      name: process.env.REACT_APP_MTN_NAME || 'MTN Mobile Money',
+      name: import.meta.env.VITE_MTN_NAME || 'MTN Mobile Money',
       code: 'mtn_money',
-      apiUrl: process.env.REACT_APP_MTN_API_URL,
-      collectionId: process.env.REACT_APP_MTN_COLLECTION_ID,
-      enabled: process.env.REACT_APP_MTN_ENABLED === 'true',
+      apiUrl: import.meta.env.VITE_MTN_API_URL,
+      collectionId: import.meta.env.VITE_MTN_COLLECTION_ID,
+      enabled: import.meta.env.VITE_MTN_ENABLED === 'true',
       color: '#FFC107',
-      feePercent: parseFloat(process.env.REACT_APP_MTN_FEE_PERCENT) || 0.5
+      feePercent: parseFloat(import.meta.env.VITE_MTN_FEE_PERCENT) || 0.5
     },
     airtel_money: {
-      name: process.env.REACT_APP_AIRTEL_NAME || 'Airtel Money',
+      name: import.meta.env.VITE_AIRTEL_NAME || 'Airtel Money',
       code: 'airtel_money',
-      apiUrl: process.env.REACT_APP_AIRTEL_API_URL,
-      merchantId: process.env.REACT_APP_AIRTEL_MERCHANT_ID,
-      enabled: process.env.REACT_APP_AIRTEL_ENABLED === 'true',
+      apiUrl: import.meta.env.VITE_AIRTEL_API_URL,
+      merchantId: import.meta.env.VITE_AIRTEL_MERCHANT_ID,
+      enabled: import.meta.env.VITE_AIRTEL_ENABLED === 'true',
       color: '#D32F2F',
-      feePercent: parseFloat(process.env.REACT_APP_AIRTEL_FEE_PERCENT) || 0.5
+      feePercent: parseFloat(import.meta.env.VITE_AIRTEL_FEE_PERCENT) || 0.5
     }
   }
 };
@@ -304,7 +304,7 @@ const ParentPaymentPortal: React.FC = () => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setPaymentStep('success');
         toast.success('Payment initiated successfully!');
@@ -337,13 +337,13 @@ const ParentPaymentPortal: React.FC = () => {
 
   // Filter students
   const filteredStudents = students.filter(s => {
-    const matchesSearch = 
+    const matchesSearch =
       `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.student_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.trade_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesFilter = filterStatus === 'all' || s.payment_status === filterStatus;
-    
+
     return matchesSearch && matchesFilter;
   });
 
@@ -376,7 +376,7 @@ const ParentPaymentPortal: React.FC = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -476,7 +476,7 @@ const ParentPaymentPortal: React.FC = () => {
                     Link
                   </Button>
                 </CardTitle>
-                
+
                 {/* Search and Filter */}
                 <div className="mt-2 space-y-2">
                   <div className="relative">
@@ -501,7 +501,7 @@ const ParentPaymentPortal: React.FC = () => {
                   </Select>
                 </div>
               </CardHeader>
-              
+
               <CardContent>
                 {loading ? (
                   <div className="flex justify-center py-8">
@@ -523,11 +523,10 @@ const ParentPaymentPortal: React.FC = () => {
                       >
                         <div
                           onClick={() => handleSelectStudent(student)}
-                          className={`p-3 mb-2 rounded-lg border cursor-pointer transition-all ${
-                            selectedStudent?.student_id === student.student_id
+                          className={`p-3 mb-2 rounded-lg border cursor-pointer transition-all ${selectedStudent?.student_id === student.student_id
                               ? 'border-green-500 bg-green-50 shadow-md'
                               : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <Avatar>
@@ -594,7 +593,7 @@ const ParentPaymentPortal: React.FC = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                       <TabsList className="grid w-full grid-cols-4">

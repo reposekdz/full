@@ -131,11 +131,11 @@ export const fetchLinkedChildren = async (): Promise<LinkedStudent[]> => {
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch linked children');
   }
-  
+
   return data.children;
 };
 
@@ -147,11 +147,11 @@ export const fetchDashboardSummary = async (): Promise<DashboardStats> => {
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch dashboard summary');
   }
-  
+
   return data.summary;
 };
 
@@ -163,11 +163,11 @@ export const fetchFeeStructure = async (studentId: string): Promise<FeeItem[]> =
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch fee structure');
   }
-  
+
   return data.feeStructure;
 };
 
@@ -179,11 +179,11 @@ export const fetchPaymentHistory = async (studentId: string): Promise<PaymentRec
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch payment history');
   }
-  
+
   return data.payments;
 };
 
@@ -197,11 +197,11 @@ export const initiatePayment = async (request: PaymentInitRequest): Promise<Paym
     body: JSON.stringify(request),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Payment initiation failed');
   }
-  
+
   return data;
 };
 
@@ -213,11 +213,11 @@ export const getReceipt = async (receiptNumber: string): Promise<ReceiptData> =>
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch receipt');
   }
-  
+
   return data.receipt;
 };
 
@@ -229,11 +229,11 @@ export const verifyPayment = async (referenceNumber: string): Promise<PaymentRec
     headers: getAuthHeaders(),
   });
   const data = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Payment verification failed');
   }
-  
+
   return data.payment;
 };
 
@@ -275,69 +275,69 @@ export const requestLinkChildWithDetails = async (payload: {
  * Get available payment methods
  */
 export const getAvailablePaymentMethods = (): PaymentMethod[] => {
-  const gtFee = parseFloat(process.env.REACT_APP_MTN_FEE_PERCENT || '') || 0;
-  const bprFee = parseFloat(process.env.REACT_APP_BPR_FEE_PERCENT || '') || 0;
-  const equityFee = parseFloat(process.env.REACT_APP_EQUITY_FEE_PERCENT || '') || 0;
-  const mtnFee = parseFloat(process.env.REACT_APP_MTN_FEE_PERCENT || '') || 0.5;
-  const airtelFee = parseFloat(process.env.REACT_APP_AIRTEL_FEE_PERCENT || '') || 0.5;
-  
+  const gtFee = parseFloat(import.meta.env.VITE_MTN_FEE_PERCENT || '') || 0;
+  const bprFee = parseFloat(import.meta.env.VITE_BPR_FEE_PERCENT || '') || 0;
+  const equityFee = parseFloat(import.meta.env.VITE_EQUITY_FEE_PERCENT || '') || 0;
+  const mtnFee = parseFloat(import.meta.env.VITE_MTN_FEE_PERCENT || '') || 0.5;
+  const airtelFee = parseFloat(import.meta.env.VITE_AIRTEL_FEE_PERCENT || '') || 0.5;
+
   const methods: PaymentMethod[] = [];
-  
-  if (process.env.REACT_APP_GT_BANK_ENABLED === 'true') {
+
+  if (import.meta.env.VITE_GT_BANK_ENABLED === 'true') {
     methods.push({
       code: 'gt_bank',
-      name: process.env.REACT_APP_GT_BANK_NAME || 'GT Bank Rwanda',
+      name: import.meta.env.VITE_GT_BANK_NAME || 'GT Bank Rwanda',
       type: 'bank',
       enabled: true,
       color: '#1A237E',
       feePercent: gtFee,
     });
   }
-  
-  if (process.env.REACT_APP_BPR_ENABLED === 'true') {
+
+  if (import.meta.env.VITE_BPR_ENABLED === 'true') {
     methods.push({
       code: 'bpr',
-      name: process.env.REACT_APP_BPR_NAME || 'Bank of Kigali (BPR)',
+      name: import.meta.env.VITE_BPR_NAME || 'Bank of Kigali (BPR)',
       type: 'bank',
       enabled: true,
       color: '#C62828',
       feePercent: bprFee,
     });
   }
-  
-  if (process.env.REACT_APP_EQUITY_ENABLED === 'true') {
+
+  if (import.meta.env.VITE_EQUITY_ENABLED === 'true') {
     methods.push({
       code: 'equity_bank',
-      name: process.env.REACT_APP_EQUITY_NAME || 'Equity Bank Rwanda',
+      name: import.meta.env.VITE_EQUITY_NAME || 'Equity Bank Rwanda',
       type: 'bank',
       enabled: true,
       color: '#1565C0',
       feePercent: equityFee,
     });
   }
-  
-  if (process.env.REACT_APP_MTN_ENABLED === 'true') {
+
+  if (import.meta.env.VITE_MTN_ENABLED === 'true') {
     methods.push({
       code: 'mtn_money',
-      name: process.env.REACT_APP_MTN_NAME || 'MTN Mobile Money',
+      name: import.meta.env.VITE_MTN_NAME || 'MTN Mobile Money',
       type: 'mobile',
       enabled: true,
       color: '#FFC107',
       feePercent: mtnFee,
     });
   }
-  
-  if (process.env.REACT_APP_AIRTEL_ENABLED === 'true') {
+
+  if (import.meta.env.VITE_AIRTEL_ENABLED === 'true') {
     methods.push({
       code: 'airtel_money',
-      name: process.env.REACT_APP_AIRTEL_NAME || 'Airtel Money',
+      name: import.meta.env.VITE_AIRTEL_NAME || 'Airtel Money',
       type: 'mobile',
       enabled: true,
       color: '#D32F2F',
       feePercent: airtelFee,
     });
   }
-  
+
   return methods;
 };
 
@@ -345,8 +345,8 @@ export const getAvailablePaymentMethods = (): PaymentMethod[] => {
  * Format currency for display
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('rw-RW', { 
-    style: 'currency', 
+  return new Intl.NumberFormat('rw-RW', {
+    style: 'currency',
     currency: 'RWF',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,

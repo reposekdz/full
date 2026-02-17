@@ -10,6 +10,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    'process.env': {}
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory

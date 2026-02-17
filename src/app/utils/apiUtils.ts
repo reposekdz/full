@@ -24,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const getAuthToken = (): string | null => {
   return localStorage.getItem('token');
@@ -72,7 +72,7 @@ export const apiRequest = async <T = any>(
 ): Promise<ApiResponse<T>> => {
   try {
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-    
+
     const response = await fetch(url, {
       ...options,
       headers: {

@@ -1,847 +1,1156 @@
-// Parent Linking & Access Control Routes - Complete System with Verification Codes
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-const crypto = require('crypto');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
-// ==================== UTILITY FUNCTIONS ====================
+// ============================================================
+// CORE LINK MANAGEMENT
+// ============================================================
 
-// Generate verification code
-const generateVerificationCode = () => {
-  return crypto.randomBytes(3).toString('hex').toUpperCase(); // 6-character code
-};
-
-// Send SMS notification (placeholder - integrate with actual SMS service)
-const sendVerificationSMS = async (phone, code, studentName) => {
-  // In production, integrate with African Talking or other SMS service
-  console.log(`[SMS] Sending verification code ${code} to ${phone} for linking with ${studentName}`);
-  return { success: true, messageId: `SMS-${Date.now()}` };
-};
-
-// ==================== ROLE-BASED APPROVAL PERMISSIONS ====================
-const APPROVER_ROLES = ['admin', 'headmaster', 'dod', 'director_study', 'director_discipline', 'accountant', 'advisor', 'patron', 'matron'];
-
-const canApproveRequests = (userRole) => {
-  return APPROVER_ROLES.includes(userRole);
-};
-
-// ==================== PARENT VERIFICATION CODES ====================
-
-// POST request verification code (parent requests to link)
-router.post('/request-verification', async (req, res) => {
+// GET /api/parent-linking/links - Get all links with advanced filtering
+router.get('/links', authenticateToken, async (req, res) => {
   try {
-    const { 
-      parent_name, parent_phone, parent_email,
-      student_first_name, student_last_name, student_trade, student_level,
-      student_id_code, relationship, message 
-    } = req.body;
+    const {
+      status,
+      parent_id,
+      student_id,
+      relationship_type,
+      min_confidence,
+      max_confidence,
+      page = 1,
+      limit = 50,
+      sort_by = 'created_at',
+      sort_order = 'DESC'
+    } = req.query;
 
-    // Check for existing pending request
-    const [existing] = await pool.execute(
-      `SELECT * FROM parent_student_requests 
-       WHERE parent_phone = ? AND status = 'pending' 
-       AND student_first_name = ? AND student_last_name = ?`,
-      [parent_phone, student_first_name, student_last_name]
-    );
-    
-    if (existing.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'A pending request already exists for this student' 
-      });
-    }
+    let sql = `
+            SELECT 
+                psl.*,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                p.email as parent_email,
+                p.phone as parent_phone,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.student_id as student_number,
+                s.trade_code,
+                s.level,
+                COALESCE(t.name, s.trade_code) as trade_name
+            FROM parent_student_links psl
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE 1=1
+        `;
 
-    // Generate verification code
-    const verification_code = generateVerificationCode();
-    
-    // Try to find the student
-    let foundStudentId = null;
-    let foundStudentCode = null;
-    
-    if (student_id_code) {
-      const [students] = await pool.execute(
-        'SELECT id, student_code FROM global_student_sheets WHERE student_id = ? OR student_code = ?',
-        [student_id_code, student_id_code]
-      );
-      if (students.length > 0) {
-        foundStudentId = students[0].id;
-        foundStudentCode = students[0].student_code;
-      }
-    }
-
-    // Create the verification code request
-    const [result] = await pool.execute(
-      `INSERT INTO parent_verification_codes (
-        parent_phone, parent_name, parent_email,
-        student_first_name, student_last_name, student_trade, student_level,
-        student_id, student_code, relationship_type, message,
-        verification_code, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-      [
-        parent_phone, parent_name, parent_email || null,
-        student_first_name, student_last_name, student_trade || null, student_level || null,
-        foundStudentId, foundStudentCode, relationship || 'guardian', message || null,
-        verification_code
-      ]
-    );
-
-    // Send verification SMS
-    await sendVerificationSMS(
-      parent_phone, 
-      verification_code, 
-      `${student_first_name} ${student_last_name}`
-    );
-
-    res.json({
-      success: true,
-      message: 'Verification code sent to your phone. Please enter it to complete your request.',
-      request_id: result.insertId,
-      expires_in: '24 hours'
-    });
-  } catch (error) {
-    console.error('Error requesting verification:', error);
-    res.status(500).json({ success: false, message: 'Error processing request' });
-  }
-});
-
-// POST verify code and submit request
-router.post('/verify-and-submit', async (req, res) => {
-  try {
-    const { parent_phone, verification_code, request_id } = req.body;
-
-    // Find the verification request
-    const [requests] = await pool.execute(
-      'SELECT * FROM parent_verification_codes WHERE id = ? AND verification_code = ?',
-      [request_id, verification_code.toUpperCase()]
-    );
-
-    if (requests.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid verification code' });
-    }
-
-    const verification = requests[0];
-
-    if (verification.status !== 'pending') {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Request has already been ${verification.status}` 
-      });
-    }
-
-    // Check if code expired (24 hours)
-    const createdAt = new Date(verification.created_at);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-    
-    if (hoursDiff > 24) {
-      await pool.execute(
-        'UPDATE parent_verification_codes SET status = ? WHERE id = ?',
-        ['expired', request_id]
-      );
-      return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new one.' });
-    }
-
-    // Mark as verified
-    await pool.execute(
-      'UPDATE parent_verification_codes SET status = ?, verified_at = NOW() WHERE id = ?',
-      ['verified', request_id]
-    );
-
-    // Now submit as a proper linking request for approval
-    const [submitResult] = await pool.execute(
-      `INSERT INTO parent_student_requests (
-        parent_id, parent_name, parent_phone, parent_email,
-        student_first_name, student_last_name, student_trade, student_level,
-        student_id, student_code, relationship_type, message, status, created_at,
-        verified_by_parent, verification_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), 1, ?)`,
-      [
-        verification.parent_id || null, verification.parent_name, verification.parent_phone, verification.parent_email,
-        verification.student_first_name, verification.student_last_name, 
-        verification.student_trade, verification.student_level,
-        verification.student_id, verification.student_code, 
-        verification.relationship_type, verification.message,
-        request_id
-      ]
-    );
-
-    res.json({
-      success: true,
-      message: 'Verification successful! Your request has been submitted for approval.',
-      request_id: submitResult.insertId
-    });
-  } catch (error) {
-    console.error('Error verifying code:', error);
-    res.status(500).json({ success: false, message: 'Error verifying code' });
-  }
-});
-
-// POST resend verification code
-router.post('/resend-verification', async (req, res) => {
-  try {
-    const { request_id, parent_phone } = req.body;
-
-    const [requests] = await pool.execute(
-      'SELECT * FROM parent_verification_codes WHERE id = ? AND status = ?',
-      [request_id, 'pending']
-    );
-
-    if (requests.length === 0) {
-      return res.status(404).json({ success: false, message: 'Verification request not found' });
-    }
-
-    const verification = requests[0];
-    const newCode = generateVerificationCode();
-
-    await pool.execute(
-      'UPDATE parent_verification_codes SET verification_code = ?, created_at = NOW() WHERE id = ?',
-      [newCode, request_id]
-    );
-
-    await sendVerificationSMS(
-      parent_phone, 
-      newCode, 
-      `${verification.student_first_name} ${verification.student_last_name}`
-    );
-
-    res.json({
-      success: true,
-      message: 'New verification code sent to your phone'
-    });
-  } catch (error) {
-    console.error('Error resending verification:', error);
-    res.status(500).json({ success: false, message: 'Error resending code' });
-  }
-});
-
-// ==================== PARENT CONNECTIONS ====================
-
-// GET all parent connections (for admin/staff)
-router.get('/connections', authenticateToken, async (req, res) => {
-  try {
-    const { student_id, parent_phone, status, search } = req.query;
-    
-    let query = `
-      SELECT pc.*, 
-             gss.first_name as student_first_name, gss.last_name as student_name, gss.student_code,
-             u.name as parent_user_name, u.email as parent_user_email
-      FROM parent_connections pc
-      LEFT JOIN global_student_sheets gss ON pc.student_id = gss.id
-      LEFT JOIN users u ON pc.parent_id = u.id
-      WHERE 1=1
-    `;
     const params = [];
-    
+
+    if (status) {
+      sql += ` AND psl.status = ?`;
+      params.push(status);
+    }
+    if (parent_id) {
+      sql += ` AND psl.parent_id = ?`;
+      params.push(parent_id);
+    }
     if (student_id) {
-      query += ' AND pc.student_id = ?';
+      sql += ` AND psl.student_id = ?`;
       params.push(student_id);
     }
-    if (parent_phone) {
-      query += ' AND pc.parent_phone LIKE ?';
-      params.push(`%${parent_phone}%`);
+    if (relationship_type) {
+      sql += ` AND psl.relationship_type = ?`;
+      params.push(relationship_type);
     }
-    if (status) {
-      query += ' AND pc.status = ?';
-      params.push(status);
+    if (min_confidence) {
+      sql += ` AND psl.match_confidence >= ?`;
+      params.push(parseFloat(min_confidence));
     }
-    if (search) {
-      query += ' AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR pc.parent_name LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    if (max_confidence) {
+      sql += ` AND psl.match_confidence <= ?`;
+      params.push(parseFloat(max_confidence));
     }
-    
-    query += ' ORDER BY pc.created_at DESC';
-    
-    const [connections] = await pool.execute(query, params);
-    
-    res.json({
-      success: true,
-      connections,
-      total: connections.length
-    });
-  } catch (error) {
-    console.error('Error fetching connections:', error);
-    res.status(500).json({ success: false, message: 'Error fetching connections' });
-  }
-});
 
-// GET parent dashboard - get all linked children with full information
-router.get('/parent-dashboard/:parentPhone', async (req, res) => {
-  try {
-    const { parentPhone } = req.params;
-    
-    // Find parent by phone
-    const [parents] = await pool.execute(
-      'SELECT id, name, email, phone FROM users WHERE phone = ? AND role = "parent"',
-      [parentPhone]
-    );
-    
-    if (parents.length === 0) {
-      return res.status(404).json({ success: false, message: 'Parent not found' });
-    }
-    
-    const parent = parents[0];
-    
-    // Get all connected students
-    const [connections] = await pool.execute(
-      `SELECT pc.*, 
-              gss.id as sheet_id, gss.student_id as student_number, gss.student_code, 
-              gss.first_name, gss.last_name, gss.middle_name, gss.trade_code, gss.level_number,
-              gss.profile_image, gss.gender, gss.date_of_birth
-       FROM parent_connections pc
-       LEFT JOIN global_student_sheets gss ON pc.student_id = gss.id
-       WHERE pc.parent_phone = ? AND pc.status = 'active'
-       ORDER BY pc.created_at DESC`,
-      [parentPhone]
-    );
-    
-    // Get detailed information for each child
-    const children = await Promise.all(connections.map(async (conn) => {
-      const sheetId = conn.sheet_id;
-      
-      // Get attendance summary
-      const [attendance] = await pool.execute(
-        `SELECT 
-           COUNT(*) as total_days,
-           SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days,
-           SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days,
-           SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late_days
-         FROM student_attendance_records 
-         WHERE sheet_id = ? AND attendance_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`,
-        [sheetId]
-      );
-      
-      // Get latest marks
-      const [marks] = await pool.execute(
-        `SELECT * FROM student_marks 
-         WHERE student_id = (SELECT student_id FROM global_student_sheets WHERE id = ?)
-         ORDER BY created_at DESC LIMIT 5`,
-        [sheetId]
-      );
-      
-      // Get discipline records
-      const [discipline] = await pool.execute(
-        `SELECT COUNT(*) as total_incidents, SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical_incidents
-         FROM student_discipline_records 
-         WHERE sheet_id = ? AND status = 'active'`,
-        [sheetId]
-      );
-      
-      // Get payment status
-      const [payments] = await pool.execute(
-        `SELECT SUM(amount) as total_paid, COUNT(*) as payment_count
-         FROM student_payment_records 
-         WHERE sheet_id = ? AND status = 'completed'`,
-        [sheetId]
-      );
-      
-      return {
-        connection: {
-          id: conn.id,
-          connection_id: conn.connection_id || `PC-${conn.id}`,
-          relationship: conn.relationship,
-          permissions: {
-            view_marks: conn.can_view_marks,
-            view_attendance: conn.can_view_attendance,
-            view_discipline: conn.can_view_discipline,
-            view_report_cards: conn.can_view_report_cards,
-            view_fees: conn.can_view_fees,
-            receive_notifications: conn.can_receive_notifications
-          },
-          approved_by: conn.approved_by,
-          approved_by_role: conn.approved_by_role,
-          approved_at: conn.created_at
-        },
-        student: {
-          sheet_id: sheetId,
-          student_number: conn.student_number,
-          student_code: conn.student_code,
-          first_name: conn.first_name,
-          last_name: conn.last_name,
-          middle_name: conn.middle_name,
-          full_name: `${conn.first_name} ${conn.last_name}`,
-          trade: conn.trade_code,
-          level: conn.level_number,
-          profile_image: conn.profile_image,
-          gender: conn.gender,
-          date_of_birth: conn.date_of_birth
-        },
-        attendance: attendance[0] || { total_days: 0, present_days: 0, absent_days: 0, late_days: 0 },
-        recent_marks: marks,
-        discipline: discipline[0] || { total_incidents: 0, critical_incidents: 0 },
-        payments: payments[0] || { total_paid: 0, payment_count: 0 }
-      };
-    }));
-    
-    res.json({
-      success: true,
-      parent: {
-        id: parent.id,
-        name: parent.name,
-        phone: parent.phone,
-        email: parent.email,
-        children_count: children.length
-      },
-      children,
-      verified: true
-    });
-  } catch (error) {
-    console.error('Error fetching parent dashboard:', error);
-    res.status(500).json({ success: false, message: 'Error fetching parent dashboard' });
-  }
-});
+    // Get total count
+    const countSql = sql.replace(/SELECT .*? FROM/, 'SELECT COUNT(*) as total FROM');
+    const [countResult] = await pool.execute(countSql, params);
+    const total = countResult[0].total;
 
-// ==================== LINKING REQUESTS ====================
+    // Add sorting and pagination
+    const validSortFields = ['created_at', 'match_confidence', 'status', 'linked_at'];
+    const sortField = validSortFields.includes(sort_by) ? `psl.${sort_by}` : 'psl.created_at';
+    const order = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-// GET pending requests count for dashboard
-router.get('/pending-count', authenticateToken, async (req, res) => {
-  try {
-    const userRole = req.user?.role;
-    
-    if (!canApproveRequests(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied' 
-      });
-    }
-    
-    const [[{ count }]] = await pool.execute(
-      "SELECT COUNT(*) as count FROM parent_student_requests WHERE status = 'pending'"
-    );
-    
-    res.json({
-      success: true,
-      pendingCount: count,
-      role: userRole,
-      canApprove: true
-    });
-  } catch (error) {
-    console.error('Error fetching pending count:', error);
-    res.status(500).json({ success: false, message: 'Error fetching count' });
-  }
-});
-
-// GET all pending requests (for dashboard display)
-router.get('/pending-requests', authenticateToken, async (req, res) => {
-  try {
-    const userRole = req.user?.role;
-    
-    if (!canApproveRequests(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You do not have permission to view pending requests' 
-      });
-    }
-    
-    const [requests] = await pool.execute(
-      `SELECT psr.*, 
-              gss.student_code, gss.trade_code, gss.level_number,
-              CONCAT(u.first_name, ' ', u.last_name) as parent_name,
-              u.phone as parent_phone,
-              u.email as parent_email
-       FROM parent_student_requests psr
-       LEFT JOIN users u ON psr.parent_id = u.id
-       LEFT JOIN global_student_sheets gss ON psr.student_id = gss.id
-       WHERE psr.status = 'pending'
-       ORDER BY psr.created_at DESC LIMIT 50`
-    );
-    
-    res.json({
-      success: true,
-      requests,
-      role: userRole,
-      canApprove: true
-    });
-  } catch (error) {
-    console.error('Error fetching pending requests:', error);
-    res.status(500).json({ success: false, message: 'Error fetching requests' });
-  }
-});
-
-// GET linking requests (for admin/staff)
-router.get('/linking-requests', authenticateToken, async (req, res) => {
-  try {
-    const { status, page = 1, limit = 20 } = req.query;
-    const userRole = req.user?.role;
-    
-    if (!canApproveRequests(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You do not have permission to view linking requests' 
-      });
-    }
-    
-    let query = `SELECT psr.*,
-                  CONCAT(u.first_name, ' ', u.last_name) as parent_name,
-                  u.phone as parent_phone,
-                  u.email as parent_email
-                  FROM parent_student_requests psr
-                  LEFT JOIN users u ON psr.parent_id = u.id
-                  WHERE 1=1`;
-    const params = [];
-    
-    if (status) {
-      query += ' AND psr.status = ?';
-      params.push(status);
-    }
-    
-    query += ' ORDER BY psr.created_at DESC LIMIT ? OFFSET ?';
+    sql += ` ORDER BY ${sortField} ${order}`;
+    sql += ` LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
-    
-    const [requests] = await pool.execute(query, params);
-    
-    const [[{ total }]] = await pool.execute(
-      status
-        ? 'SELECT COUNT(*) as total FROM parent_student_requests WHERE status = ?'
-        : 'SELECT COUNT(*) as total FROM parent_student_requests',
-      status ? [status] : []
-    );
-    
+
+    const [links] = await pool.execute(sql, params);
+
     res.json({
       success: true,
-      requests,
-      userRole,
-      canApprove: canApproveRequests(userRole),
+      data: links,
       pagination: {
-        total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching linking requests:', error);
-    res.status(500).json({ success: false, message: 'Error fetching requests' });
-  }
-});
-
-// PUT approve/reject linking request
-router.put('/linking-requests/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action, note } = req.body;
-    
-    const userRole = req.user?.role;
-    const userId = req.user?.id;
-    const userName = req.user?.name;
-    
-    if (!canApproveRequests(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You do not have permission to process linking requests' 
-      });
-    }
-    
-    const status = action === 'approve' ? 'approved' : 'rejected';
-    
-    const [requests] = await pool.execute('SELECT * FROM parent_student_requests WHERE id = ?', [id]);
-    
-    if (requests.length === 0) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    
-    const reqData = requests[0];
-    
-    if (reqData.status !== 'pending') {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Request has already been ${reqData.status}` 
-      });
-    }
-    
-    // Update the request
-    await pool.execute(
-      `UPDATE parent_student_requests 
-       SET status = ?, reviewed_by = ?, reviewed_by_name = ?,
-           reviewed_by_role = ?, reviewed_at = NOW(), review_note = ? 
-       WHERE id = ?`,
-      [status, userId, userName, userRole, note, id]
-    );
-    
-    if (action === 'approve') {
-      // Create the connection
-      await pool.execute(
-        `INSERT INTO parent_connections (
-          parent_id, parent_name, parent_phone, parent_email,
-          student_id, student_name, relationship,
-          can_view_marks, can_view_attendance, can_view_discipline,
-          can_view_report_cards, can_view_fees, can_receive_notifications,
-          status, created_at, approved_by, approved_by_role
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 1, 1, 1, 'active', NOW(), ?, ?)`,
-        [
-          reqData.parent_id, reqData.parent_name, reqData.parent_phone, reqData.parent_email,
-          reqData.student_id, `${reqData.student_first_name} ${reqData.student_last_name}`,
-          reqData.relationship_type,
-          userName, userRole
-        ]
-      );
-      
-      // Create notification for parent
-      await pool.execute(
-        `INSERT INTO parent_notifications (
-          parent_phone, title, message, urgency, is_read, created_at
-        ) VALUES (?, ?, ?, 'normal', 0, NOW())`,
-        [
-          reqData.parent_phone,
-          'Parent Linking Approved - Access Granted',
-          `Your request to link with student ${reqData.student_first_name} ${reqData.student_last_name} has been approved by ${userName} (${userRole.replace('_', ' ')}). You now have access to view your child's information.`
-        ]
-      );
-    } else {
-      await pool.execute(
-        `INSERT INTO parent_notifications (
-          parent_phone, title, message, urgency, is_read, created_at
-        ) VALUES (?, ?, ?, 'low', 0, NOW())`,
-        [
-          reqData.parent_phone,
-          'Parent Linking Request Not Approved',
-          `Your request to link with student ${reqData.student_first_name} ${reqData.student_last_name} was not approved. ${note ? 'Reason: ' + note : ''}`
-        ]
-      );
-    }
-    
-    res.json({
-      success: true,
-      message: `Request ${status} successfully`,
-      approvedBy: userName,
-      approvedByRole: userRole
-    });
-  } catch (error) {
-    console.error('Error processing linking request:', error);
-    res.status(500).json({ success: false, message: 'Error processing request' });
-  }
-});
-
-// POST bulk approve requests
-router.post('/bulk-approve', authenticateToken, async (req, res) => {
-  try {
-    const { request_ids } = req.body;
-    const userRole = req.user?.role;
-    const userId = req.user?.id;
-    const userName = req.user?.name;
-    
-    if (!['admin', 'headmaster'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Only administrators and headmasters can bulk approve requests' 
-      });
-    }
-    
-    if (!Array.isArray(request_ids) || request_ids.length === 0) {
-      return res.status(400).json({ success: false, message: 'No request IDs provided' });
-    }
-    
-    let approved = 0;
-    let skipped = 0;
-    
-    for (const reqId of request_ids) {
-      const [requests] = await pool.execute(
-        "SELECT * FROM parent_student_requests WHERE id = ? AND status = 'pending'",
-        [reqId]
-      );
-      
-      if (requests.length > 0) {
-        const reqData = requests[0];
-        
-        await pool.execute(
-          `UPDATE parent_student_requests 
-           SET status = 'approved', reviewed_by = ?, reviewed_by_name = ?,
-               reviewed_by_role = ?, reviewed_at = NOW(), review_note = 'Bulk approved'
-           WHERE id = ?`,
-          [userId, userName, userRole, reqId]
-        );
-        
-        await pool.execute(
-          `INSERT INTO parent_connections (
-            parent_id, parent_name, parent_phone, parent_email,
-            student_id, student_name, relationship,
-            can_view_marks, can_view_attendance, can_view_discipline,
-            can_view_report_cards, can_view_fees, can_receive_notifications,
-            status, created_at, approved_by, approved_by_role
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 1, 1, 1, 'active', NOW(), ?, ?)`,
-          [
-            reqData.parent_id, reqData.parent_name, reqData.parent_phone, reqData.parent_email,
-            reqData.student_id, `${reqData.student_first_name} ${reqData.student_last_name}`,
-            reqData.relationship_type,
-            userName, userRole
-          ]
-        );
-        
-        await pool.execute(
-          `INSERT INTO parent_notifications (
-            parent_phone, title, message, urgency, is_read, created_at
-          ) VALUES (?, ?, ?, 'normal', 0, NOW())`,
-          [
-            reqData.parent_phone,
-            'Parent Linking Approved',
-            `Your request to link with student ${reqData.student_first_name} ${reqData.student_last_name} has been approved.`
-          ]
-        );
-        
-        approved++;
-      } else {
-        skipped++;
-      }
-    }
-    
-    res.json({
-      success: true,
-      message: `Successfully approved ${approved} requests, skipped ${skipped}`,
-      approved,
-      skipped
-    });
-  } catch (error) {
-    console.error('Error in bulk approval:', error);
-    res.status(500).json({ success: false, message: 'Error processing bulk approval' });
-  }
-});
-
-// ==================== PARENT MESSAGES ====================
-
-router.get('/messages/:parentPhone', async (req, res) => {
-  try {
-    const { parentPhone } = req.params;
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
-    
-    const [messages] = await pool.execute(
-      `SELECT * FROM parent_communications 
-       WHERE parent_phone = ?
-       ORDER BY sent_at DESC LIMIT ? OFFSET ?`,
-      [parentPhone, parseInt(limit), offset]
-    );
-    
-    const [[{ total }]] = await pool.execute(
-      'SELECT COUNT(*) as total FROM parent_communications WHERE parent_phone = ?',
-      [parentPhone]
-    );
-    
-    res.json({
-      success: true,
-      messages,
-      pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ success: false, message: 'Error fetching messages' });
-  }
-});
-
-router.post('/messages', authenticateToken, async (req, res) => {
-  try {
-    const { parent_phone, student_sheet_id, subject, message_body, urgency, category } = req.body;
-    
-    const [result] = await pool.execute(
-      `INSERT INTO parent_communications (
-        student_sheet_id, sender_id, sender_name, sender_role,
-        parent_phone, subject, message_body, urgency, category, status, sent_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'sent', NOW())`,
-      [
-        student_sheet_id || null,
-        req.user?.id,
-        req.user?.name || 'System',
-        req.user?.role || 'staff',
-        parent_phone,
-        subject,
-        message_body,
-        urgency || 'normal',
-        category || 'general'
-      ]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Message sent successfully',
-      message_id: result.insertId
+    console.error('Get links error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch links',
+      error: error.message
     });
-  } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ success: false, message: 'Error sending message' });
   }
 });
 
-// ==================== PARENT NOTIFICATIONS ====================
-
-router.get('/notifications/:parentPhone', async (req, res) => {
-  try {
-    const { parentPhone } = req.params;
-    
-    const [notifications] = await pool.execute(
-      `SELECT * FROM parent_notifications 
-       WHERE parent_phone = ?
-       ORDER BY created_at DESC LIMIT 50`,
-      [parentPhone]
-    );
-    
-    const [[{ unread_count }]] = await pool.execute(
-      'SELECT COUNT(*) as unread_count FROM parent_notifications WHERE parent_phone = ? AND is_read = 0',
-      [parentPhone]
-    );
-    
-    res.json({
-      success: true,
-      notifications,
-      unread_count
-    });
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ success: false, message: 'Error fetching notifications' });
-  }
-});
-
-router.put('/notifications/:id/read', async (req, res) => {
+// GET /api/parent-linking/links/:id - Get specific link details
+router.get('/links/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    await pool.execute(
-      'UPDATE parent_notifications SET is_read = 1 WHERE id = ?',
+
+    const [links] = await pool.execute(`
+            SELECT 
+                psl.*,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                p.email as parent_email,
+                p.phone as parent_phone,
+                p.address as parent_address,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.student_id as student_number,
+                s.trade_code,
+                s.level,
+                s.email as student_email,
+                t.name as trade_name
+            FROM parent_student_links psl
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE psl.id = ?
+        `, [id]);
+
+    if (links.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Link not found'
+      });
+    }
+
+    // Get activity history
+    const [activity] = await pool.execute(`
+            SELECT * FROM parent_student_link_activity
+            WHERE link_id = ?
+            ORDER BY created_at DESC
+        `, [id]);
+
+    res.json({
+      success: true,
+      link: links[0],
+      activity
+    });
+  } catch (error) {
+    console.error('Get link details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch link details',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/parent-linking/links - Create new link
+router.post('/links', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const {
+      parent_id,
+      student_id,
+      relationship_type = 'Parent',
+      match_confidence = 100,
+      notes
+    } = req.body;
+
+    // Validate parent exists
+    const [parent] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? AND role = "parent"',
+      [parent_id]
+    );
+    if (parent.length === 0) {
+      throw new Error('Parent not found');
+    }
+
+    // Validate student exists
+    const [student] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? AND role = "student"',
+      [student_id]
+    );
+    if (student.length === 0) {
+      throw new Error('Student not found');
+    }
+
+    // Check if link already exists
+    const [existing] = await connection.execute(
+      'SELECT id FROM parent_student_links WHERE parent_id = ? AND student_id = ?',
+      [parent_id, student_id]
+    );
+    if (existing.length > 0) {
+      throw new Error('Link already exists');
+    }
+
+    // Create link
+    const [result] = await connection.execute(`
+            INSERT INTO parent_student_links (
+                parent_id, student_id, relationship_type, status,
+                match_confidence, match_metadata, linked_at
+            ) VALUES (?, ?, ?, 'active', ?, ?, NOW())
+        `, [
+      parent_id,
+      student_id,
+      relationship_type,
+      match_confidence,
+      JSON.stringify({ manually_created: true, created_by: req.user.userId, notes })
+    ]);
+
+    const linkId = result.insertId;
+
+    // Log activity
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'created', ?)
+        `, [linkId, `Link created by user ${req.user.userId}`]);
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: 'Link created successfully',
+      link_id: linkId
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Create link error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create link'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// PUT /api/parent-linking/links/:id - Update link
+router.put('/links/:id', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const { status, relationship_type, notes } = req.body;
+
+    const [existing] = await connection.execute(
+      'SELECT * FROM parent_student_links WHERE id = ?',
       [id]
     );
-    
-    res.json({ success: true, message: 'Notification marked as read' });
+    if (existing.length === 0) {
+      throw new Error('Link not found');
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (status) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+    if (relationship_type) {
+      updates.push('relationship_type = ?');
+      params.push(relationship_type);
+    }
+    if (updates.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id);
+
+    await connection.execute(
+      `UPDATE parent_student_links SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    // Log activity
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'updated', ?)
+        `, [id, notes || `Link updated by user ${req.user.userId}`]);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Link updated successfully'
+    });
   } catch (error) {
-    console.error('Error marking notification read:', error);
-    res.status(500).json({ success: false, message: 'Error updating notification' });
+    await connection.rollback();
+    console.error('Update link error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update link'
+    });
+  } finally {
+    connection.release();
   }
 });
 
-// ==================== EXPORT ROUTES ====================
-
-router.get('/export/connections', authenticateToken, async (req, res) => {
+// DELETE /api/parent-linking/links/:id - Remove link
+router.delete('/links/:id', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const userRole = req.user?.role;
-    
-    if (!['admin', 'headmaster', 'accountant'].includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'You do not have permission to export data' 
-      });
-    }
-    
-    const [connections] = await pool.execute(
-      `SELECT pc.connection_id, pc.parent_name, pc.parent_phone, pc.parent_email,
-              gss.student_code, gss.first_name, gss.last_name, gss.trade_code, gss.level_number,
-              pc.relationship, pc.status, pc.created_at, pc.approved_by, pc.approved_by_role
-       FROM parent_connections pc
-       LEFT JOIN global_student_sheets gss ON pc.student_id = gss.id
-       ORDER BY pc.created_at DESC`
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const [existing] = await connection.execute(
+      'SELECT * FROM parent_student_links WHERE id = ?',
+      [id]
     );
-    
+    if (existing.length === 0) {
+      throw new Error('Link not found');
+    }
+
+    // Log activity before deletion
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'deleted', ?)
+        `, [id, reason || `Link deleted by user ${req.user.userId}`]);
+
+    // Soft delete by setting status to 'deleted'
+    await connection.execute(
+      'UPDATE parent_student_links SET status = ?, updated_at = NOW() WHERE id = ?',
+      ['deleted', id]
+    );
+
+    await connection.commit();
+
     res.json({
       success: true,
-      connections,
-      exportedBy: req.user?.name,
-      exportedByRole: userRole,
-      exportedAt: new Date().toISOString()
+      message: 'Link deleted successfully'
     });
   } catch (error) {
-    console.error('Error exporting connections:', error);
-    res.status(500).json({ success: false, message: 'Error exporting data' });
+    await connection.rollback();
+    console.error('Delete link error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete link'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET /api/parent-linking/parent/:parent_id/students - Get all students for a parent
+router.get('/parent/:parent_id/students', authenticateToken, async (req, res) => {
+  try {
+    const { parent_id } = req.params;
+
+    const [students] = await pool.execute(`
+            SELECT 
+                s.id,
+                s.first_name,
+                s.last_name,
+                s.student_id,
+                s.trade_code,
+                s.level,
+                s.email,
+                s.phone,
+                t.name as trade_name,
+                psl.id as link_id,
+                psl.relationship_type,
+                psl.status,
+                psl.match_confidence,
+                psl.linked_at
+            FROM parent_student_links psl
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE psl.parent_id = ? AND psl.status IN ('active', 'pending')
+            ORDER BY s.first_name, s.last_name
+        `, [parent_id]);
+
+    res.json({
+      success: true,
+      students,
+      count: students.length
+    });
+  } catch (error) {
+    console.error('Get parent students error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch students',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/parent-linking/student/:student_id/parents - Get all parents for a student
+router.get('/student/:student_id/parents', authenticateToken, async (req, res) => {
+  try {
+    const { student_id } = req.params;
+
+    const [parents] = await pool.execute(`
+            SELECT 
+                p.id,
+                p.first_name,
+                p.last_name,
+                p.email,
+                p.phone,
+                p.address,
+                psl.id as link_id,
+                psl.relationship_type,
+                psl.status,
+                psl.match_confidence,
+                psl.linked_at
+            FROM parent_student_links psl
+            INNER JOIN users p ON psl.parent_id = p.id
+            WHERE psl.student_id = ? AND psl.status IN ('active', 'pending')
+            ORDER BY p.first_name, p.last_name
+        `, [student_id]);
+
+    res.json({
+      success: true,
+      parents,
+      count: parents.length
+    });
+  } catch (error) {
+    console.error('Get student parents error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch parents',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================
+// APPROVAL & VERIFICATION
+// ============================================================
+
+// GET /api/parent-linking/pending - Get all pending link requests
+router.get('/pending', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+
+    const [links] = await pool.execute(`
+            SELECT 
+                psl.*,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                p.email as parent_email,
+                p.phone as parent_phone,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.student_id as student_number,
+                s.trade_code,
+                s.level,
+                t.name as trade_name
+            FROM parent_student_links psl
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE psl.status = 'pending'
+            ORDER BY psl.created_at DESC
+            LIMIT ? OFFSET ?
+        `, [parseInt(limit), (parseInt(page) - 1) * parseInt(limit)]);
+
+    const [countResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links WHERE status = ?',
+      ['pending']
+    );
+
+    res.json({
+      success: true,
+      data: links,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: countResult[0].total,
+        pages: Math.ceil(countResult[0].total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get pending links error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending links',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/parent-linking/approve/:id - Approve link request
+router.post('/approve/:id', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    await connection.execute(
+      'UPDATE parent_student_links SET status = ?, linked_at = NOW(), updated_at = NOW() WHERE id = ?',
+      ['active', id]
+    );
+
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'approved', ?)
+        `, [id, notes || `Approved by user ${req.user.userId}`]);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Link approved successfully'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Approve link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve link',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// POST /api/parent-linking/reject/:id - Reject link request
+router.post('/reject/:id', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    await connection.execute(
+      'UPDATE parent_student_links SET status = ?, updated_at = NOW() WHERE id = ?',
+      ['rejected', id]
+    );
+
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'rejected', ?)
+        `, [id, reason || `Rejected by user ${req.user.userId}`]);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Link rejected successfully'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Reject link error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject link',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// POST /api/parent-linking/bulk-approve - Bulk approve links
+router.post('/bulk-approve', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { link_ids } = req.body;
+
+    if (!Array.isArray(link_ids) || link_ids.length === 0) {
+      throw new Error('link_ids must be a non-empty array');
+    }
+
+    const placeholders = link_ids.map(() => '?').join(',');
+
+    await connection.execute(
+      `UPDATE parent_student_links SET status = 'active', linked_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders})`,
+      link_ids
+    );
+
+    // Log activities
+    for (const linkId of link_ids) {
+      await connection.execute(`
+                INSERT INTO parent_student_link_activity (link_id, action, details)
+                VALUES (?, 'bulk_approved', ?)
+            `, [linkId, `Bulk approved by user ${req.user.userId}`]);
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `${link_ids.length} links approved successfully`,
+      count: link_ids.length
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Bulk approve error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to approve links'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// POST /api/parent-linking/bulk-reject - Bulk reject links
+router.post('/bulk-reject', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { link_ids, reason } = req.body;
+
+    if (!Array.isArray(link_ids) || link_ids.length === 0) {
+      throw new Error('link_ids must be a non-empty array');
+    }
+
+    const placeholders = link_ids.map(() => '?').join(',');
+
+    await connection.execute(
+      `UPDATE parent_student_links SET status = 'rejected', updated_at = NOW() WHERE id IN (${placeholders})`,
+      link_ids
+    );
+
+    // Log activities
+    for (const linkId of link_ids) {
+      await connection.execute(`
+                INSERT INTO parent_student_link_activity (link_id, action, details)
+                VALUES (?, 'bulk_rejected', ?)
+            `, [linkId, reason || `Bulk rejected by user ${req.user.userId}`]);
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `${link_ids.length} links rejected successfully`,
+      count: link_ids.length
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Bulk reject error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to reject links'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// ============================================================
+// ADVANCED SEARCH & ANALYTICS
+// ============================================================
+
+// POST /api/parent-linking/search - Advanced search with filters
+router.post('/search', authenticateToken, async (req, res) => {
+  try {
+    const {
+      parent_name,
+      student_name,
+      parent_phone,
+      student_number,
+      trade_code,
+      level,
+      status,
+      date_from,
+      date_to,
+      page = 1,
+      limit = 20
+    } = req.body;
+
+    let sql = `
+            SELECT 
+                psl.*,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                p.email as parent_email,
+                p.phone as parent_phone,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.student_id as student_number,
+                s.trade_code,
+                s.level,
+                COALESCE(t.name, s.trade_code) as trade_name
+            FROM parent_student_links psl
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE 1=1
+        `;
+
+    const params = [];
+
+    if (parent_name) {
+      sql += ` AND CONCAT(p.first_name, ' ', p.last_name) LIKE ?`;
+      params.push(`%${parent_name}%`);
+    }
+    if (student_name) {
+      sql += ` AND CONCAT(s.first_name, ' ', s.last_name) LIKE ?`;
+      params.push(`%${student_name}%`);
+    }
+    if (parent_phone) {
+      sql += ` AND p.phone LIKE ?`;
+      params.push(`%${parent_phone}%`);
+    }
+    if (student_number) {
+      sql += ` AND s.student_id LIKE ?`;
+      params.push(`%${student_number}%`);
+    }
+    if (trade_code) {
+      sql += ` AND s.trade_code = ?`;
+      params.push(trade_code);
+    }
+    if (level) {
+      sql += ` AND s.level = ?`;
+      params.push(level);
+    }
+    if (status) {
+      sql += ` AND psl.status = ?`;
+      params.push(status);
+    }
+    if (date_from) {
+      sql += ` AND psl.created_at >= ?`;
+      params.push(date_from);
+    }
+    if (date_to) {
+      sql += ` AND psl.created_at <= ?`;
+      params.push(date_to);
+    }
+
+    // Get total count
+    const countSql = sql.replace(/SELECT .*? FROM/, 'SELECT COUNT(*) as total FROM');
+    const [countResult] = await pool.execute(countSql, params);
+    const total = countResult[0].total;
+
+    // Add pagination
+    sql += ` ORDER BY psl.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+    const [results] = await pool.execute(sql, params);
+
+    res.json({
+      success: true,
+      data: results,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search links',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/parent-linking/analytics - Link statistics and analytics
+router.get('/analytics', authenticateToken, async (req, res) => {
+  try {
+    // Total links by status
+    const [statusStats] = await pool.execute(`
+            SELECT status, COUNT(*) as count
+            FROM parent_student_links
+            GROUP BY status
+        `);
+
+    // Links created per month (last 12 months)
+    const [monthlyStats] = await pool.execute(`
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                COUNT(*) as count
+            FROM parent_student_links
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY month DESC
+        `);
+
+    // Average confidence scores
+    const [confidenceStats] = await pool.execute(`
+            SELECT 
+                AVG(match_confidence) as avg_confidence,
+                MIN(match_confidence) as min_confidence,
+                MAX(match_confidence) as max_confidence
+            FROM parent_student_links
+            WHERE status IN ('approved', 'pending')
+        `);
+
+    // Top relationship types
+    const [relationshipStats] = await pool.execute(`
+            SELECT relationship_type, COUNT(*) as count
+            FROM parent_student_links
+            WHERE status = 'approved'
+            GROUP BY relationship_type
+            ORDER BY count DESC
+            LIMIT 10
+        `);
+
+    // Links by trade
+    const [tradeStats] = await pool.execute(`
+            SELECT 
+                COALESCE(t.name, s.trade_code) as trade_name,
+                COUNT(psl.id) as count
+            FROM parent_student_links psl
+            INNER JOIN users s ON psl.student_id = s.id
+            LEFT JOIN trades t ON s.trade_code = t.code
+            WHERE psl.status = 'approved'
+            GROUP BY s.trade_code
+            ORDER BY count DESC
+        `);
+
+    // Links by level
+    const [levelStats] = await pool.execute(`
+            SELECT 
+                s.level,
+                COUNT(psl.id) as count
+            FROM parent_student_links psl
+            INNER JOIN users s ON psl.student_id = s.id
+            WHERE psl.status = 'approved'
+            GROUP BY s.level
+            ORDER BY s.level
+        `);
+
+    res.json({
+      success: true,
+      analytics: {
+        status_breakdown: statusStats,
+        monthly_trends: monthlyStats,
+        confidence_metrics: confidenceStats[0],
+        relationship_types: relationshipStats,
+        trade_distribution: tradeStats,
+        level_distribution: levelStats
+      }
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/parent-linking/activity/:id - Get link activity history
+router.get('/activity/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [activity] = await pool.execute(`
+            SELECT * FROM parent_student_link_activity
+            WHERE link_id = ?
+            ORDER BY created_at DESC
+        `, [id]);
+
+    res.json({
+      success: true,
+      activity
+    });
+  } catch (error) {
+    console.error('Get activity error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch activity',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/parent-linking/stats/dashboard - Dashboard statistics
+router.get('/stats/dashboard', authenticateToken, requireRole(['admin', 'headmaster', 'dos']), async (req, res) => {
+  try {
+    // Total links
+    const [totalResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links'
+    );
+
+    // Pending links
+    const [pendingResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links WHERE status = ?',
+      ['pending']
+    );
+
+    // Approved links (active)
+    const [activeResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links WHERE status = ?',
+      ['approved']
+    );
+
+    // Rejected links
+    const [rejectedResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links WHERE status = ?',
+      ['rejected']
+    );
+
+    // Recent links (last 7 days)
+    const [recentResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM parent_student_links WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+    );
+
+    // Total parents
+    const [parentsResult] = await pool.execute(
+      "SELECT COUNT(DISTINCT parent_id) as total FROM parent_student_links"
+    );
+
+    // Total students linked
+    const [studentsResult] = await pool.execute(
+      "SELECT COUNT(DISTINCT student_id) as total FROM parent_student_links WHERE status = 'approved'"
+    );
+
+    // Links by trade
+    const [tradeStats] = await pool.execute(`
+      SELECT 
+        COALESCE(t.name, u.trade_code) as trade_name,
+        COUNT(*) as count
+      FROM parent_student_links psl
+      JOIN users u ON psl.student_id = u.id
+      LEFT JOIN trades t ON u.trade_code = t.code
+      WHERE psl.status = 'approved'
+      GROUP BY u.trade_code
+    `);
+
+    // Links by relationship type
+    const [relationshipStats] = await pool.execute(`
+      SELECT 
+        relationship_type,
+        COUNT(*) as count
+      FROM parent_student_links
+      WHERE status = 'approved'
+      GROUP BY relationship_type
+    `);
+
+    res.json({
+      success: true,
+      stats: {
+        total: totalResult[0].total,
+        pending: pendingResult[0].total,
+        active: activeResult[0].total,
+        rejected: rejectedResult[0].total,
+        recent_7days: recentResult[0].total,
+        total_parents: parentsResult[0].total,
+        total_linked_students: studentsResult[0].total,
+        by_trade: tradeStats,
+        by_relationship: relationshipStats
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard stats',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================
+// ADMIN MANAGEMENT
+// ============================================================
+
+// GET /api/parent-linking/admin/overview - Admin overview
+router.get('/admin/overview', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  try {
+    // Get comprehensive overview
+    const [stats] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total_links,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_links,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_links,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_links,
+                AVG(match_confidence) as avg_confidence
+            FROM parent_student_links
+        `);
+
+    // Recent activity
+    const [recentActivity] = await pool.execute(`
+            SELECT 
+                psla.*,
+                psl.parent_id,
+                psl.student_id,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name
+            FROM parent_student_link_activity psla
+            INNER JOIN parent_student_links psl ON psla.link_id = psl.id
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            ORDER BY psla.created_at DESC
+            LIMIT 20
+        `);
+
+    res.json({
+      success: true,
+      overview: stats[0],
+      recent_activity: recentActivity
+    });
+  } catch (error) {
+    console.error('Admin overview error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch admin overview',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/parent-linking/admin/conflicts - Detect conflicts
+router.get('/admin/conflicts', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  try {
+    // Find students with multiple active parent links
+    const [multipleParents] = await pool.execute(`
+            SELECT 
+                s.id as student_id,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                s.student_id as student_number,
+                COUNT(psl.id) as parent_count,
+                GROUP_CONCAT(CONCAT(p.first_name, ' ', p.last_name) SEPARATOR ', ') as parent_names
+            FROM users s
+            INNER JOIN parent_student_links psl ON s.id = psl.student_id
+            INNER JOIN users p ON psl.parent_id = p.id
+            WHERE s.role = 'student' AND psl.status = 'active'
+            GROUP BY s.id
+            HAVING COUNT(psl.id) > 2
+        `);
+
+    // Find duplicate pending requests
+    const [duplicates] = await pool.execute(`
+            SELECT 
+                parent_id,
+                student_id,
+                COUNT(*) as count,
+                GROUP_CONCAT(id) as link_ids
+            FROM parent_student_links
+            WHERE status = 'pending'
+            GROUP BY parent_id, student_id
+            HAVING COUNT(*) > 1
+        `);
+
+    res.json({
+      success: true,
+      conflicts: {
+        multiple_parents: multipleParents,
+        duplicate_requests: duplicates
+      }
+    });
+  } catch (error) {
+    console.error('Conflicts detection error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to detect conflicts',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/parent-linking/admin/force-link - Force create link (admin only)
+router.post('/admin/force-link', authenticateToken, requireRole(['admin']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { parent_id, student_id, relationship_type, reason } = req.body;
+
+    // Create link with admin override
+    const [result] = await connection.execute(`
+            INSERT INTO parent_student_links (
+                parent_id, student_id, relationship_type, status,
+                match_confidence, match_metadata, linked_at
+            ) VALUES (?, ?, ?, 'active', 100, ?, NOW())
+        `, [
+      parent_id,
+      student_id,
+      relationship_type,
+      JSON.stringify({ admin_forced: true, created_by: req.user.userId, reason })
+    ]);
+
+    const linkId = result.insertId;
+
+    // Log activity
+    await connection.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details)
+            VALUES (?, 'force_linked', ?)
+        `, [linkId, `Force linked by admin ${req.user.userId}: ${reason}`]);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Link force created successfully',
+      link_id: linkId
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Force link error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to force create link'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET /api/parent-linking/admin/audit-log - Audit trail
+router.get('/admin/audit-log', authenticateToken, requireRole(['admin', 'headmaster']), async (req, res) => {
+  try {
+    const { page = 1, limit = 50, action } = req.query;
+
+    let sql = `
+            SELECT 
+                psla.*,
+                psl.parent_id,
+                psl.student_id,
+                CONCAT(p.first_name, ' ', p.last_name) as parent_name,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name
+            FROM parent_student_link_activity psla
+            INNER JOIN parent_student_links psl ON psla.link_id = psl.id
+            INNER JOIN users p ON psl.parent_id = p.id
+            INNER JOIN users s ON psl.student_id = s.id
+            WHERE 1=1
+        `;
+
+    const params = [];
+
+    if (action) {
+      sql += ` AND psla.action = ?`;
+      params.push(action);
+    }
+
+    sql += ` ORDER BY psla.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+    const [logs] = await pool.execute(sql, params);
+
+    res.json({
+      success: true,
+      logs
+    });
+  } catch (error) {
+    console.error('Audit log error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch audit log',
+      error: error.message
+    });
   }
 });
 

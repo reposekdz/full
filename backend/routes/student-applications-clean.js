@@ -238,11 +238,11 @@ router.get('/all', async (req, res) => {
     const offset = (page - 1) * limit;
     
     let query = `
-      SELECT sa.*, t.trade_name, tl.description as level_description,
+      SELECT sa.*, t.name, tl.description as level_description,
              p.name_en as province_name, d.name_en as district_name, 
              s.name_en as sector_name, COUNT(ad.id) as document_count
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       LEFT JOIN trade_levels tl ON sa.level_number = tl.level_number
       LEFT JOIN provinces p ON sa.province_id = p.id
       LEFT JOIN districts d ON sa.district_id = d.id
@@ -294,11 +294,11 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     
     const [applications] = await pool.execute(`
-      SELECT sa.*, t.trade_name, tl.description as level_description,
+      SELECT sa.*, t.name, tl.description as level_description,
              p.name_en as province_name, d.name_en as district_name,
              s.name_en as sector_name, c.name_en as cell_name, v.name_en as village_name
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       LEFT JOIN trade_levels tl ON sa.level_number = tl.level_number
       LEFT JOIN provinces p ON sa.province_id = p.id
       LEFT JOIN districts d ON sa.district_id = d.id

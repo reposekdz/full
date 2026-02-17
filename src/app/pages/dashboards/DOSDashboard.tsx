@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { GraduationCap, Users, BookOpen, TrendingUp, Plus, Search, UserPlus, BarChart2, Award, Target, MessageSquare } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, TrendingUp, Plus, Search, UserPlus, BarChart2, Award, Target, MessageSquare, Grid } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/app/components/ui/badge';
 import apiService from '@/app/services/apiService';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
+import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 interface DOSDashboardProps {
   onNavigate?: (page: string) => void;
@@ -17,6 +19,7 @@ interface DOSDashboardProps {
 }
 
 export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps = {}) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState<any>(null);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -209,17 +212,20 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
         </div>
 
         <div className="flex gap-2 border-b-2 border-gray-200">
-          {['overview', 'subjects', 'teachers', 'performance'].map((tab) => (
+          {['overview', 'subjects', 'teachers', 'performance', 'global-sheets'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 font-semibold capitalize transition-all ${
-                activeTab === tab
+              className={`px-6 py-3 font-semibold capitalize transition-all ${activeTab === tab
                   ? 'border-b-4 border-indigo-600 text-indigo-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
-              {tab}
+              {tab === 'global-sheets' ? (
+                <div className="flex items-center gap-2">
+                  <Grid className="w-4 h-4" /> Global Sheets
+                </div>
+              ) : tab}
             </button>
           ))}
         </div>
@@ -256,11 +262,11 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
                         </p>
                         <Badge className={
                           cls.avg_marks >= 80 ? 'bg-green-100 text-green-700' :
-                          cls.avg_marks >= 60 ? 'bg-blue-100 text-blue-700' :
-                          'bg-yellow-100 text-yellow-700'
+                            cls.avg_marks >= 60 ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
                         }>
                           {cls.avg_marks >= 80 ? 'Excellent' :
-                           cls.avg_marks >= 60 ? 'Good' : 'Needs Improvement'}
+                            cls.avg_marks >= 60 ? 'Good' : 'Needs Improvement'}
                         </Badge>
                       </div>
                     </motion.div>
@@ -345,13 +351,13 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
                         <td className="py-3 px-4">
                           <Badge className={
                             subject.avg_percentage >= 80 ? 'bg-green-100 text-green-700' :
-                            subject.avg_percentage >= 60 ? 'bg-blue-100 text-blue-700' :
-                            subject.avg_percentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
+                              subject.avg_percentage >= 60 ? 'bg-blue-100 text-blue-700' :
+                                subject.avg_percentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
                           }>
                             {subject.avg_percentage >= 80 ? 'Excellent' :
-                             subject.avg_percentage >= 60 ? 'Good' :
-                             subject.avg_percentage >= 40 ? 'Fair' : 'Poor'}
+                              subject.avg_percentage >= 60 ? 'Good' :
+                                subject.avg_percentage >= 40 ? 'Fair' : 'Poor'}
                           </Badge>
                         </td>
                       </motion.tr>
@@ -422,11 +428,11 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
                         <td className="py-3 px-4">
                           <Badge className={
                             teacher.total_periods > 20 ? 'bg-red-100 text-red-700' :
-                            teacher.total_periods > 15 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                              teacher.total_periods > 15 ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
                           }>
                             {teacher.total_periods > 20 ? 'Overloaded' :
-                             teacher.total_periods > 15 ? 'Full' : 'Available'}
+                              teacher.total_periods > 15 ? 'Full' : 'Available'}
                           </Badge>
                         </td>
                       </motion.tr>
@@ -470,12 +476,11 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
                         initial={{ width: 0 }}
                         animate={{ width: `${subject.avg_percentage || 0}%` }}
                         transition={{ delay: index * 0.05 + 0.2, duration: 0.8 }}
-                        className={`h-full flex items-center justify-end pr-2 ${
-                          subject.avg_percentage >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                          subject.avg_percentage >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                          subject.avg_percentage >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                          'bg-gradient-to-r from-red-500 to-rose-500'
-                        }`}
+                        className={`h-full flex items-center justify-end pr-2 ${subject.avg_percentage >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                            subject.avg_percentage >= 60 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
+                              subject.avg_percentage >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                'bg-gradient-to-r from-red-500 to-rose-500'
+                          }`}
                       >
                         <span className="text-white text-xs font-bold">
                           {subject.avg_percentage ? subject.avg_percentage.toFixed(0) : 0}%
@@ -487,6 +492,16 @@ export default function DOSDashboard({ onNavigate, onLogout }: DOSDashboardProps
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {activeTab === 'global-sheets' && (
+          <div className="h-[calc(100vh-250px)]">
+            <GlobalStudentSheets
+              userRole={user?.role || 'dos'}
+              userId={user?.id || 0}
+              onNavigate={onNavigate}
+            />
+          </div>
         )}
       </div>
     </div>

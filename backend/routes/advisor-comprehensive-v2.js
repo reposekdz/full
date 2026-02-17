@@ -483,7 +483,7 @@ router.get('/students/all', authenticateToken, requireRole('advisor', 'admin'), 
     const { trade, level, search } = req.query;
     
     let query = `
-      SELECT u.*, t.trade_name, l.level_name,
+      SELECT u.*, t.name, l.level_name,
         (SELECT AVG(g.marks) FROM grades g WHERE g.student_id = u.id) as avg_grade,
         (SELECT COUNT(*) FROM attendance a WHERE a.student_id = u.id AND a.status = 'present') as attendance_count
       FROM users u

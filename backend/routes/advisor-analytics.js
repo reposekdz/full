@@ -20,14 +20,14 @@ router.get('/analytics/school-overview', authenticateToken, requireRole('advisor
 
     const [tradeStats] = await pool.execute(`
       SELECT 
-        t.trade_name,
+        t.name,
         t.trade_id,
         COUNT(DISTINCT e.student_id) as enrolled_students,
         t.capacity,
         ROUND((COUNT(DISTINCT e.student_id) / t.capacity * 100), 2) as utilization_rate
       FROM trades t
       LEFT JOIN enrollments e ON t.trade_id = e.trade_id AND e.status = 'active'
-      GROUP BY t.trade_id, t.trade_name, t.capacity
+      GROUP BY t.trade_id, t.name, t.capacity
       ORDER BY enrolled_students DESC
     `);
 
@@ -159,27 +159,27 @@ router.get('/analytics/performance-trends', authenticateToken, requireRole('advi
         DATE_FORMAT(sg.created_at, '%Y-%m') as month,
         AVG(CAST(sg.average_score AS DECIMAL(5,2))) as avg_score,
         COUNT(DISTINCT sg.student_id) as student_count,
-        t.trade_name,
+        t.name,
         tl.level_name
       FROM student_grades sg
       JOIN enrollments e ON sg.student_id = e.student_id
       JOIN trades t ON e.trade_id = t.trade_id
       JOIN trade_levels tl ON e.level_id = tl.id
       WHERE sg.created_at >= ${dateFilter} ${tradeFilter} ${levelFilter}
-      GROUP BY DATE_FORMAT(sg.created_at, '%Y-%m'), t.trade_name, tl.level_name
+      GROUP BY DATE_FORMAT(sg.created_at, '%Y-%m'), t.name, tl.level_name
       ORDER BY month DESC
     `, params);
 
     const [comparisonData] = await pool.execute(`
       SELECT 
-        t.trade_name,
+        t.name,
         AVG(CAST(sg.average_score AS DECIMAL(5,2))) as avg_score,
         COUNT(DISTINCT sg.student_id) as student_count
       FROM student_grades sg
       JOIN enrollments e ON sg.student_id = e.student_id
       JOIN trades t ON e.trade_id = t.trade_id
       WHERE sg.created_at >= ${dateFilter}
-      GROUP BY t.trade_name
+      GROUP BY t.name
       ORDER BY avg_score DESC
     `, []);
 
@@ -203,7 +203,7 @@ router.get('/analytics/student-risk-analysis', authenticateToken, requireRole('a
       SELECT 
         s.student_id,
         CONCAT(s.first_name, ' ', s.last_name) as student_name,
-        t.trade_name,
+        t.name,
         tl.level_name,
         AVG(CAST(sg.average_score AS DECIMAL(5,2))) as avg_score,
         COUNT(DISTINCT CASE WHEN a.status = 'absent' THEN a.date END) as absent_days,
@@ -227,7 +227,7 @@ router.get('/analytics/student-risk-analysis', authenticateToken, requireRole('a
       LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       LEFT JOIN discipline_records dr ON s.student_id = dr.student_id AND dr.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
       WHERE s.status = 'active' AND e.status = 'active'
-      GROUP BY s.student_id, s.first_name, s.last_name, t.trade_name, tl.level_name
+      GROUP BY s.student_id, s.first_name, s.last_name, t.name, tl.level_name
       HAVING avg_score < 50 OR absent_days > 10 OR discipline_incidents > 3
       ORDER BY risk_level DESC, avg_score ASC
       LIMIT 100

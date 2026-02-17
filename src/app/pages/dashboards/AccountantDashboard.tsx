@@ -1,712 +1,478 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { DollarSign, TrendingUp, Users, AlertCircle, Plus, Search, Download, CreditCard, Wallet, PieChart, Upload, Columns, Phone, Bell, Filter, FileText, Send, MessageSquare, RefreshCw, LayoutGrid } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  TrendingUp,
+  DollarSign,
+  PieChart as PieChartIcon,
+  Calendar,
+  Search,
+  Download,
+  Filter,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreVertical,
+  Briefcase,
+  Layers,
+  FileText,
+  Activity,
+  Plus,
+  RefreshCw,
+  Grid
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area
+} from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
-import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import apiService from '@/app/services/apiService';
-import { toast } from 'sonner';
-import AccountantPaymentProofs from '@/app/components/AccountantPaymentProofs';
-import AccountantDynamicColumns from '@/app/components/AccountantDynamicColumns';
-import { GLOBAL_TRADES, GLOBAL_LEVELS, getLevelsForTrade } from '@/app/constants/tradesAndLevels';
-import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
-import { API_BASE_URL } from '@/app/config/apiBase';
+import { Badge } from '@/app/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/app/components/ui/dropdown-menu';
+
+import { apiService } from '@/app/services/apiService';
+import GlobalStudentSheets from '../../components/GlobalStudentSheets';
+
+
 
 interface AccountantDashboardProps {
-  onNavigate?: (page: string) => void;
-  onLogout?: () => void;
+  onNavigate: (page: string) => void;
+  onLogout: () => void;
 }
 
-export default function AccountantDashboard({ onNavigate, onLogout }: AccountantDashboardProps) {
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [overview, setOverview] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [trades, setTrades] = useState<any[]>([]);
-  const [levels, setLevels] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [trends, setTrends] = useState<any[]>([]);
+  const [methods, setMethods] = useState<any[]>([]);
+  const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterTrade, setFilterTrade] = useState('all');
-  const [filterLevel, setFilterLevel] = useState('all');
-  const [newPayment, setNewPayment] = useState({
-    student_id: '',
-    amount: '',
-    payment_method: 'cash',
-    transaction_ref: '',
-    payment_date: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
-  const [reminderSettings, setReminderSettings] = useState<{ remind_after_days?: string; enabled?: string; frequency?: string; minBalance?: string; time?: string }>({});
-  const [reminderForm, setReminderForm] = useState({ remind_after_days: 7, enabled: true, frequency: 'daily', minBalance: 0, time: '09:00' });
-  const [reminderSaving, setReminderSaving] = useState(false);
 
   useEffect(() => {
-    fetchData();
-    setTrades(GLOBAL_TRADES);
-    setLevels(GLOBAL_LEVELS);
-    apiService.getFeeReminderSettings().then((r: any) => {
-      if (r?.settings) setReminderSettings(r.settings);
-      if (r?.settings?.fee_reminder_remind_after_days != null) setReminderForm(f => ({ ...f, remind_after_days: parseInt(r.settings.fee_reminder_remind_after_days, 10) || 7 }));
-      if (r?.settings?.fee_reminder_enabled != null) setReminderForm(f => ({ ...f, enabled: r.settings.fee_reminder_enabled === 'true' }));
-      if (r?.settings?.fee_reminder_frequency) setReminderForm(f => ({ ...f, frequency: r.settings.fee_reminder_frequency }));
-      if (r?.settings?.fee_reminder_min_balance != null) setReminderForm(f => ({ ...f, minBalance: parseInt(r.settings.fee_reminder_min_balance, 10) || 0 }));
-      if (r?.settings?.fee_reminder_time) setReminderForm(f => ({ ...f, time: r.settings.fee_reminder_time }));
-    }).catch(() => {});
+    fetchDashboardData();
   }, []);
 
-  useEffect(() => {
-    if (filterTrade !== 'all' || filterLevel !== 'all') {
-      fetchData();
-    }
-  }, [filterTrade, filterLevel]);
-
-  const fetchData = async () => {
+  const fetchDashboardData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-      const [overviewData, studentsData, accountantRes] = await Promise.all([
-        apiService.getAccountantOverview().catch(() => null),
-        apiService.getAccountantStudentsFinancial({
-          trade: filterTrade !== 'all' ? filterTrade : undefined,
-          trade_code: filterTrade !== 'all' ? filterTrade : undefined,
-          level: filterLevel !== 'all' ? filterLevel : undefined
-        }).catch(() => ({ students: [] })),
-        fetch(`${API_BASE_URL}/accountant/dashboard`, { headers: authHeaders }).then(r => r.json()).catch(() => null)
+      const [statsRes, trendsRes, methodsRes, recentRes] = await Promise.all([
+        apiService.request('global-student-sheets/statistics'),
+        apiService.request('payments/statistics/trends').catch(() => ({ success: true, trends: [] })),
+        apiService.request('payments/statistics/methods').catch(() => ({ success: true, methods: [] })),
+        apiService.request('payments/history/recent').catch(() => ({ success: true, payments: [] }))
       ]);
-      const ov = overviewData?.data ?? overviewData?.dashboard ?? overviewData?.stats ?? null;
-      if (ov && (ov.total_expected != null || ov.total_collected != null || ov.totalIncome != null)) {
-        setOverview(ov.total_expected != null ? ov : {
-          total_expected: Number(ov.totalIncome ?? 0) + Math.max(0, Number(ov.netBalance ?? 0)),
-          total_collected: Number(ov.totalIncome ?? 0),
-          outstanding_balance: Math.abs(Math.min(0, Number(ov.netBalance ?? 0)))
-        });
-      } else if (accountantRes?.success && accountantRes?.stats) {
-        const s = accountantRes.stats;
-        setOverview({
-          total_expected: Number(s.totalIncome ?? 0) + Math.max(0, Number(s.netBalance ?? 0)),
-          total_collected: Number(s.totalIncome ?? 0),
-          outstanding_balance: Math.abs(Math.min(0, Number(s.netBalance ?? 0)))
-        });
-      }
-      setStudents(Array.isArray(studentsData?.students) ? studentsData.students : []);
+
+      if (statsRes.success) setStats(statsRes.statistics);
+      if (trendsRes.success) setTrends(trendsRes.trends || []);
+      if (methodsRes.success) setMethods(methodsRes.methods || []);
+      if (recentRes.success) setRecentPayments(recentRes.payments || []);
+
     } catch (error) {
-      console.error('Failed to fetch accountant data:', error);
-      toast.error('Failed to load dashboard data');
+      console.error('Dashboard Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRecordPayment = async () => {
-    try {
-      await apiService.recordPayment({
-        ...newPayment,
-        amount: parseFloat(newPayment.amount)
-      });
-      toast.success('Payment recorded successfully!');
-      setNewPayment({
-        student_id: '',
-        amount: '',
-        payment_method: 'cash',
-        transaction_ref: '',
-        payment_date: new Date().toISOString().split('T')[0],
-        notes: ''
-      });
-      fetchData();
-    } catch (error: any) {
-      toast.error('Failed to record payment: ' + (error?.message || 'Unknown error'));
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(amount || 0);
   };
 
-  const exportData = () => {
-    const csvContent = 'Student ID,Name,Total,Paid,Balance,Status\n' +
-      students.map(s => `${s.student_id},${s.first_name} ${s.last_name},${s.total_amount},${s.paid_amount},${s.balance},${s.payment_status}`).join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `financial-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
-
-  const filteredStudents = students.filter(s => {
-    const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.student_code?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || s.payment_status === filterStatus;
-    const matchesTrade = filterTrade === 'all' || s.trade === filterTrade;
-    const matchesLevel = filterLevel === 'all' || s.level === filterLevel;
-    return matchesSearch && matchesStatus && matchesTrade && matchesLevel;
-  });
-
-  const handleContactParent = async (studentId: number) => {
-    try {
-      await apiService.contactParent(studentId, { message: 'Muraho! Mwaramutse. Turabamenyesha ko umwana wanyu afite ideni ry\'amafaranga y\'ishuri. Mwakwishyura vuba bishoboka. Murakoze!' });
-      toast.success('Ubutumwa bwoherejwe ku mubyeyi!');
-    } catch (error: any) {
-      toast.error('Byanze kohereza ubutumwa: ' + (error?.message || ''));
-    }
-  };
-
-  const handleAutoRemind = async () => {
-    try {
-      const unpaidStudents = students.filter(s => s.payment_status === 'unpaid' || s.payment_status === 'partial');
-      await apiService.bulkRemindParents(unpaidStudents.map(s => s.id));
-      toast.success(`Ibutumwa byoherejwe ku babyeyi ${unpaidStudents.length}!`);
-    } catch (error: any) {
-      toast.error('Byanze kohereza ibutumwa: ' + (error?.message || ''));
-    }
-  };
-
-  const handleSaveReminderSettings = async () => {
-    try {
-      setReminderSaving(true);
-      await apiService.saveFeeReminderSettings({
-        enabled: reminderForm.enabled,
-        frequency: reminderForm.frequency,
-        minBalance: reminderForm.minBalance,
-        time: reminderForm.time,
-        remind_after_days: reminderForm.remind_after_days
-      });
-      toast.success('Igenamiterere cy\'ibutsa byarahinduwe!');
-    } catch (error: any) {
-      toast.error('Byanze gukiza: ' + (error?.message || ''));
-    } finally {
-      setReminderSaving(false);
-    }
-  };
-
-  const collectionRate = overview && Number(overview.total_expected) > 0
-    ? ((Number(overview.total_collected) / Number(overview.total_expected)) * 100).toFixed(1)
-    : '0';
-
-  const availableLevels = filterTrade === 'all' ? GLOBAL_LEVELS : getLevelsForTrade(filterTrade);
-
-  const paidCount = students.filter(s => s.payment_status === 'paid').length;
-  const unpaidCount = students.filter(s => s.payment_status === 'unpaid').length;
-  const partialCount = students.filter(s => s.payment_status === 'partial').length;
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600"></div>
+  const StatCard = ({ title, value, icon: Icon, color, trend, trendValue }: any) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -5 }}
+      className={`relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-gray-100/50 flex flex-col justify-between`}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        {trend && (
+          <Badge variant="outline" className={trend === 'up' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-600 bg-rose-50 border-rose-100'}>
+            {trend === 'up' ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+            {trendValue}
+          </Badge>
+        )}
       </div>
-    );
-  }
+      <div>
+        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+        <h3 className="text-2xl font-black text-gray-900 leading-tight">
+          {typeof value === 'number' && title.includes('Fee') ? formatCurrency(value) : value}
+        </h3>
+      </div>
+      <div className={`absolute bottom-0 left-0 w-full h-1 bg-${color}-500 opacity-20`} />
+    </motion.div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-5xl font-black bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-              Dashbord y'Umubare
-            </h1>
-            <p className="text-gray-600 mt-2">Gucunga amafaranga n'amafaranga y'ishuri</p>
+    <div className="min-h-screen bg-gray-50/50 p-6 md:p-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-600 mb-1">
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Accountant Portal (Ibiro by'Umuhuzabikorwa)</span>
+            <span className="text-gray-300">/</span>
+            <span className="text-gray-500">Dashboard (Imbonerahamwe)</span>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <Button variant="outline" onClick={() => fetchData()} disabled={loading} className="shrink-0" title="Refresh">
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            {onNavigate && (
-              <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50 shrink-0" onClick={() => onNavigate('student-sheets')}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Student Sheets (SOD, BDC, AUT)
-              </Button>
-            )}
-            <Button onClick={handleAutoRemind} className="bg-gradient-to-r from-orange-600 to-red-600 text-white">
-              <Bell className="w-4 h-4 mr-2" />
-              Ibutsa Ababyeyi ({unpaidCount + partialCount})
-            </Button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Andika Kwishyura
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Andika Kwishyura</DialogTitle>
-                  <DialogDescription>Andika kwishyura gushya kw'umwana</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label>Umwana</Label>
-                    <Select value={newPayment.student_id} onValueChange={(v) => setNewPayment({ ...newPayment, student_id: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Hitamo umwana" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {students.map(s => (
-                          <SelectItem key={s.id} value={s.id.toString()}>
-                            {s.first_name} {s.last_name} ({s.student_id}) - Ideni: {s.balance?.toLocaleString()} RWF
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Amafaranga (RWF)</Label>
-                    <Input
-                      type="number"
-                      value={newPayment.amount}
-                      onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
-                      placeholder="Andika amafaranga"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Uburyo bwo Kwishyura</Label>
-                    <Select value={newPayment.payment_method} onValueChange={(v) => setNewPayment({ ...newPayment, payment_method: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Amafaranga</SelectItem>
-                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                        <SelectItem value="bank_transfer">Banki</SelectItem>
-                        <SelectItem value="card">Karita</SelectItem>
-                        <SelectItem value="check">Sheki</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Nimero y'Icyemezo</Label>
-                    <Input
-                      value={newPayment.transaction_ref}
-                      onChange={(e) => setNewPayment({ ...newPayment, transaction_ref: e.target.value })}
-                      placeholder="Nimero y'icyemezo"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Itariki</Label>
-                    <Input
-                      type="date"
-                      value={newPayment.payment_date}
-                      onChange={(e) => setNewPayment({ ...newPayment, payment_date: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Inyongera</Label>
-                    <Input
-                      value={newPayment.notes}
-                      onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })}
-                      placeholder="Inyongera"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleRecordPayment} className="bg-gradient-to-r from-green-600 to-teal-600 text-white">
-                    Bika Kwishyura
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Button onClick={exportData} variant="outline" className="border-2">
-              <Download className="w-4 h-4 mr-2" />
-              Pakurura CSV
-            </Button>
-          </div>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Financial Intelligence (Ikigega cy'Ishuri)</h1>
+          <p className="text-gray-500 flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            {new Date().toLocaleDateString('rw-RW', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white border-2 border-green-200 p-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
-              Incamake
-            </TabsTrigger>
-            <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
-              Imbonerahamwe Rusange
-            </TabsTrigger>
-            <TabsTrigger value="reminders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white">
-              <Bell className="w-4 h-4 mr-2" />
-              Ibutsa Ababyeyi
-            </TabsTrigger>
-            <TabsTrigger value="columns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
-              <Columns className="w-4 h-4 mr-2" />
-              Inkingi
-            </TabsTrigger>
-            <TabsTrigger value="payment-proofs" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-teal-500 data-[state=active]:text-white">
-              <Upload className="w-4 h-4 mr-2" />
-              Ibyemezo
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white">
-              <FileText className="w-4 h-4 mr-2" />
-              Raporo
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="bg-white border-gray-200 shadow-sm" onClick={() => fetchDashboardData()}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Sync Data
+          </Button>
+          <Button size="sm" className="bg-gray-900 hover:bg-black text-white shadow-xl shadow-gray-200">
+            <Download className="w-4 h-4 mr-2" /> Financial Report
+          </Button>
+        </div>
+      </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-              <Card className="border-2 border-green-100 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <DollarSign className="w-12 h-12 mx-auto text-green-600 mb-2" />
-                  <p className="text-4xl font-black text-green-900">
-                    {(overview?.total_expected || 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-600">Expected (RWF)</p>
-                </CardContent>
-              </Card>
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div className="xl:col-span-3 space-y-8">
+          {/* Statistics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard title="Amafaranga ategerejwe (Total Expected)" value={stats?.total_fees || 0} icon={DollarSign} color="blue" trend="up" trendValue="+12.5%" />
+            <StatCard title="Ayabonetse (Actual Collected)" value={stats?.total_paid || 0} icon={CreditCard} color="emerald" trend="up" trendValue="+8.4%" />
+            <StatCard title="Ibirarane (Outstanding Balance)" value={stats?.total_balance || 0} icon={TrendingUp} color="amber" trend="down" trendValue="-3.2%" />
+          </div>
 
-              <Card className="border-2 border-blue-100 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <Wallet className="w-12 h-12 mx-auto text-blue-600 mb-2" />
-                  <p className="text-4xl font-black text-blue-900">
-                    {(overview?.total_collected || 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-600">Collected (RWF)</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-red-100 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <AlertCircle className="w-12 h-12 mx-auto text-red-600 mb-2" />
-                  <p className="text-4xl font-black text-red-900">
-                    {(overview?.outstanding_balance || 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-600">Outstanding (RWF)</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-purple-100 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <TrendingUp className="w-12 h-12 mx-auto text-purple-600 mb-2" />
-                  <p className="text-4xl font-black text-purple-900">{collectionRate}%</p>
-                  <p className="text-sm text-gray-600">Collection Rate</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-orange-100 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6 text-center">
-                  <Users className="w-12 h-12 mx-auto text-orange-600 mb-2" />
-                  <p className="text-2xl font-black text-green-700">{paidCount}</p>
-                  <p className="text-2xl font-black text-yellow-700">{partialCount}</p>
-                  <p className="text-2xl font-black text-red-700">{unpaidCount}</p>
-                  <p className="text-xs text-gray-600">Paid/Partial/Unpaid</p>
-                </CardContent>
-              </Card>
+          {/* Main Tabs Container */}
+          <Tabs defaultValue="overview" className="space-y-8" onValueChange={setActiveTab}>
+            <div className="flex justify-between items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100 overflow-x-auto scrollbar-hide">
+              <TabsList className="bg-transparent border-0">
+                <TabsTrigger value="overview" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-blue-200 transition-all font-bold text-gray-500">
+                  <LayoutDashboard className="w-4 h-4 mr-2" /> Overview
+                </TabsTrigger>
+                <TabsTrigger value="management" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-blue-200 transition-all font-bold text-gray-500">
+                  <Grid className="w-4 h-4 mr-2" /> Global Sheets (Excel)
+                </TabsTrigger>
+                <TabsTrigger value="ledger" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-blue-200 transition-all font-bold text-gray-500">
+                  <FileText className="w-4 h-4 mr-2" /> Payments Ledger
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-blue-200 transition-all font-bold text-gray-500">
+                  <Activity className="w-4 h-4 mr-2" /> Advanced Analytics
+                </TabsTrigger>
+              </TabsList>
             </div>
 
-            <Card className="border-2 border-green-100 shadow-xl">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-6 h-6 text-green-600" />
-                    Imbonerahamwe Rusange y'Abanyeshuri - Global Student Sheet
-                  </CardTitle>
-                  <div className="flex gap-3 flex-wrap">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        placeholder="Shakisha abanyeshuri..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 border-2 w-64"
-                      />
-                    </div>
-                    <Select value={filterTrade} onValueChange={setFilterTrade}>
-                      <SelectTrigger className="w-40 border-2">
-                        <SelectValue placeholder="Umwuga" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Imyuga Yose</SelectItem>
-                        {trades.filter(t => t.id).map(trade => (
-                          <SelectItem key={trade.id} value={trade.code}>{trade.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterLevel} onValueChange={(v) => { setFilterLevel(v); }}>
-                      <SelectTrigger className="w-40 border-2">
-                        <SelectValue placeholder="Urwego" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Inzego Zose</SelectItem>
-                        {availableLevels.map(level => (
-                          <SelectItem key={level.id} value={level.display}>
-                            {level.display}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-40 border-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Byose</SelectItem>
-                        <SelectItem value="paid">Yishyuye</SelectItem>
-                        <SelectItem value="partial">Yishyuye Igice</SelectItem>
-                        <SelectItem value="unpaid">Ntiyishyura</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 bg-gradient-to-r from-green-50 to-teal-50">
-                        <th className="text-left py-3 px-4 font-bold">Umwana</th>
-                        <th className="text-left py-3 px-4 font-bold">Umwuga</th>
-                        <th className="text-left py-3 px-4 font-bold">Urwego</th>
-                        <th className="text-right py-3 px-4 font-bold">Yishyuwe</th>
-                        <th className="text-right py-3 px-4 font-bold">Yasabwe</th>
-                        <th className="text-right py-3 px-4 font-bold">Ideni</th>
-                        <th className="text-center py-3 px-4 font-bold">Uko Bimeze</th>
-                        <th className="text-center py-3 px-4 font-bold">Ibikorwa</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStudents.map((student, index) => (
-                        <motion.tr
-                          key={student.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.03 }}
-                          className="border-b hover:bg-green-50"
-                        >
-                          <td className="py-3 px-4">
-                            <div>
-                              <p className="font-semibold text-gray-900">{student.first_name} {student.last_name}</p>
-                              <p className="text-xs text-gray-500">{student.student_code || student.student_id}</p>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="text-sm font-medium">{student.trade || student.trade_name || 'N/A'}</p>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="text-sm">Urwego {student.level || student.level_number || 'N/A'}</p>
-                          </td>
-                          <td className="py-3 px-4 text-right font-bold text-green-600">
-                            {(student.total_paid || student.paid_amount || 0).toLocaleString()} RWF
-                          </td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-700">
-                            {(student.total_invoiced || student.total_amount || 0).toLocaleString()} RWF
-                          </td>
-                          <td className="py-3 px-4 text-right font-bold text-red-600">
-                            {(student.balance || 0).toLocaleString()} RWF
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <Badge className={
-                              student.payment_status === 'paid' ? 'bg-green-100 text-green-700 font-semibold' :
-                              student.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700 font-semibold' :
-                              'bg-red-100 text-red-700 font-semibold'
-                            }>
-                              {student.payment_status === 'paid' ? 'Yishyuye' : 
-                               student.payment_status === 'partial' ? 'Igice' : 'Ntiyishyura'}
-                            </Badge>
-                            <div className="text-xs text-gray-500 mt-1">{student.percentage_paid || 0}%</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2 justify-center">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-green-600 text-green-600 hover:bg-green-50"
-                                onClick={() => {
-                                  setNewPayment({ ...newPayment, student_id: student.id.toString() });
-                                }}
-                              >
-                                <CreditCard className="w-3 h-3 mr-1" />
-                                Ishyura
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                                onClick={() => handleContactParent(student.id)}
-                              >
-                                <Phone className="w-3 h-3 mr-1" />
-                                Hamagara
-                              </Button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reminders" className="space-y-6">
-            <Card className="border-2 border-orange-200 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-6 h-6 text-orange-600" />
-                  Igenamiterere cy'ibutsa ababyeyi (Auto-remind timing)
-                </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">Hindura igihe ababyeyi bafite ideni bakoresheje ibutsa (remind parent after X days). Bikwa mu database.</p>
-              </CardHeader>
-              <CardContent className="space-y-4 max-w-xl">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="reminder-enabled"
-                    checked={reminderForm.enabled}
-                    onChange={(e) => setReminderForm(f => ({ ...f, enabled: e.target.checked }))}
-                    className="rounded border-2"
-                  />
-                  <Label htmlFor="reminder-enabled">Gukoresha ibutsa by\'amafaranga (Auto-reminder enabled)</Label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Igihe cyo gukora ibutsa nyuma y\'iminsi (Remind after days)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={reminderForm.remind_after_days}
-                      onChange={(e) => setReminderForm(f => ({ ...f, remind_after_days: parseInt(e.target.value, 10) || 7 }))}
-                      placeholder="7"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Iminsi nyuma y\'itariki y\'ideni (e.g. 7 = ibutsa nyuma y\'icyumweru)</p>
-                  </div>
-                  <div>
-                    <Label>Igihe cy\'umunsi (Time of day)</Label>
-                    <Input
-                      type="time"
-                      value={reminderForm.time}
-                      onChange={(e) => setReminderForm(f => ({ ...f, time: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Igipimo cyo gukora (Frequency)</Label>
-                    <Select value={reminderForm.frequency} onValueChange={(v) => setReminderForm(f => ({ ...f, frequency: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Buri munsi</SelectItem>
-                        <SelectItem value="weekly">Buri cyumweru</SelectItem>
-                        <SelectItem value="biweekly">Kabiri mu cyumweru</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Ideni rikiri hasi (Min balance RWF)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={reminderForm.minBalance}
-                      onChange={(e) => setReminderForm(f => ({ ...f, minBalance: parseInt(e.target.value, 10) || 0 }))}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleSaveReminderSettings}
-                  disabled={reminderSaving}
-                  className="bg-gradient-to-r from-orange-500 to-amber-500 text-white"
-                >
-                  {reminderSaving ? 'Bika...' : 'Bika Igenamiterere'}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="students" className="space-y-6">
-            <Card className="border-2 border-green-100 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                  Ibikorwa Biheruka - Recent Transactions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {overview?.recent_transactions?.slice(0, 10).map((transaction: any, index: number) => (
-                    <motion.div
-                      key={transaction.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-4">
-                        <CreditCard className="w-8 h-8 text-green-600" />
+            <AnimatePresence mode="wait">
+              <TabsContent value="overview">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Revenue Chart */}
+                  <Card className="lg:col-span-2 rounded-2xl border-0 shadow-sm overflow-hidden bg-white">
+                    <CardHeader className="border-b border-gray-50 pb-6">
+                      <div className="flex justify-between items-end">
                         <div>
-                          <p className="font-semibold">
-                            {transaction.first_name} {transaction.last_name}
-                          </p>
-                          <p className="text-xs text-gray-500">{transaction.student_id}</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(transaction.payment_date).toLocaleDateString()}
-                          </p>
+                          <CardTitle className="text-xl font-bold">Revenue Collection Trends</CardTitle>
+                          <CardDescription>Monthly growth and comparison with last period</CardDescription>
+                        </div>
+                        <Badge variant="outline">6 Months View</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="h-[350px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={trends}>
+                            <defs>
+                              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `RWF ${value / 1000}k`} />
+                            <RechartsTooltip
+                              contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', shadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Area type="monotone" dataKey="collected" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Transactions List */}
+                  <Card className="rounded-2xl border-0 shadow-sm bg-white">
+                    <CardHeader className="border-b border-gray-50">
+                      <CardTitle className="text-xl font-bold">Recent Transactions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 px-0">
+                      <div className="space-y-1">
+                        {recentPayments.map((payment, idx) => (
+                          <div key={payment.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white bg-gradient-to-br ${idx % 2 === 0 ? 'from-blue-500 to-indigo-600' : 'from-emerald-500 to-teal-600'}`}>
+                                {payment.student_name?.[0]}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900 leading-none mb-1">{payment.student_name}</p>
+                                <p className="text-xs text-gray-500 uppercase font-mono">{payment.reference_number}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-gray-900">{formatCurrency(payment.amount)}</p>
+                              <p className={`text-[10px] font-bold uppercase transition-colors ${payment.status === 'completed' ? 'text-emerald-600' : 'text-amber-500'}`}>
+                                {payment.status}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="p-4 pt-6">
+                          <Button variant="outline" className="w-full text-blue-600 border-blue-100 hover:bg-blue-50" onClick={() => setActiveTab('ledger')}>
+                            View Transaction History
+                          </Button>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">
-                          {transaction.amount?.toLocaleString()} RWF
-                        </p>
-                        <p className="text-xs text-gray-500">{transaction.payment_method}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="management" className="m-0">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-3xl shadow-xl border border-gray-100/50 overflow-hidden min-h-[700px]"
+                >
+                  <GlobalStudentSheets userRole="accountant" userId={0} onNavigate={onNavigate} />
+                </motion.div>
+              </TabsContent>
+
+              <TabsContent value="ledger">
+                <Card className="border-0 shadow-sm rounded-3xl overflow-hidden bg-white">
+                  <CardHeader className="pb-6">
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Comprehensive Ledger</CardTitle>
+                      <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-2" /> Export PDF</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                          <tr>
+                            <th className="px-6 py-4">Transaction ID</th>
+                            <th className="px-6 py-4">Student</th>
+                            <th className="px-6 py-4">Method</th>
+                            <th className="px-6 py-4">Amount</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {recentPayments.map(p => (
+                            <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 font-mono text-sm">{p.reference_number}</td>
+                              <td className="px-6 py-4 font-medium">{p.student_name}</td>
+                              <td className="px-6 py-4 uppercase text-xs">{p.payment_method}</td>
+                              <td className="px-6 py-4 font-black">{formatCurrency(p.amount)}</td>
+                              <td className="px-6 py-4">
+                                <Badge className={p.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-0' : 'bg-amber-100 text-amber-800 border-0'}>
+                                  {p.status}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 text-sm">{new Date(p.created_at).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <Card className="rounded-3xl border-0 shadow-sm bg-white">
+                    <CardHeader>
+                      <CardTitle>Payment Methods Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={methods}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {methods.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reports" className="space-y-6">
-            <Card className="border-2 border-blue-100 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                  Raporo z'Amafaranga - Financial Reports
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="border-2 border-green-200">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-3xl font-black text-green-600">{paidCount}</p>
-                      <p className="text-sm text-gray-600 mt-2">Abanyeshuri Bishyuye</p>
-                      <p className="text-xs text-gray-500">Students Who Paid</p>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        {methods.map((m, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                            <span className="text-sm font-medium text-gray-600">{m.name}</span>
+                            <span className="text-sm font-bold text-gray-900 ml-auto">{m.count}</span>
+                          </div>
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
-                  <Card className="border-2 border-yellow-200">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-3xl font-black text-yellow-600">{partialCount}</p>
-                      <p className="text-sm text-gray-600 mt-2">Bishyuye Igice</p>
-                      <p className="text-xs text-gray-500">Partial Payment</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="border-2 border-red-200">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-3xl font-black text-red-600">{unpaidCount}</p>
-                      <p className="text-sm text-gray-600 mt-2">Ntibashyura</p>
-                      <p className="text-xs text-gray-500">Not Paid</p>
+
+                  <Card className="rounded-3xl border-0 shadow-sm bg-white">
+                    <CardHeader>
+                      <CardTitle>Collection Efficiency</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col justify-center items-center h-[300px]">
+                      <div className="relative w-48 h-48 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle
+                            cx="96"
+                            cy="96"
+                            r="88"
+                            stroke="currentColor"
+                            strokeWidth="16"
+                            fill="transparent"
+                            className="text-gray-100"
+                          />
+                          <circle
+                            cx="96"
+                            cy="96"
+                            r="88"
+                            stroke="currentColor"
+                            strokeWidth="16"
+                            fill="transparent"
+                            strokeDasharray={552.92}
+                            strokeDashoffset={552.92 * (1 - (stats?.total_paid / stats?.total_fees || 0))}
+                            className="text-blue-600 transition-all duration-1000 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center">
+                          <span className="text-4xl font-black text-gray-900">
+                            {stats?.total_fees > 0 ? Math.round((stats?.total_paid / stats?.total_fees) * 100) : 0}%
+                          </span>
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Yishyuwe</span>
+                        </div>
+                      </div>
+                      <div className="mt-8 text-center">
+                        <p className="text-gray-500 text-sm">Target Remaining</p>
+                        <p className="text-2xl font-black text-gray-900">{formatCurrency(stats?.total_balance)}</p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
-                <div className="mt-6">
-                  <Button onClick={exportData} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                    <Download className="w-4 h-4 mr-2" />
-                    Pakurura Raporo Yuzuye (CSV)
-                  </Button>
+              </TabsContent>
+            </AnimatePresence>
+          </Tabs>
+        </div>
+
+        {/* Right Sidebar - Quick Actions */}
+        <div className="hidden xl:flex flex-col gap-8 w-80">
+          <Card className="rounded-3xl border-0 shadow-lg bg-gray-900 text-white overflow-hidden">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-400" /> Quick Management
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-xs">Direct access to core functions</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              <Button variant="ghost" className="w-full justify-start gap-4 h-14 bg-gray-800/50 hover:bg-blue-600 hover:text-white border-0 text-gray-300 transition-all rounded-2xl" onClick={() => onNavigate('payments-management')}>
+                <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center font-bold text-blue-400 group-hover:bg-blue-500">
+                  <DollarSign className="w-5 h-5" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <div className="text-left">
+                  <p className="text-sm font-bold">Record Payment</p>
+                  <p className="text-[10px] opacity-50">Parent fee collection</p>
+                </div>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start gap-4 h-14 bg-gray-800/50 hover:bg-emerald-600 hover:text-white border-0 text-gray-300 transition-all rounded-2xl" onClick={() => onNavigate('invoices-management')}>
+                <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center font-bold text-emerald-400">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold">Issue Invoice</p>
+                  <p className="text-[10px] opacity-50">Generate student bills</p>
+                </div>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start gap-4 h-14 bg-gray-800/50 hover:bg-amber-600 hover:text-white border-0 text-gray-300 transition-all rounded-2xl" onClick={() => onNavigate('budgets-management')}>
+                <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center font-bold text-amber-400">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold">Annual Budget</p>
+                  <p className="text-[10px] opacity-50">Allocations & forecasting</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="columns" className="space-y-6">
-            <AccountantDynamicColumns />
-          </TabsContent>
+          <Card className="rounded-3xl border-0 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="p-6">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-600" /> School Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0 space-y-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <span className="text-sm font-bold text-gray-500">Fee Collection</span>
+                  <span className="text-lg font-black text-gray-900">{Math.round((stats?.total_paid / stats?.total_fees) * 100 || 0)}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(stats?.total_paid / stats?.total_fees) * 100 || 0}%` }}
+                    className="h-full bg-blue-600 rounded-full"
+                  />
+                </div>
+              </div>
 
-          <TabsContent value="payment-proofs" className="space-y-6">
-            <AccountantPaymentProofs />
-          </TabsContent>
-        </Tabs>
+              <div className="pt-4 border-t border-gray-50 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{stats?.active_students || 0} Students</p>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Across 3 Trades</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default AccountantDashboard;

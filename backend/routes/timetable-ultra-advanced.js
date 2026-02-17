@@ -466,7 +466,7 @@ router.get('/teacher/:teacher_id/schedule', authenticateToken, async (req, res) 
     const [schedule] = await pool.execute(
       `SELECT 
         te.*,
-        t.trade_code,
+        t.code,
         t.level_number,
         t.level_suffix
       FROM timetable_entries te

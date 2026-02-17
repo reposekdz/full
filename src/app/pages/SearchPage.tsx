@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, X, Filter, Code, Building, Car, Users, Book, Trophy, ArrowRight, TrendingUp, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, X, Filter, Code, Building, Car, Users, Book, Trophy, ArrowRight, TrendingUp, Star, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { Input } from '@/app/components/ui/input';
@@ -7,8 +7,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { mockStudents } from '@/app/data/mockStudents';
-import { mockTeachers } from '@/app/data/mockTeachers';
+import { API_BASE_URL } from '@/app/config/apiBase';
 
 interface SearchPageProps {
   onNavigate: (page: string) => void;
@@ -19,111 +18,98 @@ const SearchPage: React.FC<SearchPageProps> = ({ onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<any>({
+    trades: [],
+    sports: [],
+    news: [],
+    staff: [],
+    students: [],
+    courses: []
+  });
 
-  const allSearchableItems = [
-    { 
-      id: 'sod', 
-      title: 'Software Development (SOD)', 
-      type: 'Trade', 
+  // Real search function
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchQuery.trim()) {
+        setResults({ trades: [], sports: [], news: [], staff: [], students: [], courses: [] });
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/unified-integration/search/global?q=${encodeURIComponent(searchQuery)}&limit=20`);
+        const data = await response.json();
+        if (data.success) {
+          setResults(data.results);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  // Convert API results to display format
+  const allItems = [
+    ...results.trades.map((item: any) => ({
+      id: `trade-${item.id}`,
+      title: item.title || item.name,
+      type: 'Trade',
       category: 'programs',
-      description: 'Learn coding, web development, and software engineering', 
+      description: item.description || '',
       icon: Code,
       color: 'from-blue-500 to-indigo-500',
-      action: 'trade-sod',
-      stats: { students: mockStudents.filter(s => s.trade === 'SOD').length, teachers: mockTeachers.filter(t => t.trade === 'SOD').length }
-    },
-    { 
-      id: 'bdc', 
-      title: 'Building & Construction (BDC)', 
-      type: 'Trade', 
-      category: 'programs',
-      description: 'Master construction techniques and architectural design', 
-      icon: Building,
-      color: 'from-orange-500 to-red-500',
-      action: 'trade-bdc',
-      stats: { students: mockStudents.filter(s => s.trade === 'BDC').length, teachers: mockTeachers.filter(t => t.trade === 'BDC').length }
-    },
-    { 
-      id: 'aut', 
-      title: 'Automobile Technology (AUT)', 
-      type: 'Trade', 
-      category: 'programs',
-      description: 'Become an expert in vehicle repair and EV technology', 
-      icon: Car,
-      color: 'from-green-500 to-teal-500',
-      action: 'trade-aut',
-      stats: { students: mockStudents.filter(s => s.trade === 'AUT').length, teachers: mockTeachers.filter(t => t.trade === 'AUT').length }
-    },
-    { 
-      id: 'students', 
-      title: 'Students Portal', 
-      type: 'Portal', 
-      category: 'services',
-      description: 'Access student dashboard and academic resources', 
-      icon: Users,
-      color: 'from-purple-500 to-pink-500',
-      action: 'role-selection'
-    },
-    { 
-      id: 'library', 
-      title: 'Library Resources', 
-      type: 'Service', 
-      category: 'services',
-      description: 'Browse library catalog and digital resources', 
-      icon: Book,
-      color: 'from-yellow-500 to-orange-500',
-      action: 'services'
-    },
-    { 
-      id: 'sports', 
-      title: 'Sports & Athletics', 
-      type: 'Activity', 
+      action: 'trades'
+    })),
+    ...results.sports.map((item: any) => ({
+      id: `sport-${item.id}`,
+      title: item.name,
+      type: 'Sport',
       category: 'activities',
-      description: 'Join our sports teams and fitness programs', 
+      description: item.description || '',
       icon: Trophy,
       color: 'from-green-500 to-emerald-500',
       action: 'sports'
-    },
-    { 
-      id: 'teams', 
-      title: 'School Teams', 
-      type: 'About', 
-      category: 'about',
-      description: 'Meet our management and teaching staff', 
+    })),
+    ...results.news.map((item: any) => ({
+      id: `news-${item.id}`,
+      title: item.title,
+      type: 'News',
+      category: 'news',
+      description: item.excerpt || '',
+      icon: Book,
+      color: 'from-yellow-500 to-orange-500',
+      action: 'news'
+    })),
+    ...results.staff.map((item: any) => ({
+      id: `staff-${item.id}`,
+      title: item.name,
+      type: 'Staff',
+      category: 'people',
+      description: `${item.role} | ${item.email}`,
       icon: Users,
-      color: 'from-indigo-500 to-blue-500',
-      action: 'teams'
-    },
+      color: 'from-purple-500 to-pink-500',
+      action: 'staff'
+    })),
+    ...results.students.map((item: any) => ({
+      id: `student-${item.id}`,
+      title: item.name || `${item.first_name} ${item.last_name}`,
+      type: 'Student',
+      category: 'people',
+      description: `${item.trade || ''} | ${item.class || ''}`,
+      icon: Users,
+      color: 'from-blue-400 to-cyan-400',
+      action: 'students'
+    }))
   ];
 
-  const students = mockStudents.map(s => ({
-    id: `student-${s.id}`,
-    title: s.name,
-    type: 'Student',
-    category: 'people',
-    description: `${s.trade} - ${s.level} | Overall Average: ${s.overallAverage}%`,
-    icon: Users,
-    color: 'from-blue-400 to-cyan-400',
-    action: 'students',
-    metadata: s
-  }));
-
-  const teachers = mockTeachers.map(t => ({
-    id: `teacher-${t.id}`,
-    title: t.name,
-    type: 'Teacher',
-    category: 'people',
-    description: `${t.specialization} | ${t.experience} years experience`,
-    icon: Users,
-    color: 'from-green-400 to-teal-400',
-    action: 'teachers',
-    metadata: t
-  }));
-
-  const allItems = [...allSearchableItems, ...students, ...teachers];
-
   const filteredResults = allItems.filter(item => {
-    const matchesQuery = searchQuery === '' || 
+    const matchesQuery = searchQuery === '' ||
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.type.toLowerCase().includes(searchQuery.toLowerCase());
@@ -230,11 +216,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ onNavigate }) => {
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
-                        selectedCategory === category.id
-                          ? 'bg-gradient-to-r from-yellow-500 to-green-500 text-white shadow-md'
-                          : 'hover:bg-yellow-50 text-gray-700'
-                      }`}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${selectedCategory === category.id
+                        ? 'bg-gradient-to-r from-yellow-500 to-green-500 text-white shadow-md'
+                        : 'hover:bg-yellow-50 text-gray-700'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{category.label}</span>
@@ -274,7 +259,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ onNavigate }) => {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ delay: index * 0.05 }}
                       >
-                        <Card 
+                        <Card
                           className="border-2 border-yellow-200 hover:border-yellow-400 hover:shadow-xl transition-all cursor-pointer group"
                           onClick={() => onNavigate(result.action)}
                         >
@@ -295,30 +280,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ onNavigate }) => {
                                   <Badge className={`bg-gradient-to-r ${result.color} text-white border-0`}>
                                     {result.type}
                                   </Badge>
-                                  {result.stats && (
-                                    <div className="flex items-center space-x-3 text-xs text-gray-500">
-                                      <span className="flex items-center">
-                                        <Users className="w-3 h-3 mr-1" />
-                                        {result.stats.students}
-                                      </span>
-                                      <span className="flex items-center">
-                                        <Star className="w-3 h-3 mr-1" />
-                                        {result.stats.teachers}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {result.metadata && 'overallAverage' in result.metadata && (
-                                    <div className="flex items-center space-x-2">
-                                      <TrendingUp className="w-4 h-4 text-green-500" />
-                                      <span className="text-sm font-bold text-gray-900">{result.metadata.overallAverage}%</span>
-                                    </div>
-                                  )}
-                                  {result.metadata && 'rating' in result.metadata && (
-                                    <div className="flex items-center space-x-1">
-                                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                      <span className="text-sm font-bold text-gray-900">{result.metadata.rating}</span>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -341,7 +302,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ onNavigate }) => {
                   <p className="text-gray-600 mb-6">
                     We couldn't find anything matching "<span className="font-bold">{searchQuery}</span>"
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => setSearchQuery('')}
                     className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
                   >

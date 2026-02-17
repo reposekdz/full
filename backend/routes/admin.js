@@ -8,8 +8,8 @@ const router = express.Router();
 // Dashboard endpoint
 router.get('/dashboard', async (req, res) => {
   try {
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       dashboard: {
         message: 'Admin dashboard endpoint',
         stats: {
@@ -31,13 +31,13 @@ router.get('/search', authenticateToken, async (req, res) => {
   try {
     const { q, type } = req.query;
     let query = 'SELECT id, name, email, role, created_at, "user" as type FROM users WHERE ';
-    
+
     if (type === 'students') query += 'role = "student" AND ';
     else if (type === 'teachers') query += 'role = "teacher" AND ';
     else if (type === 'users') query += '';
-    
+
     query += '(name LIKE ? OR email LIKE ?) LIMIT 50';
-    
+
     const [results] = await pool.execute(query, [`%${q}%`, `%${q}%`]);
     res.json({ success: true, results });
   } catch (error) {
@@ -60,9 +60,17 @@ router.post('/users', authenticateToken, async (req, res) => {
   try {
     const { name, email, phone, role, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Get the role_id from roles table
+    const [roleResult] = await pool.execute('SELECT id FROM roles WHERE name = ?', [role]);
+    if (roleResult.length === 0) {
+      return res.status(400).json({ success: false, message: `Role '${role}' not found in system` });
+    }
+    const roleId = roleResult[0].id;
+
     const [result] = await pool.execute(
-      'INSERT INTO users (name, email, phone, role, password, is_active) VALUES (?, ?, ?, ?, ?, true)',
-      [name, email, phone, role, hashedPassword]
+      'INSERT INTO users (name, email, phone, role, role_id, password, is_active) VALUES (?, ?, ?, ?, ?, ?, true)',
+      [name, email, phone, role, roleId, hashedPassword]
     );
     res.json({ success: true, message: 'User created', userId: result.insertId });
   } catch (error) {
@@ -134,9 +142,9 @@ router.get('/analytics', async (req, res) => {
     const [parents] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "parent"');
     const [staff] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role IN ("admin", "accountant", "stock_manager", "director_study", "director_discipline", "headmaster", "super_admin")');
     const [courses] = await pool.execute('SELECT COUNT(*) as count FROM trade_classes');
-    const [revenue] = await pool.execute('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = "completed" AND YEAR(payment_date) = YEAR(CURDATE())');
+    const [revenue] = await pool.execute('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = "completed" AND YEAR(created_at) = YEAR(CURDATE())');
     const [stock] = await pool.execute('SELECT COUNT(*) as count FROM inventory WHERE status = "active"');
-    
+
     res.json({
       success: true,
       analytics: {
@@ -160,7 +168,7 @@ router.get('/reports/:type', authenticateToken, async (req, res) => {
   try {
     const { type } = req.params;
     let data = [];
-    
+
     if (type === 'users') {
       const [users] = await pool.execute('SELECT * FROM users ORDER BY created_at DESC');
       data = users;
@@ -168,7 +176,7 @@ router.get('/reports/:type', authenticateToken, async (req, res) => {
       const [attendance] = await pool.execute('SELECT * FROM attendance ORDER BY date DESC LIMIT 1000');
       data = attendance;
     }
-    
+
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Report generation failed' });

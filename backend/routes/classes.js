@@ -15,11 +15,11 @@ router.get('/', async (req, res) => {
         tc.academic_year,
         tc.capacity,
         COUNT(DISTINCT s.id) as student_count,
-        t.trade_name
+        t.name
       FROM trade_classes tc
       LEFT JOIN students s ON tc.trade_code = s.trade_code AND tc.level_number = s.level_number
-      LEFT JOIN trades t ON tc.trade_code = t.trade_code
-      GROUP BY tc.id, tc.trade_code, tc.level_number, tc.level_suffix, tc.class_name, tc.academic_year, tc.capacity, t.trade_name
+      LEFT JOIN trades t ON tc.trade_code = t.code
+      GROUP BY tc.id, tc.trade_code, tc.level_number, tc.level_suffix, tc.class_name, tc.academic_year, tc.capacity, t.name
       ORDER BY tc.trade_code, tc.level_number, tc.level_suffix
     `);
     
@@ -36,10 +36,10 @@ router.get('/:id', async (req, res) => {
     const [classes] = await pool.execute(`
       SELECT 
         tc.*,
-        t.trade_name,
+        t.name,
         COUNT(DISTINCT s.id) as student_count
       FROM trade_classes tc
-      LEFT JOIN trades t ON tc.trade_code = t.trade_code
+      LEFT JOIN trades t ON tc.trade_code = t.code
       LEFT JOIN students s ON tc.trade_code = s.trade_code AND tc.level_number = s.level_number
       WHERE tc.id = ?
       GROUP BY tc.id

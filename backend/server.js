@@ -70,7 +70,7 @@ const routes = {
   roleAuth: loadRoute('./routes/role-auth', 'Role Auth'),
   staffAuth: loadRoute('./routes/staff-auth', 'Staff Auth'),
   userAuth: loadRoute('./routes/user-auth', 'User Auth'),
-  
+
   // User Management
   users: loadRoute('./routes/users', 'Users'),
   students: loadRoute('./routes/students', 'Students'),
@@ -78,9 +78,10 @@ const routes = {
   parents: loadRoute('./routes/parents', 'Parents'),
   staff: loadRoute('./routes/staff', 'Staff'),
   staffAdvanced: loadRoute('./routes/staff-advanced', 'Staff Advanced'),
+  staffProfile: loadRoute('./routes/staff-profile', 'Staff Profile'),
   roles: loadRoute('./routes/roles', 'Roles'),
   serialCodes: loadRoute('./routes/serial-codes', 'Serial Codes'),
-  
+
   // Academic Management
   academics: loadRoute('./routes/academics', 'Academics'),
   courses: loadRoute('./routes/courses', 'Courses'),
@@ -90,13 +91,13 @@ const routes = {
   assignments: loadRoute('./routes/assignments', 'Assignments'),
   homework: loadRoute('./routes/homework', 'Homework'),
   timetable: loadRoute('./routes/timetable', 'Timetable'),
-  
+
   // Advanced Academic Features
   advancedAcademics: loadRoute('./routes/advancedAcademics', 'Advanced Academics'),
   advancedAssignments: loadRoute('./routes/advanced-assignments', 'Advanced Assignments'),
   aiGrading: loadRoute('./routes/aiGrading', 'AI Grading'),
   adaptiveLearning: loadRoute('./routes/adaptiveLearning', 'Adaptive Learning'),
-  
+
   // NEW COMPREHENSIVE SYSTEMS
   academicSystem: loadRoute('./routes/academic-system', 'Academic System'),
   admissionSystem: loadRoute('./routes/admission-system', 'Admission System'),
@@ -109,51 +110,52 @@ const routes = {
   librarySystem: loadRoute('./routes/library-system', 'Library System'),
   workshopSystem: loadRoute('./routes/workshop-system', 'Workshop System'),
   financialSystem: loadRoute('./routes/financial-system', 'Financial System'),
-  
+
   // Finance & Stock
   finance: loadRoute('./routes/finance', 'Finance'),
   stock: loadRoute('./routes/stock', 'Stock'),
-  
+
   // Discipline & DOS
   discipline: loadRoute('./routes/discipline', 'Discipline'),
   disciplineManagement: loadRoute('./routes/discipline-management', 'Discipline Management'),
   dos: loadRoute('./routes/dos', 'Director of Studies'),
   dosAdvanced: loadRoute('./routes/dos-advanced', 'DOS Advanced'),
   dosManagement: loadRoute('./routes/dos-management', 'DOS Management'),
-  
+
   // Parent Features
   parentDashboard: loadRoute('./routes/parent-dashboard', 'Parent Dashboard'),
   parentLinking: loadRoute('./routes/parent-linking', 'Parent Linking'),
   parentMonitoring: loadRoute('./routes/parent-monitoring', 'Parent Monitoring'),
-  
+
   // Class Management
   classManagement: loadRoute('./routes/class-management', 'Class Management'),
   classSheets: loadRoute('./routes/class-sheets', 'Class Sheets'),
   classSheetsApi: loadRoute('./routes/class-sheets-api', 'Class Sheets API'),
-  
+
   // Student Features
   studentManagement: loadRoute('./routes/student-management', 'Student Management'),
   studentSheets: loadRoute('./routes/student-sheets', 'Student Sheets'),
   globalStudentSheets: loadRoute('./routes/global-student-sheets', 'Global Student Sheets'),
   studentCompetitions: loadRoute('./routes/student-competitions', 'Student Competitions'),
   studentAdvanced: loadRoute('./routes/student-advanced', 'Student Advanced'),
-  
+
   // Teacher Features
   teacherPortal: loadRoute('./routes/teacher-portal', 'Teacher Portal'),
   teacherAdvanced: loadRoute('./routes/teacher-advanced', 'Teacher Advanced'),
   marksManagement: loadRoute('./routes/marks-management', 'Marks Management'),
-  
+
   // Staff Features
   staffDashboard: loadRoute('./routes/staff-dashboard', 'Staff Dashboard'),
   comprehensiveManagement: loadRoute('./routes/comprehensive-management', 'Comprehensive Management'),
-  
+  comprehensiveStats: loadRoute('./routes/comprehensive-stats', 'Comprehensive Statistics'),
+
   // Communication
   messages: loadRoute('./routes/messages', 'Messages'),
   notifications: loadRoute('./routes/notifications', 'Notifications'),
   liveChat: loadRoute('./routes/live-chat', 'Live Chat'),
   comprehensiveMessaging: loadRoute('./routes/comprehensive-messaging', 'Comprehensive Messaging'),
   automatedNotifications: loadRoute('./routes/automated-notifications', 'Automated Notifications'),
-  
+
   // Content & Dynamic
   content: loadRoute('./routes/content', 'Content'),
   dynamic: loadRoute('./routes/dynamic', 'Dynamic'),
@@ -164,7 +166,7 @@ const routes = {
   hero: loadRoute('./routes/hero', 'Hero'),
   gallery: loadRoute('./routes/gallery', 'Gallery'),
   articleInteractions: loadRoute('./routes/article-interactions', 'Article Interactions'),
-  
+
   // Sports & Teams
   sports: loadRoute('./routes/sports', 'Sports'),
   sportsPlayers: loadRoute('./routes/sports-players', 'Sports Players'),
@@ -172,7 +174,7 @@ const routes = {
   sportsManagement: loadRoute('./routes/sports-management', 'Sports Management'),
   sportsComprehensive: loadRoute('./routes/sports-comprehensive', 'Sports Comprehensive'),
   teams: loadRoute('./routes/teams', 'Teams'),
-  
+
   // Trades & Services
   trades: loadRoute('./routes/trades', 'Trades'),
   tradesCourses: loadRoute('./routes/trades-courses', 'Trades Courses'),
@@ -180,11 +182,11 @@ const routes = {
   levels: loadRoute('./routes/levels', 'Levels'),
   services: loadRoute('./routes/services', 'Services'),
   servicesAdvanced: loadRoute('./routes/services-advanced', 'Services Advanced'),
-  
+
   // Support & Contact
   contact: loadRoute('./routes/contact', 'Contact'),
   support: loadRoute('./routes/support', 'Support'),
-  
+
   // Advanced Management APIs
   hrManagement: loadRoute('./routes/hr-management', 'HR Management'),
   advancedAnalytics: loadRoute('./routes/advanced-analytics', 'Advanced Analytics'),
@@ -193,19 +195,19 @@ const routes = {
   communicationHub: loadRoute('./routes/communication-hub', 'Communication Hub'),
   advancedReports: loadRoute('./routes/advanced-reports', 'Advanced Reports'),
   supportEnhanced: loadRoute('./routes/support-enhanced', 'Support Enhanced'),
-  
+
   // Learning Features
   collaboration: loadRoute('./routes/collaboration', 'Collaboration'),
   liveStudy: loadRoute('./routes/liveStudy', 'Live Study'),
   peerReview: loadRoute('./routes/peerReview', 'Peer Review'),
   quizzes: loadRoute('./routes/quizzes', 'Quizzes'),
   holidayPackages: loadRoute('./routes/holidayPackages', 'Holiday Packages'),
-  
+
   // Analytics & Dashboards
   analytics: loadRoute('./routes/analytics', 'Analytics'),
   dashboards: loadRoute('./routes/dashboards', 'Dashboards'),
   gamification: loadRoute('./routes/gamification', 'Gamification'),
-  
+
   // System & Admin
   systemUpdates: loadRoute('./routes/system-updates', 'System Updates'),
   leadership: loadRoute('./routes/leadership', 'Leadership'),
@@ -226,12 +228,12 @@ const routes = {
   paymentProofs: loadRoute('./routes/payment-proofs', 'Payment Proofs'),
   classes: loadRoute('./routes/classes', 'Classes'),
   docs: loadRoute('./routes/docs', 'Documentation'),
-  
+
   // Library & Hostel
   library: loadRoute('./routes/library', 'Library'),
   hostel: loadRoute('./routes/hostel', 'Hostel'),
   transport: loadRoute('./routes/transport', 'Transport'),
-  
+
   // Advanced APIs
   comprehensiveDatabase: loadRoute('./routes/comprehensive-database', 'Comprehensive Database'),
   comprehensiveApi: loadRoute('./routes/comprehensiveApi', 'Comprehensive API'),
@@ -247,7 +249,7 @@ const routes = {
   advancedSupport: loadRoute('./routes/advanced-support', 'Advanced Support'),
   dosUpdated: loadRoute('./routes/dos-updated', 'DOS Updated'),
   enhancedDos: loadRoute('./routes/enhanced-dos', 'Enhanced DOS'),
-  
+
   // New Advanced Features
   knowledgeBase: loadRoute('./routes/knowledge-base', 'Knowledge Base'),
   realtimeNotifications: loadRoute('./routes/realtime-notifications', 'Realtime Notifications'),
@@ -261,7 +263,7 @@ const routes = {
   sms: loadRoute('./routes/sms', 'SMS'),
   parentMessages: loadRoute('./routes/parent-messages', 'Parent Messages'),
   parentPortal: loadRoute('./routes/parent-portal', 'Parent Portal'),
-  
+
   // Admin Management
   adminComprehensive: loadRoute('./routes/admin-comprehensive', 'Admin Comprehensive'),
   contentManagement: loadRoute('./routes/content-management', 'Content Management'),
@@ -269,7 +271,7 @@ const routes = {
   sportsHeroManagement: loadRoute('./routes/sports-hero-management', 'Sports & Hero Management'),
   unifiedContent: loadRoute('./routes/unified-content', 'Unified Content'),
   comprehensiveStaff: loadRoute('./routes/comprehensive-staff', 'Comprehensive Staff'),
-  
+
   // Comprehensive Full-Stack APIs (Production-Ready)
   comprehensiveUsers: loadRoute('./routes/comprehensive-users-api', 'Comprehensive Users API'),
   comprehensiveAcademic: loadRoute('./routes/comprehensive-academic-api', 'Comprehensive Academic API'),
@@ -278,10 +280,10 @@ const routes = {
   comprehensiveKnowledgeNotifications: loadRoute('./routes/comprehensive-knowledge-notifications-admissions-exams-api', 'Comprehensive Knowledge & Notifications API'),
   comprehensiveAttendanceGrades: loadRoute('./routes/comprehensive-attendance-grades-assignments-api', 'Comprehensive Attendance & Grades API'),
   comprehensiveLibraryServices: loadRoute('./routes/comprehensive-library-hostel-transport-sports-communication-api', 'Comprehensive Library & Services API'),
-  
+
   // Unified Integration API (Master Integration)
   unifiedIntegration: loadRoute('./routes/unified-integration-api', 'Unified Integration API'),
-  
+
   // DOD Comprehensive System
   dodComprehensive: loadRoute('./routes/dod-comprehensive', 'DOD Comprehensive'),
   dodAdvanced: loadRoute('./routes/dod-advanced', 'DOD Advanced'),
@@ -290,11 +292,11 @@ const routes = {
   dodActions: loadRoute('./routes/dod-actions', 'DOD Actions'),
   dod: loadRoute('./routes/dod', 'DOD Management'),
   staffManagement: loadRoute('./routes/staff-management', 'Staff Management'),
-  
+
   // DOS Comprehensive Management
   dosComprehensiveManagement: loadRoute('./routes/dos-comprehensive-management', 'DOS Comprehensive Management'),
   dosAdvancedManagement: loadRoute('./routes/dos-advanced-management', 'DOS Advanced Management'),
-  
+
   // NEW MISSING ROUTES - Full Feature Set
   curriculum: loadRoute('./routes/curriculum', 'Curriculum'),
   budgets: loadRoute('./routes/budgets', 'Budgets'),
@@ -310,7 +312,7 @@ const routes = {
   events: loadRoute('./routes/events', 'Events'),
   forums: loadRoute('./routes/forums', 'Forums'),
   advancedRoleFeatures: loadRoute('./routes/advanced-role-features', 'Advanced Role Features'),
-  
+
   // COMPREHENSIVE ADVANCED FEATURES
   universalStaffManagement: loadRoute('./routes/universal-staff-management', 'Universal Staff Management'),
   adminDashboardAdvanced: loadRoute('./routes/admin-dashboard-advanced', 'Admin Dashboard Advanced'),
@@ -319,16 +321,16 @@ const routes = {
   teacherPortalAdvanced: loadRoute('./routes/teacher-portal-advanced', 'Teacher Portal Advanced'),
   studentPortalComprehensive: loadRoute('./routes/student-portal-comprehensive', 'Student Portal Comprehensive'),
   parentPortalComprehensive: loadRoute('./routes/parent-portal-comprehensive', 'Parent Portal Comprehensive'),
-  
+
   // NEW COMPREHENSIVE GLOBAL SYSTEM
   globalStudentManagement: loadRoute('./routes/global-student-management', 'Global Student Management'),
   comprehensiveStaffActions: loadRoute('./routes/comprehensive-staff-actions', 'Comprehensive Staff Actions'),
   analyticsAISystem: loadRoute('./routes/analytics-ai-system', 'Analytics AI System'),
-  
+
   // SCHOOL OWNER - Supreme Access
   schoolOwner: loadRoute('./routes/school-owner', 'School Owner'),
   patronMatronComprehensive: loadRoute('./routes/patron-matron-comprehensive', 'Patron Matron Comprehensive'),
-  
+
   // ULTRA-COMPREHENSIVE STAFF PORTALS (Full-Featured)
   parentPortalUltra: loadRoute('./routes/parent-portal-ultra', 'Parent Portal Ultra'),
   studentPortalUltra: loadRoute('./routes/student-portal-ultra', 'Student Portal Ultra'),
@@ -340,7 +342,7 @@ const routes = {
   dosUltra: loadRoute('./routes/dos-ultra', 'DOS Ultra'),
   dodUltra: loadRoute('./routes/dod-ultra', 'DOD Ultra'),
   dodUltraAdvanced: loadRoute('./routes/dod-ultra-advanced', 'DOD Ultra Advanced'),
-  
+
   // ULTRA-ADVANCED ROUTES (Feature-Complete, Modern, Production-Ready)
   dosUltraAdvanced: loadRoute('./routes/dos-ultra-advanced', 'DOS Ultra Advanced'),
   timetableUltraAdvanced: loadRoute('./routes/timetable-ultra-advanced', 'Timetable Ultra Advanced'),
@@ -373,6 +375,7 @@ if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdv
 if (routes.parents) { app.use('/api/parents', routes.parents); mountedRoutes++; }
 if (routes.staff) { app.use('/api/staff', routes.staff); mountedRoutes++; }
 if (routes.staffAdvanced) { app.use('/api/staff-advanced', routes.staffAdvanced); mountedRoutes++; }
+if (routes.staffProfile) { app.use('/api/staff-profile', routes.staffProfile); mountedRoutes++; }
 if (routes.roles) { app.use('/api/roles', routes.roles); mountedRoutes++; }
 
 // Academic Management
@@ -421,8 +424,19 @@ if (routes.parentDashboard) { app.use('/api/parent-dashboard', routes.parentDash
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
 if (routes.parentMonitoring) { app.use('/api/parent-monitoring', routes.parentMonitoring); mountedRoutes++; }
 
+// Parent Registration with Auto-Linking
+app.use('/api/parent-registration', require('./routes/parent-registration')); mountedRoutes++;
+
+// Parent Management API for Headmaster/DOD/DOS
+app.use('/api/parent-management', require('./routes/parent-management')); mountedRoutes++;
+
+// Advanced Payment System
+app.use('/api/payments', require('./routes/payments')); mountedRoutes++;
+
 // Parent Payment Portal - GT Bank, BPR, Equity Bank Integration
 app.use('/api/parent-payment-portal', require('./routes/parent-payment-portal')); mountedRoutes++;
+
+
 
 // Class Management
 if (routes.classManagement) { app.use('/api/class-management', routes.classManagement); mountedRoutes++; }
@@ -511,6 +525,8 @@ app.use('/api/staff-roles', require('./routes/staff-roles')); mountedRoutes++;
 app.use('/api/staff-credentials', require('./routes/staff-credentials')); mountedRoutes++;
 app.use('/api/dynamic-sheets', require('./routes/dynamic-student-sheets')); mountedRoutes++;
 app.use('/api/staff-dynamic-sheets', require('./routes/staff-dynamic-sheets')); mountedRoutes++;
+app.use('/api/global-student-sheets', require('./routes/global-student-sheets')); // Teacher Marks & Global Sheets mountedRoutes++;
+app.use('/api/global-admin-accountant-sheets', require('./routes/global-admin-accountant-sheets')); mountedRoutes++; // Admin & Accountant Full Access
 app.use('/api/timetable-generator', require('./routes/timetable-generator')); mountedRoutes++;
 if (routes.developers) { app.use('/api/developers', routes.developers); mountedRoutes++; }
 if (routes.developersApi) { app.use('/api/developers-api', routes.developersApi); mountedRoutes++; }
@@ -534,6 +550,7 @@ if (routes.studentPayments) { app.use('/api/accountant', routes.studentPayments)
 if (routes.paymentAnalytics) { app.use('/api/accountant', routes.paymentAnalytics); mountedRoutes++; }
 if (routes.accountantManagement) { app.use('/api/accountant', routes.accountantManagement); mountedRoutes++; }
 if (routes.accountantAdvanced) { app.use('/api/accountant-advanced', routes.accountantAdvanced); mountedRoutes++; }
+if (routes.comprehensiveStats) { app.use('/api/comprehensive-stats', routes.comprehensiveStats); mountedRoutes++; }
 if (routes.paymentProofs) { app.use('/api/payment-proofs', routes.paymentProofs); mountedRoutes++; }
 if (routes.classes) { app.use('/api/classes', routes.classes); mountedRoutes++; }
 if (routes.docs) { app.use('/api/docs', routes.docs); mountedRoutes++; }
@@ -617,6 +634,12 @@ app.use('/api/dos-management', require('./routes/dos-management')); mountedRoute
 if (routes.dosComprehensiveManagement) { app.use('/api/dos-comprehensive', routes.dosComprehensiveManagement); mountedRoutes++; }
 if (routes.dosAdvancedManagement) { app.use('/api/dos-advanced', routes.dosAdvancedManagement); mountedRoutes++; }
 
+// DOS Timetable Generation
+app.use('/api/dos-timetable', require('./routes/dos-timetable')); mountedRoutes++;
+
+// DOS Report Card Generation
+app.use('/api/dos-reports', require('./routes/dos-reports')); mountedRoutes++;
+
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
 
@@ -672,8 +695,8 @@ if (routes.stockUltraAdvanced) { app.use('/api/stock-ultra-advanced', routes.sto
 if (routes.serialCodeSystem) { app.use('/api/serial-code-system', routes.serialCodeSystem); mountedRoutes++; }
 if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.teacherStudentMarks); mountedRoutes++; }
 
-  // COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
-  app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;
+// COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
+app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;
 
 // Headmaster Applications Management
 app.use('/api/headmaster-applications', require('./routes/headmaster-applications')); mountedRoutes++;
@@ -706,8 +729,8 @@ else { app.use('/api/admin-content', require('./routes/admin-content')); mounted
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Garden TVET School Management System API',
     version: '4.0.0',
     timestamp: new Date().toISOString(),
@@ -737,9 +760,9 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 const startServer = (port) => {
   server.listen(port, () => {
-  console.log('\n' + '='.repeat(80));
-  console.log('🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM');
-  console.log('='.repeat(80));
+    console.log('\n' + '='.repeat(80));
+    console.log('🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM');
+    console.log('='.repeat(80));
     console.log(`🚀 Server: http://localhost:${port}`);
     console.log(`📊 Database: ${process.env.DB_NAME || 'school_management'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);

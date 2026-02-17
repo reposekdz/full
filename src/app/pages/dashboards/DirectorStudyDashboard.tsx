@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Calendar, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Calendar,
   ClipboardList,
   Award,
   FileText,
@@ -116,7 +116,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
         apiService.getDOSCurriculum(),
         apiService.getDOSDashboardStats()
       ]);
-      
+
       setAnalytics(analyticsData.analytics || analyticsData.data);
       const rawTrades = tradesData.success ? tradesData.trades : (Array.isArray(tradesData) ? tradesData : tradesData.data || tradesData.trades || []);
       const tradesResult = (rawTrades || []).map((t: any) => ({
@@ -146,11 +146,11 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
         page: pagination.current_page,
         limit: pagination.per_page
       };
-      
+
       if (searchQuery) params.search = searchQuery;
       if (selectedTrade !== 'all') params.trade_code = selectedTrade;
       if (selectedLevel !== 'all') params.level_number = selectedLevel;
-      
+
       const response = await apiService.getDOSStudents(params);
       const studentsData = response.students || response.data?.students || [];
       const paginationData = response.pagination || response.data?.pagination || pagination;
@@ -330,7 +330,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
       <LeftSidebar currentPage="dashboard-director-study" onNavigate={onNavigate} />
-      
+
       <div className="flex-1 overflow-auto">
         <div className="p-8">
           {/* Header */}
@@ -343,6 +343,13 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                 <p className="text-gray-600">Gucunga imyigire n'imyigishirize</p>
               </div>
               <div className="flex items-center space-x-3">
+                <Button
+                  onClick={() => onNavigate('dos-comprehensive-management')}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  DOS Comprehensive Management
+                </Button>
                 <Button
                   variant="outline"
                   className="border-yellow-400 text-yellow-700 hover:bg-yellow-50"
@@ -440,11 +447,10 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                       <div className="space-y-4">
                         {recentActivities.map((activity, index) => (
                           <div key={index} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-yellow-50 transition-colors">
-                            <div className={`p-2 rounded-lg ${
-                              activity.status === 'completed' ? 'bg-green-100' :
-                              activity.status === 'pending' ? 'bg-yellow-100' :
-                              'bg-blue-100'
-                            }`}>
+                            <div className={`p-2 rounded-lg ${activity.status === 'completed' ? 'bg-green-100' :
+                                activity.status === 'pending' ? 'bg-yellow-100' :
+                                  'bg-blue-100'
+                              }`}>
                               {activity.type === 'exam' && <ClipboardList className="h-4 w-4 text-green-600" />}
                               {activity.type === 'curriculum' && <BookOpen className="h-4 w-4 text-yellow-600" />}
                               {activity.type === 'report' && <FileText className="h-4 w-4 text-blue-600" />}
@@ -546,39 +552,39 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="first_name">Izina rya mbere</Label>
-                              <Input 
-                                id="first_name" 
-                                placeholder="Izina rya mbere" 
+                              <Input
+                                id="first_name"
+                                placeholder="Izina rya mbere"
                                 value={newStudent.first_name}
-                                onChange={(e) => setNewStudent({...newStudent, first_name: e.target.value})}
+                                onChange={(e) => setNewStudent({ ...newStudent, first_name: e.target.value })}
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="last_name">Izina rya kabiri</Label>
-                              <Input 
-                                id="last_name" 
-                                placeholder="Izina rya kabiri" 
+                              <Input
+                                id="last_name"
+                                placeholder="Izina rya kabiri"
                                 value={newStudent.last_name}
-                                onChange={(e) => setNewStudent({...newStudent, last_name: e.target.value})}
+                                onChange={(e) => setNewStudent({ ...newStudent, last_name: e.target.value })}
                               />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input 
-                              id="email" 
-                              type="email" 
-                              placeholder="email@example.com" 
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="email@example.com"
                               value={newStudent.email}
-                              onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                              onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="trade">Umwuga</Label>
-                              <Select 
-                                value={newStudent.trade_code} 
-                                onValueChange={(value) => setNewStudent({...newStudent, trade_code: value, level: ''})}
+                              <Select
+                                value={newStudent.trade_code}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, trade_code: value, level: '' })}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo umwuga" />
@@ -588,8 +594,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                     <div className="p-4 text-center text-gray-500">Nta myuga ihari</div>
                                   ) : (
                                     [...new Map((trades as any[]).map(t => [t.trade_code || t.code, t])).values()].map((trade) => (
-                                      <SelectItem 
-                                        key={trade.trade_code || trade.code} 
+                                      <SelectItem
+                                        key={trade.trade_code || trade.code}
                                         value={String(trade.trade_code || trade.code)}
                                         className="cursor-pointer hover:bg-yellow-50"
                                       >
@@ -605,9 +611,9 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="level">Urwego</Label>
-                              <Select 
-                                value={newStudent.level} 
-                                onValueChange={(value) => setNewStudent({...newStudent, level: value})}
+                              <Select
+                                value={newStudent.level}
+                                onValueChange={(value) => setNewStudent({ ...newStudent, level: value })}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Hitamo urwego" />
@@ -622,11 +628,11 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="parent-phone">Telefoni y'Umubyeyi</Label>
-                            <Input 
-                              id="parent-phone" 
-                              placeholder="+250..." 
+                            <Input
+                              id="parent-phone"
+                              placeholder="+250..."
                               value={newStudent.parent_phone}
-                              onChange={(e) => setNewStudent({...newStudent, parent_phone: e.target.value})}
+                              onChange={(e) => setNewStudent({ ...newStudent, parent_phone: e.target.value })}
                             />
                           </div>
                         </div>
@@ -634,7 +640,7 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                           <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                             Hagarika
                           </Button>
-                          <Button 
+                          <Button
                             className="bg-gradient-to-r from-yellow-500 to-green-500 text-white"
                             onClick={() => handleCreateStudent(newStudent)}
                           >
@@ -721,9 +727,9 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                                     <Edit className="h-4 w-4 mr-1" />
                                     Hindura
                                   </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     className="border-red-300 text-red-700 hover:bg-red-50"
                                     onClick={() => handleDeleteStudent(student.id)}
                                   >
@@ -845,9 +851,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                             <h3 className="font-bold text-sm text-gray-700 mb-3">Imyitwarire</h3>
                             <div className="space-y-2">
                               {selectedStudent.recent_conducts.map((conduct: any) => (
-                                <div key={conduct.id} className={`p-3 border-2 rounded-lg ${
-                                  conduct.incident_type === 'positive' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                                }`}>
+                                <div key={conduct.id} className={`p-3 border-2 rounded-lg ${conduct.incident_type === 'positive' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                                  }`}>
                                   <div className="flex items-center justify-between">
                                     <h4 className="font-medium">{conduct.title}</h4>
                                     <Badge className={conduct.incident_type === 'positive' ? 'bg-green-500' : 'bg-red-500'}>
@@ -1016,8 +1021,8 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                           <h4 className="font-bold text-gray-900">{item.subject}</h4>
                           <Badge className={
                             item.status === 'ahead' ? 'bg-green-100 text-green-700' :
-                            item.status === 'behind' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
+                              item.status === 'behind' ? 'bg-red-100 text-red-700' :
+                                'bg-yellow-100 text-yellow-700'
                           }>
                             {item.status === 'ahead' ? 'Imbere' : item.status === 'behind' ? 'Inyuma' : 'Ku Murongo'}
                           </Badge>
@@ -1027,11 +1032,10 @@ const DirectorStudyDashboard: React.FC<DirectorStudyDashboardProps> = ({ onNavig
                             initial={{ width: 0 }}
                             animate={{ width: `${item.progress}%` }}
                             transition={{ duration: 1, delay: index * 0.1 }}
-                            className={`h-full rounded-full ${
-                              item.status === 'ahead' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
-                              item.status === 'behind' ? 'bg-gradient-to-r from-red-500 to-orange-500' :
-                              'bg-gradient-to-r from-yellow-500 to-green-500'
-                            }`}
+                            className={`h-full rounded-full ${item.status === 'ahead' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
+                                item.status === 'behind' ? 'bg-gradient-to-r from-red-500 to-orange-500' :
+                                  'bg-gradient-to-r from-yellow-500 to-green-500'
+                              }`}
                           />
                         </div>
                         <p className="text-sm text-gray-600 mt-2">{item.progress}% byarangiye</p>

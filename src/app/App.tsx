@@ -92,6 +92,7 @@ import StockManagerDashboard from '@/app/pages/dashboards/StockManagerDashboard'
 import ResponsesPage from '@/app/pages/ResponsesPage';
 import StudentsManagementPage from '@/app/pages/StudentsManagementPage';
 import PaymentsManagement from '@/app/pages/accountant/PaymentsManagement';
+import AccountantPaymentsPage from '@/app/pages/dashboards/AccountantPaymentsPage';
 import { ExpensesManagement, InvoicesManagement } from '@/app/pages/accountant/AllAccountantPages';
 import EnhancedStudentPayments from '@/app/pages/accountant/EnhancedStudentPayments';
 import BudgetsManagement from '@/app/pages/accountant/BudgetsManagementPage';
@@ -112,6 +113,7 @@ import { GlobalMobileMenu } from '@/app/components/GlobalMobileMenu';
 import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
 import HeadmasterStudentManagement from '@/app/pages/headmaster/HeadmasterStudentManagement';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import AdminAccountantGlobalSheets from '@/app/components/AdminAccountantGlobalSheets';
 import DODManagement from '@/app/pages/dashboards/DODManagement';
 import DOSManagementUltraAdvanced from '@/app/pages/dos/DOSManagementUltraAdvanced';
 import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
@@ -123,36 +125,36 @@ import ParentLinkingManagement from '@/app/components/ParentLinkingManagement';
 const AppContent: React.FC = () => {
   // Mirror role-based navigation visibility used in Header
   const roleNavVisibility: Record<string, string[]> = {
-    school_owner: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
-    admin: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
-    super_admin: ['home','academics','sports','services','trades','leadership','staff-management-advanced','contactUs','supports','developers'],
-    headmaster: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
-    director_study: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
-    director_discipline: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
-    dod: ['home','academics','leadership','staff-management-advanced','contactUs','supports'],
-    accountant: ['home','services','staff-management-advanced','leadership','supports','contactUs'],
-    stock_manager: ['home','trades','services','staff-management-advanced','supports','contactUs'],
-    teacher: ['home','academics','leadership','contactUs','supports'],
-    advisor: ['home','academics','leadership','contactUs','supports'],
-    patron: ['home','academics','leadership','contactUs','supports'],
-    matron: ['home','academics','leadership','contactUs','supports'],
-    support_staff: ['home','services','supports','contactUs'],
-    parent: ['home','academics','sports','supports','contactUs']
+    school_owner: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
+    admin: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
+    super_admin: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
+    headmaster: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    director_study: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    director_discipline: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    dod: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
+    accountant: ['home', 'services', 'staff-management-advanced', 'leadership', 'supports', 'contactUs'],
+    stock_manager: ['home', 'trades', 'services', 'staff-management-advanced', 'supports', 'contactUs'],
+    teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    advisor: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    patron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    matron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    support_staff: ['home', 'services', 'supports', 'contactUs'],
+    parent: ['home', 'academics', 'sports', 'supports', 'contactUs']
   };
 
   const roleExtraAllowed: Record<string, string[]> = {
-    school_owner: ['profile','student-sheets'],
-    admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
-    super_admin: ['profile','student-sheets','admin','admin-panel','admin/team-overview','admin-developers','admin-articles'],
-    headmaster: ['profile','headmaster-students','student-sheets','dashboard-headmaster','application-management','parent-applications'],
-    director_study: ['profile','dos-students','dos-report-cards','dos-teacher-marks','dos-parent-access','dos-sms','student-sheets','dashboard-director-study','dashboard-dos','application-management','parent-applications'],
-    director_discipline: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline','parent-applications'],
-    dod: ['profile','dod-profile','dod-discipline','dod-leave','dod-leave-management','dod-parent-management','dod-exams','dod-students','dod-reports','dod-punishments','dod-parent-notifications','dod-student-sheets','dod-management','dod-notifications','student-sheets','dashboard-director-discipline','parent-applications'],
-    accountant: ['profile','student-sheets','dashboard-accountant','payments-management','expenses-management','invoices-management','budgets-management','salaries-management','transactions-management','financial-reports','timetable-view','students-management','student-payments-management','parent-applications'],
-    stock_manager: ['profile','dashboard-stock','student-sheets','staff-management-advanced'],
-    teacher: ['profile','search','notifications','classes','students','gradebook','attendance','assignments','resources','schedule','teacher-grading','teacher-create-assignment','student-sheets','dashboard-teacher'],
-    advisor: ['profile','student-sheets','dashboard-advisor','parent-applications'],
-    parent: ['profile','dashboard-parent'],
+    school_owner: ['profile', 'student-sheets'],
+    admin: ['profile', 'student-sheets', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
+    super_admin: ['profile', 'student-sheets', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
+    headmaster: ['profile', 'headmaster-students', 'student-sheets', 'dashboard-headmaster', 'application-management', 'parent-applications'],
+    director_study: ['profile', 'dos-students', 'dos-report-cards', 'dos-teacher-marks', 'dos-parent-access', 'dos-sms', 'dos-comprehensive-management', 'student-sheets', 'dashboard-director-study', 'dashboard-dos', 'application-management', 'parent-applications'],
+    director_discipline: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
+    dod: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
+    accountant: ['profile', 'student-sheets', 'dashboard-accountant', 'payments-management', 'accountant-payments', 'expenses-management', 'invoices-management', 'budgets-management', 'salaries-management', 'transactions-management', 'financial-reports', 'timetable-view', 'students-management', 'student-payments-management', 'parent-applications'],
+    stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced'],
+    teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher'],
+    advisor: ['profile', 'student-sheets', 'dashboard-advisor', 'parent-applications'],
+    parent: ['profile', 'dashboard-parent'],
     patron: ['profile'],
     matron: ['profile'],
     support_staff: ['profile'],
@@ -236,13 +238,13 @@ const AppContent: React.FC = () => {
   const handleNavigate = (page: string) => {
     // Allow certain pages to be accessed regardless of authentication status
     const publicPages = ['home', 'trades', 'sports', 'services', 'contactUs', 'supports', 'developers', 'leadership', 'news', 'login', 'register', 'parent-register', 'search'];
-    
+
     if (publicPages.includes(page)) {
       setCurrentPage(page);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+
     if (user && !isPageAllowed(page, user.role)) {
       const safe = getRoleDashboard(user.role);
       setCurrentPage(safe);
@@ -261,6 +263,7 @@ const AppContent: React.FC = () => {
       case 'super_admin':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="admin" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
+        if (currentPage === 'global-student-sheets') return <AdminAccountantGlobalSheets />;
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
@@ -276,6 +279,7 @@ const AppContent: React.FC = () => {
         if (currentPage === 'dos-teacher-marks') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
         if (currentPage === 'dos-parent-access') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
         if (currentPage === 'dos-sms') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
+        if (currentPage === 'dos-comprehensive-management') return <DOSManagementUltraAdvanced onNavigate={handleNavigate} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
         if (currentPage === 'application-management') return <ApplicationManagementDashboard onNavigate={handleNavigate} onLogout={logout} />;
         return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -323,7 +327,8 @@ const AppContent: React.FC = () => {
       case 'accountant':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-accountant" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
-        if (currentPage.startsWith('payments-') || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
+        if (currentPage === 'global-student-sheets') return <AdminAccountantGlobalSheets />;
+        if (currentPage.startsWith('payments-') || currentPage === 'accountant-payments' || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
           return null;
         }
         return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -485,7 +490,7 @@ const AppContent: React.FC = () => {
           />
         </div>
       );
-      
+
       // Role selection pages
       if (currentPage === 'role-selection') {
         return <RoleSelectionPage onNavigate={handleNavigate} onRoleSelect={handleRoleSelect} />;
@@ -517,6 +522,8 @@ const AppContent: React.FC = () => {
         return <EnhancedStudentPayments onNavigate={handleNavigate} />;
       case 'payments-management':
         return <PaymentsManagement onNavigate={handleNavigate} />;
+      case 'accountant-payments':
+        return <AccountantPaymentsPage />;
       case 'expenses-management':
         return <ExpensesManagement onNavigate={handleNavigate} />;
       case 'invoices-management':
@@ -546,7 +553,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full max-w-[100vw]">
       {/* Global Mobile Menu - Shows everywhere for authenticated users */}
       <GlobalMobileMenu currentPage={currentPage} onNavigate={handleNavigate} />
-      
+
       <Header
         currentPage={currentPage}
         onNavigate={handleNavigate}

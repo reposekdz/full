@@ -519,7 +519,7 @@ function needsIntervention(student) {
 
 function generateStudentProfile(student) {
   return {
-    academic_summary: `${student.first_name} ${student.last_name} is enrolled in ${student.trade_name} Level ${student.level_number}${student.level_suffix || ''} with an average grade of ${(student.average_grade || 0).toFixed(1)}%.`,
+    academic_summary: `${student.first_name} ${student.last_name} is enrolled in ${student.name} Level ${student.level_number}${student.level_suffix || ''} with an average grade of ${(student.average_grade || 0).toFixed(1)}%.`,
     attendance_summary: `Attendance rate: ${student.total_attendance_records > 0 ? ((student.present_days / student.total_attendance_records) * 100).toFixed(1) : 'N/A'}%`,
     performance_summary: calculateAcademicStanding(student),
     recommendations: generateStudentRecommendations(student)

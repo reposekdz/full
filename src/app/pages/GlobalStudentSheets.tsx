@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Download, FileText, Filter, Plus, Search, Settings, Users } from 'lucide-react';
+import { Download, FileText, Filter, Plus, Search, Settings, Users, RefreshCw } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -11,19 +11,73 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { GLOBAL_LEVELS, GLOBAL_TRADES, getLevelsForTrade } from '@/app/constants/tradesAndLevels';
 import apiService from '@/app/services/apiService';
+import {
+  DataGrid,
+  GridColDef,
+  GridToolbarContainer,
+  GridToolbarExport,
+  GridToolbarFilterButton,
+  GridToolbarDensitySelector,
+  GridActionsCellItem
+} from '@mui/x-data-grid';
+import { Edit, Trash2 } from 'lucide-react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { Box } from '@mui/material';
+
+const muiTheme = createTheme({
+  palette: {
+    primary: { main: '#2563eb' }, // blue-600
+    secondary: { main: '#9333ea' }, // purple-600
+  },
+});
+
+function CustomToolbar() {
+  return (
+    <GridToolbarContainer className="p-2 gap-2">
+      <GridToolbarFilterButton />
+      <GridToolbarDensitySelector />
+      <GridToolbarExport />
+    </GridToolbarContainer>
+  );
+}
 
 type LevelDef = (typeof GLOBAL_LEVELS)[number];
 
+interface Student {
+  id: number;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  gender: string;
+  status: string;
+  custom_values?: Record<number, string>;
+  username?: string;
+}
+
+interface Column {
+  id: number;
+  column_name: string;
+  column_type: string;
+  is_required: boolean;
+  default_value: string;
+  display_order: number;
+}
+
 const canAddStudentRole = (role?: string) =>
-  !!role && ['dos', 'director_study', 'headmaster', 'admin', 'super_admin'].includes(role);
+  !!role && ['accountant', 'dod', 'dos', 'headmaster', 'admin', 'teacher', 'advisor'].includes(role.toLowerCase());
+
+const canManageColumns = (role?: string) =>
+  !!role && ['accountant', 'dod', 'dos', 'headmaster', 'admin', 'teacher', 'advisor'].includes(role.toLowerCase());
 
 export default function GlobalStudentSheets() {
   const [selectedTrade, setSelectedTrade] = useState('');
   const [selectedLevelId, setSelectedLevelId] = useState('');
   const selectedLevel: LevelDef | null = selectedLevelId ? (GLOBAL_LEVELS.find((l) => l.id === selectedLevelId) || null) : null;
 
-  const [students, setStudents] = useState<any[]>([]);
-  const [columns, setColumns] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [columns, setColumns] = useState<Column[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -205,15 +259,15 @@ export default function GlobalStudentSheets() {
     const templates =
       template === 'finance'
         ? [
-            { column_name: 'Paid', column_type: 'number', default_value: '0', is_required: false },
-            { column_name: 'Unpaid', column_type: 'number', default_value: '0', is_required: false },
-            { column_name: 'Balance', column_type: 'number', default_value: '0', is_required: false }
-          ]
+          { column_name: 'Paid', column_type: 'number', default_value: '0', is_required: false },
+          { column_name: 'Unpaid', column_type: 'number', default_value: '0', is_required: false },
+          { column_name: 'Balance', column_type: 'number', default_value: '0', is_required: false }
+        ]
         : [
-            { column_name: 'Quiz', column_type: 'number', default_value: '0', is_required: false },
-            { column_name: 'Midterm', column_type: 'number', default_value: '0', is_required: false },
-            { column_name: 'Final', column_type: 'number', default_value: '0', is_required: false }
-          ];
+          { column_name: 'Quiz', column_type: 'number', default_value: '0', is_required: false },
+          { column_name: 'Midterm', column_type: 'number', default_value: '0', is_required: false },
+          { column_name: 'Final', column_type: 'number', default_value: '0', is_required: false }
+        ];
 
     const existing = new Set((columns || []).map((c) => String(c.column_name || '').toLowerCase().trim()));
     setLoading(true);
@@ -278,339 +332,421 @@ export default function GlobalStudentSheets() {
     }
   };
 
-  const sheetTitle = selectedTrade && selectedLevel ? `${selectedTrade} - Level ${selectedLevel.level_number}${selectedLevel.level_suffix || ''}` : '';
+  // DataGrid Column Definitions
+  const gridColumns: GridColDef[] = useMemo(() => {
+    const base: GridColDef[] = [
+      { field: 'index', headerName: '#', width: 60, renderCell: (params) => params.api.getAllRowIds().indexOf(params.id) + 1 },
+      { field: 'username', headerName: 'Student ID', width: 140, fontWeight: 'bold' },
+      {
+        field: 'full_name',
+        headerName: 'Amazina / Name',
+        width: 220,
+        valueGetter: (params, row) => `${row.first_name || ''} ${row.last_name || ''}`,
+        renderCell: (params) => <span className="font-semibold text-blue-700">{params.value}</span>
+      },
+      { field: 'email', headerName: 'Email', width: 200 },
+      { field: 'phone', headerName: 'Phone', width: 140 },
+    ];
+
+    const custom: GridColDef[] = (columns || []).map((c) => ({
+      field: `custom_${c.id}`,
+      headerName: c.column_name,
+      width: 150,
+      editable: true,
+      renderEditCell: (params) => (
+        <Input
+          type={c.column_type === 'number' ? 'number' : c.column_type === 'date' ? 'date' : 'text'}
+          defaultValue={params.value}
+          onBlur={(e) => {
+            params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value });
+            handleUpdateValue(params.row.id, c.id, e.target.value);
+          }}
+          className="h-9 w-full"
+        />
+      ),
+      valueGetter: (params, row) => row.custom_values?.[c.id] ?? c.default_value ?? ''
+    }));
+
+    const statusCol: GridColDef = {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (params) => (
+        <Badge className={params.value === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+          {params.value === 'active' ? 'Active' : 'Inactive'}
+        </Badge>
+      )
+    };
+
+    return [...base, ...custom, statusCol];
+  }, [columns]);
+
+  const gridRows = useMemo(() => {
+    return filteredStudents.map((s, idx) => ({
+      id: s.id || `temp-${idx}`,
+      ...s
+    }));
+  }, [filteredStudents]);
+
+  const sheetTitle = selectedTrade && selectedLevel
+    ? `${selectedTrade} - Level ${selectedLevel.level_number}${selectedLevel.level_suffix || ''}`
+    : '';
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Imbonerahamwe Rusange y'Abanyeshuri
-            </h1>
-            <p className="text-gray-600 mt-2">Global Student Sheets (Trade/Level independent)</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedTrade && selectedLevel && (
-              <Button onClick={exportToCSV} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            )}
-            {selectedTrade && selectedLevel && canAddStudentRole(user?.role) && (
-              <Button onClick={() => setShowAddStudent(true)} variant="outline">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Student
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <Card className="border-2 border-blue-100 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-6 h-6 text-blue-600" />
-              Hitamo Umwuga n'Urwego
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Umwuga / Trade</label>
-                <Select
-                  value={selectedTrade}
-                  onValueChange={(v) => {
-                    setSelectedTrade(v);
-                    setSelectedLevelId('');
-                    setStudents([]);
-                    setColumns([]);
-                  }}
-                >
-                  <SelectTrigger className="border-2">
-                    <SelectValue placeholder="Hitamo umwuga..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GLOBAL_TRADES.map((trade) => (
-                      <SelectItem key={trade.code} value={trade.code}>
-                        {trade.code} - {trade.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Urwego / Level</label>
-                <Select value={selectedLevelId} onValueChange={setSelectedLevelId} disabled={!selectedTrade}>
-                  <SelectTrigger className="border-2">
-                    <SelectValue placeholder="Hitamo urwego..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLevels.map((level) => (
-                      <SelectItem key={level.id} value={level.id}>
-                        {level.display}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+    <ThemeProvider theme={muiTheme}>
+      <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-[#f0f4ff] to-[#e6eeff] p-6 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+          >
+            <div>
+              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 bg-clip-text text-transparent drop-shadow-sm">
+                Imbonerahamwe Rusange y'Abanyeshuri
+              </h1>
+              <p className="text-gray-500 font-medium mt-2 flex items-center gap-2">
+                <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">Advanced Grid</Badge>
+                Global Student Sheets (Trade/Level independent)
+              </p>
             </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedTrade && selectedLevel && (
+                <Button onClick={exportToCSV} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-200 transition-all active:scale-95">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              )}
+              {selectedTrade && selectedLevel && (
+                <Button onClick={fetchSheet} variant="outline" disabled={loading} className="bg-white/80 backdrop-blur-sm border-blue-100 hover:bg-blue-50 transition-all">
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              )}
+              {selectedTrade && selectedLevel && canAddStudentRole(user?.role) && (
+                <Button onClick={() => setShowAddStudent(true)} variant="outline" className="bg-white/80 backdrop-blur-sm border-purple-100 hover:bg-purple-50 transition-all text-purple-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Student
+                </Button>
+              )}
+            </div>
+          </motion.div>
 
-            {selectedTrade && selectedLevel && (
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="relative w-full md:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Shakisha..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 border-2"
-                  />
+          <Card className="border-0 shadow-2xl shadow-blue-100/50 bg-white/70 backdrop-blur-md overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500" />
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-indigo-900">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Filter className="w-5 h-5 text-blue-600" />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={openCreateColumn}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Add Column
-                  </Button>
-                  <Button variant="outline" onClick={() => addTemplateColumns('finance')}>
-                    Add Finance Columns
-                  </Button>
-                  <Button variant="outline" onClick={() => addTemplateColumns('marks')}>
-                    Add Marks Columns
-                  </Button>
+                Hitamo Umwuga n'Urwego
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700 ml-1">Umwuga / Trade</label>
+                  <Select
+                    value={selectedTrade}
+                    onValueChange={(v) => {
+                      setSelectedTrade(v);
+                      setSelectedLevelId('');
+                      setStudents([]);
+                      setColumns([]);
+                    }}
+                  >
+                    <SelectTrigger className="border-2 border-blue-50 bg-white/50 focus:ring-2 focus:ring-blue-200 transition-all h-12">
+                      <SelectValue placeholder="Hitamo umwuga..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GLOBAL_TRADES.map((trade) => (
+                        <SelectItem key={trade.code} value={trade.code} className="hover:bg-blue-50">
+                          <span className="font-bold text-blue-600">{trade.code}</span> - {trade.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700 ml-1">Urwego / Level</label>
+                  <Select value={selectedLevelId} onValueChange={setSelectedLevelId} disabled={!selectedTrade}>
+                    <SelectTrigger className="border-2 border-blue-50 bg-white/50 focus:ring-2 focus:ring-blue-200 transition-all h-12">
+                      <SelectValue placeholder="Hitamo urwego..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLevels.map((level) => (
+                        <SelectItem key={level.id} value={level.id} className="hover:bg-blue-50">
+                          {level.display}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {!selectedTrade || !selectedLevel ? (
-          <Card className="border-2 border-blue-100 shadow-xl">
-            <CardContent className="p-12 text-center">
-              <FileText className="w-20 h-20 mx-auto text-blue-300 mb-4" />
-              <h3 className="text-2xl font-bold text-gray-700 mb-2">Hitamo Umwuga n'Urwego</h3>
-              <p className="text-gray-600">Select a trade and a level to view the sheet</p>
+              {selectedTrade && selectedLevel && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-gray-100"
+                >
+                  <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
+                    <Input
+                      placeholder="Shakisha (Amazina, ID)..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 border-2 border-blue-50 bg-white/50 focus:ring-2 focus:ring-blue-200 h-10"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canManageColumns(user?.role) && (
+                      <Button variant="outline" onClick={openCreateColumn} className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Add Column
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={() => addTemplateColumns('finance')} className="text-green-700 hover:bg-green-50">
+                      Finance Template
+                    </Button>
+                    <Button variant="ghost" onClick={() => addTemplateColumns('marks')} className="text-amber-700 hover:bg-amber-50">
+                      Marks Template
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
-        ) : (
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full max-w-xl bg-white border">
-              <TabsTrigger value="all">All ({filteredStudents.length})</TabsTrigger>
-              <TabsTrigger value="active">Bakora ({filteredStudents.filter((s) => s.status === 'active').length})</TabsTrigger>
-              <TabsTrigger value="inactive">Ntibakora ({filteredStudents.filter((s) => s.status !== 'active').length})</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="all">
-              <Card className="border-2 border-blue-100 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-6 h-6 text-blue-600" />
-                    {sheetTitle} Student Sheet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex justify-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-                    </div>
-                  ) : filteredStudents.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Users className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-gray-600">Nta banyeshuri babonetse / No students found</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b-2 bg-gradient-to-r from-blue-50 to-indigo-50">
-                            <th className="text-left py-3 px-4 font-bold">#</th>
-                            <th className="text-left py-3 px-4 font-bold">Student ID</th>
-                            <th className="text-left py-3 px-4 font-bold">Amazina</th>
-                            <th className="text-left py-3 px-4 font-bold">Email</th>
-                            <th className="text-left py-3 px-4 font-bold">Phone</th>
-                            {(columns || []).map((c) => (
-                              <th key={c.id} className="text-left py-3 px-4 font-bold">
-                                {c.column_name}
-                              </th>
-                            ))}
-                            <th className="text-center py-3 px-4 font-bold">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredStudents.map((student, index) => (
-                            <motion.tr
-                              key={student.id || `${student.student_id}-${index}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.01 }}
-                              className="border-b hover:bg-blue-50"
-                            >
-                              <td className="py-3 px-4 text-gray-600">{index + 1}</td>
-                              <td className="py-3 px-4 font-mono font-semibold">{student.student_id || student.username}</td>
-                              <td className="py-3 px-4">
-                                <p className="font-semibold">
-                                  {student.first_name} {student.last_name}
-                                </p>
-                              </td>
-                              <td className="py-3 px-4 text-sm text-gray-600">{student.email || 'N/A'}</td>
-                              <td className="py-3 px-4 text-sm text-gray-600">{student.phone || 'N/A'}</td>
-                              {(columns || []).map((c) => (
-                                <td key={c.id} className="py-2 px-4">
-                                  <Input
-                                    type={c.column_type === 'number' ? 'number' : c.column_type === 'date' ? 'date' : 'text'}
-                                    defaultValue={student.custom_values?.[c.id] ?? c.default_value ?? ''}
-                                    onBlur={(e) => handleUpdateValue(student.id, c.id, e.target.value)}
-                                    className="h-9"
-                                  />
-                                </td>
-                              ))}
-                              <td className="py-3 px-4 text-center">
-                                <Badge className={student.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
-                                  {student.status === 'active' ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+          {!selectedTrade || !selectedLevel ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Card className="border-0 shadow-xl bg-white/50 backdrop-blur-sm">
+                <CardContent className="p-20 text-center">
+                  <div className="w-24 h-24 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                    <FileText className="w-12 h-12 text-blue-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-indigo-900 mb-2">Hitamo Umwuga n'Urwego</h3>
+                  <p className="text-gray-500 max-w-sm mx-auto">Select a trade and a level from above to access the interactive student data grid</p>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </motion.div>
+          ) : (
+            <Tabs defaultValue="all" className="w-full space-y-6">
+              <div className="flex justify-between items-center">
+                <TabsList className="bg-white/80 p-1 border shadow-sm">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+                    All ({filteredStudents.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="active" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                    Bakora ({filteredStudents.filter((s) => s.status === 'active').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="inactive" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                    Ntibakora ({filteredStudents.filter((s) => s.status !== 'active').length})
+                  </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="active">
-              <Card className="border-2 border-green-100 shadow-xl">
-                <CardHeader>
-                  <CardTitle>Active Students</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">
-                    {filteredStudents.filter((s) => s.status === 'active').length} active students in {sheetTitle}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="inactive">
-              <Card className="border-2 border-gray-100 shadow-xl">
-                <CardHeader>
-                  <CardTitle>Inactive Students</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">
-                    {filteredStudents.filter((s) => s.status !== 'active').length} inactive students in {sheetTitle}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-
-      <Dialog open={showColumnModal} onOpenChange={setShowColumnModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingColumn ? 'Edit Column' : 'Add Column'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Column Name</Label>
-              <Input value={columnForm.column_name} onChange={(e) => setColumnForm({ ...columnForm, column_name: e.target.value })} />
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={columnForm.column_type} onValueChange={(v) => setColumnForm({ ...columnForm, column_type: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Default Value</Label>
-              <Input value={columnForm.default_value} onChange={(e) => setColumnForm({ ...columnForm, default_value: e.target.value })} />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowColumnModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={saveColumn} disabled={loading || !columnForm.column_name.trim()}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Add Student ({sheetTitle})</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {createdSerial && (
-              <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 font-semibold">
-                Serial Code: <span className="font-mono">{createdSerial}</span>
+                <div className="hidden md:flex items-center gap-2 text-sm text-gray-500 font-medium">
+                  <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                  Auto-sync active
+                </div>
               </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Student ID (optional)</Label>
-                <Input value={studentForm.student_id} onChange={(e) => setStudentForm({ ...studentForm, student_id: e.target.value })} />
+
+              <TabsContent value="all" className="mt-0">
+                <Card className="border-0 shadow-2xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6">
+                    <div className="flex justify-between items-center text-white/90 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider opacity-80">Official Student Record</span>
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <CardTitle className="text-2xl font-black">
+                      {sheetTitle} Data Management Sheet
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Box sx={{
+                      height: 700,
+                      width: '100%',
+                      '& .MuiDataGrid-root': {
+                        border: 'none',
+                      },
+                      '& .MuiDataGrid-cell': {
+                        borderBottom: '1px solid #f1f5f9',
+                        fontSize: '0.925rem',
+                        '&:focus': { outline: 'none' },
+                      },
+                      '& .MuiDataGrid-columnHeaders': {
+                        backgroundColor: '#f8fafc',
+                        borderBottom: '2px solid #e2e8f0',
+                        color: '#475569',
+                        fontWeight: '800',
+                      },
+                      '& .MuiDataGrid-virtualScroller': {
+                        backgroundColor: '#ffffff',
+                      },
+                      '& .MuiDataGrid-footerContainer': {
+                        borderTop: '2px solid #e2e8f0',
+                        backgroundColor: '#f8fafc',
+                      }
+                    }}>
+                      <DataGrid
+                        rows={gridRows}
+                        columns={gridColumns}
+                        loading={loading}
+                        slots={{ toolbar: CustomToolbar }}
+                        initialState={{
+                          pagination: { paginationModel: { pageSize: 25 } },
+                        }}
+                        pageSizeOptions={[10, 25, 50, 100]}
+                        disableRowSelectionOnClick
+                        density="comfortable"
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="active">
+                <Card className="p-12 text-center border-0 shadow-xl bg-white">
+                  <Users className="w-16 h-16 mx-auto text-green-500 mb-4 opacity-20" />
+                  <h2 className="text-xl font-bold">Active Students View</h2>
+                  <p className="text-gray-500">Currently showing {filteredStudents.filter((s) => s.status === 'active').length} active records.</p>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="inactive">
+                <Card className="p-12 text-center border-0 shadow-xl bg-white">
+                  <Users className="w-16 h-16 mx-auto text-red-500 mb-4 opacity-20" />
+                  <h2 className="text-xl font-bold">Inactive Records</h2>
+                  <p className="text-gray-500">Currently showing {filteredStudents.filter((s) => s.status !== 'active').length} archived records.</p>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
+
+        <Dialog open={showColumnModal} onOpenChange={setShowColumnModal}>
+          <DialogContent className="max-w-lg border-0 shadow-2xl backdrop-blur-xl bg-white/95">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-indigo-900">
+                {editingColumn ? 'Edit Dynamic Column' : 'Add New Student Column'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">Inzina ry'Inkingi / Column Name</Label>
+                <Input
+                  placeholder="e.g. Marks, Fees, Comments"
+                  value={columnForm.column_name}
+                  onChange={(e) => setColumnForm({ ...columnForm, column_name: e.target.value })}
+                  className="h-11 border-blue-50 focus:ring-blue-100"
+                />
               </div>
-              <div>
-                <Label>Gender</Label>
-                <Select value={studentForm.gender} onValueChange={(v) => setStudentForm({ ...studentForm, gender: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Gender" />
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">Ubwoko / Data Type</Label>
+                <Select value={columnForm.column_type} onValueChange={(v) => setColumnForm({ ...columnForm, column_type: v })}>
+                  <SelectTrigger className="h-11 border-blue-50">
+                    <SelectValue placeholder="Hitamo ubwoko..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="text">Umwandiko / Text</SelectItem>
+                    <SelectItem value="number">Imibare / Number</SelectItem>
+                    <SelectItem value="date">Italiki / Date</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>First Name</Label>
-                <Input value={studentForm.first_name} onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })} />
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">Agaciro k'Ibifatizo / Default Value</Label>
+                <Input
+                  placeholder="Optional"
+                  value={columnForm.default_value}
+                  onChange={(e) => setColumnForm({ ...columnForm, default_value: e.target.value })}
+                  className="h-11 border-blue-50"
+                />
               </div>
-              <div>
-                <Label>Last Name</Label>
-                <Input value={studentForm.last_name} onChange={(e) => setStudentForm({ ...studentForm, last_name: e.target.value })} />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input value={studentForm.phone} onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })} />
-              </div>
-              <div>
-                <Label>Date of Birth</Label>
-                <Input type="date" value={studentForm.date_of_birth} onChange={(e) => setStudentForm({ ...studentForm, date_of_birth: e.target.value })} />
+              <div className="flex gap-3 justify-end pt-4">
+                <Button variant="ghost" onClick={() => setShowColumnModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveColumn}
+                  disabled={loading || !columnForm.column_name.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-8"
+                >
+                  {loading ? <RefreshCw className="animate-spin w-4 h-4 mr-2" /> : null}
+                  Save Column
+                </Button>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddStudent(false)}>
-                Close
-              </Button>
-              <Button
-                onClick={addStudent}
-                disabled={loading || !studentForm.first_name.trim() || !studentForm.last_name.trim()}
-              >
-                Add Student
-              </Button>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showAddStudent} onOpenChange={setShowAddStudent}>
+          <DialogContent className="max-w-2xl border-0 shadow-2xl bg-white/98">
+            <DialogHeader>
+              <DialogTitle>Add Student ({sheetTitle})</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {createdSerial && (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 font-semibold">
+                  Serial Code: <span className="font-mono">{createdSerial}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Student ID (optional)</Label>
+                  <Input value={studentForm.student_id} onChange={(e) => setStudentForm({ ...studentForm, student_id: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={studentForm.gender} onValueChange={(v) => setStudentForm({ ...studentForm, gender: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>First Name</Label>
+                  <Input value={studentForm.first_name} onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Last Name</Label>
+                  <Input value={studentForm.last_name} onChange={(e) => setStudentForm({ ...studentForm, last_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input value={studentForm.phone} onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input type="date" value={studentForm.date_of_birth} onChange={(e) => setStudentForm({ ...studentForm, date_of_birth: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowAddStudent(false)}>
+                  Close
+                </Button>
+                <Button
+                  onClick={addStudent}
+                  disabled={loading || !studentForm.first_name.trim() || !studentForm.last_name.trim()}
+                >
+                  Add Student
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ThemeProvider>
   );
 }
 

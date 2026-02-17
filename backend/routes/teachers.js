@@ -140,10 +140,17 @@ router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'h
     const hashedPassword = await bcrypt.hash(password || 'teacher123', 10);
     const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
 
+    // Get the teacher role_id from roles table
+    const [teacherRole] = await pool.execute('SELECT id FROM roles WHERE name = "teacher"');
+    if (teacherRole.length === 0) {
+      return res.status(500).json({ success: false, message: 'Teacher role not found in system' });
+    }
+    const teacherRoleId = teacherRole[0].id;
+
     const [result] = await pool.execute(`
-      INSERT INTO users (username, email, password, first_name, last_name, phone, role, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, 'teacher', 1)
-    `, [username, email, hashedPassword, first_name, last_name, phone]);
+      INSERT INTO users (username, email, password, first_name, last_name, phone, role, role_id, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 'teacher', ?, 1)
+    `, [username, email, hashedPassword, first_name, last_name, phone, teacherRoleId]);
 
     res.json({
       success: true,

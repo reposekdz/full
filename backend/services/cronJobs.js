@@ -34,7 +34,7 @@ cron.schedule('0 8 * * 1-5', async () => {
     const [teachers] = await pool.query(
       'SELECT id, first_name, last_name, phone, email FROM users WHERE role = "teacher"'
     );
-    
+
     for (const teacher of teachers) {
       await createNotification(
         teacher.id,
@@ -63,7 +63,7 @@ cron.schedule('0 18 * * *', async () => {
       WHERE a.due_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
       AND sa.status != 'submitted'
     `);
-    
+
     for (const assignment of assignments) {
       await createNotification(
         assignment.student_id,
@@ -91,14 +91,14 @@ cron.schedule('0 7 * * *', async () => {
       JOIN users u ON se.student_id = u.id
       WHERE e.exam_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
     `);
-    
+
     for (const exam of exams) {
       const examDate = new Date(exam.exam_date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       examDate.setHours(0, 0, 0, 0);
       const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
-      
+
       await createNotification(
         exam.student_id,
         'Exam Reminder',
@@ -124,7 +124,7 @@ cron.schedule('0 9 1 * *', async () => {
       JOIN student_payments p ON u.id = p.student_id
       WHERE u.role = 'student' AND p.status = 'pending'
     `);
-    
+
     for (const student of students) {
       await createNotification(
         student.id,
@@ -168,20 +168,20 @@ cron.schedule('0 10 * * *', async () => {
         AND gss.payment_deadline < NOW()
       ORDER BY days_overdue DESC
     `);
-    
+
     console.log(`Found ${overdueStudents.length} students with overdue payments`);
-    
+
     let smsCount = 0;
     let emailCount = 0;
-    
+
     for (const student of overdueStudents) {
       const studentName = `${student.student_first_name} ${student.student_last_name}`;
       const level = `${student.level_number}${student.level_suffix || ''}`;
       const balance = parseFloat(student.balance).toLocaleString();
       const daysOverdue = student.days_overdue;
-      
+
       const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, your child ${studentName} (${student.trade_name} L${level}) has an outstanding balance of ${balance} RWF. Payment is ${daysOverdue} days overdue. Please settle to avoid service interruption. Thank you.`;
-      
+
       const emailMessage = `
         <h2>Payment Reminder - Garden TVET School</h2>
         <p>Dear ${student.guardian_name},</p>
@@ -200,14 +200,14 @@ cron.schedule('0 10 * * *', async () => {
         <p>Thank you for your cooperation.</p>
         <p><em>Garden TVET School</em></p>
       `;
-      
+
       if (student.guardian_phone && sendSMSFunc) {
         try {
           const smsResult = await sendSMSFunc(
-            student.guardian_phone, 
-            smsMessage, 
-            1, 
-            { 
+            student.guardian_phone,
+            smsMessage,
+            1,
+            {
               type: 'payment_reminder',
               student_id: student.student_id,
               student_code: student.student_code,
@@ -215,7 +215,7 @@ cron.schedule('0 10 * * *', async () => {
               days_overdue: daysOverdue
             }
           );
-          
+
           if (smsResult.success) {
             smsCount++;
             console.log(`✓ SMS sent to ${student.guardian_name} (${student.guardian_phone})`);
@@ -224,7 +224,7 @@ cron.schedule('0 10 * * *', async () => {
           console.log(`✗ SMS failed for ${student.guardian_name}: ${err.message}`);
         }
       }
-      
+
       if (student.guardian_email && emailTransporter) {
         try {
           await emailTransporter.sendMail({
@@ -239,12 +239,12 @@ cron.schedule('0 10 * * *', async () => {
           console.log(`✗ Email failed for ${student.guardian_email}: ${err.message}`);
         }
       }
-      
+
       const [parentLinks] = await pool.query(
         'SELECT parent_id FROM parent_student_links WHERE student_id = ? AND is_active = 1',
         [student.student_id]
       );
-      
+
       if (parentLinks.length > 0) {
         const parentId = parentLinks[0].parent_id;
         await createNotification(
@@ -258,7 +258,7 @@ cron.schedule('0 10 * * *', async () => {
         );
       }
     }
-    
+
     console.log(`✅ Payment reminders sent: ${smsCount} SMS, ${emailCount} emails`);
   } catch (error) {
     console.error('Parent payment reminder error:', error);
@@ -275,12 +275,12 @@ cron.schedule('0 9 * * 1', async () => {
         gss.student_code,
         gss.first_name as student_first_name,
         gss.last_name as student_last_name,
-        gss.guardian_name,
-        gss.guardian_phone,
-        gss.guardian_email,
+        gss.phone,
+        gss.email,
         gss.balance,
         gss.payment_deadline,
         gss.trade_name,
+        gss.trade_code,
         gss.level_number,
         gss.level_suffix,
         DATEDIFF(gss.payment_deadline, NOW()) as days_remaining
@@ -289,20 +289,20 @@ cron.schedule('0 9 * * 1', async () => {
         AND gss.balance > 0
         AND gss.payment_deadline BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
     `);
-    
+
     console.log(`Found ${upcomingDue.length} students with payments due this week`);
-    
+
     for (const student of upcomingDue) {
       const studentName = `${student.student_first_name} ${student.student_last_name}`;
       const level = `${student.level_number}${student.level_suffix || ''}`;
       const balance = parseFloat(student.balance).toLocaleString();
       const daysRemaining = student.days_remaining;
-      
+
       const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, payment of ${balance} RWF for ${studentName} (${student.trade_name} L${level}) is due in ${daysRemaining} day(s). Please make payment to avoid penalties.`;
-      
+
       if (student.guardian_phone && sendSMSFunc) {
         try {
-          await sendSMSFunc(student.guardian_phone, smsMessage, 1, { 
+          await sendSMSFunc(student.guardian_phone, smsMessage, 1, {
             type: 'upcoming_payment',
             student_id: student.student_id,
             days_remaining: daysRemaining
@@ -312,7 +312,7 @@ cron.schedule('0 9 * * 1', async () => {
         }
       }
     }
-    
+
     console.log(`✅ Weekly payment reminders sent`);
   } catch (error) {
     console.error('Weekly payment reminder error:', error);
@@ -330,16 +330,16 @@ cron.schedule('0 17 * * 5', async () => {
       JOIN users s ON psl.student_id = s.id
       WHERE p.role = 'parent'
     `);
-    
+
     for (const parent of parents) {
       const [attendance] = await pool.query(
         'SELECT COUNT(*) as present FROM attendance WHERE student_id = ? AND status = "present" AND DATE(date) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)',
         [parent.student_id]
       );
-      
+
       const presentDays = attendance[0]?.present || 0;
       const studentName = `${parent.student_first} ${parent.student_last}`;
-      
+
       await createNotification(
         parent.id,
         'Weekly Student Report',
@@ -366,7 +366,7 @@ cron.schedule('0 15 * * 1,3,5', async () => {
       JOIN sports_teams st ON sp.team_id = st.id
       WHERE sp.is_active = 1
     `);
-    
+
     for (const player of players) {
       await createNotification(
         player.id,
@@ -402,17 +402,17 @@ async function createNotification(userId, title, message, type, priority, sendSM
     console.error('Missing required notification parameters');
     return;
   }
-  
+
   try {
     await pool.query(
       'INSERT INTO notifications (user_id, title, message, type, priority, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, NOW())',
       [userId, title, message, type || 'info', priority || 'normal']
     );
-    
+
     const [users] = await pool.query('SELECT phone, email FROM users WHERE id = ?', [userId]);
     if (users.length > 0) {
       const user = users[0];
-      
+
       if (sendSMSFlag && user.phone && sendSMSFunc) {
         try {
           await sendSMSFunc(user.phone, `${title}: ${message}`, 1, { notification: true });
@@ -420,7 +420,7 @@ async function createNotification(userId, title, message, type, priority, sendSM
           console.log('SMS send failed:', err.message);
         }
       }
-      
+
       if (sendEmailFlag && user.email && emailTransporter) {
         try {
           await emailTransporter.sendMail({

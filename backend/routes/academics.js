@@ -10,12 +10,12 @@ router.get('/courses', authenticateToken, async (req, res) => {
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT c.*, t.trade_name, t.trade_code, tl.level_number,
+      SELECT c.*, t.name, t.code, tl.level_number,
         COUNT(DISTINCT e.student_id) as student_count,
         AVG(g.score) as average_score
       FROM courses c
       LEFT JOIN trade_levels tl ON c.trade_level_id = tl.id
-      LEFT JOIN trades t ON tl.trade_code = t.trade_code
+      LEFT JOIN trades t ON tl.trade_code = t.code
       LEFT JOIN enrollments e ON c.id = e.course_id
       LEFT JOIN grades g ON c.id = g.course_id
       WHERE c.is_active = true
@@ -27,7 +27,7 @@ router.get('/courses', authenticateToken, async (req, res) => {
       params.push(level);
     }
     if (trade) {
-      query += ' AND t.trade_code = ?';
+      query += ' AND t.code = ?';
       params.push(trade);
     }
     if (search) {
@@ -59,13 +59,13 @@ router.get('/courses/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     const [courses] = await pool.execute(`
-      SELECT c.*, t.trade_name, t.trade_code, tl.level_number,
+      SELECT c.*, t.name, t.code, tl.level_number,
         u.first_name as instructor_first_name,
         u.last_name as instructor_last_name,
         u.email as instructor_email
       FROM courses c
       LEFT JOIN trade_levels tl ON c.trade_level_id = tl.id
-      LEFT JOIN trades t ON tl.trade_code = t.trade_code
+      LEFT JOIN trades t ON tl.trade_code = t.code
       LEFT JOIN users u ON c.instructor_id = u.id
       WHERE c.id = ?
     `, [id]);
@@ -110,7 +110,7 @@ router.get('/courses/:id', authenticateToken, async (req, res) => {
 router.get('/my-courses', authenticateToken, async (req, res) => {
   try {
     const [courses] = await pool.execute(`
-      SELECT c.*, t.trade_name, tl.level_number,
+      SELECT c.*, t.name, tl.level_number,
         u.first_name as instructor_first_name,
         u.last_name as instructor_last_name,
         e.enrollment_date,
@@ -118,7 +118,7 @@ router.get('/my-courses', authenticateToken, async (req, res) => {
       FROM enrollments e
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN trade_levels tl ON c.trade_level_id = tl.id
-      LEFT JOIN trades t ON tl.trade_code = t.trade_code
+      LEFT JOIN trades t ON tl.trade_code = t.code
       LEFT JOIN users u ON c.instructor_id = u.id
       LEFT JOIN grades g ON c.id = g.course_id AND g.student_id = ?
       WHERE e.student_id = ? AND e.status = 'active'

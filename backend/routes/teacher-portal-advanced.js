@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req, res) => {
   try {
     const teacherId = req.user.userId;
-    
+
     // Get teacher's classes
     const [classes] = await pool.execute(`
       SELECT 
@@ -17,10 +17,10 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
         COUNT(DISTINCT e.student_id) as student_count
       FROM classes c
       LEFT JOIN class_enrollments e ON c.id = e.class_id
-      WHERE c.teacher_id = ? AND c.status = 'active'
+      WHERE c.teacher_id = ? AND c.is_active = 1
       GROUP BY c.id
     `, [teacherId]);
-    
+
     // Get today's schedule
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     const [schedule] = await pool.execute(`
@@ -33,7 +33,7 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
       WHERE t.teacher_id = ? AND t.day_of_week = ?
       ORDER BY t.start_time
     `, [teacherId, today]);
-    
+
     // Get pending assignments to grade
     const [pendingGrading] = await pool.execute(`
       SELECT 
@@ -42,7 +42,7 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
       JOIN assignments a ON asub.assignment_id = a.id
       WHERE a.teacher_id = ? AND asub.status = 'submitted' AND asub.grade IS NULL
     `, [teacherId]);
-    
+
     // Get attendance statistics
     const [[attendanceStats]] = await pool.execute(`
       SELECT 
@@ -53,7 +53,7 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
       JOIN classes c ON sa.class_id = c.id
       WHERE c.teacher_id = ? AND sa.attendance_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
     `, [teacherId]);
-    
+
     // Get recent activities
     const [recentActivities] = await pool.execute(`
       (SELECT 'assignment' as type, title as description, created_at 
@@ -66,7 +66,7 @@ router.get('/dashboard', authenticateToken, requireRole(['teacher']), async (req
        ORDER BY asub.graded_at DESC LIMIT 5)
       ORDER BY created_at DESC LIMIT 10
     `, [teacherId, teacherId]);
-    
+
     res.json({
       success: true,
       dashboard: {
@@ -90,10 +90,10 @@ router.get('/classes', authenticateToken, requireRole(['teacher']), async (req, 
   try {
     const teacherId = req.user.userId;
     const { academicYear, term } = req.query;
-    
+
     let conditions = ['c.teacher_id = ?'];
     let params = [teacherId];
-    
+
     if (academicYear) {
       conditions.push('c.academic_year = ?');
       params.push(academicYear);
@@ -102,9 +102,9 @@ router.get('/classes', authenticateToken, requireRole(['teacher']), async (req, 
       conditions.push('c.term = ?');
       params.push(term);
     }
-    
+
     const whereClause = 'WHERE ' + conditions.join(' AND ');
-    
+
     const [classes] = await pool.execute(`
       SELECT 
         c.*,
@@ -117,7 +117,7 @@ router.get('/classes', authenticateToken, requireRole(['teacher']), async (req, 
       GROUP BY c.id
       ORDER BY c.class_code
     `, params);
-    
+
     res.json({ success: true, classes });
   } catch (error) {
     console.error('Get classes error:', error);
@@ -130,13 +130,13 @@ router.get('/classes/:classId/students', authenticateToken, requireRole(['teache
   try {
     const { classId } = req.params;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [classId, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     const [students] = await pool.execute(`
       SELECT 
         s.*,
@@ -153,7 +153,7 @@ router.get('/classes/:classId/students', authenticateToken, requireRole(['teache
       GROUP BY s.id
       ORDER BY s.last_name, s.first_name
     `, [classId, classId, classId]);
-    
+
     res.json({ success: true, students });
   } catch (error) {
     console.error('Get class students error:', error);
@@ -168,23 +168,23 @@ router.post('/attendance', authenticateToken, requireRole(['teacher']), async (r
   try {
     const { class_id, attendance_date, attendance_records } = req.body;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [class_id, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     const connection = await pool.getConnection();
     await connection.beginTransaction();
-    
+
     try {
       for (const record of attendance_records) {
         const [existing] = await connection.execute(`
           SELECT id FROM student_attendance 
           WHERE student_id = ? AND class_id = ? AND attendance_date = ?
         `, [record.student_id, class_id, attendance_date]);
-        
+
         if (existing.length > 0) {
           await connection.execute(`
             UPDATE student_attendance 
@@ -199,7 +199,7 @@ router.post('/attendance', authenticateToken, requireRole(['teacher']), async (r
           `, [record.student_id, class_id, teacherId, attendance_date, record.status, record.notes || null]);
         }
       }
-      
+
       await connection.commit();
       res.json({ success: true, message: 'Attendance marked successfully' });
     } catch (error) {
@@ -220,16 +220,16 @@ router.get('/attendance/class/:classId', authenticateToken, requireRole(['teache
     const { classId } = req.params;
     const { startDate, endDate } = req.query;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [classId, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     let conditions = ['sa.class_id = ?'];
     let params = [classId];
-    
+
     if (startDate) {
       conditions.push('sa.attendance_date >= ?');
       params.push(startDate);
@@ -238,9 +238,9 @@ router.get('/attendance/class/:classId', authenticateToken, requireRole(['teache
       conditions.push('sa.attendance_date <= ?');
       params.push(endDate);
     }
-    
+
     const whereClause = 'WHERE ' + conditions.join(' AND ');
-    
+
     const [attendance] = await pool.execute(`
       SELECT 
         sa.*,
@@ -251,7 +251,7 @@ router.get('/attendance/class/:classId', authenticateToken, requireRole(['teache
       ${whereClause}
       ORDER BY sa.attendance_date DESC, s.last_name, s.first_name
     `, params);
-    
+
     // Get summary
     const [[summary]] = await pool.execute(`
       SELECT 
@@ -263,7 +263,7 @@ router.get('/attendance/class/:classId', authenticateToken, requireRole(['teache
       FROM student_attendance sa
       ${whereClause}
     `, params);
-    
+
     res.json({ success: true, attendance, summary });
   } catch (error) {
     console.error('Get attendance error:', error);
@@ -376,21 +376,21 @@ router.post('/grades', authenticateToken, requireRole(['teacher']), async (req, 
       final_marks,
       remarks
     } = req.body;
-    
+
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [class_id, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     // Check if marks exist
     const [existing] = await pool.execute(`
       SELECT id FROM student_marks 
       WHERE student_id = ? AND class_id = ? AND subject_code = ? AND academic_year = ? AND term = ?
     `, [student_id, class_id, subject_code, academic_year, term]);
-    
+
     if (existing.length > 0) {
       await pool.execute(`
         UPDATE student_marks 
@@ -398,7 +398,7 @@ router.post('/grades', authenticateToken, requireRole(['teacher']), async (req, 
             remarks = ?, updated_by = ?, updated_at = NOW()
         WHERE id = ?
       `, [quiz_marks, midterm_marks, final_marks, remarks, teacherId, existing[0].id]);
-      
+
       res.json({ success: true, message: 'Marks updated successfully' });
     } else {
       await pool.execute(`
@@ -412,7 +412,7 @@ router.post('/grades', authenticateToken, requireRole(['teacher']), async (req, 
         academic_year, term, quiz_marks, midterm_marks, final_marks,
         remarks, teacherId
       ]);
-      
+
       res.json({ success: true, message: 'Marks added successfully' });
     }
   } catch (error) {
@@ -427,16 +427,16 @@ router.get('/grades/class/:classId', authenticateToken, requireRole(['teacher'])
     const { classId } = req.params;
     const { academicYear, term, subjectCode } = req.query;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [classId, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     let conditions = ['sm.class_id = ?'];
     let params = [classId];
-    
+
     if (academicYear) {
       conditions.push('sm.academic_year = ?');
       params.push(academicYear);
@@ -449,9 +449,9 @@ router.get('/grades/class/:classId', authenticateToken, requireRole(['teacher'])
       conditions.push('sm.subject_code = ?');
       params.push(subjectCode);
     }
-    
+
     const whereClause = 'WHERE ' + conditions.join(' AND ');
-    
+
     const [marks] = await pool.execute(`
       SELECT 
         sm.*,
@@ -464,7 +464,7 @@ router.get('/grades/class/:classId', authenticateToken, requireRole(['teacher'])
       ${whereClause}
       ORDER BY s.last_name, s.first_name
     `, params);
-    
+
     // Calculate statistics
     const [[stats]] = await pool.execute(`
       SELECT 
@@ -477,7 +477,7 @@ router.get('/grades/class/:classId', authenticateToken, requireRole(['teacher'])
       FROM student_marks sm
       ${whereClause}
     `, params);
-    
+
     res.json({ success: true, marks, statistics: stats });
   } catch (error) {
     console.error('Get marks error:', error);
@@ -501,9 +501,9 @@ router.post('/assignments', authenticateToken, requireRole(['teacher']), async (
       instructions,
       attachments
     } = req.body;
-    
+
     const teacherId = req.user.userId;
-    
+
     const [result] = await pool.execute(`
       INSERT INTO assignments (
         class_id, teacher_id, title, description, assignment_type,
@@ -514,7 +514,7 @@ router.post('/assignments', authenticateToken, requireRole(['teacher']), async (
       subject_id, due_date, total_marks, instructions,
       JSON.stringify(attachments)
     ]);
-    
+
     res.json({
       success: true,
       message: 'Assignment created successfully',
@@ -531,10 +531,10 @@ router.get('/assignments', authenticateToken, requireRole(['teacher']), async (r
   try {
     const teacherId = req.user.userId;
     const { classId, status } = req.query;
-    
+
     let conditions = ['a.teacher_id = ?'];
     let params = [teacherId];
-    
+
     if (classId) {
       conditions.push('a.class_id = ?');
       params.push(classId);
@@ -543,9 +543,9 @@ router.get('/assignments', authenticateToken, requireRole(['teacher']), async (r
       conditions.push('a.status = ?');
       params.push(status);
     }
-    
+
     const whereClause = 'WHERE ' + conditions.join(' AND ');
-    
+
     const [assignments] = await pool.execute(`
       SELECT 
         a.*,
@@ -560,7 +560,7 @@ router.get('/assignments', authenticateToken, requireRole(['teacher']), async (r
       GROUP BY a.id
       ORDER BY a.due_date DESC
     `, params);
-    
+
     res.json({ success: true, assignments });
   } catch (error) {
     console.error('Get assignments error:', error);
@@ -573,13 +573,13 @@ router.get('/assignments/:assignmentId/submissions', authenticateToken, requireR
   try {
     const { assignmentId } = req.params;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this assignment
     const [[assignmentCheck]] = await pool.execute('SELECT id FROM assignments WHERE id = ? AND teacher_id = ?', [assignmentId, teacherId]);
     if (!assignmentCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to assignment' });
     }
-    
+
     const [submissions] = await pool.execute(`
       SELECT 
         asub.*,
@@ -591,7 +591,7 @@ router.get('/assignments/:assignmentId/submissions', authenticateToken, requireR
       WHERE asub.assignment_id = ?
       ORDER BY asub.submitted_at DESC
     `, [assignmentId]);
-    
+
     res.json({ success: true, submissions });
   } catch (error) {
     console.error('Get submissions error:', error);
@@ -605,7 +605,7 @@ router.post('/assignments/submissions/:submissionId/grade', authenticateToken, r
     const { submissionId } = req.params;
     const { grade, feedback, graded_marks } = req.body;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this assignment
     const [[check]] = await pool.execute(`
       SELECT asub.id 
@@ -613,17 +613,17 @@ router.post('/assignments/submissions/:submissionId/grade', authenticateToken, r
       JOIN assignments a ON asub.assignment_id = a.id
       WHERE asub.id = ? AND a.teacher_id = ?
     `, [submissionId, teacherId]);
-    
+
     if (!check) {
       return res.status(403).json({ success: false, message: 'Unauthorized access' });
     }
-    
+
     await pool.execute(`
       UPDATE assignment_submissions 
       SET grade = ?, feedback = ?, graded_marks = ?, status = 'graded', graded_at = NOW(), graded_by = ?
       WHERE id = ?
     `, [grade, feedback, graded_marks, teacherId, submissionId]);
-    
+
     res.json({ success: true, message: 'Submission graded successfully' });
   } catch (error) {
     console.error('Grade submission error:', error);
@@ -639,13 +639,13 @@ router.get('/analytics/class/:classId/performance', authenticateToken, requireRo
     const { classId } = req.params;
     const { academicYear, term } = req.query;
     const teacherId = req.user.userId;
-    
+
     // Verify teacher owns this class
     const [[classCheck]] = await pool.execute('SELECT id FROM classes WHERE id = ? AND teacher_id = ?', [classId, teacherId]);
     if (!classCheck) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to class' });
     }
-    
+
     // Performance by student
     const [studentPerformance] = await pool.execute(`
       SELECT 
@@ -661,7 +661,7 @@ router.get('/analytics/class/:classId/performance', authenticateToken, requireRo
       GROUP BY s.student_id, student_name
       ORDER BY average_marks DESC
     `, [classId, classId, academicYear, term]);
-    
+
     // Subject-wise performance
     const [subjectPerformance] = await pool.execute(`
       SELECT 
@@ -675,7 +675,7 @@ router.get('/analytics/class/:classId/performance', authenticateToken, requireRo
       WHERE sm.class_id = ? AND sm.academic_year = ? AND sm.term = ?
       GROUP BY sm.subject_code, sm.subject_name
     `, [classId, academicYear, term]);
-    
+
     res.json({
       success: true,
       analytics: {
@@ -694,16 +694,16 @@ router.get('/reports/student/:studentId', authenticateToken, requireRole(['teach
   try {
     const { studentId } = req.params;
     const { academicYear, term } = req.query;
-    
+
     // Get student info
     const [students] = await pool.execute(`
       SELECT * FROM global_student_sheets WHERE student_id = ?
     `, [studentId]);
-    
+
     if (students.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     // Get marks
     const [marks] = await pool.execute(`
       SELECT 
@@ -715,7 +715,7 @@ router.get('/reports/student/:studentId', authenticateToken, requireRole(['teach
       WHERE sm.student_id = ? AND sm.academic_year = ? AND sm.term = ?
       ORDER BY sm.subject_name
     `, [studentId, academicYear, term]);
-    
+
     // Get attendance
     const [[attendance]] = await pool.execute(`
       SELECT 
@@ -727,7 +727,7 @@ router.get('/reports/student/:studentId', authenticateToken, requireRole(['teach
       FROM student_attendance
       WHERE student_id = ?
     `, [studentId]);
-    
+
     // Get assignment submissions
     const [assignments] = await pool.execute(`
       SELECT 
@@ -742,7 +742,7 @@ router.get('/reports/student/:studentId', authenticateToken, requireRole(['teach
       WHERE asub.student_id = ?
       ORDER BY asub.submitted_at DESC
     `, [studentId]);
-    
+
     res.json({
       success: true,
       student: students[0],

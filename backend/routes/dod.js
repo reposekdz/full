@@ -17,13 +17,13 @@ router.get('/incidents', authenticateToken, async (req, res) => {
         s.first_name as student_first_name, s.last_name as student_last_name, s.username as student_username,
         sp.admission_number,
         r.first_name as reported_by_first_name, r.last_name as reported_by_last_name,
-        t.trade_code, t.trade_name
+        t.code, t.name
       FROM discipline_incidents i
       LEFT JOIN users s ON i.student_id = s.id
       LEFT JOIN student_profiles sp ON s.id = sp.user_id
       LEFT JOIN users r ON i.reported_by = r.id
       LEFT JOIN enrollments e ON s.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE 1=1
     `;
     const params = [];
@@ -116,12 +116,12 @@ router.get('/leaves', authenticateToken, async (req, res) => {
       SELECT l.*,
         s.first_name as student_first_name, s.last_name as student_last_name, s.username as student_username,
         sp.admission_number,
-        t.trade_code, t.trade_name
+        t.code, t.name
       FROM leave_requests l
       LEFT JOIN users s ON l.student_id = s.id
       LEFT JOIN student_profiles sp ON s.id = sp.user_id
       LEFT JOIN enrollments e ON s.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE 1=1
     `;
     const params = [];
@@ -407,14 +407,14 @@ router.get('/students', authenticateToken, async (req, res) => {
     let query = `
       SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
         sp.admission_number, sp.date_of_birth, sp.gender,
-        t.trade_code, t.trade_name,
+        t.code, t.name,
         e.level_number, e.level_suffix,
         (SELECT COUNT(*) FROM discipline_incidents di WHERE di.student_id = u.id) as incident_count,
         (SELECT COUNT(*) FROM attendances a WHERE a.student_id = u.id AND a.status = 'absent' AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as absence_count
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE u.role = 'student'
     `;
     const params = [];
@@ -572,14 +572,14 @@ router.get('/student-sheets', authenticateToken, async (req, res) => {
     let query = `
       SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
         sp.admission_number, sp.date_of_birth, sp.gender, sp.address,
-        t.trade_code, t.trade_name,
+        t.code, t.name,
         e.level_number, e.level_suffix,
         (SELECT COUNT(*) FROM discipline_incidents di WHERE di.student_id = u.id AND di.status = 'pending') as pending_incidents,
         (SELECT COUNT(*) FROM attendances a WHERE a.student_id = u.id AND a.status = 'absent') as total_absences
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trades t ON e.trade_code = t.trade_code
+      LEFT JOIN trades t ON e.trade_code = t.code
       WHERE u.role = 'student'
     `;
     const params = [];

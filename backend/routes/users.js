@@ -68,7 +68,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
       try {
         let adminUpdateFields = [];
         let adminUpdateValues = [];
-        
+
         if (first_name) {
           adminUpdateFields.push('first_name = ?');
           adminUpdateValues.push(first_name);
@@ -90,11 +90,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
           adminUpdateFields.push('password = ?');
           adminUpdateValues.push(hashedPassword);
         }
-        
+
         if (adminUpdateFields.length > 0) {
           adminUpdateFields.push('updated_at = CURRENT_TIMESTAMP');
           adminUpdateValues.push(user.email);
-          
+
           const adminQuery = `UPDATE admin_users SET ${adminUpdateFields.join(', ')} WHERE email = ?`;
           await pool.execute(adminQuery, adminUpdateValues);
         }
@@ -228,12 +228,16 @@ router.post('/', [
     }
 
     const { username, email, first_name, last_name, password, phone, role_id, date_of_birth } = req.body;
-    
-    const roleMap = {
-      1: 'student', 2: 'teacher', 3: 'parent', 4: 'admin', 5: 'super_admin',
-      6: 'accountant', 7: 'stock_manager', 8: 'headmaster', 9: 'director_study', 10: 'director_discipline'
-    };
-    const role = roleMap[role_id] || 'student';
+
+    // Get role name from role_id
+    const [roleResult] = await pool.execute('SELECT name FROM roles WHERE id = ?', [role_id]);
+    if (roleResult.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role_id'
+      });
+    }
+    const role = roleResult[0].name;
 
     const generatedUsername = username || email.split('@')[0];
 
@@ -253,9 +257,9 @@ router.post('/', [
     const password_hash = await bcrypt.hash(password || 'password123', saltRounds);
 
     const [result] = await pool.execute(
-      `INSERT INTO users (username, email, first_name, last_name, password_hash, phone, role, date_of_birth) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [generatedUsername, email, first_name, last_name, password_hash, phone, role, date_of_birth]
+      `INSERT INTO users (username, email, first_name, last_name, password_hash, phone, role, role_id, date_of_birth) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [generatedUsername, email, first_name, last_name, password_hash, phone, role, role_id, date_of_birth]
     );
 
     res.status(201).json({

@@ -130,7 +130,7 @@ const TeamsPage: React.FC<TeamsPageProps> = ({ onNavigate }) => {
                         <div className="w-20 h-20 rounded-full bg-white shadow-xl flex items-center justify-center text-4xl border-4 border-white overflow-hidden">
                           {team.image_url ? (
                             <img
-                              src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${team.image_url}`}
+                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${team.image_url}`}
                               alt={team.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {

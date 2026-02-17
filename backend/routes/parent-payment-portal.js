@@ -10,7 +10,7 @@ const db = require('../config/database');
 // Environment Configuration
 const CONFIG = {
   API_BASE: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  
+
   // Bank Configurations from Environment
   BANKS: {
     gt_bank: {
@@ -82,95 +82,46 @@ const requireAuth = (req, res, next) => {
 router.get('/my-children', requireAuth, async (req, res) => {
   try {
     const parentId = req.user.id;
-    
+
     // Get all verified linked children for this parent
     const query = `
       SELECT 
         pl.id as linking_id,
         pl.student_id,
-        pl.relationship,
-        pl.is_primary,
+        pl.relationship_type as relationship,
         pl.created_at as linked_date,
-        ss.student_code,
-        ss.first_name,
-        ss.last_name,
-        ss.profile_image,
-        ts.trade_code,
-        ts.trade_name,
-        ss.level_number,
-        ss.current_class,
-        COALESCE((
-          SELECT SUM(fa.amount) 
-          FROM fee_assessments fa 
-          WHERE fa.student_id = ss.student_id 
-          AND fa.academic_year = (SELECT current_academic_year FROM system_settings LIMIT 1)
-        ), 0) as total_fees,
-        COALESCE((
-          SELECT SUM(p.amount) 
-          FROM payments p 
-          WHERE p.student_id = ss.student_id 
-          AND p.status = 'completed'
-        ), 0) as paid_amount,
-        COALESCE((
-          SELECT SUM(fa.amount) 
-          FROM fee_assessments fa 
-          WHERE fa.student_id = ss.student_id 
-          AND fa.academic_year = (SELECT current_academic_year FROM system_settings LIMIT 1)
-        ), 0) - COALESCE((
-          SELECT SUM(p.amount) 
-          FROM payments p 
-          WHERE p.student_id = ss.student_id 
-          AND p.status = 'completed'
-        ), 0) as balance,
+        u.student_code,
+        u.first_name,
+        u.last_name,
+        u.profile_image,
+        u.trade_code,
+        t.name as trade_name,
+        u.level_number,
+        u.class as current_class,
+        COALESCE(gss.balance, 0) as balance,
+        COALESCE(gss.total_fees, 0) as total_fees,
+        COALESCE(gss.paid_amount, 0) as paid_amount,
+        COALESCE(gss.payment_status, 'unpaid') as payment_status,
         CASE 
-          WHEN COALESCE((
-            SELECT SUM(fa.amount) 
-            FROM fee_assessments fa 
-            WHERE fa.student_id = ss.student_id 
-            AND fa.academic_year = (SELECT current_academic_year FROM system_settings LIMIT 1)
-          ), 0) <= COALESCE((
-            SELECT SUM(p.amount) 
-            FROM payments p 
-            WHERE p.student_id = ss.student_id 
-            AND p.status = 'completed'
-          ), 0) THEN 'paid'
-          WHEN COALESCE((
-            SELECT SUM(p.amount) 
-            FROM payments p 
-            WHERE p.student_id = ss.student_id 
-            AND p.status = 'completed'
-          ), 0) > 0 THEN 'partial'
+          WHEN COALESCE(gss.balance, 0) <= 0 THEN 'paid'
+          WHEN COALESCE(gss.paid_amount, 0) > 0 THEN 'partial'
           ELSE 'unpaid'
-        END as payment_status,
+        END as payment_status_calc,
         CASE 
-          WHEN COALESCE((
-            SELECT SUM(fa.amount) 
-            FROM fee_assessments fa 
-            WHERE fa.student_id = ss.student_id 
-            AND fa.academic_year = (SELECT current_academic_year FROM system_settings LIMIT 1)
-          ), 0) > 0 THEN
-            ROUND((COALESCE((
-              SELECT SUM(p.amount) 
-              FROM payments p 
-              WHERE p.student_id = ss.student_id 
-              AND p.status = 'completed'
-            ), 0) / COALESCE((
-              SELECT SUM(fa.amount) 
-              FROM fee_assessments fa 
-              WHERE fa.student_id = ss.student_id 
-              AND fa.academic_year = (SELECT current_academic_year FROM system_settings LIMIT 1)
-            ), 0)) * 100, 2)
+          WHEN COALESCE(gss.total_fees, 0) > 0 THEN
+            ROUND((COALESCE(gss.paid_amount, 0) / COALESCE(gss.total_fees, 0)) * 100, 2)
           ELSE 0
         END as percentage_paid
-      FROM parent_linking pl
-      JOIN student_sheets ss ON pl.student_id = ss.student_id
-      LEFT JOIN trade_subjects ts ON ss.trade_code = ts.trade_code
+      FROM parent_student_links pl
+      JOIN users u ON pl.student_id = u.id
+      LEFT JOIN trades t ON u.trade_code = t.code
+      LEFT JOIN global_student_sheets gss ON u.student_code = gss.student_code
       WHERE pl.parent_id = ? AND pl.status = 'verified'
-      ORDER BY pl.is_primary DESC, ss.first_name ASC
+      ORDER BY u.first_name ASC
     `;
-    
+
     const results = await db.query(query, [parentId]);
-    
+
     // Format results
     const levelDisplay = {
       '3': 'Level 3',
@@ -183,12 +134,13 @@ router.get('/my-children', requireAuth, async (req, res) => {
       '5A': 'Level 5A',
       '5B': 'Level 5B'
     };
-    
+
     const children = results.map(child => ({
       ...child,
+      payment_status: child.payment_status_calc || child.payment_status || 'unpaid',
       level_display: levelDisplay[child.level_number] || child.level_number
     }));
-    
+
     res.json({
       success: true,
       children: children,
@@ -204,7 +156,7 @@ router.get('/my-children', requireAuth, async (req, res) => {
 router.get('/dashboard-summary', requireAuth, async (req, res) => {
   try {
     const parentId = req.user.id;
-    
+
     const query = `
       SELECT 
         COUNT(*) as linked_students_count,
@@ -264,14 +216,14 @@ router.get('/dashboard-summary', requireAuth, async (req, res) => {
         WHERE pl.parent_id = ? AND pl.status = 'verified'
       ) as summary
     `;
-    
+
     const result = await db.query(query, [parentId]);
     const summary = result[0];
-    
-    summary.collection_rate = summary.total_fees > 0 
-      ? Math.round((summary.total_paid / summary.total_fees) * 100 * 100) / 100 
+
+    summary.collection_rate = summary.total_fees > 0
+      ? Math.round((summary.total_paid / summary.total_fees) * 100 * 100) / 100
       : 0;
-    
+
     res.json({
       success: true,
       summary: summary
@@ -287,15 +239,15 @@ router.get('/fee-structure/:studentId', requireAuth, async (req, res) => {
   try {
     const { studentId } = req.params;
     const parentId = req.user.id;
-    
+
     // Verify parent has access to this student
     const verifyQuery = 'SELECT * FROM parent_ligning WHERE parent_id = ? AND student_id = ? AND status = ?';
     const verifyResult = await db.query(verifyQuery, [parentId, studentId, 'verified']);
-    
+
     if (verifyResult.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied to this student' });
     }
-    
+
     const query = `
       SELECT 
         fa.id,
@@ -317,9 +269,9 @@ router.get('/fee-structure/:studentId', requireAuth, async (req, res) => {
       GROUP BY fa.id
       ORDER BY fa.due_date ASC
     `;
-    
+
     const results = await db.query(query, [studentId]);
-    
+
     res.json({
       success: true,
       feeStructure: results
@@ -335,15 +287,15 @@ router.get('/payment-history/:studentId', requireAuth, async (req, res) => {
   try {
     const { studentId } = req.params;
     const parentId = req.user.id;
-    
+
     // Verify parent has access
     const verifyQuery = 'SELECT * FROM parent_linking WHERE parent_id = ? AND student_id = ? AND status = ?';
     const verifyResult = await db.query(verifyQuery, [parentId, studentId, 'verified']);
-    
+
     if (verifyResult.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const query = `
       SELECT 
         p.id,
@@ -353,6 +305,16 @@ router.get('/payment-history/:studentId', requireAuth, async (req, res) => {
         p.payment_date,
         p.status,
         p.receipt_number,
+        ss.first_name as student_first_name,
+        ss.last_name as student_last_name,
+        CONCAT(ss.first_name, ' ', ss.last_name) as student_name,
+        ss.student_code,
+        ss.trade_name as trade_code,
+        ss.level_number as level,
+        par.first_name as parent_first_name,
+        par.last_name as parent_last_name,
+        CONCAT(par.first_name, ' ', par.last_name) as parent_name,
+        par.phone as parent_phone,
         CASE 
           WHEN p.payment_method = 'gt_bank' THEN 'GT Bank Rwanda'
           WHEN p.payment_method = 'bpr' THEN 'Bank of Kigali (BPR)'
@@ -362,12 +324,14 @@ router.get('/payment-history/:studentId', requireAuth, async (req, res) => {
           ELSE p.payment_method
         END as bank_name
       FROM payments p
+      LEFT JOIN student_sheets ss ON p.student_id = ss.student_id
+      LEFT JOIN users par ON p.parent_id = par.id
       WHERE p.student_id = ?
       ORDER BY p.payment_date DESC
     `;
-    
+
     const results = await db.query(query, [studentId]);
-    
+
     res.json({
       success: true,
       payments: results
@@ -385,61 +349,61 @@ router.post('/initiate-payment', requireAuth, async (req, res) => {
     const parentId = req.user.id;
     const parentPhone = req.user.phone || req.user.phone_number;
     const parentEmail = req.user.email;
-    
+
     // Validate inputs
     if (!studentId || !amount || !paymentMethod) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    
+
     // Verify parent has access
     const verifyQuery = 'SELECT * FROM parent_linking WHERE parent_id = ? AND student_id = ? AND status = ?';
     const verifyResult = await db.query(verifyQuery, [parentId, studentId, 'verified']);
-    
+
     if (verifyResult.length === 0) {
       return res.status(403).json({ success: false, message: 'Access denied to this student' });
     }
-    
+
     // Get student info
     const studentQuery = 'SELECT first_name, last_name, student_code FROM student_sheets WHERE student_id = ?';
     const studentResult = await db.query(studentQuery, [studentId]);
-    
+
     if (studentResult.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     const student = studentResult[0];
-    
+
     // Generate receipt number
     const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     const referenceNumber = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-    
+
     // Get bank configuration
     const bankConfig = CONFIG.BANKS[paymentMethod];
-    
+
     if (!bankConfig || !bankConfig.enabled) {
       return res.status(400).json({ success: false, message: 'Payment method not available' });
     }
-    
+
     // Calculate fee if applicable
     const feeAmount = bankConfig.feePercent ? (amount * bankConfig.feePercent / 100) : 0;
     const totalAmount = amount + feeAmount;
-    
+
     // Create pending payment record
     const insertQuery = `
       INSERT INTO pending_payments 
       (parent_id, student_id, amount, fee_amount, total_amount, payment_method, reference_number, receipt_number, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
     `;
-    
+
     const insertResult = await db.query(insertQuery, [
       parentId, studentId, amount, feeAmount, totalAmount, paymentMethod, referenceNumber, receiptNumber
     ]);
-    
+
     const pendingPaymentId = insertResult.insertId;
-    
+
     // Process payment based on method
     let paymentResponse = null;
-    
+
     try {
       if (paymentMethod === 'gt_bank') {
         // GT Bank Payment Integration
@@ -491,26 +455,26 @@ router.post('/initiate-payment', requireAuth, async (req, res) => {
           description: `School fees for ${student.first_name} ${student.last_name}`
         });
       }
-      
+
       // Update payment status based on response
       if (paymentResponse && paymentResponse.success) {
-        await db.query('UPDATE pending_payments SET status = ?, external_reference = ? WHERE id = ?', 
+        await db.query('UPDATE pending_payments SET status = ?, external_reference = ? WHERE id = ?',
           [paymentResponse.status || 'completed', paymentResponse.externalRef, pendingPaymentId]);
-        
+
         // Create completed payment record
         await db.query(`
           INSERT INTO payments 
           (student_id, parent_id, amount, payment_method, reference_number, receipt_number, status, payment_date, fee_amount)
           VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW(), ?)
         `, [studentId, parentId, amount, paymentMethod, referenceNumber, receiptNumber, feeAmount]);
-        
+
         // Update student's paid amount (simplified)
         await db.query(`
           INSERT INTO payment_records (student_id, payment_id, amount, created_at)
           VALUES (?, ?, ?, NOW())
           ON DUPLICATE KEY UPDATE payment_id = VALUES(payment_id), amount = VALUES(amount)
         `, [studentId, pendingPaymentId, amount]);
-        
+
         res.json({
           success: true,
           message: 'Payment processed successfully',
@@ -526,9 +490,9 @@ router.post('/initiate-payment', requireAuth, async (req, res) => {
         });
       } else {
         // Payment initiated but pending verification
-        await db.query('UPDATE pending_payments SET status = ?, external_reference = ? WHERE id = ?', 
+        await db.query('UPDATE pending_payments SET status = ?, external_reference = ? WHERE id = ?',
           [paymentResponse?.status || 'pending', paymentResponse?.externalRef, pendingPaymentId]);
-        
+
         res.json({
           success: true,
           message: 'Payment initiated successfully. Please complete payment.',
@@ -547,17 +511,17 @@ router.post('/initiate-payment', requireAuth, async (req, res) => {
       }
     } catch (paymentError) {
       console.error('Payment processing error:', paymentError);
-      
+
       // Demo mode - simulate successful payment
-      await db.query('UPDATE pending_payments SET status = ? WHERE id = ?', 
+      await db.query('UPDATE pending_payments SET status = ? WHERE id = ?',
         ['completed', pendingPaymentId]);
-      
+
       await db.query(`
         INSERT INTO payments 
         (student_id, parent_id, amount, payment_method, reference_number, receipt_number, status, payment_date, fee_amount)
         VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW(), ?)
       `, [studentId, parentId, amount, paymentMethod, referenceNumber, receiptNumber, feeAmount]);
-      
+
       res.json({
         success: true,
         message: 'Payment processed successfully (Demo Mode)',
@@ -584,7 +548,7 @@ router.get('/receipt/:receiptNumber', requireAuth, async (req, res) => {
   try {
     const { receiptNumber } = req.params;
     const parentId = req.user.id;
-    
+
     const query = `
       SELECT 
         p.*,
@@ -598,13 +562,13 @@ router.get('/receipt/:receiptNumber', requireAuth, async (req, res) => {
       LEFT JOIN trade_subjects ts ON ss.trade_code = ts.trade_code
       WHERE p.receipt_number = ? AND p.parent_id = ?
     `;
-    
+
     const result = await db.query(query, [receiptNumber, parentId]);
-    
+
     if (result.length === 0) {
       return res.status(404).json({ success: false, message: 'Receipt not found' });
     }
-    
+
     res.json({
       success: true,
       receipt: result[0]
@@ -620,18 +584,18 @@ router.post('/webhook/:paymentMethod', async (req, res) => {
   try {
     const { paymentMethod } = req.params;
     const { reference, status, externalRef } = req.body;
-    
+
     // Update payment status
     await db.query(`
       UPDATE pending_payments 
       SET status = ?, external_reference = ?, verified_at = NOW()
       WHERE reference_number = ?
     `, [status, externalRef, reference]);
-    
+
     if (status === 'completed') {
       // Update payments table
       const pending = await db.query('SELECT * FROM pending_payments WHERE reference_number = ?', [reference]);
-      
+
       if (pending.length > 0) {
         await db.query(`
           INSERT INTO payments 
@@ -648,7 +612,7 @@ router.post('/webhook/:paymentMethod', async (req, res) => {
         ]);
       }
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Webhook error:', error);
@@ -659,13 +623,13 @@ router.post('/webhook/:paymentMethod', async (req, res) => {
 // Bank Payment Integration Functions
 async function processGTBankPayment(data) {
   const { merchantId, amount, reference, customerName, customerEmail, description } = data;
-  
+
   // Check if API is configured
   if (!process.env.REACT_APP_GT_BANK_API_URL) {
     console.log('GT Bank API not configured, using demo mode');
     return { success: true, status: 'completed', externalRef: `GT-${Date.now()}` };
   }
-  
+
   try {
     const response = await fetch(process.env.REACT_APP_GT_BANK_API_URL, {
       method: 'POST',
@@ -686,12 +650,12 @@ async function processGTBankPayment(data) {
         return_url: `${process.env.FRONTEND_URL}/payment/success`
       })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
-      return { 
-        success: true, 
+      return {
+        success: true,
         status: result.data?.status || 'pending',
         externalRef: result.data?.transaction_id,
         paymentUrl: result.data?.payment_url
@@ -707,12 +671,12 @@ async function processGTBankPayment(data) {
 
 async function processBPRPayment(data) {
   const { merchantId, amount, reference, phone, description } = data;
-  
+
   if (!process.env.REACT_APP_BPR_API_URL) {
     console.log('BPR API not configured, using demo mode');
     return { success: true, status: 'completed', externalRef: `BPR-${Date.now()}` };
   }
-  
+
   try {
     const response = await fetch(process.env.REACT_APP_BPR_API_URL, {
       method: 'POST',
@@ -729,11 +693,11 @@ async function processBPRPayment(data) {
         callback_url: `${process.env.REACT_APP_API_URL}/parent-payment-portal/webhook/bpr`
       })
     });
-    
+
     const result = await response.json();
-    
-    return { 
-      success: result.status === 'success', 
+
+    return {
+      success: result.status === 'success',
       status: result.status === 'success' ? 'pending' : 'failed',
       externalRef: result.transaction_id,
       message: result.message
@@ -746,12 +710,12 @@ async function processBPRPayment(data) {
 
 async function processEquityBankPayment(data) {
   const { merchantId, amount, reference, customerName, customerPhone, description } = data;
-  
+
   if (!process.env.REACT_APP_EQUITY_API_URL) {
     console.log('Equity Bank API not configured, using demo mode');
     return { success: true, status: 'completed', externalRef: `EQ-${Date.now()}` };
   }
-  
+
   try {
     const response = await fetch(process.env.REACT_APP_EQUITY_API_URL, {
       method: 'POST',
@@ -770,11 +734,11 @@ async function processEquityBankPayment(data) {
         callback_url: `${process.env.REACT_APP_API_URL}/parent-payment-portal/webhook/equity_bank`
       })
     });
-    
+
     const result = await response.json();
-    
-    return { 
-      success: result.response_code === '00', 
+
+    return {
+      success: result.response_code === '00',
       status: result.response_code === '00' ? 'pending' : 'failed',
       externalRef: result.transaction_id,
       paymentUrl: result.payment_link
@@ -787,12 +751,12 @@ async function processEquityBankPayment(data) {
 
 async function processMTNPayment(data) {
   const { collectionId, amount, reference, phone, customerName, description } = data;
-  
+
   if (!process.env.REACT_APP_MTN_API_URL) {
     console.log('MTN API not configured, using demo mode');
     return { success: true, status: 'completed', externalRef: `MTN-${Date.now()}` };
   }
-  
+
   try {
     const response = await fetch(process.env.REACT_APP_MTN_API_URL, {
       method: 'POST',
@@ -814,11 +778,11 @@ async function processMTNPayment(data) {
         callback_url: `${process.env.REACT_APP_API_URL}/parent-payment-portal/webhook/mtn_money`
       })
     });
-    
+
     const result = await response.json();
-    
-    return { 
-      success: result.status === 'SUCCESS' || result.status === 'PENDING', 
+
+    return {
+      success: result.status === 'SUCCESS' || result.status === 'PENDING',
       status: result.status === 'SUCCESS' ? 'pending' : 'failed',
       externalRef: result.internal_transaction_id,
       message: result.message
@@ -831,12 +795,12 @@ async function processMTNPayment(data) {
 
 async function processAirtelPayment(data) {
   const { merchantId, amount, reference, phone, customerName, description } = data;
-  
+
   if (!process.env.REACT_APP_AIRTEL_API_URL) {
     console.log('Airtel API not configured, using demo mode');
     return { success: true, status: 'completed', externalRef: `AIR-${Date.now()}` };
   }
-  
+
   try {
     const response = await fetch(process.env.REACT_APP_AIRTEL_API_URL, {
       method: 'POST',
@@ -854,11 +818,11 @@ async function processAirtelPayment(data) {
         callback_url: `${process.env.REACT_APP_API_URL}/parent-payment-portal/webhook/airtel_money`
       })
     });
-    
+
     const result = await response.json();
-    
-    return { 
-      success: result.success, 
+
+    return {
+      success: result.success,
       status: result.data?.status === 'INITIATED' ? 'pending' : 'failed',
       externalRef: result.data?.transaction_id,
       message: result.message

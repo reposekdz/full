@@ -402,7 +402,7 @@ router.get('/student/:studentId/dashboard', authenticateToken, async (req, res) 
         id: student.student_id,
         name: `${student.first_name} ${student.last_name}`,
         code: student.student_code,
-        trade: student.trade_code,
+        trade: student.code,
         level: student.level_number
       },
       stats,

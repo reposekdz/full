@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User, GraduationCap, TrendingUp, Calendar, DollarSign, MessageCircle, 
+import {
+  User, GraduationCap, TrendingUp, Calendar, DollarSign, MessageCircle,
   Bell, BookOpen, Award, Clock, AlertCircle, CheckCircle, Phone, Mail,
   Download, Eye, BarChart3, PieChart, Activity, Target, Star, Heart,
   FileText, Send, LogOut, Settings, Menu, X, ChevronRight, Sparkles,
@@ -64,26 +64,63 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const { data: studentData } = await axios.get(`${API_URL}/parent-dashboard/student`, { headers });
-      if (studentData.success && studentData.student) {
-        setStudent(studentData.student);
-        const sid = studentData.student.id;
-        
-        await Promise.all([
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance)),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees)),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])),
-          axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || [])),
-        ]);
+      // First check for linked students via the overview endpoint
+      const { data: overviewData } = await axios.get(`${API_URL}/parent-dashboard/overview`, { headers });
+
+      if (overviewData.success && overviewData.children && overviewData.children.length > 0) {
+        // Use the first linked student
+        const firstChild = overviewData.children[0];
+        setStudent({
+          id: firstChild.id,
+          first_name: firstChild.name?.split(' ')[0] || '',
+          last_name: firstChild.name?.split(' ').slice(1).join(' ') || '',
+          student_code: firstChild.student_code,
+          trade: firstChild.class_name,
+          gpa: firstChild.average_grade,
+          attendance_percentage: firstChild.attendance,
+          balance: firstChild.pending_fees
+        });
+
+        const sid = firstChild.id;
+
+        // Fetch additional data for the student
+        try {
+          await Promise.all([
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance)).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees)).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || [])).catch(() => { }),
+          ]);
+        } catch (innerError) {
+          console.error('Error fetching student details:', innerError);
+        }
+      } else {
+        // No linked students - try the legacy student endpoint
+        const { data: studentData } = await axios.get(`${API_URL}/parent-dashboard/student`, { headers });
+        if (studentData.success && studentData.student) {
+          setStudent(studentData.student);
+          const sid = studentData.student.id;
+
+          await Promise.all([
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance)).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees)).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])).catch(() => { }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || [])).catch(() => { }),
+          ]);
+        }
       }
 
       await Promise.all([
-        axios.get(`${API_URL}/parent-dashboard/messages/all`, { headers }).then(r => r.data.success && setMessages(r.data.messages || [])),
-        axios.get(`${API_URL}/parent-dashboard/notifications`, { headers }).then(r => r.data.success && setNotifications(r.data.notifications || [])),
+        axios.get(`${API_URL}/parent-dashboard/messages/all`, { headers }).then(r => r.data.success && setMessages(r.data.messages || [])).catch(() => { }),
+        axios.get(`${API_URL}/parent-dashboard/notifications`, { headers }).then(r => r.data.success && setNotifications(r.data.notifications || [])).catch(() => { }),
       ]);
 
     } catch (error) {
@@ -98,7 +135,7 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
     if (!messageText.trim() || !selectedTeacher) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/parent-dashboard/message/send`, 
+      await axios.post(`${API_URL}/parent-dashboard/message/send`,
         { recipientId: selectedTeacher.id, message: messageText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -128,7 +165,7 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
         linkFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         setLinkFormStatus('success');
         toast.success('Byakozwe neza! Ubutumwa bwawe bwoherejwe.');
@@ -153,16 +190,16 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
     }
   };
 
-  const calculateGPA = () => {
-    if (!grades.length) return 0;
+  const calculateGPA = (): string => {
+    if (!grades.length) return '0';
     const total = grades.reduce((sum, g) => sum + (g.score || 0), 0);
     return (total / grades.length).toFixed(1);
   };
 
-  const getAttendanceRate = () => {
-    if (!attendance) return 0;
+  const getAttendanceRate = (): string => {
+    if (!attendance) return '0';
     const total = (attendance.present || 0) + (attendance.absent || 0);
-    return total > 0 ? ((attendance.present / total) * 100).toFixed(0) : 0;
+    return total > 0 ? ((attendance.present / total) * 100).toFixed(0) : '0';
   };
 
   if (loading) {
@@ -180,95 +217,95 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
       {/* Left Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
-          <motion.aside 
+          <motion.aside
             initial={{ x: -300 }}
             animate={{ x: 0 }}
             exit={{ x: -300 }}
             transition={{ type: 'spring', damping: 20 }}
             className="fixed left-0 top-0 bottom-0 w-72 bg-gradient-to-b from-yellow-400 via-green-400 to-yellow-500 shadow-2xl z-40 overflow-y-auto scrollbar-thin scrollbar-thumb-yellow-600 scrollbar-track-yellow-300"
           >
-        <div className="p-6 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-b-4 border-yellow-600">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6" />
-              <h2 className="text-xl font-bold">Urubuga rw'Ababyeyi</h2>
+            <div className="p-6 bg-gradient-to-r from-yellow-500 to-green-500 text-white border-b-4 border-yellow-600">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-6 h-6" />
+                  <h2 className="text-xl font-bold">Urubuga rw'Ababyeyi</h2>
+                </div>
+                <button onClick={() => setSidebarOpen(false)} className="lg:hidden hover:bg-white/20 p-1 rounded">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-3 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center font-bold text-lg">
+                  {parent.first_name?.[0]}{parent.last_name?.[0]}
+                </div>
+                <div>
+                  <p className="font-bold">{parent.first_name} {parent.last_name}</p>
+                  <p className="text-xs opacity-90">{parent.email}</p>
+                </div>
+              </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden hover:bg-white/20 p-1 rounded">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-            <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center font-bold text-lg">
-              {parent.first_name?.[0]}{parent.last_name?.[0]}
-            </div>
-            <div>
-              <p className="font-bold">{parent.first_name} {parent.last_name}</p>
-              <p className="text-xs opacity-90">{parent.email}</p>
-            </div>
-          </div>
-        </div>
 
-        <nav className="p-4 space-y-2">
-          <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'overview' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <BarChart3 className="w-5 h-5" />
-            <span>Incamake</span>
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
-          <button onClick={() => setActiveTab('grades')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'grades' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <Award className="w-5 h-5" />
-            <span>Amanota</span>
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
-          <button onClick={() => setActiveTab('attendance')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'attendance' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <CheckCircle className="w-5 h-5" />
-            <span>Kwitabira</span>
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
-          <button onClick={() => setActiveTab('assignments')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'assignments' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <ClipboardList className="w-5 h-5" />
-            <span>Ibikorwa</span>
-            <Badge className="ml-auto bg-white text-green-700">{assignments.length}</Badge>
-          </button>
-          <button onClick={() => setActiveTab('timetable')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'timetable' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <Calendar className="w-5 h-5" />
-            <span>Gahunda y'Amasomo</span>
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
-          <button onClick={() => setActiveTab('exams')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'exams' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <BookMarked className="w-5 h-5" />
-            <span>Ibizamini</span>
-            <Badge className="ml-auto bg-white text-green-700">{exams.length}</Badge>
-          </button>
-          <button onClick={() => setActiveTab('messages')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'messages' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <MessageCircle className="w-5 h-5" />
-            <span>Ubutumwa</span>
-            {messages.length > 0 && <Badge className="ml-auto bg-red-500 text-white animate-pulse">{messages.length}</Badge>}
-          </button>
-          <button onClick={() => setActiveTab('notifications')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'notifications' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
-            <Bell className="w-5 h-5" />
-            <span>Amakuru</span>
-            {notifications.filter(n => !n.is_read).length > 0 && <Badge className="ml-auto bg-red-500 text-white animate-pulse">{notifications.filter(n => !n.is_read).length}</Badge>}
-          </button>
-        </nav>
+            <nav className="p-4 space-y-2">
+              <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'overview' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <BarChart3 className="w-5 h-5" />
+                <span>Incamake</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+              <button onClick={() => setActiveTab('grades')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'grades' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <Award className="w-5 h-5" />
+                <span>Amanota</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+              <button onClick={() => setActiveTab('attendance')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'attendance' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <CheckCircle className="w-5 h-5" />
+                <span>Kwitabira</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+              <button onClick={() => setActiveTab('assignments')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'assignments' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <ClipboardList className="w-5 h-5" />
+                <span>Ibikorwa</span>
+                <Badge className="ml-auto bg-white text-green-700">{assignments.length}</Badge>
+              </button>
+              <button onClick={() => setActiveTab('timetable')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'timetable' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <Calendar className="w-5 h-5" />
+                <span>Gahunda y'Amasomo</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+              <button onClick={() => setActiveTab('exams')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'exams' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <BookMarked className="w-5 h-5" />
+                <span>Ibizamini</span>
+                <Badge className="ml-auto bg-white text-green-700">{exams.length}</Badge>
+              </button>
+              <button onClick={() => setActiveTab('messages')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'messages' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <MessageCircle className="w-5 h-5" />
+                <span>Ubutumwa</span>
+                {messages.length > 0 && <Badge className="ml-auto bg-red-500 text-white animate-pulse">{messages.length}</Badge>}
+              </button>
+              <button onClick={() => setActiveTab('notifications')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all font-medium ${activeTab === 'notifications' ? 'bg-white text-green-700 shadow-lg scale-105' : 'text-white hover:bg-white/20 hover:scale-105'}`}>
+                <Bell className="w-5 h-5" />
+                <span>Amakuru</span>
+                {notifications.filter(n => !n.is_read).length > 0 && <Badge className="ml-auto bg-red-500 text-white animate-pulse">{notifications.filter(n => !n.is_read).length}</Badge>}
+              </button>
+            </nav>
 
-        <div className="p-4 space-y-2">
-          <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Star className="w-5 h-5 text-yellow-300" />
-              <p className="font-bold">Imibare Yihuse</p>
+            <div className="p-4 space-y-2">
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="w-5 h-5 text-yellow-300" />
+                  <p className="font-bold">Imibare Yihuse</p>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p>GPA: <span className="font-bold">{calculateGPA()}</span></p>
+                  <p>Kwitabira: <span className="font-bold">{getAttendanceRate()}%</span></p>
+                  <p>Ibikorwa: <span className="font-bold">{assignments.length}</span></p>
+                </div>
+              </div>
+              <Button onClick={onLogout} className="w-full bg-white text-green-700 hover:bg-yellow-100 font-bold shadow-lg">
+                <LogOut className="w-4 h-4 mr-2" />Gusohoka
+              </Button>
             </div>
-            <div className="space-y-1 text-sm">
-              <p>GPA: <span className="font-bold">{calculateGPA()}</span></p>
-              <p>Kwitabira: <span className="font-bold">{getAttendanceRate()}%</span></p>
-              <p>Ibikorwa: <span className="font-bold">{assignments.length}</span></p>
-            </div>
-          </div>
-          <Button onClick={onLogout} className="w-full bg-white text-green-700 hover:bg-yellow-100 font-bold shadow-lg">
-            <LogOut className="w-4 h-4 mr-2" />Gusohoka
-          </Button>
-        </div>
-      </motion.aside>
-      )}
+          </motion.aside>
+        )}
       </AnimatePresence>
 
       {/* Main Content */}
@@ -318,193 +355,193 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
                 </div>
               </Card>
 
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-yellow-500 to-green-500 rounded-lg"><Award className="w-6 h-6 text-white" /></div>
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                </div>
-                <h3 className="text-3xl font-bold text-green-700 mb-1">{calculateGPA()}</h3>
-                <p className="text-sm text-green-600 font-medium">GPA Rusange</p>
-                <Progress value={parseFloat(calculateGPA()) * 10} className="mt-3 h-2" />
-              </Card>
-              <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-green-500 to-yellow-500 rounded-lg"><CheckCircle className="w-6 h-6 text-white" /></div>
-                  <Activity className="w-5 h-5 text-green-600" />
-                </div>
-                <h3 className="text-3xl font-bold text-green-700 mb-1">{getAttendanceRate()}%</h3>
-                <p className="text-sm text-green-600 font-medium">Kwitabira</p>
-                <Progress value={parseFloat(getAttendanceRate())} className="mt-3 h-2" />
-              </Card>
-              <Card className="p-6 bg-gradient-to-br from-yellow-50 to-green-50 border-yellow-200 hover:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-yellow-500 to-green-500 rounded-lg"><DollarSign className="w-6 h-6 text-white" /></div>
-                </div>
-                <h3 className="text-3xl font-bold text-green-700 mb-1">{fees?.balance || 0} RWF</h3>
-                <p className="text-sm text-green-600 font-medium">Amafaranga Asigaye</p>
-              </Card>
-              <Card className="p-6 bg-gradient-to-br from-green-50 to-yellow-100 border-green-200 hover:shadow-xl transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-gradient-to-r from-green-500 to-yellow-500 rounded-lg"><ClipboardList className="w-6 h-6 text-white" /></div>
-                </div>
-                <h3 className="text-3xl font-bold text-green-700 mb-1">{assignments.length}</h3>
-                <p className="text-sm text-green-600 font-medium">Ibikorwa</p>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'grades' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Imikorere mu Masomo</h3>
-            <div className="space-y-3">
-              {grades.map((g, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white font-bold">{g.score || 'N/A'}</div>
-                    <div>
-                      <p className="font-semibold">{g.subject}</p>
-                      <p className="text-xs text-gray-500">{g.exam_type}</p>
-                    </div>
-                  </div>
-                  <Badge className={g.score >= 70 ? 'bg-green-100 text-green-700' : g.score >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}>
-                    {g.score >= 70 ? 'Byiza Cyane' : g.score >= 50 ? 'Byiza' : 'Birakeneye Iterambere'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === 'assignments' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Ibikorwa</h3>
-            <div className="space-y-3">
-              {assignments.map((a, i) => (
-                <div key={i} className="p-4 bg-blue-50 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold">{a.title}</h4>
-                    <Badge className={a.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}>{a.status === 'submitted' ? 'Byatanzwe' : 'Ntibikitanze'}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{a.description}</p>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span>Itariki: {new Date(a.due_date).toLocaleDateString()}</span>
-                    {a.score && <span>Amanota: {a.score}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === 'timetable' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Gahunda y'Amasomo</h3>
-            <div className="space-y-2">
-              {timetable.map((t, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div>
-                    <p className="font-semibold">{t.subject_name}</p>
-                    <p className="text-xs text-gray-500">{t.teacher}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{t.day_of_week}</p>
-                    <p className="text-xs text-gray-500">{t.start_time} - {t.end_time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === 'messages' && (
-          <div className="space-y-4">
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Ubutumwa</h3>
-                <Button onClick={() => setShowMessageModal(true)} className="bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:shadow-xl">
-                  <Send className="w-4 h-4 mr-2" />Ubutumwa Bushya
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {messages.map((m, i) => (
-                  <div key={i} className="p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">{m.sender_name?.[0]}</div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{m.sender_name}</p>
-                        <p className="text-sm text-gray-600">{m.message}</p>
-                        <p className="text-xs text-gray-400 mt-1">{new Date(m.created_at).toLocaleString()}</p>
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Card className="p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-xl transition-all">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-gradient-to-r from-yellow-500 to-green-500 rounded-lg"><Award className="w-6 h-6 text-white" /></div>
+                        <TrendingUp className="w-5 h-5 text-green-600" />
                       </div>
+                      <h3 className="text-3xl font-bold text-green-700 mb-1">{calculateGPA()}</h3>
+                      <p className="text-sm text-green-600 font-medium">GPA Rusange</p>
+                      <Progress value={parseFloat(calculateGPA()) * 10} className="mt-3 h-2" />
+                    </Card>
+                    <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-xl transition-all">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-gradient-to-r from-green-500 to-yellow-500 rounded-lg"><CheckCircle className="w-6 h-6 text-white" /></div>
+                        <Activity className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h3 className="text-3xl font-bold text-green-700 mb-1">{getAttendanceRate()}%</h3>
+                      <p className="text-sm text-green-600 font-medium">Kwitabira</p>
+                      <Progress value={parseFloat(getAttendanceRate())} className="mt-3 h-2" />
+                    </Card>
+                    <Card className="p-6 bg-gradient-to-br from-yellow-50 to-green-50 border-yellow-200 hover:shadow-xl transition-all">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-gradient-to-r from-yellow-500 to-green-500 rounded-lg"><DollarSign className="w-6 h-6 text-white" /></div>
+                      </div>
+                      <h3 className="text-3xl font-bold text-green-700 mb-1">{fees?.balance || 0} RWF</h3>
+                      <p className="text-sm text-green-600 font-medium">Amafaranga Asigaye</p>
+                    </Card>
+                    <Card className="p-6 bg-gradient-to-br from-green-50 to-yellow-100 border-green-200 hover:shadow-xl transition-all">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-gradient-to-r from-green-500 to-yellow-500 rounded-lg"><ClipboardList className="w-6 h-6 text-white" /></div>
+                      </div>
+                      <h3 className="text-3xl font-bold text-green-700 mb-1">{assignments.length}</h3>
+                      <p className="text-sm text-green-600 font-medium">Ibikorwa</p>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'grades' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Imikorere mu Masomo</h3>
+                  <div className="space-y-3">
+                    {grades.map((g, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white font-bold">{g.score || 'N/A'}</div>
+                          <div>
+                            <p className="font-semibold">{g.subject}</p>
+                            <p className="text-xs text-gray-500">{g.exam_type}</p>
+                          </div>
+                        </div>
+                        <Badge className={g.score >= 70 ? 'bg-green-100 text-green-700' : g.score >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}>
+                          {g.score >= 70 ? 'Byiza Cyane' : g.score >= 50 ? 'Byiza' : 'Birakeneye Iterambere'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {activeTab === 'assignments' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Ibikorwa</h3>
+                  <div className="space-y-3">
+                    {assignments.map((a, i) => (
+                      <div key={i} className="p-4 bg-blue-50 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold">{a.title}</h4>
+                          <Badge className={a.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}>{a.status === 'submitted' ? 'Byatanzwe' : 'Ntibikitanze'}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{a.description}</p>
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span>Itariki: {new Date(a.due_date).toLocaleDateString()}</span>
+                          {a.score && <span>Amanota: {a.score}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {activeTab === 'timetable' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Gahunda y'Amasomo</h3>
+                  <div className="space-y-2">
+                    {timetable.map((t, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div>
+                          <p className="font-semibold">{t.subject_name}</p>
+                          <p className="text-xs text-gray-500">{t.teacher}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{t.day_of_week}</p>
+                          <p className="text-xs text-gray-500">{t.start_time} - {t.end_time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {activeTab === 'messages' && (
+                <div className="space-y-4">
+                  <Card className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold">Ubutumwa</h3>
+                      <Button onClick={() => setShowMessageModal(true)} className="bg-gradient-to-r from-yellow-500 to-green-500 text-white hover:shadow-xl">
+                        <Send className="w-4 h-4 mr-2" />Ubutumwa Bushya
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {messages.map((m, i) => (
+                        <div key={i} className="p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">{m.sender_name?.[0]}</div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm">{m.sender_name}</p>
+                              <p className="text-sm text-gray-600">{m.message}</p>
+                              <p className="text-xs text-gray-400 mt-1">{new Date(m.created_at).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {activeTab === 'notifications' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Amakuru</h3>
+                  <div className="space-y-2">
+                    {notifications.map((n, i) => (
+                      <div key={i} className="flex items-start gap-2 p-3 hover:bg-gray-50 rounded-lg">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${n.is_read ? 'bg-gray-300' : 'bg-orange-500'}`}></div>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700">{n.message}</p>
+                          <p className="text-xs text-gray-400">{new Date(n.time).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {activeTab === 'exams' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Ibizamini Bizaza</h3>
+                  <div className="space-y-3">
+                    {exams.map((e, i) => (
+                      <div key={i} className="p-4 bg-yellow-50 rounded-lg">
+                        <h4 className="font-bold">{e.exam_name}</h4>
+                        <p className="text-sm text-gray-600">{e.subject_name}</p>
+                        <div className="flex gap-4 text-xs text-gray-500 mt-2">
+                          <span>{new Date(e.exam_date).toLocaleDateString()}</span>
+                          <span>{e.start_time} - {e.end_time}</span>
+                          <span>Icyumba: {e.room}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {activeTab === 'attendance' && (
+                <Card className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Amakuru y'Ubutabire</h3>
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-green-700">{attendance?.present || 0}</p>
+                      <p className="text-xs text-green-600">Yaritabiriye</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                      <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-red-700">{attendance?.absent || 0}</p>
+                      <p className="text-xs text-red-600">Ntiyitabiriye</p>
+                    </div>
+                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                      <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-yellow-700">{attendance?.late || 0}</p>
+                      <p className="text-xs text-yellow-600">Yatinze</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === 'notifications' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Amakuru</h3>
-            <div className="space-y-2">
-              {notifications.map((n, i) => (
-                <div key={i} className="flex items-start gap-2 p-3 hover:bg-gray-50 rounded-lg">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${n.is_read ? 'bg-gray-300' : 'bg-orange-500'}`}></div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-700">{n.message}</p>
-                    <p className="text-xs text-gray-400">{new Date(n.time).toLocaleString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === 'exams' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Ibizamini Bizaza</h3>
-            <div className="space-y-3">
-              {exams.map((e, i) => (
-                <div key={i} className="p-4 bg-yellow-50 rounded-lg">
-                  <h4 className="font-bold">{e.exam_name}</h4>
-                  <p className="text-sm text-gray-600">{e.subject_name}</p>
-                  <div className="flex gap-4 text-xs text-gray-500 mt-2">
-                    <span>{new Date(e.exam_date).toLocaleDateString()}</span>
-                    <span>{e.start_time} - {e.end_time}</span>
-                    <span>Icyumba: {e.room}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === 'attendance' && (
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Amakuru y'Ubutabire</h3>
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-green-700">{attendance?.present || 0}</p>
-                <p className="text-xs text-green-600">Yaritabiriye</p>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-red-700">{attendance?.absent || 0}</p>
-                <p className="text-xs text-red-600">Ntiyitabiriye</p>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-yellow-700">{attendance?.late || 0}</p>
-                <p className="text-xs text-yellow-600">Yatinze</p>
-              </div>
-            </div>
-          </Card>
-        )}
+                </Card>
+              )}
             </>
           )}
         </div>
@@ -539,7 +576,7 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <Card className="border-2 border-yellow-200 shadow-lg">
@@ -549,7 +586,7 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
                         <h4 className="font-bold text-lg">Kohereza Ubutumwa</h4>
                       </div>
                       <p className="text-sm text-gray-600 mb-4">Andika amazina y'umwana n'ubutumwa bwawe. Admin, Headmaster, cyangwa DOS bazagusubiza vuba.</p>
-                      
+
                       <form onSubmit={handleLinkStudentRequest} className="space-y-4">
                         <div>
                           <Label htmlFor="student_name" className="flex items-center gap-2">
@@ -583,8 +620,8 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
 
                         <div>
                           <Label htmlFor="preferred_contact">Uburyo Wakwishyuriweho</Label>
-                          <Select 
-                            value={linkFormData.preferred_contact} 
+                          <Select
+                            value={linkFormData.preferred_contact}
                             onValueChange={(value) => setLinkFormData({ ...linkFormData, preferred_contact: value })}
                             disabled={linkFormLoading}
                           >
@@ -682,7 +719,7 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
                         <div>
                           <h5 className="font-semibold text-orange-900 mb-2">Icyitonderwa</h5>
                           <p className="text-sm text-orange-800">
-                            Kode yo guhuza n'umwana wawe itangwa n'abayobozi b'ishuri gusa. 
+                            Kode yo guhuza n'umwana wawe itangwa n'abayobozi b'ishuri gusa.
                             Nta wundi uyishobora kuguha. Ubundi, reba ko amazina y'umwana wawe ari yo ukandika neza.
                           </p>
                         </div>

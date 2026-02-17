@@ -240,10 +240,10 @@ router.get('/all', authenticateToken, requireRole(['admin', 'headmaster', 'direc
     let query = `
       SELECT 
         sa.*, 
-        t.trade_name,
+        t.name,
         DATEDIFF(NOW(), sa.application_date) as days_pending
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       WHERE 1=1
     `;
     
@@ -317,12 +317,12 @@ router.get('/details/:id', authenticateToken, requireRole(['admin', 'headmaster'
     const [applications] = await pool.execute(`
       SELECT 
         sa.*,
-        t.trade_name,
+        t.name,
         p.name_rw as province_name,
         d.name_rw as district_name,
         s.name_rw as sector_name
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       LEFT JOIN provinces p ON sa.province_id = p.id
       LEFT JOIN districts d ON sa.district_id = d.id
       LEFT JOIN sectors s ON sa.sector_id = s.id
@@ -388,10 +388,10 @@ router.get('/dos/pending', authenticateToken, requireRole(['director_of_study', 
     let query = `
       SELECT 
         sa.*, 
-        t.trade_name,
+        t.name,
         DATEDIFF(NOW(), sa.application_date) as days_pending
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       WHERE sa.status IN ('pending', 'under_review_dos')
     `;
     
@@ -533,12 +533,12 @@ router.get('/headmaster/pending', authenticateToken, requireRole(['headmaster', 
     let query = `
       SELECT 
         sa.*, 
-        t.trade_name,
+        t.name,
         u.first_name as dos_first_name,
         u.last_name as dos_last_name,
         DATEDIFF(NOW(), sa.dos_reviewed_at) as days_since_dos_review
       FROM student_applications sa
-      LEFT JOIN trades t ON sa.trade_code = t.trade_code
+      LEFT JOIN trades t ON sa.trade_code = t.code
       LEFT JOIN users u ON sa.dos_reviewed_by = u.id
       WHERE sa.status IN ('approved_dos', 'under_review_headmaster')
     `;

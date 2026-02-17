@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
+import {
   BookOpen, Users, Calendar, Clock, Award, TrendingUp, LogOut, Settings,
   Bell, Download, Upload, FileText, BarChart, Target, CheckCircle, XCircle,
   PlayCircle, PauseCircle, RefreshCw, Eye, MessageSquare, Star, Trophy,
@@ -26,6 +26,8 @@ import { Switch } from '@/app/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/components/ui/collapsible';
 import AdvancedLeftSidebar from '@/app/components/AdvancedLeftSidebar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
+import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import { Grid } from 'lucide-react';
 
 interface EnhancedTeacherDashboardProps {
   onNavigate: (page: string) => void;
@@ -76,7 +78,7 @@ interface TeacherStats {
 
 const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onNavigate, onLogout }) => {
   const { user } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -189,7 +191,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
         },
         body: JSON.stringify(newAssignment)
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setIsCreateAssignmentOpen(false);
@@ -226,7 +228,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
           date: new Date().toISOString().split('T')[0]
         })
       });
-      
+
       const data = await response.json();
       if (data.success) {
         fetchStudents();
@@ -287,8 +289,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
 
   // Filter students
   const filteredStudents = studentsData.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         student.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = filterClass === 'all' || student.class === filterClass;
     return matchesSearch && matchesClass;
   });
@@ -325,7 +327,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
       <UniversalMessagingWidget />
       <AdvancedLeftSidebar currentPage="dashboard" onNavigate={onNavigate} onLogout={onLogout} />
-      
+
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
@@ -341,8 +343,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={handleRefresh}
                   disabled={refreshing}
@@ -461,10 +463,11 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
 
           {/* Enhanced Tabs */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="classes">Classes</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="global-sheets">Global Sheets</TabsTrigger>
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
@@ -567,20 +570,20 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                         <div className="space-y-4">
                           <div>
                             <Label htmlFor="title">Assignment Title</Label>
-                            <Input 
-                              id="title" 
+                            <Input
+                              id="title"
                               value={newAssignment.title}
                               onChange={(e) => setNewAssignment(prev => ({ ...prev, title: e.target.value }))}
-                              placeholder="React Components Project" 
+                              placeholder="React Components Project"
                             />
                           </div>
                           <div>
                             <Label htmlFor="description">Description</Label>
-                            <Textarea 
-                              id="description" 
+                            <Textarea
+                              id="description"
                               value={newAssignment.description}
                               onChange={(e) => setNewAssignment(prev => ({ ...prev, description: e.target.value }))}
-                              placeholder="Brief description of the assignment" 
+                              placeholder="Brief description of the assignment"
                               rows={3}
                             />
                           </div>
@@ -602,8 +605,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                             </div>
                             <div>
                               <Label htmlFor="due_date">Due Date</Label>
-                              <Input 
-                                id="due_date" 
+                              <Input
+                                id="due_date"
                                 type="datetime-local"
                                 value={newAssignment.due_date}
                                 onChange={(e) => setNewAssignment(prev => ({ ...prev, due_date: e.target.value }))}
@@ -612,12 +615,12 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                           </div>
                           <div>
                             <Label htmlFor="points">Total Points</Label>
-                            <Input 
-                              id="points" 
+                            <Input
+                              id="points"
                               type="number"
                               value={newAssignment.total_points}
                               onChange={(e) => setNewAssignment(prev => ({ ...prev, total_points: parseInt(e.target.value) }))}
-                              placeholder="100" 
+                              placeholder="100"
                             />
                           </div>
                         </div>
@@ -654,8 +657,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
               <div className="space-y-4">
                 {classesData.map((cls) => (
                   <Card key={cls.id} className="overflow-hidden">
-                    <Collapsible 
-                      open={expandedClasses.has(cls.id)} 
+                    <Collapsible
+                      open={expandedClasses.has(cls.id)}
                       onOpenChange={() => toggleClassExpansion(cls.id)}
                     >
                       <CollapsibleTrigger asChild>
@@ -663,8 +666,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                               <div className="flex items-center space-x-2">
-                                {expandedClasses.has(cls.id) ? 
-                                  <ChevronDown className="w-5 h-5" /> : 
+                                {expandedClasses.has(cls.id) ?
+                                  <ChevronDown className="w-5 h-5" /> :
                                   <ChevronRight className="w-5 h-5" />
                                 }
                                 <div>
@@ -703,7 +706,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div>
                               <h4 className="font-medium text-gray-900 mb-3">Recent Activity</h4>
                               <div className="space-y-2 text-sm">
@@ -712,7 +715,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                                 <p className="text-gray-600">• New quiz scheduled for Friday</p>
                               </div>
                             </div>
-                            
+
                             <div>
                               <h4 className="font-medium text-gray-900 mb-3">Quick Actions</h4>
                               <div className="space-y-2">
@@ -810,9 +813,9 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className={`${student.avg_grade >= 90 ? 'bg-green-500' : 
-                                               student.avg_grade >= 80 ? 'bg-blue-500' : 
-                                               student.avg_grade >= 70 ? 'bg-yellow-500' : 'bg-red-500'} text-white`}>
+                              <Badge className={`${student.avg_grade >= 90 ? 'bg-green-500' :
+                                student.avg_grade >= 80 ? 'bg-blue-500' :
+                                  student.avg_grade >= 70 ? 'bg-yellow-500' : 'bg-red-500'} text-white`}>
                                 {student.avg_grade}%
                               </Badge>
                             </TableCell>
@@ -887,8 +890,8 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
                               <div className="text-sm">
                                 <p>{new Date(assignment.due_date).toLocaleDateString()}</p>
                                 <p className="text-gray-500">
-                                  {new Date(assignment.due_date) > new Date() ? 
-                                    `${Math.ceil((new Date(assignment.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left` : 
+                                  {new Date(assignment.due_date) > new Date() ?
+                                    `${Math.ceil((new Date(assignment.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left` :
                                     'Past due'
                                   }
                                 </p>
@@ -975,7 +978,7 @@ const EnhancedTeacherDashboard: React.FC<EnhancedTeacherDashboardProps> = ({ onN
           </Tabs>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

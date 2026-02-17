@@ -1530,8 +1530,8 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
           id: student.id,
           student_id: student.student_id,
           name: `${student.first_name} ${student.last_name}`,
-          trade: student.trade_name,
-          trade_code: student.trade_code,
+          trade: student.name,
+          trade_code: student.code,
           level: student.level,
           email: student.email
         },
@@ -1737,7 +1737,7 @@ router.post('/students/graduate', authenticateToken, requireRole('headmaster', '
           student_id, 
           success: true,
           name: `${student.first_name} ${student.last_name}`,
-          trade: student.trade_name,
+          trade: student.name,
           graduation_date: graduation_date || new Date()
         });
       }
@@ -1800,18 +1800,18 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
           }
           
           // Validate trade if provided
-          if (student.trade_id || student.trade_code) {
+          if (student.trade_id || student.code) {
             const tradeQuery = student.trade_id 
               ? 'SELECT id, code, name FROM trades WHERE id = ? AND is_active = 1'
               : 'SELECT id, code, name FROM trades WHERE code = ? AND is_active = 1';
-            const tradeParam = student.trade_id || student.trade_code;
+            const tradeParam = student.trade_id || student.code;
             
             const [trades] = await connection.execute(tradeQuery, [tradeParam]);
             if (!trades || trades.length === 0) {
               throw new Error(`Trade not found: ${tradeParam}`);
             }
             student.trade_id = trades[0].id;
-            student.trade_code = trades[0].code;
+            student.code = trades[0].code;
           }
           
           // Generate student_id
@@ -1832,7 +1832,7 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
               'SELECT COUNT(*) as total FROM users WHERE role = "student" AND trade_id = ? AND level = ?',
               [student.trade_id, levelNum]
             );
-            student_id = `${student.trade_code}${levelNum}${String(count[0].total + 1).padStart(3, '0')}`;
+            student_id = `${student.code}${levelNum}${String(count[0].total + 1).padStart(3, '0')}`;
           } else {
             const year = new Date().getFullYear().toString().slice(-2);
             const [count] = await connection.execute('SELECT COUNT(*) as total FROM users WHERE role = "student"');
@@ -1990,8 +1990,8 @@ router.post('/students/export', authenticateToken, requireRole('dos', 'headmaste
           student.date_of_birth || '',
           student.gender || '',
           `"${(student.address || '').replace(/"/g, '""')}"`,
-          student.trade_code || '',
-          student.trade_name || '',
+          student.code || '',
+          student.name || '',
           student.level || '',
           student.class_name || '',
           student.enrollment_status || '',

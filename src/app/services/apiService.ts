@@ -90,35 +90,35 @@ class ApiService {
     try {
       const data = await this.request('/locations/provinces');
       if (data?.provinces && Array.isArray(data.provinces)) return { success: true, provinces: data.provinces };
-    } catch (_) {}
+    } catch (_) { }
     return { success: false };
   }
   async getLocationsDistricts(provinceId: number): Promise<{ success: boolean; districts?: { id: number; name_en: string; name_rw?: string }[] }> {
     try {
       const data = await this.request(`/locations/districts/${provinceId}`);
       if (data?.districts && Array.isArray(data.districts)) return { success: true, districts: data.districts };
-    } catch (_) {}
+    } catch (_) { }
     return { success: false };
   }
   async getLocationsSectors(districtId: number): Promise<{ success: boolean; sectors?: { id: number; name_en: string; name_rw?: string }[] }> {
     try {
       const data = await this.request(`/locations/sectors/${districtId}`);
       if (data?.sectors && Array.isArray(data.sectors)) return { success: true, sectors: data.sectors };
-    } catch (_) {}
+    } catch (_) { }
     return { success: false };
   }
   async getLocationsCells(sectorId: number): Promise<{ success: boolean; cells?: { id: number; name_en: string; name_rw?: string }[] }> {
     try {
       const data = await this.request(`/locations/cells/${sectorId}`);
       if (data?.cells && Array.isArray(data.cells)) return { success: true, cells: data.cells };
-    } catch (_) {}
+    } catch (_) { }
     return { success: false };
   }
   async getLocationsVillages(cellId: number): Promise<{ success: boolean; villages?: { id: number; name_en: string; name_rw?: string }[] }> {
     try {
       const data = await this.request(`/locations/villages/${cellId}`);
       if (data?.villages && Array.isArray(data.villages)) return { success: true, villages: data.villages };
-    } catch (_) {}
+    } catch (_) { }
     return { success: false };
   }
 
@@ -394,23 +394,11 @@ class ApiService {
   }
 
   // Advisor Dashboard
-  async getAdvisorOverview() {
-    return this.request('/staff/advisor/overview');
-  }
-
-  async getAdvisorStudents() {
-    return this.request('/staff/advisor/students');
-  }
-
   async createStudentCase(caseData: any) {
     return this.request('/staff/advisor/cases/create', {
       method: 'POST',
       body: JSON.stringify(caseData)
     });
-  }
-
-  async getAdvisorMeetings() {
-    return this.request('/staff/advisor/meetings');
   }
 
   async scheduleMeeting(meetingData: any) {
@@ -457,29 +445,10 @@ class ApiService {
     return this.request(`/staff/accountant/reports/summary?${query}`);
   }
 
-  // DOD Dashboard
-  async getDODOverview() {
-    return this.request('/staff/dod/overview');
-  }
-
-  async getDODStudents() {
-    return this.request('/staff/dod/students');
-  }
-
-  async createIncident(incidentData: any) {
-    return this.request('/staff/dod/incidents/create', {
-      method: 'POST',
-      body: JSON.stringify(incidentData)
-    });
-  }
-
-  async getDisciplineStatistics() {
-    return this.request('/staff/dod/reports/statistics');
-  }
 
   // DOS Dashboard
   async getDOSOverview() {
-    return this.request('/staff/dos/overview');
+    return this.getDOSStats();
   }
 
   async getSubjectPerformance() {
@@ -497,19 +466,10 @@ class ApiService {
     });
   }
 
-  // Headmaster Dashboard
-  async getHeadmasterOverview() {
-    return this.request('/staff/headmaster/overview');
-  }
-
-  async getComprehensiveReport(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/staff/headmaster/reports/comprehensive?${query}`);
-  }
 
   // Stock Manager Dashboard
   async getStockOverview() {
-    return this.request('/staff/stock/overview');
+    return this.getStockStats();
   }
 
   async getInventoryItems(params = {}) {
@@ -531,31 +491,69 @@ class ApiService {
     });
   }
 
+  // Comprehensive Statistics APIs
+  async getDOSStats() {
+    return this.request('/comprehensive-stats/dos');
+  }
+
+  async getAdvisorStats() {
+    return this.request('/comprehensive-stats/advisor');
+  }
+
+  async getAdvisorOverview() {
+    return this.getAdvisorStats();
+  }
+
+  async getAdvisorStudents() {
+    return this.request('/comprehensive-stats/advisor/students');
+  }
+
+  async getAdvisorMeetings() {
+    return this.request('/comprehensive-stats/advisor/meetings');
+  }
+
+  async getHeadmasterStats() {
+    return this.request('/comprehensive-stats/headmaster');
+  }
+
+  async getHeadmasterOverview() {
+    return this.getHeadmasterStats();
+  }
+
+  async getComprehensiveReport(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/comprehensive-stats/reports?${query}`);
+  }
+
+  async getStockStats() {
+    return this.request('/comprehensive-stats/stock');
+  }
+
   // Comprehensive Management APIs
-  async getManagementTeachers(params = {}) {
+  async getManagementTeacherList(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/management/teachers?${query}`);
   }
 
-  async getTeacherDetails(id: number) {
+  async getManagementTeacherDetails(id: number) {
     return this.request(`/management/teachers/${id}`);
   }
 
-  async createTeacher(teacherData: any) {
+  async managementCreateTeacher(teacherData: any) {
     return this.request('/management/teachers/create', {
       method: 'POST',
       body: JSON.stringify(teacherData)
     });
   }
 
-  async updateTeacher(id: number, teacherData: any) {
+  async managementUpdateTeacher(id: number, teacherData: any) {
     return this.request(`/management/teachers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(teacherData)
     });
   }
 
-  async deleteTeacher(id: number) {
+  async managementDeleteTeacher(id: number) {
     return this.request(`/management/teachers/${id}`, {
       method: 'DELETE'
     });
@@ -587,7 +585,7 @@ class ApiService {
     return this.request(`/management/students/${id}`);
   }
 
-  async createStudent(studentData: any) {
+  async createManagementStudent(studentData: any) {
     return this.request('/management/students/create', {
       method: 'POST',
       body: JSON.stringify(studentData)
@@ -689,6 +687,17 @@ class ApiService {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ email })
+    });
+    return response.json();
+  }
+
+  async searchStudents(query: string, trade?: string, level?: string) {
+    const response = await fetch(`${API_BASE}/parent-registration/search-students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query, trade, level })
     });
     return response.json();
   }
@@ -1164,24 +1173,6 @@ class ApiService {
     return this.request('/discipline/classes');
   }
 
-  async getDODOverview() {
-    return this.request('/dod-comprehensive/dashboard/stats');
-  }
-
-  async getDODStudents() {
-    return this.request('/dod-comprehensive/students');
-  }
-
-  async getDisciplineStatistics() {
-    return this.request('/discipline/analytics');
-  }
-
-  async createIncident(incidentData: any) {
-    return this.request('/dod-comprehensive/discipline/cases', {
-      method: 'POST',
-      body: JSON.stringify(incidentData)
-    });
-  }
 
   async sendParentMessage(parentId: number, messageData: any) {
     return this.request('/dod-actions/message-parent', {
@@ -1325,9 +1316,6 @@ class ApiService {
     });
   }
 
-  async getStockStats() {
-    return this.request('/stock/stats');
-  }
 
   async getStockNotifications() {
     return this.request('/stock/notifications');
@@ -1396,29 +1384,7 @@ class ApiService {
     return this.request('/payment-proofs/stats/summary');
   }
 
-  async getDOSStudentDetails(studentId: number) {
-    return this.request(`/dos/students/${studentId}`);
-  }
 
-  async dosCreateStudent(studentData: any) {
-    return this.request('/dos-management/students', {
-      method: 'POST',
-      body: JSON.stringify(studentData)
-    });
-  }
-
-  async dosUpdateStudent(studentId: number, studentData: any) {
-    return this.request(`/dos/students/${studentId}`, {
-      method: 'PUT',
-      body: JSON.stringify(studentData)
-    });
-  }
-
-  async dosDeleteStudent(studentId: number) {
-    return this.request(`/dos/students/${studentId}`, {
-      method: 'DELETE'
-    });
-  }
 
   async getCourseByCode(code: string) {
     return this.request(`/academics/courses/code/${code}`);
@@ -1485,134 +1451,6 @@ class ApiService {
     return this.request(`/finance/students/${studentId}/fee-summary`);
   }
 
-  // Dashboard Statistics
-  async getDashboardStats(role: string, userId?: number) {
-    try {
-      const promises = [];
-      
-      switch (role) {
-        case 'admin':
-        case 'super_admin':
-          promises.push(
-            this.request('/users?limit=1'),
-            this.request('/academics/courses'),
-            this.request('/finance/payments?limit=1'),
-            this.request('/stock/items?limit=1')
-          );
-          break;
-        case 'student':
-          if (userId) {
-            promises.push(
-              this.request(`/academics/grades?student_id=${userId}`),
-              this.request(`/academics/attendance?student_id=${userId}`),
-              this.request(`/finance/students/${userId}/fee-summary`)
-            );
-          }
-          break;
-        case 'teacher':
-          if (userId) {
-            promises.push(
-              this.request(`/academics/grades?teacher_id=${userId}`),
-              this.request(`/academics/attendance?teacher_id=${userId}`)
-            );
-          }
-          break;
-        case 'accountant':
-          promises.push(
-            this.request('/finance/payments?limit=1'),
-            this.request('/finance/reports/summary')
-          );
-          break;
-        case 'stock_manager':
-          promises.push(
-            this.request('/stock/items?limit=1'),
-            this.request('/stock/movements?limit=1')
-          );
-          break;
-        case 'headmaster':
-          promises.push(
-            this.request('/headmaster/dashboard')
-          );
-          break;
-      }
-
-      const results = await Promise.all(promises);
-      return this.formatDashboardStats(role, results);
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      return {};
-    }
-  }
-
-  private formatDashboardStats(role: string, results: any[]) {
-    switch (role) {
-      case 'admin':
-      case 'super_admin':
-        return {
-          totalUsers: results[0]?.pagination?.total || results[0]?.users?.length || 0,
-          totalCourses: results[1]?.courses?.length || 0,
-          totalPayments: results[2]?.pagination?.total || 0,
-          totalStockItems: results[3]?.pagination?.total || 0
-        };
-      case 'director_study':
-        return {
-          totalStudents: results[0]?.pagination?.total || results[0]?.users?.length || 0,
-          totalTeachers: results[1]?.pagination?.total || results[1]?.users?.length || 0,
-          totalClasses: results[2]?.classes?.length || 0,
-          averagePerformance: this.calculateAveragePerformance(results[3]?.grades || [])
-        };
-      case 'student':
-        return {
-          totalGrades: results[0]?.grades?.length || 0,
-          averageGrade: this.calculateAverageGrade(results[0]?.grades || []),
-          attendanceRate: this.calculateAttendanceRate(results[1]?.attendance || []),
-          feeBalance: results[2]?.summary?.total_balance || 0
-        };
-      case 'teacher':
-        return {
-          totalStudents: new Set(results[0]?.grades?.map((g: any) => g.student_id) || []).size,
-          totalGrades: results[0]?.grades?.length || 0,
-          attendanceMarked: results[1]?.attendance?.length || 0
-        };
-      case 'accountant':
-        return {
-          totalPayments: results[0]?.pagination?.total || 0,
-          totalAmount: results[1]?.report?.total_collections?.total_amount || 0
-        };
-      case 'stock_manager':
-        return {
-          totalItems: results[0]?.pagination?.total || 0,
-          totalMovements: results[1]?.pagination?.total || 0
-        };
-      case 'headmaster':
-        return {
-          totalStudents: results[0]?.stats?.total_students || 0,
-          totalTeachers: results[0]?.stats?.total_teachers || 0,
-          totalRevenue: results[0]?.stats?.total_revenue || 0,
-          overallPerformance: results[0]?.stats?.overall_performance || 0
-        };
-      default:
-        return {};
-    }
-  }
-
-  private calculateAverageGrade(grades: any[]) {
-    if (!grades.length) return 0;
-    const total = grades.reduce((sum, grade) => sum + (parseFloat(grade.obtained_marks) / parseFloat(grade.max_marks)) * 100, 0);
-    return Math.round(total / grades.length);
-  }
-
-  private calculateAttendanceRate(attendance: any[]) {
-    if (!attendance.length) return 0;
-    const present = attendance.filter(a => a.status === 'present').length;
-    return Math.round((present / attendance.length) * 100);
-  }
-
-  private calculateAveragePerformance(grades: any[]) {
-    if (!grades.length) return 0;
-    const total = grades.reduce((sum, grade) => sum + (parseFloat(grade.obtained_marks) / parseFloat(grade.max_marks)) * 100, 0);
-    return Math.round(total / grades.length);
-  }
 
   // Contact Management
   async submitContactForm(formData: FormData) {
@@ -1964,11 +1802,11 @@ class ApiService {
       // Try multiple endpoints to get trades data
       const endpoints = [
         '/content/trades/all',
-        '/comprehensive-trades/all', 
+        '/comprehensive-trades/all',
         '/trades/all',
         '/management/trades'
       ];
-      
+
       for (const endpoint of endpoints) {
         try {
           const result = await this.request(endpoint);
@@ -1979,7 +1817,7 @@ class ApiService {
           continue; // Try next endpoint
         }
       }
-      
+
       // Fallback: return default trades if no endpoint works
       return [
         { id: 1, name: 'ICT', code: 'ICT', description: 'Information and Communication Technology' },
@@ -2002,7 +1840,7 @@ class ApiService {
         '/management/levels',
         '/academics/levels'
       ];
-      
+
       for (const endpoint of endpoints) {
         try {
           const result = await this.request(endpoint);
@@ -2013,7 +1851,7 @@ class ApiService {
           continue; // Try next endpoint
         }
       }
-      
+
       // Fallback: return default levels if no endpoint works
       return [
         { id: 1, level_number: 1, name: 'Level 1', description: 'First Year' },
@@ -2255,7 +2093,7 @@ class ApiService {
   }
 
   // ==================== UNIVERSAL STAFF MANAGEMENT ====================
-  
+
   // Dynamic Column Management
   async getCustomColumns(entityType: string) {
     return this.request(`/universal-management/columns/${entityType}`);
@@ -2326,7 +2164,7 @@ class ApiService {
   }
 
   // ==================== ADMIN DASHBOARD ADVANCED ====================
-  
+
   async getAdminDashboardOverview(timeframe: string = '30d') {
     return this.request(`/admin-dashboard-advanced/overview?timeframe=${timeframe}`);
   }
@@ -2400,7 +2238,7 @@ class ApiService {
   }
 
   // ==================== ACCOUNTANT COMPREHENSIVE ====================
-  
+
   async getFeeStructures(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/accountant-comprehensive/fee-structures?${query}`);
@@ -2420,12 +2258,12 @@ class ApiService {
     });
   }
 
-  async getAccountantPayments(params = {}) {
+  async getComprehensiveAccountantPayments(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/accountant-comprehensive/payments?${query}`);
   }
 
-  async recordAccountantPayment(paymentData: any) {
+  async recordComprehensiveAccountantPayment(paymentData: any) {
     return this.request('/accountant-comprehensive/payments', {
       method: 'POST',
       body: JSON.stringify(paymentData)
@@ -2461,7 +2299,7 @@ class ApiService {
     return this.request(`/accountant-comprehensive/reports/collection-efficiency?academicYear=${academicYear}`);
   }
 
-  async getAccountantBudgets(params = {}) {
+  async getComprehensiveAccountantBudgets(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/accountant-comprehensive/budgets?${query}`);
   }
@@ -2493,7 +2331,7 @@ class ApiService {
   }
 
   // ==================== STOCK MANAGEMENT ADVANCED ====================
-  
+
   async getInventory(params = {}) {
     const query = new URLSearchParams(params as any).toString();
     return this.request(`/stock-advanced/inventory?${query}`);
@@ -2585,7 +2423,7 @@ class ApiService {
   }
 
   // ==================== TEACHER PORTAL ADVANCED ====================
-  
+
   async getTeacherDashboard() {
     return this.request('/teacher-portal-advanced/dashboard');
   }
@@ -2682,7 +2520,7 @@ class ApiService {
   }
 
   // ==================== STUDENT PORTAL COMPREHENSIVE ====================
-  
+
   async getStudentPortalDashboard() {
     return this.request('/student-portal-comprehensive/dashboard');
   }
@@ -2758,7 +2596,7 @@ class ApiService {
   }
 
   // ==================== PARENT PORTAL COMPREHENSIVE ====================
-  
+
   async getParentDashboard() {
     return this.request('/parent-portal-comprehensive/dashboard');
   }
@@ -2855,7 +2693,7 @@ class ApiService {
   }
 
   // ==================== GLOBAL STUDENT SHEETS ====================
-  
+
   async getGlobalStudentSheets(tradeCode: string, levelNumber: number, levelSuffix: string = '') {
     return this.request(`/global-sheets/sheets/${tradeCode}/${levelNumber}?level_suffix=${levelSuffix}`);
   }
@@ -2943,7 +2781,164 @@ class ApiService {
       body: JSON.stringify({ student_id: studentId, event_type: eventType, ...variables })
     });
   }
+
+  // ============================================================
+  // PARENT LINKING SYSTEM
+  // ============================================================
+
+  // Core Link Management
+  async getParentLinks(params?: {
+    status?: string;
+    parent_id?: number;
+    student_id?: number;
+    relationship_type?: string;
+    min_confidence?: number;
+    max_confidence?: number;
+    page?: number;
+    limit?: number;
+    sort_by?: string;
+    sort_order?: 'ASC' | 'DESC';
+  }) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-linking/links?${query}`);
+  }
+
+  async getParentLink(id: number) {
+    return this.request(`/parent-linking/links/${id}`);
+  }
+
+  async createParentLink(data: {
+    parent_id: number;
+    student_id: number;
+    relationship_type?: string;
+    match_confidence?: number;
+    notes?: string;
+  }) {
+    return this.request('/parent-linking/links', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateParentLink(id: number, data: {
+    status?: string;
+    relationship_type?: string;
+    notes?: string;
+  }) {
+    return this.request(`/parent-linking/links/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteParentLink(id: number, reason?: string) {
+    return this.request(`/parent-linking/links/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason })
+    });
+  }
+
+  async getParentStudents(parentId: number) {
+    return this.request(`/parent-linking/parent/${parentId}/students`);
+  }
+
+  async getStudentParents(studentId: number) {
+    return this.request(`/parent-linking/student/${studentId}/parents`);
+  }
+
+  // Approval & Verification
+  async getPendingLinks(params?: { page?: number; limit?: number }) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-linking/pending?${query}`);
+  }
+
+  async approveLink(id: number, notes?: string) {
+    return this.request(`/parent-linking/approve/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ notes })
+    });
+  }
+
+  async rejectLink(id: number, reason?: string) {
+    return this.request(`/parent-linking/reject/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  }
+
+  async bulkApproveLinks(linkIds: number[]) {
+    return this.request('/parent-linking/bulk-approve', {
+      method: 'POST',
+      body: JSON.stringify({ link_ids: linkIds })
+    });
+  }
+
+  async bulkRejectLinks(linkIds: number[], reason?: string) {
+    return this.request('/parent-linking/bulk-reject', {
+      method: 'POST',
+      body: JSON.stringify({ link_ids: linkIds, reason })
+    });
+  }
+
+  // Advanced Search & Analytics
+  async searchParentLinks(filters: {
+    parent_name?: string;
+    student_name?: string;
+    parent_phone?: string;
+    student_number?: string;
+    trade_code?: string;
+    level?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.request('/parent-linking/search', {
+      method: 'POST',
+      body: JSON.stringify(filters)
+    });
+  }
+
+  async getParentLinkingAnalytics() {
+    return this.request('/parent-linking/analytics');
+  }
+
+  async getParentLinkingDashboardStats() {
+    return this.request('/parent-linking/stats/dashboard');
+  }
+
+  async getParentLinkActivity(id: number) {
+    return this.request(`/parent-linking/activity/${id}`);
+  }
+
+  // Admin Management
+  async getParentLinkingAdminOverview() {
+    return this.request('/parent-linking/admin/overview');
+  }
+
+  async getParentLinkingConflicts() {
+    return this.request('/parent-linking/admin/conflicts');
+  }
+
+  async forceCreateLink(data: {
+    parent_id: number;
+    student_id: number;
+    relationship_type: string;
+    reason: string;
+  }) {
+    return this.request('/parent-linking/admin/force-link', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getParentLinkingAuditLog(params?: { page?: number; limit?: number; action?: string }) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-linking/admin/audit-log?${query}`);
+  }
 }
 
 export const apiService = new ApiService();
 export default apiService;
+

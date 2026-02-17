@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import apiService from '@/app/services/apiService';
-import { 
-  School, 
-  Users, 
-  TrendingUp, 
-  DollarSign, 
+import {
+  School,
+  Users,
+  TrendingUp,
+  DollarSign,
   BookOpen,
   Trophy,
   Shield,
@@ -52,12 +52,16 @@ import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDa
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import { ApplicationManagementDashboard } from '@/app/components/ApplicationManagementDashboard';
 
+import { useAuth } from '@/app/contexts/AuthContext';
+import { Grid } from 'lucide-react';
+
 interface HeadMasterDashboardProps {
   onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
 const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, onLogout }) => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -352,7 +356,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
     <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
       <UniversalMessagingWidget />
       <LeftSidebar currentPage="dashboard" onNavigate={onNavigate} />
-      
+
       <div className="flex-1 overflow-auto">
         <div className="p-8">
           <motion.div
@@ -396,11 +400,10 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                           <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color}`}>
                             <Icon className="h-6 w-6 text-white" />
                           </div>
-                          <Badge className={`${
-                            stat.trend === 'up' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-red-100 text-red-700'
-                          }`}>
+                          <Badge className={`${stat.trend === 'up'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {stat.trend === 'up' ? (
                               <TrendingUp className="h-3 w-3 mr-1" />
                             ) : (
@@ -449,10 +452,10 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                 Analytics
               </TabsTrigger>
               <TabsTrigger value="hr" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
-                HR
+                Staff/HR
               </TabsTrigger>
               <TabsTrigger value="inventory" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
-                Inventory
+                Assets
               </TabsTrigger>
               <TabsTrigger value="events-mgmt" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-green-500 data-[state=active]:text-white">
                 Events
@@ -469,7 +472,11 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
             </TabsList>
 
             <TabsContent value="global-sheets">
-              <GlobalStudentSheets onNavigate={onNavigate} />
+              <GlobalStudentSheets
+                userRole={user?.role || 'headmaster'}
+                userId={user?.id || 0}
+                onNavigate={onNavigate}
+              />
             </TabsContent>
 
             <TabsContent value="applications">
@@ -497,8 +504,8 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                               </div>
                               <Badge className={
                                 activity.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                activity.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
-                                'bg-blue-100 text-blue-700'
+                                  activity.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                                    'bg-blue-100 text-blue-700'
                               }>
                                 {activity.priority === 'high' ? 'Ngombwa' : activity.priority === 'medium' ? 'Byiciriritse' : 'Byoroshye'}
                               </Badge>
@@ -507,11 +514,11 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                               <span>{activity.time}</span>
                               <Badge variant="outline" className={
                                 activity.status === 'completed' ? 'border-green-300 text-green-700' :
-                                activity.status === 'in_progress' ? 'border-orange-300 text-orange-700' :
-                                'border-blue-300 text-blue-700'
+                                  activity.status === 'in_progress' ? 'border-orange-300 text-orange-700' :
+                                    'border-blue-300 text-blue-700'
                               }>
-                                {activity.status === 'completed' ? 'Byarangiye' : 
-                                 activity.status === 'in_progress' ? 'Birakorwa' : 'Biteguwe'}
+                                {activity.status === 'completed' ? 'Byarangiye' :
+                                  activity.status === 'in_progress' ? 'Birakorwa' : 'Biteguwe'}
                               </Badge>
                             </div>
                           </div>
@@ -570,11 +577,11 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                             <span className="text-sm text-gray-600">Intego: {item.target}%</span>
                             <Badge className={
                               item.status === 'excellent' ? 'bg-green-100 text-green-700' :
-                              item.status === 'target' ? 'bg-blue-100 text-blue-700' :
-                              'bg-yellow-100 text-yellow-700'
+                                item.status === 'target' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-yellow-100 text-yellow-700'
                             }>
-                              {item.status === 'excellent' ? 'Byiza' : 
-                               item.status === 'target' ? 'Ku Ntego' : 'Iterambere'}
+                              {item.status === 'excellent' ? 'Byiza' :
+                                item.status === 'target' ? 'Ku Ntego' : 'Iterambere'}
                             </Badge>
                           </div>
                         </div>
@@ -584,11 +591,10 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                               initial={{ width: 0 }}
                               animate={{ width: `${item.score}%` }}
                               transition={{ duration: 1, delay: index * 0.1 }}
-                              className={`h-full rounded-full ${
-                                item.status === 'excellent' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
+                              className={`h-full rounded-full ${item.status === 'excellent' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
                                 item.status === 'target' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                                'bg-gradient-to-r from-yellow-500 to-orange-500'
-                              }`}
+                                  'bg-gradient-to-r from-yellow-500 to-orange-500'
+                                }`}
                             />
                           </div>
                           <span className="font-bold text-lg text-gray-900 min-w-[50px]">{item.score}%</span>
@@ -625,7 +631,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                           </div>
                           <h3 className="text-xl font-black text-gray-900 mb-1">{dept.name}</h3>
                           <p className="text-sm text-gray-600 mb-4">{dept.head}</p>
-                          
+
                           <div className="space-y-3 mb-4">
                             <div>
                               <div className="flex items-center justify-between mb-1">
@@ -633,13 +639,13 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                                 <span className="text-sm font-bold text-gray-900">{dept.performance}%</span>
                               </div>
                               <div className="bg-gray-200 rounded-full h-2">
-                                <div 
+                                <div
                                   className={`h-2 rounded-full bg-gradient-to-r ${dept.color}`}
                                   style={{ width: `${dept.performance}%` }}
                                 />
                               </div>
                             </div>
-                            
+
                             {dept.students && (
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-600">Abanyeshuri:</span>
@@ -745,7 +751,7 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                             <td className="p-3">
                               <div className="flex items-center space-x-2">
                                 <div className="w-20 bg-gray-200 rounded-full h-2">
-                                  <div 
+                                  <div
                                     className={`h-2 rounded-full bg-gradient-to-r ${dept.color}`}
                                     style={{ width: `${dept.performance}%` }}
                                   />
@@ -807,11 +813,11 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                           </div>
                           <Badge className={
                             goal.status === 'ahead' ? 'bg-green-100 text-green-700' :
-                            goal.status === 'at_risk' ? 'bg-red-100 text-red-700' :
-                            'bg-blue-100 text-blue-700'
+                              goal.status === 'at_risk' ? 'bg-red-100 text-red-700' :
+                                'bg-blue-100 text-blue-700'
                           }>
-                            {goal.status === 'ahead' ? 'Imbere' : 
-                             goal.status === 'at_risk' ? 'Mu Kaga' : 'Ku Murongo'}
+                            {goal.status === 'ahead' ? 'Imbere' :
+                              goal.status === 'at_risk' ? 'Mu Kaga' : 'Ku Murongo'}
                           </Badge>
                         </div>
                         <div className="relative">
@@ -824,11 +830,10 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                               initial={{ width: 0 }}
                               animate={{ width: `${goal.progress}%` }}
                               transition={{ duration: 1, delay: index * 0.1 }}
-                              className={`h-full rounded-full ${
-                                goal.status === 'ahead' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
+                              className={`h-full rounded-full ${goal.status === 'ahead' ? 'bg-gradient-to-r from-green-500 to-teal-500' :
                                 goal.status === 'at_risk' ? 'bg-gradient-to-r from-red-500 to-orange-500' :
-                                'bg-gradient-to-r from-yellow-500 to-green-500'
-                              }`}
+                                  'bg-gradient-to-r from-yellow-500 to-green-500'
+                                }`}
                             />
                           </div>
                         </div>
@@ -875,8 +880,8 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
                             </div>
                             <Badge className="bg-gradient-to-r from-yellow-500 to-green-500 text-white border-0">
                               {event.type === 'meeting' ? 'Inama' :
-                               event.type === 'exam' ? 'Ikizamini' :
-                               event.type === 'sports' ? 'Siporo' : 'Ihembo'}
+                                event.type === 'exam' ? 'Ikizamini' :
+                                  event.type === 'sports' ? 'Siporo' : 'Ihembo'}
                             </Badge>
                           </div>
                           <div className="grid grid-cols-3 gap-4 mb-4">

@@ -11,60 +11,75 @@ const router = express.Router();
 // Get all students (Admin/Teacher)
 router.get('/list', authenticateToken, async (req, res) => {
   try {
-    const { search, class_id, status, page = 1, limit = 50 } = req.query;
+    const { search, trade, level, status, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
 
+    // Use global_student_sheets for student data
     let query = `
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
-        u.is_active, u.created_at,
-        sp.admission_number, sp.date_of_birth, sp.gender, sp.blood_group, sp.address,
-        GROUP_CONCAT(DISTINCT tc.name) as classes
-      FROM users u
-      LEFT JOIN student_profiles sp ON u.id = sp.user_id
-      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
-      LEFT JOIN trade_classes tc ON e.class_id = tc.id
-      WHERE u.role = 'student'
+      SELECT 
+        gss.id,
+        gss.first_name,
+        gss.last_name,
+        gss.student_id,
+        gss.trade_code,
+        gss.level_number,
+        gss.gender,
+        gss.email,
+        gss.phone,
+        gss.status,
+        gss.created_at
+      FROM global_student_sheets gss
+      WHERE 1=1
     `;
     const params = [];
 
     if (search) {
-      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR sp.admission_number LIKE ?)`;
+      query += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR gss.student_id LIKE ?)`;
       const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+      params.push(searchParam, searchParam, searchParam);
     }
 
-    if (class_id) {
-      query += ` AND e.class_id = ?`;
-      params.push(class_id);
+    if (trade) {
+      query += ` AND gss.trade_code = ?`;
+      params.push(trade);
+    }
+
+    if (level) {
+      query += ` AND gss.level_number = ?`;
+      params.push(level);
     }
 
     if (status === 'active') {
-      query += ` AND u.is_active = 1`;
+      query += ` AND gss.status = 'active'`;
     } else if (status === 'inactive') {
-      query += ` AND u.is_active = 0`;
+      query += ` AND gss.status = 'inactive'`;
     }
 
-    query += ` GROUP BY u.id ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
+    query += ` ORDER BY gss.created_at DESC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
 
     const [students] = await pool.execute(query, params);
 
-    let countQuery = 'SELECT COUNT(DISTINCT u.id) as total FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id LEFT JOIN enrollments e ON u.id = e.student_id WHERE u.role = "student"';
+    let countQuery = 'SELECT COUNT(*) as total FROM global_student_sheets gss WHERE 1=1';
     const countParams = [];
-    
+
     if (search) {
-      countQuery += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR sp.admission_number LIKE ?)`;
+      countQuery += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR gss.student_id LIKE ?)`;
       const searchParam = `%${search}%`;
-      countParams.push(searchParam, searchParam, searchParam, searchParam);
+      countParams.push(searchParam, searchParam, searchParam);
     }
-    if (class_id) {
-      countQuery += ` AND e.class_id = ?`;
-      countParams.push(class_id);
+    if (trade) {
+      countQuery += ` AND gss.trade_code = ?`;
+      countParams.push(trade);
+    }
+    if (level) {
+      countQuery += ` AND gss.level_number = ?`;
+      countParams.push(level);
     }
     if (status === 'active') {
-      countQuery += ` AND u.is_active = 1`;
+      countQuery += ` AND gss.status = 'active'`;
     } else if (status === 'inactive') {
-      countQuery += ` AND u.is_active = 0`;
+      countQuery += ` AND gss.status = 'inactive'`;
     }
 
     const [[{ total }]] = await pool.execute(countQuery, countParams);
@@ -223,10 +238,17 @@ router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'h
     const hashedPassword = await bcrypt.hash(password || 'student123', 10);
     const username = admission_number || `STD${Date.now()}`;
 
+    // Get the student role_id from roles table
+    const [studentRole] = await pool.execute('SELECT id FROM roles WHERE name = "student"');
+    if (studentRole.length === 0) {
+      return res.status(500).json({ success: false, message: 'Student role not found in system' });
+    }
+    const studentRoleId = studentRole[0].id;
+
     const [userResult] = await pool.execute(`
-      INSERT INTO users (username, email, password, first_name, last_name, phone, role, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, 'student', 1)
-    `, [username, email, hashedPassword, first_name, last_name, phone]);
+      INSERT INTO users (username, email, password, first_name, last_name, phone, role, role_id, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, 'student', ?, 1)
+    `, [username, email, hashedPassword, first_name, last_name, phone, studentRoleId]);
 
     const studentId = userResult.insertId;
 

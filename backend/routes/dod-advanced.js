@@ -57,7 +57,7 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, NOW())
     `, [
       student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.trade_code, student.level_number, conduct_type, severity,
+      student.code, student.level_number, conduct_type, severity,
       description, action_taken || '', conduct_points_deducted, new_conduct_score,
       req.user?.id || 0, removed_by_name
     ]);
@@ -85,7 +85,7 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
             {
               name: `${student.first_name} ${student.last_name}`,
               code: student.student_code,
-              trade: student.trade_code,
+              trade: student.code,
               level: student.level_number,
               parentName: conn.parent_name || 'Mubyeyi'
             },
@@ -167,7 +167,7 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false, NOW())
     `, [
       student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.trade_code, student.level_number, leave_type, reason,
+      student.code, student.level_number, leave_type, reason,
       start_time, end_time || start_time, req.user?.id || 0, approved_by_name
     ]);
     
@@ -188,7 +188,7 @@ router.post('/leave/add', authenticateToken, async (req, res) => {
             {
               name: `${student.first_name} ${student.last_name}`,
               code: student.student_code,
-              trade: student.trade_code,
+              trade: student.code,
               level: student.level_number,
               parentName: conn.parent_name || 'Mubyeyi'
             },

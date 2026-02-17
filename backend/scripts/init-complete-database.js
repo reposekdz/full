@@ -5,10 +5,10 @@ require('dotenv').config();
 
 async function initializeDatabase() {
   let connection;
-  
+
   try {
     console.log('🔄 Connecting to MySQL server...');
-    
+
     // Connect to MySQL server (without database)
     connection = await mysql.createConnection({
       host: process.env.DB_HOST,
@@ -30,7 +30,7 @@ async function initializeDatabase() {
     console.log('🔄 Reading schema file...');
     const schemaPath = path.join(__dirname, 'complete-advanced-schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
-    
+
     console.log('🔄 Executing schema...');
     // Split by semicolon and execute each statement separately
     const statements = schema.split(';').filter(stmt => stmt.trim().length > 0);
@@ -45,17 +45,21 @@ async function initializeDatabase() {
     console.log('🔄 Creating default admin user...');
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash('admin123', 10);
-    
+
+    // Get super_admin role_id
+    const [superAdminRole] = await connection.query('SELECT id FROM roles WHERE name = "super_admin"');
+    const superAdminRoleId = superAdminRole.length > 0 ? superAdminRole[0].id : 1;
+
     await connection.query(`
-      INSERT INTO users (username, email, password_hash, role, first_name, last_name, is_active)
-      VALUES ('admin', 'admin@school.com', ?, 'super_admin', 'System', 'Administrator', TRUE)
+      INSERT INTO users (username, email, password_hash, role, role_id, first_name, last_name, is_active)
+      VALUES ('admin', 'admin@school.com', ?, 'super_admin', ?, 'System', 'Administrator', TRUE)
       ON DUPLICATE KEY UPDATE password_hash = password_hash
-    `, [hashedPassword]);
+    `, [hashedPassword, superAdminRoleId]);
     console.log('✅ Default admin user created (username: admin, password: admin123)');
 
     // Insert sample data
     console.log('🔄 Inserting sample data...');
-    
+
     // Sample classes
     await connection.query(`
       INSERT INTO classes (class_name, trade, level, academic_year_id, room_number, capacity)

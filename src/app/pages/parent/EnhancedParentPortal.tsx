@@ -20,6 +20,7 @@ import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Progress } from '@/app/components/ui/progress';
 import { API_BASE_URL } from '@/app/config/apiBase';
+import ParentLinkingCenter from './ParentLinkingCenter';
 
 // ==================== TYPES ====================
 
@@ -90,6 +91,7 @@ const EnhancedParentPortal: React.FC = () => {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAddChildModal, setShowAddChildModal] = useState(false);
 
   // Form States
   const [messageForm, setMessageForm] = useState({
@@ -108,44 +110,69 @@ const EnhancedParentPortal: React.FC = () => {
     notes: ''
   });
 
+  const [notificationSettings, setNotificationSettings] = useState({
+    sms_enabled: true,
+    whatsapp_enabled: false,
+    email_enabled: true,
+    attendance_alerts: true,
+    marks_alerts: true,
+    fee_reminders: true
+  });
+
+  const [notificationSettings, setNotificationSettings] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]);
+
   useEffect(() => {
     fetchParentData();
+    fetchActivityLogs();
+    fetchNotificationSettings();
   }, []);
 
-  const fetchParentData = async () => {
-    setLoading(true);
+  const fetchActivityLogs = async () => {
     try {
       const token = localStorage.getItem('token');
-
-      const [dashboardRes, notificationsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/enhanced-parent-portal/dashboard`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_BASE_URL}/enhanced-parent-portal/notifications`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
-
-      const dashboardData = await dashboardRes.json();
-      const notificationsData = await notificationsRes.json();
-
-      if (dashboardData.success) {
-        setParentInfo(dashboardData.parent);
-        setChildren(dashboardData.children || []);
-        if (dashboardData.children?.length > 0) {
-          setSelectedChild(dashboardData.children[0]);
-        }
-        setUnreadCount(dashboardData.summary?.unread_notifications || 0);
-      }
-
-      if (notificationsData.success) {
-        setNotifications(notificationsData.notifications || []);
-      }
-
+      const res = await fetch(`${API_BASE_URL}/enhanced-parent-portal/activity?limit=5`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setActivities(data.activities || []);
     } catch (error) {
-      console.error('Error fetching parent data:', error);
+      console.error('Error fetching activity logs:', error);
     }
-    setLoading(false);
+  };
+
+  const fetchNotificationSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/enhanced-parent-portal/settings/notifications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setNotificationSettings(data.settings);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/enhanced-parent-portal/settings/notifications`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(notificationSettings)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Igenamiterere ryabitswe neza!');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Gubika igenamiterere ntibishobotse.');
+    }
   };
 
   const handleRefresh = () => {
@@ -177,10 +204,11 @@ const EnhancedParentPortal: React.FC = () => {
           message_type: 'inquiry',
           priority: 'normal'
         });
-        alert('Message sent successfully!');
+        alert('Ubutumwa bwayoherejwe neza!');
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('Gohereza ubutumwa ntibishobotse.');
     }
   };
 
@@ -207,11 +235,12 @@ const EnhancedParentPortal: React.FC = () => {
           payment_date: new Date().toISOString().split('T')[0],
           notes: ''
         });
-        alert('Payment proof submitted successfully!');
+        alert('Ikimenyetso cyo kwishyura cyakiriwe!');
         fetchParentData();
       }
     } catch (error) {
       console.error('Error submitting payment:', error);
+      alert('Kwakira ikimenyetso cyo kwishyura ntibishobotse.');
     }
   };
 
@@ -225,7 +254,18 @@ const EnhancedParentPortal: React.FC = () => {
       overdue: 'bg-red-100 text-red-800',
       active: 'bg-green-100 text-green-800'
     };
-    return <Badge className={colors[status] || 'bg-gray-100'}>{status}</Badge>;
+
+    const kinyarwandaStatus: Record<string, string> = {
+      present: 'Yitabiriye',
+      absent: 'Ntiyabonetse',
+      late: 'Yatinze',
+      paid: 'Byishyuwe',
+      pending: 'Bitegerejwe',
+      overdue: 'Byataye igihe',
+      active: 'Arakora'
+    };
+
+    return <Badge className={colors[status] || 'bg-gray-100'}>{kinyarwandaStatus[status] || status}</Badge>;
   };
 
   if (loading) {
@@ -233,7 +273,7 @@ const EnhancedParentPortal: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-yellow-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-gray-700">Loading parent portal...</p>
+          <p className="text-xl font-semibold text-gray-700">Turi gufungura imbuga y'ababyeyi...</p>
         </div>
       </div>
     );
@@ -241,24 +281,8 @@ const EnhancedParentPortal: React.FC = () => {
 
   if (children.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-yellow-50 flex items-center justify-center p-6">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="w-6 h-6 text-yellow-600" />
-              No Children Linked
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">
-              No children are currently linked to your account. Please contact the school administration to link your child's account.
-            </p>
-            <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Contact School
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white flex items-center justify-center p-6">
+        <ParentLinkingCenter onSuccess={fetchParentData} />
       </div>
     );
   }
@@ -270,8 +294,8 @@ const EnhancedParentPortal: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Parent Portal</h1>
-              <p className="text-green-100">Monitor your child's academic progress and school activities</p>
+              <h1 className="text-3xl font-bold mb-2">Imbuga y'Ababyeyi</h1>
+              <p className="text-green-100">Kurikirana imitsindire n'ibikorwa by'umwana wawe ku ishuri</p>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -280,13 +304,13 @@ const EnhancedParentPortal: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                Vugurura
               </Button>
-              <Button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm relative">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
+              <Button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm relative group">
+                <Bell className="w-4 h-4 mr-2 group-hover:animate-bounce" />
+                Integuza
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center animate-pulse">
                     {unreadCount}
                   </span>
                 )}
@@ -300,16 +324,22 @@ const EnhancedParentPortal: React.FC = () => {
               <Button
                 key={child.student.id}
                 onClick={() => setSelectedChild(child)}
-                className={`${
-                  selectedChild?.student.id === child.student.id
-                    ? 'bg-white text-green-700 shadow-lg'
-                    : 'bg-white/20 hover:bg-white/30 text-white'
-                }`}
+                className={`${selectedChild?.student.id === child.student.id
+                  ? 'bg-white text-green-700 shadow-lg'
+                  : 'bg-white/20 hover:bg-white/30 text-white'
+                  }`}
               >
                 <User className="w-4 h-4 mr-2" />
                 {child.student.name}
               </Button>
             ))}
+            <Button
+              onClick={() => setShowAddChildModal(true)}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 border-dashed"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Ongera Umwana
+            </Button>
           </div>
 
           {/* Parent Info */}
@@ -340,7 +370,7 @@ const EnhancedParentPortal: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Attendance</p>
+                    <p className="text-sm text-gray-600 mb-1">Kwitabira</p>
                     <h3 className="text-3xl font-bold text-green-700">{selectedChild.attendance.rate}%</h3>
                   </div>
                   <CheckCircle className="w-12 h-12 text-green-600 opacity-50" />
@@ -352,7 +382,7 @@ const EnhancedParentPortal: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Average Grade</p>
+                    <p className="text-sm text-gray-600 mb-1">Impuzandengo</p>
                     <h3 className="text-3xl font-bold text-yellow-700">{selectedChild.academics.average_grade}%</h3>
                   </div>
                   <Award className="w-12 h-12 text-yellow-600 opacity-50" />
@@ -364,7 +394,7 @@ const EnhancedParentPortal: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Pending Fees</p>
+                    <p className="text-sm text-gray-600 mb-1">Umwenda w'Ishuri</p>
                     <h3 className="text-2xl font-bold text-emerald-700">RWF {selectedChild.finance.balance.toLocaleString()}</h3>
                   </div>
                   <Wallet className="w-12 h-12 text-emerald-600 opacity-50" />
@@ -376,7 +406,7 @@ const EnhancedParentPortal: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Conduct Score</p>
+                    <p className="text-sm text-gray-600 mb-1">Imyitwarire</p>
                     <h3 className="text-3xl font-bold text-purple-700">{selectedChild.discipline.conduct_score}</h3>
                   </div>
                   <Shield className="w-12 h-12 text-purple-600 opacity-50" />
@@ -387,13 +417,13 @@ const EnhancedParentPortal: React.FC = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white shadow-sm border">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="academics">Academics</TabsTrigger>
-              <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="finance">Finance</TabsTrigger>
-              <TabsTrigger value="discipline">Discipline</TabsTrigger>
-              <TabsTrigger value="messages">Messages</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="overview">Incamake</TabsTrigger>
+              <TabsTrigger value="academics">Amasomo</TabsTrigger>
+              <TabsTrigger value="attendance">Kwitabira</TabsTrigger>
+              <TabsTrigger value="finance">Imari</TabsTrigger>
+              <TabsTrigger value="discipline">Imyitwarire</TabsTrigger>
+              <TabsTrigger value="messages">Ubutumwa</TabsTrigger>
+              <TabsTrigger value="settings">Igenamiterere</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -403,24 +433,24 @@ const EnhancedParentPortal: React.FC = () => {
                   <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
                     <CardTitle className="flex items-center gap-2">
                       <User className="w-5 h-5" />
-                      Student Information
+                      Amakuru y'Umunyeshuri
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6 space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Full Name:</span>
+                      <span className="text-gray-600">Amazina Yose:</span>
                       <span className="font-semibold">{selectedChild.student.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Student ID:</span>
+                      <span className="text-gray-600">Nimero y'Umunyeshuri:</span>
                       <span className="font-semibold">{selectedChild.student.id}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Trade:</span>
+                      <span className="text-gray-600">Ishami:</span>
                       <span className="font-semibold">{selectedChild.student.trade}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Level:</span>
+                      <span className="text-gray-600">Umwaka:</span>
                       <span className="font-semibold">{selectedChild.student.level}</span>
                     </div>
                   </CardContent>
@@ -430,7 +460,7 @@ const EnhancedParentPortal: React.FC = () => {
                   <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50">
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="w-5 h-5" />
-                      Recent Performance
+                      Imitsindire ya Vuba
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -440,13 +470,46 @@ const EnhancedParentPortal: React.FC = () => {
                         <span className="font-semibold">{selectedChild.academics.gpa}</span>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Overall Grade</span>
+                        <span className="text-gray-600">Icyiciro (Grade)</span>
                         <span className="font-semibold">{selectedChild.academics.overall_grade}</span>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-600">Attendance Rate</span>
+                        <span className="text-gray-600">Igipimo cyo kwitabira</span>
                         <span className="font-semibold">{selectedChild.attendance.rate}%</span>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-blue-600" />
+                      Ibikorwa bya Vuba (Live Activity)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      {activities.length > 0 ? activities.map((activity, idx) => (
+                        <div key={idx} className="flex gap-4 p-3 border-b last:border-0 hover:bg-gray-50 transition-colors rounded-lg">
+                          <div className={`p-2 rounded-full h-fit ${activity.activity_type === 'login' ? 'bg-blue-100 text-blue-600' :
+                            activity.activity_type === 'view_grades' ? 'bg-green-100 text-green-600' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                            {activity.activity_type === 'login' ? <User className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{activity.activity_type.replace('_', ' ').toUpperCase()}</p>
+                            <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString()}</p>
+                          </div>
+                          <Badge variant="outline" className="h-fit">Success</Badge>
+                        </div>
+                      )) : (
+                        <div className="text-center py-8 text-gray-400">
+                          <Clock className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                          <p>Nta bikorwa bihari ubu.</p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -455,25 +518,25 @@ const EnhancedParentPortal: React.FC = () => {
               {/* Quick Actions */}
               <Card>
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                  <CardTitle>Quick Actions</CardTitle>
+                  <CardTitle>Ibikorwa bya Vuba</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="flex flex-wrap gap-4">
                     <Button onClick={() => setShowMessageModal(true)} className="bg-gradient-to-r from-green-600 to-emerald-600">
                       <MessageSquare className="w-4 h-4 mr-2" />
-                      Send Message
+                      Yohereza Ubutumwa
                     </Button>
                     <Button onClick={() => setShowPaymentModal(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600">
                       <DollarSign className="w-4 h-4 mr-2" />
-                      Submit Payment
+                      Kwishyura
                     </Button>
                     <Button variant="outline" onClick={() => setActiveTab('academics')}>
                       <FileText className="w-4 h-4 mr-2" />
-                      View Report Card
+                      Reba Indangamanota
                     </Button>
                     <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
                       <Settings className="w-4 h-4 mr-2" />
-                      Notification Settings
+                      Igenamiterere ry'Integuza
                     </Button>
                   </div>
                 </CardContent>
@@ -486,7 +549,7 @@ const EnhancedParentPortal: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
                   <CardTitle className="flex items-center gap-2">
                     <GraduationCap className="w-5 h-5" />
-                    Academic Performance
+                    Imitsindire mu Masomo
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -500,7 +563,7 @@ const EnhancedParentPortal: React.FC = () => {
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Overall Grade</h4>
+                        <h4 className="font-semibold">Icyiciro (Grade)</h4>
                         <Badge className="text-lg px-3 py-1">{selectedChild.academics.overall_grade}</Badge>
                       </div>
                     </div>
@@ -513,7 +576,7 @@ const EnhancedParentPortal: React.FC = () => {
                   <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50">
                     <CardTitle className="flex items-center gap-2">
                       <Trophy className="w-5 h-5" />
-                      Recent Achievements
+                      Ibyagezweho Vuba
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -544,33 +607,33 @@ const EnhancedParentPortal: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
-                    Attendance Summary
+                    Incamake yo Kwitabira
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <p className="text-3xl font-bold text-green-600">{selectedChild.attendance.present_days}</p>
-                      <p className="text-sm text-gray-600">Days Present</p>
+                      <p className="text-sm text-gray-600">Iminsi Yitabiriye</p>
                     </div>
                     <div className="text-center p-4 bg-red-50 rounded-lg">
                       <p className="text-3xl font-bold text-red-600">{selectedChild.attendance.absent_days}</p>
-                      <p className="text-sm text-gray-600">Days Absent</p>
+                      <p className="text-sm text-gray-600">Iminsi Atabonetse</p>
                     </div>
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <p className="text-3xl font-bold text-blue-600">{selectedChild.attendance.total_days}</p>
-                      <p className="text-sm text-gray-600">Total Days</p>
+                      <p className="text-sm text-gray-600">Iminsi Yose</p>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <p className="text-3xl font-bold text-purple-600">{selectedChild.attendance.rate}%</p>
-                      <p className="text-sm text-gray-600">Attendance Rate</p>
+                      <p className="text-sm text-gray-600">Igipimo cyo kwitabira</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Progress value={parseFloat(selectedChild.attendance.rate)} className="h-4" />
                     <p className="text-center text-sm text-gray-600">
-                      {selectedChild.attendance.rate}% attendance rate this month
+                      Igipimo cyo kwitabira muri uku kwezi ni {selectedChild.attendance.rate}%
                     </p>
                   </div>
                 </CardContent>
@@ -583,32 +646,32 @@ const EnhancedParentPortal: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50">
                   <CardTitle className="flex items-center gap-2">
                     <Wallet className="w-5 h-5" />
-                    Fee Summary
+                    Incamake y'Amafaranga y'Ishuri
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
                       <p className="text-2xl font-bold text-blue-600">RWF {selectedChild.finance.total_fees.toLocaleString()}</p>
-                      <p className="text-sm text-gray-600">Total Fees</p>
+                      <p className="text-sm text-gray-600">Amafaranga Yose</p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <p className="text-2xl font-bold text-green-600">RWF {selectedChild.finance.paid_amount.toLocaleString()}</p>
-                      <p className="text-sm text-gray-600">Paid</p>
+                      <p className="text-sm text-gray-600">Ayishyuwe</p>
                     </div>
                     <div className="text-center p-4 bg-yellow-50 rounded-lg">
                       <p className="text-2xl font-bold text-yellow-600">RWF {selectedChild.finance.balance.toLocaleString()}</p>
-                      <p className="text-sm text-gray-600">Balance</p>
+                      <p className="text-sm text-gray-600">Isigaye</p>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <p className="text-2xl font-bold text-purple-600">{getStatusBadge(selectedChild.finance.status)}</p>
-                      <p className="text-sm text-gray-600">Status</p>
+                      <p className="text-sm text-gray-600">Imiterere</p>
                     </div>
                   </div>
 
                   <Button onClick={() => setShowPaymentModal(true)} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
                     <DollarSign className="w-4 h-4 mr-2" />
-                    Submit Payment Proof
+                    Yohereza Ikimenyetso cyo Kwishyura
                   </Button>
                 </CardContent>
               </Card>
@@ -620,18 +683,18 @@ const EnhancedParentPortal: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-red-50 to-pink-50">
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="w-5 h-5" />
-                    Conduct & Discipline
+                    Imyitwarire n'Uburere
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <p className="text-4xl font-bold text-purple-600">{selectedChild.discipline.conduct_score}</p>
-                      <p className="text-sm text-gray-600">Conduct Score</p>
+                      <p className="text-sm text-gray-600">Amanota y'Imyitwarire</p>
                     </div>
                     <div className="text-center p-4 bg-yellow-50 rounded-lg">
                       <p className="text-4xl font-bold text-yellow-600">{selectedChild.discipline.incidents_this_month}</p>
-                      <p className="text-sm text-gray-600">Incidents This Month</p>
+                      <p className="text-sm text-gray-600">Ibyaha byakozwe muri uku kwezi</p>
                     </div>
                   </div>
 
@@ -639,11 +702,11 @@ const EnhancedParentPortal: React.FC = () => {
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                       <div className="flex items-center gap-2 text-red-600">
                         <AlertTriangle className="w-5 h-5" />
-                        <span className="font-semibold">Attention Required</span>
+                        <span className="font-semibold">Witonde / Isuzume</span>
                       </div>
                       <p className="text-sm text-gray-600 mt-2">
-                        Your child has {selectedChild.discipline.incidents_this_month} discipline incident(s) this month.
-                        Please contact the school for more details.
+                        Umwana wawe afite ibyaha {selectedChild.discipline.incidents_this_month} by'imyitwarire muri uku kwezi.
+                        Wavugana n'ubuyobozi ku bindi bisobanuro.
                       </p>
                     </div>
                   )}
@@ -657,13 +720,13 @@ const EnhancedParentPortal: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
                   <CardTitle className="flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" />
-                    Send Message to School
+                    Yohereza Ubutumwa ku Ishuri
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <Label>Send To</Label>
+                      <Label>Yohereza Kuri</Label>
                       <Select
                         value={messageForm.recipient_type}
                         onValueChange={(value) => setMessageForm({ ...messageForm, recipient_type: value })}
@@ -672,16 +735,16 @@ const EnhancedParentPortal: React.FC = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Administration</SelectItem>
-                          <SelectItem value="dod">Director of Studies</SelectItem>
-                          <SelectItem value="teacher">Class Teacher</SelectItem>
-                          <SelectItem value="accountant">Accountant</SelectItem>
+                          <SelectItem value="admin">Ubuyobozi (Admin)</SelectItem>
+                          <SelectItem value="dod">Umuyobozi w'Amasomo (DOS)</SelectItem>
+                          <SelectItem value="teacher">Umwarimu w'Ishuri</SelectItem>
+                          <SelectItem value="accountant">Umucungamari</SelectItem>
                           <SelectItem value="matron">Matron</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label>Message Type</Label>
+                      <Label>Ubwoko bw'Ubutumwa</Label>
                       <Select
                         value={messageForm.message_type}
                         onValueChange={(value) => setMessageForm({ ...messageForm, message_type: value })}
@@ -690,34 +753,34 @@ const EnhancedParentPortal: React.FC = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="inquiry">General Inquiry</SelectItem>
-                          <SelectItem value="feedback">Feedback</SelectItem>
-                          <SelectItem value="complaint">Complaint</SelectItem>
-                          <SelectItem value="request">Request</SelectItem>
-                          <SelectItem value="emergency">Emergency</SelectItem>
+                          <SelectItem value="inquiry">Ikibazo Rusange</SelectItem>
+                          <SelectItem value="feedback">Igitekerezo</SelectItem>
+                          <SelectItem value="complaint">Kurega / Icyifuzo</SelectItem>
+                          <SelectItem value="request">Ubusabe</SelectItem>
+                          <SelectItem value="emergency">Ikibazo Cyihutirwa</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label>Subject</Label>
+                      <Label>Intego (Subject)</Label>
                       <Input
                         value={messageForm.subject}
                         onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
-                        placeholder="Enter subject"
+                        placeholder="Andika intego y'ubutumwa"
                       />
                     </div>
                     <div>
-                      <Label>Message</Label>
+                      <Label>Ubutumwa</Label>
                       <Textarea
                         value={messageForm.message}
                         onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
-                        placeholder="Enter your message"
+                        placeholder="Andika ubutumwa bwawe hano"
                         rows={5}
                       />
                     </div>
                     <Button onClick={handleSendMessage} className="w-full bg-gradient-to-r from-green-600 to-emerald-600">
                       <Send className="w-4 h-4 mr-2" />
-                      Send Message
+                      Yohereza Ubutumwa
                     </Button>
                   </div>
                 </CardContent>
@@ -726,67 +789,104 @@ const EnhancedParentPortal: React.FC = () => {
 
             {/* Settings Tab */}
             <TabsContent value="settings" className="space-y-6">
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50">
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    Notification Settings
-                  </CardTitle>
+              <Card className="border-2 border-emerald-100 shadow-xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-emerald-600 to-green-600 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-6 h-6" />
+                        Igenamiterere ry'Integuza
+                      </CardTitle>
+                      <CardDescription className="text-emerald-100">Hitamo uko ushaka kubona amakuru y'umwana wawe.</CardDescription>
+                    </div>
+                    <Badge className="bg-white/20 text-white border-white/20">Advanced</Badge>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">Grade Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive notifications when new grades are posted</p>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-800 border-b pb-2">
+                        <MessageSquare className="w-5 h-5" /> Inzira z'Ubutumwa
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 transition-all cursor-pointer group">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+                              <Phone className="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold">Ubutumwa kuri SMS</h4>
+                              <p className="text-xs text-muted-foreground">Bona integuza kuri telefone yawe</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant={notificationSettings.sms_enabled ? 'default' : 'outline'}
+                            onClick={() => setNotificationSettings({ ...notificationSettings, sms_enabled: !notificationSettings.sms_enabled })}
+                            className={notificationSettings.sms_enabled ? 'bg-emerald-600' : ''}
+                          >
+                            {notificationSettings.sms_enabled ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 bg-green-50/50 rounded-2xl border-2 border-green-100 hover:border-green-300 transition-all cursor-pointer group">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+                              <MessageCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold">Ubutumwa kuri WhatsApp</h4>
+                              <p className="text-xs text-muted-foreground">Bona amakuru arambuye kuri WhatsApp</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant={notificationSettings.whatsapp_enabled ? 'default' : 'outline'}
+                            onClick={() => setNotificationSettings({ ...notificationSettings, whatsapp_enabled: !notificationSettings.whatsapp_enabled })}
+                            className={notificationSettings.whatsapp_enabled ? 'bg-green-600' : ''}
+                          >
+                            {notificationSettings.whatsapp_enabled ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant={true ? 'default' : 'outline'}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Enabled
-                      </Button>
                     </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">Attendance Alerts</h4>
-                        <p className="text-sm text-gray-500">Receive alerts when child is absent or late</p>
+
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-bold flex items-center gap-2 text-blue-800 border-b pb-2">
+                        <Bell className="w-5 h-5" /> Ibyo ubatseho
+                      </h3>
+                      <div className="space-y-4">
+                        {[
+                          { key: 'attendance_alerts', label: 'Integuza yo Kwitabira', icon: <Calendar className="w-5 h-5" /> },
+                          { key: 'marks_alerts', label: 'Integuza y\'Amanota', icon: <GraduationCap className="w-5 h-5" /> },
+                          { key: 'fee_reminders', label: 'Integuza yo Kwishyura', icon: <DollarSign className="w-5 h-5" /> }
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border-2 border-blue-100 hover:border-blue-300 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-white rounded-lg text-blue-600 shadow-sm">{item.icon}</div>
+                              <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={(notificationSettings as any)[item.key] ? 'default' : 'outline'}
+                              onClick={() => setNotificationSettings({ ...notificationSettings, [item.key]: !(notificationSettings as any)[item.key] })}
+                              className={(notificationSettings as any)[item.key] ? 'bg-blue-600' : ''}
+                            >
+                              {(notificationSettings as any)[item.key] ? 'Birakora' : 'Bifunze'}
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                      <Button variant={true ? 'default' : 'outline'}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Enabled
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">Fee Reminders</h4>
-                        <p className="text-sm text-gray-500">Receive fee payment reminders</p>
-                      </div>
-                      <Button variant={true ? 'default' : 'outline'}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Enabled
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">SMS Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive notifications via SMS</p>
-                      </div>
-                      <Button variant={true ? 'default' : 'outline'}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Enabled
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">Email Notifications</h4>
-                        <p className="text-sm text-gray-500">Receive notifications via Email</p>
-                      </div>
-                      <Button variant={true ? 'default' : 'outline'}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Enabled
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
+                <div className="bg-emerald-900/5 p-6 border-t border-emerald-100 flex justify-end gap-3">
+                  <Button variant="ghost" className="text-emerald-700">Cancel</Button>
+                  <Button
+                    onClick={handleSaveSettings}
+                    className="bg-emerald-600 hover:bg-emerald-700 font-bold px-8 shadow-lg shadow-emerald-200"
+                  >
+                    Bika Igenamiterere
+                  </Button>
+                </div>
               </Card>
             </TabsContent>
           </Tabs>
@@ -797,11 +897,11 @@ const EnhancedParentPortal: React.FC = () => {
       <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Send Message to School</DialogTitle>
+            <DialogTitle>Yohereza Ubutumwa ku Ishuri</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Recipient</Label>
+              <Label>Uwakira (Recipient)</Label>
               <Select
                 value={messageForm.recipient_type}
                 onValueChange={(value) => setMessageForm({ ...messageForm, recipient_type: value })}
@@ -810,15 +910,15 @@ const EnhancedParentPortal: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administration</SelectItem>
-                  <SelectItem value="dod">Director of Studies</SelectItem>
-                  <SelectItem value="teacher">Class Teacher</SelectItem>
-                  <SelectItem value="accountant">Accountant</SelectItem>
+                  <SelectItem value="admin">Ubuyobozi</SelectItem>
+                  <SelectItem value="dod">Umuyobozi w'Amasomo</SelectItem>
+                  <SelectItem value="teacher">Umwarimu w'Ishuri</SelectItem>
+                  <SelectItem value="accountant">Umucungamari</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Message Type</Label>
+              <Label>Ubwoko bw'Ubutumwa</Label>
               <Select
                 value={messageForm.message_type}
                 onValueChange={(value) => setMessageForm({ ...messageForm, message_type: value })}
@@ -827,22 +927,22 @@ const EnhancedParentPortal: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inquiry">Inquiry</SelectItem>
-                  <SelectItem value="feedback">Feedback</SelectItem>
-                  <SelectItem value="complaint">Complaint</SelectItem>
-                  <SelectItem value="request">Request</SelectItem>
+                  <SelectItem value="inquiry">Ikibazo Rusange</SelectItem>
+                  <SelectItem value="feedback">Igitekerezo</SelectItem>
+                  <SelectItem value="complaint">Kurega / Icyifuzo</SelectItem>
+                  <SelectItem value="request">Ubusabe</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Subject</Label>
+              <Label>Intego</Label>
               <Input
                 value={messageForm.subject}
                 onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
               />
             </div>
             <div>
-              <Label>Message</Label>
+              <Label>Ubutumwa</Label>
               <Textarea
                 value={messageForm.message}
                 onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
@@ -851,8 +951,8 @@ const EnhancedParentPortal: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMessageModal(false)}>Cancel</Button>
-            <Button onClick={handleSendMessage}>Send Message</Button>
+            <Button variant="outline" onClick={() => setShowMessageModal(false)}>Hagarika</Button>
+            <Button onClick={handleSendMessage}>Yohereza Ubutumwa</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -861,11 +961,11 @@ const EnhancedParentPortal: React.FC = () => {
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Submit Payment Proof</DialogTitle>
+            <DialogTitle>Yohereza Ikimenyetso cyo Kwishyura</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Amount (RWF)</Label>
+              <Label>Amafaranga (RWF)</Label>
               <Input
                 type="number"
                 value={paymentForm.amount}
@@ -874,7 +974,7 @@ const EnhancedParentPortal: React.FC = () => {
               />
             </div>
             <div>
-              <Label>Payment Method</Label>
+              <Label>Uburyo bwo Kwishyura</Label>
               <Select
                 value={paymentForm.payment_method}
                 onValueChange={(value) => setPaymentForm({ ...paymentForm, payment_method: value })}
@@ -883,15 +983,15 @@ const EnhancedParentPortal: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="bank_transfer">Kwishyura kuri Banki</SelectItem>
                   <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cash">Cash (Amafaranga mu Ntoki)</SelectItem>
+                  <SelectItem value="cheque">Sheki (Cheque)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Reference Number</Label>
+              <Label>Nimero y'Icyemezo (Reference)</Label>
               <Input
                 value={paymentForm.reference_number}
                 onChange={(e) => setPaymentForm({ ...paymentForm, reference_number: e.target.value })}
@@ -899,7 +999,7 @@ const EnhancedParentPortal: React.FC = () => {
               />
             </div>
             <div>
-              <Label>Payment Date</Label>
+              <Label>Itariki yo Kwishyura</Label>
               <Input
                 type="date"
                 value={paymentForm.payment_date}
@@ -907,7 +1007,7 @@ const EnhancedParentPortal: React.FC = () => {
               />
             </div>
             <div>
-              <Label>Notes</Label>
+              <Label>Ibindi / Ibisobanuro</Label>
               <Textarea
                 value={paymentForm.notes}
                 onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
@@ -916,9 +1016,18 @@ const EnhancedParentPortal: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPaymentModal(false)}>Cancel</Button>
-            <Button onClick={handleSubmitPayment}>Submit Payment</Button>
+            <Button variant="outline" onClick={() => setShowPaymentModal(false)}>Hagarika</Button>
+            <Button onClick={handleSubmitPayment}>Yohereza Icyemezo</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Add Child Modal */}
+      <Dialog open={showAddChildModal} onOpenChange={setShowAddChildModal}>
+        <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-0 shadow-3xl">
+          <ParentLinkingCenter onSuccess={() => {
+            setShowAddChildModal(false);
+            fetchParentData();
+          }} />
         </DialogContent>
       </Dialog>
     </div>

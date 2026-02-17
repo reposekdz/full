@@ -17,404 +17,226 @@ const { pool } = require('../config/database');
 // ==================== SMS TEMPLATES ====================
 
 // GET all templates
-router.get('/templates', authMiddleware, async (req, res) => {
+router.get('/templates', authenticateToken, async (req, res) => {
   try {
     const { type, is_active } = req.query;
-    let templates = [...smsTemplates];
+    let query = 'SELECT * FROM sms_templates WHERE 1=1';
+    const params = [];
 
-    if (type) templates = templates.filter(t => t.type === type);
-    if (is_active !== undefined) templates = templates.filter(t => t.is_active === (is_active === 'true'));
+    if (type) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+    if (is_active !== undefined) {
+      query += ' AND is_active = ?';
+      params.push(is_active === 'true');
+    }
 
-    res.json({
-      success: true,
-      templates: templates.sort((a, b) => a.display_order - b.display_order)
-    });
+    query += ' ORDER BY display_order ASC';
+    const [templates] = await pool.execute(query, params);
+
+    res.json({ success: true, templates });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching templates' });
+    console.error('Fetch templates error:', error);
+    res.status(500).json({ success: false, message: 'Icyitonderwa: Hari ikibazo mu gushaka inyongera.' });
   }
 });
 
 // GET single template
-router.get('/templates/:id', authMiddleware, async (req, res) => {
+router.get('/templates/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const template = smsTemplates.find(t => t.template_id === id);
+    const [templates] = await pool.execute('SELECT * FROM sms_templates WHERE template_id = ? OR id = ?', [id, id]);
 
-    if (!template) {
-      return res.status(404).json({ success: false, message: 'Template not found' });
+    if (templates.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inyongera ntiyabonetse.' });
     }
 
-    res.json({ success: true, template });
+    res.json({ success: true, template: templates[0] });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching template' });
+    res.status(500).json({ success: false, message: 'Ikibazo mu gushaka inyongera.' });
   }
 });
 
 // POST create template
-router.post('/templates', authMiddleware, async (req, res) => {
+router.post('/templates', authenticateToken, async (req, res) => {
   try {
     const { template_name, template_content, type, is_active, display_order } = req.body;
+    const templateId = `TPL-${Date.now()}`;
 
-    const newTemplate = {
-      template_id: `TPL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      template_name,
-      template_content,
-      type,
-      is_active: is_active !== false,
-      display_order: display_order || 0,
-      created_by: req.user?.userId || 'system',
-      created_at: new Date().toISOString()
-    };
+    await pool.execute(
+      `INSERT INTO sms_templates (template_id, template_name, template_content, type, is_active, display_order, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [templateId, template_name, template_content, type, is_active !== false, display_order || 0, req.user.userId]
+    );
 
-    smsTemplates.push(newTemplate);
-
-    res.status(201).json({
-      success: true,
-      template: newTemplate,
-      message: 'Template created successfully'
-    });
+    res.status(201).json({ success: true, template_id: templateId, message: 'Inyongera yashizweho neza.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error creating template' });
+    res.status(500).json({ success: false, message: 'Ikibazo mu gushiraho inyongera.' });
   }
 });
 
 // PUT update template
-router.put('/templates/:id', authMiddleware, async (req, res) => {
+router.put('/templates/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { template_name, template_content, type, is_active, display_order } = req.body;
 
-    const index = smsTemplates.findIndex(t => t.template_id === id);
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Template not found' });
-    }
+    await pool.execute(
+      `UPDATE sms_templates SET 
+        template_name = COALESCE(?, template_name),
+        template_content = COALESCE(?, template_content),
+        type = COALESCE(?, type),
+        is_active = COALESCE(?, is_active),
+        display_order = COALESCE(?, display_order)
+      WHERE template_id = ? OR id = ?`,
+      [template_name, template_content, type, is_active, display_order, id, id]
+    );
 
-    smsTemplates[index] = {
-      ...smsTemplates[index],
-      template_name: template_name || smsTemplates[index].template_name,
-      template_content: template_content || smsTemplates[index].template_content,
-      type: type || smsTemplates[index].type,
-      is_active: is_active !== undefined ? is_active : smsTemplates[index].is_active,
-      display_order: display_order || smsTemplates[index].display_order,
-      updated_at: new Date().toISOString()
-    };
-
-    res.json({
-      success: true,
-      template: smsTemplates[index],
-      message: 'Template updated successfully'
-    });
+    res.json({ success: true, message: 'Inyongera yavuguruwe neza.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error updating template' });
+    res.status(500).json({ success: false, message: 'Ikibazo mu kuvugurura inyongera.' });
   }
 });
 
 // DELETE template
-router.delete('/templates/:id', authMiddleware, async (req, res) => {
+router.delete('/templates/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const index = smsTemplates.findIndex(t => t.template_id === id);
-
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Template not found' });
-    }
-
-    smsTemplates.splice(index, 1);
-
-    res.json({ success: true, message: 'Template deleted successfully' });
+    await pool.execute('DELETE FROM sms_templates WHERE template_id = ? OR id = ?', [id, id]);
+    res.json({ success: true, message: 'Inyongera yasibwe neza.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error deleting template' });
+    res.status(500).json({ success: false, message: 'Ikibazo mu gusiba inyongera.' });
   }
 });
 
-// ==================== SMS SENDING (African Talking) ====================
+// ==================== SMS SENDING ====================
 
 // GET SMS configuration status
-router.get('/config', authMiddleware, async (req, res) => {
+router.get('/config', authenticateToken, async (req, res) => {
   res.json({
     success: true,
     config: {
       provider: 'African Talking',
-      isConfigured: isReady(),
-      senderId: process.env.AFRICAN_TALKING_SENDER || 'SCHOOL',
-      features: ['single_sms', 'bulk_sms', 'templates', 'delivery_reports']
+      isConfigured: !!process.env.AFRICATALKING_API_KEY,
+      senderId: process.env.AFRICATALKING_SENDER_ID || 'SCHOOL',
+      features: ['single_sms', 'bulk_sms', 'templates', 'whatsapp_fallback']
     }
   });
 });
 
-// POST send single SMS
-router.post('/send', authMiddleware, async (req, res) => {
+// POST send SMS (Unified)
+router.post('/send', authenticateToken, async (req, res) => {
   try {
-    const {
-      type, title, message, recipients, specific_phones,
-      send_via, schedule_send, scheduled_time,
-      template_id, metadata
-    } = req.body;
+    const { phone, message, metadata } = req.body;
 
-    let recipientList = [];
-    let sentCount = 0;
-    let failedCount = 0;
-    const smsRecords = [];
+    // Use the comprehensive smsService
+    const smsService = require('../services/smsService');
+    const result = await smsService.sendSMS(phone, message, req.user.userId, metadata);
 
-    // Determine recipients and send SMS
-    if (recipients === 'specific' && specific_phones) {
-      recipientList = specific_phones.split(',').map(p => p.trim());
-      const result = await sendBulkSMS(recipientList, message);
-      sentCount = result.sent;
-      failedCount = result.failed;
-      recipientList.forEach(phone => {
-        smsRecords.push({
-          sms_id: `SMS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          phone,
-          message,
-          type,
-          title,
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          delivery_channel: 'african_talking'
-        });
-      });
-    } else if (recipients === 'all') {
-      // Would query database for all parents with SMS enabled
-      recipientList = [];
-    } else if (recipients === 'trade' && metadata?.trade_code) {
-      // Would query database for parents of students in trade
-      recipientList = [];
-    } else if (recipients === 'level' && metadata?.level_number) {
-      // Would query database for parents of students in level
-      recipientList = [];
-    } else {
-      // Try sending single SMS
-      const result = await sendSMS(specific_phones || '+250000000000', message);
-      if (result.success) {
-        sentCount = 1;
-        smsRecords.push({
-          sms_id: result.messageId,
-          phone: specific_phones,
-          message,
-          type,
-          title,
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          delivery_channel: 'african_talking'
-        });
-      } else {
-        failedCount = 1;
-        smsRecords.push({
-          sms_id: `SMS-${Date.now()}-failed`,
-          phone: specific_phones,
-          message,
-          type,
-          title,
-          status: 'failed',
-          error: result.error,
-          sent_at: new Date().toISOString(),
-          delivery_channel: 'african_talking'
-        });
-      }
-    }
-
-    // Store SMS records
-    smsRecords.push(...smsRecords);
-
-    res.json({
-      success: true,
-      message: `SMS sent: ${sentCount} successful, ${failedCount} failed`,
-      stats: {
-        total_recipients: recipientList.length,
-        sent: sentCount,
-        failed: failedCount
-      },
-      sms_records: smsRecords,
-      type,
-      title,
-      recipients,
-      timestamp: new Date().toISOString()
-    });
+    res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error sending SMS',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Ikibazo mu kohereza ubutumwa.' });
   }
 });
 
 // POST send bulk SMS
-router.post('/send-bulk', authMiddleware, async (req, res) => {
+router.post('/send-bulk', authenticateToken, async (req, res) => {
   try {
-    const { phones, message, type, title } = req.body;
+    const { phones, message, metadata } = req.body;
+    const smsService = require('../services/smsService');
+    const result = await smsService.sendBulkSMS(phones, message, req.user.userId, metadata);
 
-    if (!phones || !Array.isArray(phones) || phones.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an array of phone numbers'
-      });
-    }
-
-    const result = await sendBulkSMS(phones, message);
-
-    // Record SMS
-    const smsRecords = phones.map(phone => ({
-      sms_id: `SMS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      phone,
-      message,
-      type,
-      title,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
-      delivery_channel: 'african_talking'
-    }));
-
-    res.json({
-      success: result.success,
-      message: result.success ? 'Bulk SMS sent successfully' : 'Some SMS failed to send',
-      stats: {
-        total: result.total,
-        sent: result.sent,
-        failed: result.failed
-      },
-      sms_records: smsRecords
-    });
+    res.json(result);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error sending bulk SMS',
-      error: error.message
-    });
-  }
-});
-
-// POST send templated SMS
-router.post('/send-template', authMiddleware, async (req, res) => {
-  try {
-    const { phone, template_id, variables, type, title } = req.body;
-
-    if (!phone || !template_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide phone number and template_id'
-      });
-    }
-
-    const result = await sendTemplateSMS(phone, template_id, variables || {});
-
-    res.json({
-      success: result.success,
-      message: result.success ? 'Templated SMS sent successfully' : 'Failed to send SMS',
-      result: {
-        messageId: result.messageId,
-        status: result.status,
-        recipient: phone,
-        template: template_id
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error sending templated SMS',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Ikibazo mu kohereza ubutumwa bwinshi.' });
   }
 });
 
 // GET SMS history
-router.get('/history', authMiddleware, async (req, res) => {
+router.get('/history', authenticateToken, async (req, res) => {
   try {
-    const { type, status, start_date, end_date, limit } = req.query;
+    const { recipient, status, limit = 50 } = req.query;
+    const smsService = require('../services/smsService');
+    const result = await smsService.getMessageHistory({ recipient, status, limit: parseInt(limit) });
 
-    let filteredRecords = [...smsRecords];
-
-    if (type) filteredRecords = filteredRecords.filter(r => r.type === type);
-    if (status) filteredRecords = filteredRecords.filter(r => r.status === status);
-    if (start_date) filteredRecords = filteredRecords.filter(r => new Date(r.sent_at) >= new Date(start_date));
-    if (end_date) filteredRecords = filteredRecords.filter(r => new Date(r.sent_at) <= new Date(end_date));
-
-    const limitNum = parseInt(limit) || 100;
-    const paginatedRecords = filteredRecords.slice(0, limitNum);
-
-    res.json({
-      success: true,
-      total: filteredRecords.length,
-      records: paginatedRecords
-    });
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching SMS history' });
+    res.status(500).json({ success: false, message: 'Ikibazo mu gushaka amateka y\'ubutumwa.' });
   }
 });
 
-// GET single SMS record
-router.get('/record/:id', authMiddleware, async (req, res) => {
+// GET SMS statistics
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const record = smsRecords.find(r => r.sms_id === id);
+    const smsService = require('../services/smsService');
+    const result = await smsService.getSMSStats();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Ikibazo mu gushaka imibare.' });
+  }
+});
 
-    if (!record) {
-      return res.status(404).json({ success: false, message: 'SMS record not found' });
+// ==================== PARENT NOTIFICATIONS ====================
+
+// Send notification to linked parents
+router.post('/notify/parent', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, notification_type, custom_message, variables } = req.body;
+
+    // Resolve parent(s) phone
+    const [parents] = await pool.execute(`
+      SELECT p.phone, p.first_name, p.last_name, u.first_name as student_name
+      FROM users u
+      JOIN parent_student_links psl ON u.id = psl.student_id
+      JOIN users p ON psl.parent_id = p.id
+      WHERE u.id = ? AND psl.status = 'active'
+    `, [student_id]);
+
+    if (parents.length === 0) {
+      return res.status(404).json({ success: false, message: 'Nta mubyeyi wambitswe kuri uyu munyeshuri.' });
     }
 
-    res.json({ success: true, record });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error fetching SMS record' });
-  }
-});
+    const smsService = require('../services/smsService');
+    const results = [];
 
-// GET SMS balance/status
-router.get('/balance', authMiddleware, async (req, res) => {
-  try {
-    const balanceResult = await getBalance();
+    for (const parent of parents) {
+      let message = custom_message;
+      if (!message) {
+        // Fetch template or use default
+        const [templates] = await pool.execute(
+          'SELECT template_content FROM sms_templates WHERE type = ? AND is_active = 1 LIMIT 1',
+          [notification_type]
+        );
 
-    res.json({
-      success: true,
-      balance: balanceResult,
-      configured: isReady()
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching balance',
-      error: error.message
-    });
-  }
-});
+        if (templates.length > 0) {
+          message = templates[0].template_content
+            .replace(/{{student}}/g, parent.student_name)
+            .replace(/{{parent}}/g, parent.first_name);
 
-// ==================== SMS NOTIFICATIONS BY ROLE ====================
-
-// Parent notification
-router.post('/notify/parent', authMiddleware, async (req, res) => {
-  try {
-    const { parent_phone, notification_type, student_name, message } = req.body;
-
-    let smsMessage = message;
-    if (!smsMessage) {
-      const templates = {
-        'attendance': `Dear parent, ${student_name} was absent from school today. Please contact the school.`,
-        'payment': `Dear parent, ${student_name}'s school fee payment is due. Please make payment soon.`,
-        'marks': `Dear parent, ${student_name}'s academic results have been posted. Please check.`,
-        'general': `Dear parent, ${student_name} has a message from school. Please contact us.`
-      };
-      smsMessage = templates[notification_type] || templates['general'];
-    }
-
-    const result = await sendSMS(parent_phone, smsMessage);
-
-    res.json({
-      success: result.success,
-      message: result.success ? 'Parent notification sent' : 'Failed to send notification',
-      result: {
-        phone: parent_phone,
-        type: notification_type,
-        student: student_name
+          // Replace other variables if provided
+          if (variables) {
+            Object.keys(variables).forEach(key => {
+              const regex = new RegExp(`{{${key}}}`, 'g');
+              message = message.replace(regex, variables[key]);
+            });
+          }
+        } else {
+          message = `Ubutumwa bukubwiye ko umunyeshuri ${parent.student_name} afite amakuru mashya.`;
+        }
       }
-    });
+
+      const result = await smsService.sendSMS(parent.phone, message, req.user.userId, { student_id, notification_type });
+      results.push({ parent: parent.first_name, phone: parent.phone, success: result.success });
+    }
+
+    res.json({ success: true, results, message: 'Ubutumwa bwoherejwe neza.' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error sending parent notification',
-      error: error.message
-    });
+    console.error('Notify parent error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // Bulk parent notification
 router.post('/notify/parents-bulk', authMiddleware, async (req, res) => {
@@ -464,7 +286,7 @@ router.get('/delivery-report', authMiddleware, async (req, res) => {
 
     let report = smsRecords.filter(r => {
       const dateMatch = (!start_date || new Date(r.sent_at) >= new Date(start_date)) &&
-                        (!end_date || new Date(r.sent_at) <= new Date(end_date));
+        (!end_date || new Date(r.sent_at) <= new Date(end_date));
       return dateMatch;
     });
 

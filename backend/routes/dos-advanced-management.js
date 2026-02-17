@@ -239,7 +239,7 @@ router.post('/teachers/bulk-assign', authenticateToken, async (req, res) => {
       await pool.execute(
         `INSERT IGNORE INTO teacher_subject_assignments (teacher_id, teacher_name, subject_id, subject_code, subject_name, trade_code, level_number, academic_year, assigned_by) 
          VALUES (?,?,?,?,?,?,?,?,?)`,
-        [teacher_id, teacher_name, assignment.subject_id, assignment.subject_code, assignment.subject_name, assignment.trade_code, assignment.level_number, academic_year, req.user.userId]
+        [teacher_id, teacher_name, assignment.subject_id, assignment.subject_code, assignment.subject_name, assignment.code, assignment.level_number, academic_year, req.user.userId]
       );
       assigned++;
     }

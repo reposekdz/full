@@ -158,11 +158,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
               >
                 <motion.p
                   className="text-sm font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight whitespace-nowrap"
-                  animate={{ 
+                  animate={{
                     backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
                   }}
-                  transition={{ 
-                    duration: 3, 
+                  transition={{
+                    duration: 3,
                     repeat: Infinity,
                     ease: "linear"
                   }}
@@ -177,7 +177,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
               </motion.div>
               {/* Desktop School Name */}
               <div className="hidden sm:block min-w-0">
-                <motion.p 
+                <motion.p
                   className="text-base sm:text-lg md:text-2xl font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight truncate"
                   animate={{ backgroundPosition: ['0%', '100%', '0%'] }}
                   transition={{ duration: 3, repeat: Infinity }}
@@ -254,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => onNavigate('register')}
+                      onClick={() => onNavigate('parent-register')}
                       className="rounded-full bg-gradient-to-br from-yellow-500 to-green-500 h-8 px-3"
                     >
                       <UserPlus className="w-3 h-3 mr-1" />
@@ -344,7 +344,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   </motion.p>
                 </AnimatePresence>
               </motion.div>
-              
+
               {/* Menu Button */}
               <motion.div
                 whileHover={{ scale: 1.1 }}
@@ -419,9 +419,9 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                       whileHover={{ rotate: 360, scale: 1.2 }}
                       transition={{ duration: 0.6 }}
                     >
-                      <img 
-                        src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico" 
-                        alt="Logo" 
+                      <img
+                        src="/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico"
+                        alt="Logo"
                         className="h-14 w-14 rounded-2xl bg-white p-2 shadow-2xl ring-2 ring-yellow-300"
                       />
                     </motion.div>
@@ -467,11 +467,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                             onNavigate(item.key);
                             setIsSidebarOpen(false);
                           }}
-                          className={`w-full justify-start px-4 py-2 rounded-xl transition-all ${
-                            currentPage === item.key 
-                              ? 'bg-gradient-to-r from-yellow-400 to-green-400 text-white shadow-lg border-l-4 border-green-600 font-bold' 
-                              : 'hover:bg-yellow-100 hover:border-l-4 hover:border-yellow-400'
-                          }`}
+                          className={`w-full justify-start px-4 py-2 rounded-xl transition-all ${currentPage === item.key
+                            ? 'bg-gradient-to-r from-yellow-400 to-green-400 text-white shadow-lg border-l-4 border-green-600 font-bold'
+                            : 'hover:bg-yellow-100 hover:border-l-4 hover:border-yellow-400'
+                            }`}
                         >
                           <Icon className="w-5 h-5 mr-3" />
                           <span className="font-semibold">{item.label}</span>
@@ -522,7 +521,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         onClick={() => {
-                          onNavigate('register');
+                          onNavigate('parent-register');
                           setIsSidebarOpen(false);
                         }}
                         className="w-full rounded-xl bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 font-bold shadow-lg"
@@ -534,7 +533,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <motion.div 
+                    <motion.div
                       className="flex items-center space-x-3 p-3 bg-gradient-to-r from-yellow-100 to-green-100 rounded-xl shadow-md border-2 border-yellow-300"
                       whileHover={{ scale: 1.02 }}
                     >

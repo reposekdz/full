@@ -129,25 +129,36 @@ router.post('/advisor/meetings/schedule', authenticateToken, requireRole('adviso
 
 router.get('/accountant/overview', authenticateToken, requireRole('accountant', 'admin'), async (req, res) => {
   try {
+    // Use fallback for is_current column
     const [totalFees] = await pool.execute(`
-      SELECT SUM(total_amount) as total FROM student_fees WHERE academic_year = (SELECT name FROM academic_years WHERE is_current = TRUE LIMIT 1)
-    `);
+      SELECT SUM(total_amount) as total FROM student_fees 
+      WHERE academic_year = (
+        SELECT name FROM academic_years 
+        WHERE COALESCE(is_current, FALSE) = TRUE 
+        LIMIT 1
+      )
+    `).catch(() => [[{total: 0}]]);
     
     const [totalPaid] = await pool.execute(`
-      SELECT SUM(amount) as total FROM fee_payments WHERE payment_date >= (SELECT start_date FROM academic_years WHERE is_current = TRUE LIMIT 1)
-    `);
+      SELECT SUM(COALESCE(amount, paid_amount, 0)) as total FROM fee_payments 
+      WHERE payment_date >= (
+        SELECT start_date FROM academic_years 
+        WHERE COALESCE(is_current, FALSE) = TRUE 
+        LIMIT 1
+      )
+    `).catch(() => [[{total: 0}]]);
     
     const [pendingPayments] = await pool.execute(`
       SELECT COUNT(*) as total FROM student_fees WHERE balance > 0
-    `);
+    `).catch(() => [[{total: 0}]]);
     
     const [recentTransactions] = await pool.execute(`
-      SELECT fp.*, u.first_name, u.last_name, u.student_id
+      SELECT fp.*, u.first_name, u.last_name, u.username as student_id
       FROM fee_payments fp
       JOIN users u ON fp.student_id = u.id
       ORDER BY fp.payment_date DESC
       LIMIT 20
-    `);
+    `).catch(() => [[]]);
     
     const balance = (totalPaid[0]?.total || 0);
     const expectedTotal = (totalFees[0]?.total || 0);

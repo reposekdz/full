@@ -6,15 +6,16 @@ import {
   Box, Card, CardContent, CardHeader, Typography, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, AppBar, Toolbar,
   useTheme, Snackbar, Alert, FormControl, InputLabel, Select, MenuItem, Divider,
-  LinearProgress, Tooltip, Avatar, Grid2 as Grid, Paper
+  LinearProgress, Tooltip, Avatar, Grid, Paper
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon, AttachMoney, TrendingUp, TrendingDown, People, Assessment, Download, Send,
   Visibility, Edit, CheckCircle, Warning, Cancel, Payment, Receipt, Analytics, Notifications,
-  Add, Refresh, AccountBalance, Calculator, ReceiptLong, TrendingUp as TrendingUpIcon
+  Add, Refresh, AccountBalance, Calculate, ReceiptLong, TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
-import {
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
+import apiService from '@/app/services/apiService';
+import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -123,9 +124,20 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
   const fetchDashboardStats = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchApi('/accountant-ultra-advanced/dashboard/stats');
-      if (data.success && data.stats) {
-        setStats(data.stats);
+      // Use apiService for accountant overview
+      const data = await apiService.getAccountantOverview();
+      if (data.success && data.data) {
+        setStats({
+          totalRevenue: data.data.total_revenue || 0,
+          totalExpenses: data.data.total_expenses || 0,
+          netBalance: data.data.net_balance || 0,
+          pendingPayments: data.data.pending_payments || 0,
+          overduePayments: data.data.overdue_payments || 0,
+          totalStudents: data.data.total_students || 0,
+          paidStudents: data.data.paid_students || 0,
+          unpaidStudents: data.data.unpaid_students || 0,
+          collectionRate: data.data.collection_rate || 0
+        });
       }
     } catch (err: any) {
       console.log('Using default stats');
@@ -137,9 +149,10 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchApi(`/accountant-ultra-advanced/transactions?search=${searchQuery}`);
+      // Use apiService for payments
+      const data = await apiService.getAccountantPayments({ search: searchQuery });
       if (data.success) {
-        setTransactions(data.transactions || []);
+        setTransactions(data.payments || data.data || []);
       }
     } catch (err: any) {
       setTransactions([
@@ -153,20 +166,16 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const data = await fetchApi('/accountant-ultra-advanced/students/payments');
+      // Use apiService for accountant students
+      const data = await apiService.getAccountantStudents();
       if (data.success) {
-        setStudents(data.students || []);
-      } else {
-        setStudents([
-          { student_id: 'STU001', student_name: 'John Doe', trade_code: 'SOD', level: 2, total_fees: 500000, paid_amount: 350000, balance: 150000, payment_status: 'partial' },
-          { student_id: 'STU002', student_name: 'Jane Smith', trade_code: 'AUT', level: 3, total_fees: 450000, paid_amount: 450000, balance: 0, payment_status: 'paid' },
-          { student_id: 'STU003', student_name: 'Bob Wilson', trade_code: 'BDC', level: 1, total_fees: 400000, paid_amount: 100000, balance: 300000, payment_status: 'pending' },
-        ]);
+        setStudents(data.students || data.data || []);
       }
     } catch {
       setStudents([
         { student_id: 'STU001', student_name: 'John Doe', trade_code: 'SOD', level: 2, total_fees: 500000, paid_amount: 350000, balance: 150000, payment_status: 'partial' },
         { student_id: 'STU002', student_name: 'Jane Smith', trade_code: 'AUT', level: 3, total_fees: 450000, paid_amount: 450000, balance: 0, payment_status: 'paid' },
+        { student_id: 'STU003', student_name: 'Bob Wilson', trade_code: 'BDC', level: 1, total_fees: 400000, paid_amount: 100000, balance: 300000, payment_status: 'pending' },
       ]);
     }
   }, []);
@@ -314,8 +323,10 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
         <Box sx={{ mt: 2, px: 1 }}>
           {menuItems.map(item => (
             <Box key={item.key} onClick={() => setActiveTab(item.key)}
-              sx={{ mb: 0.5, p: 1.5, borderRadius: 1, cursor: 'pointer', bgcolor: activeTab === item.key ? 'rgba(255,255,255,0.15)' : 'transparent',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, display: 'flex', alignItems: 'center' }}>
+              sx={{
+                mb: 0.5, p: 1.5, borderRadius: 1, cursor: 'pointer', bgcolor: activeTab === item.key ? 'rgba(255,255,255,0.15)' : 'transparent',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }, display: 'flex', alignItems: 'center'
+              }}>
               <Box sx={{ mr: 2, color: 'white' }}>{item.icon}</Box>
               <Typography variant="body2">{item.label}</Typography>
             </Box>
@@ -441,7 +452,7 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
               <Card sx={{ mb: 3 }}>
                 <CardContent>
                   <TextField fullWidth label="Search Transactions" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    slotProps={{ input: { startAdornment: <Search sx={{ mr: 1 }} /> }}} />
+                    slotProps={{ input: { startAdornment: <Search sx={{ mr: 1 }} /> } }} />
                 </CardContent>
               </Card>
 

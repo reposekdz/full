@@ -61,7 +61,7 @@ router.get('/trades', async (req, res) => {
          JOIN enrollments e ON u.id = e.student_id 
          JOIN trade_classes tc ON e.class_id = tc.id 
          JOIN trade_levels tl ON tc.trade_level_id = tl.id 
-         WHERE tl.trade_code = t.trade_code) as student_count
+         WHERE tl.trade_code = t.code) as student_count
       FROM trades t 
       WHERE t.is_active = true
     `);
@@ -80,9 +80,9 @@ router.get('/trades/:code', async (req, res) => {
          JOIN enrollments e ON u.id = e.student_id 
          JOIN trade_classes tc ON e.class_id = tc.id 
          JOIN trade_levels tl ON tc.trade_level_id = tl.id 
-         WHERE tl.trade_code = t.trade_code) as student_count
+         WHERE tl.trade_code = t.code) as student_count
       FROM trades t 
-      WHERE t.trade_code = ? AND t.is_active = true
+      WHERE t.code = ? AND t.is_active = true
     `, [req.params.code]);
     
     if (trades.length === 0) {

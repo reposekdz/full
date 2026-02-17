@@ -18,7 +18,7 @@ async function sendSMS(to, message, senderId, metadata = {}) {
   }
   try {
     const phoneNumber = formatPhoneNumber(to);
-    
+
     const balanceCheck = await checkBalance();
     if (!balanceCheck.success && process.env.NODE_ENV === 'production') {
       return { success: false, error: 'Insufficient balance or API error' };
@@ -28,11 +28,11 @@ async function sendSMS(to, message, senderId, metadata = {}) {
       to: [phoneNumber],
       message: message
     };
-    
+
     if (process.env.AFRICATALKING_SENDER_ID) {
       options.from = process.env.AFRICATALKING_SENDER_ID;
     }
-    
+
     const result = await sms.send(options);
 
     await logMessage({
@@ -45,8 +45,8 @@ async function sendSMS(to, message, senderId, metadata = {}) {
       response: JSON.stringify(result)
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: result,
       messageId: result.SMSMessageData?.Recipients?.[0]?.messageId
     };
@@ -72,7 +72,7 @@ async function sendWhatsApp(to, message, senderId, metadata = {}) {
   }
   try {
     const phoneNumber = formatPhoneNumber(to);
-    
+
     // Using Africa's Talking Content API for WhatsApp
     // The endpoint and structure might vary based on your specific AT account setup
     const response = await axios.post(
@@ -139,28 +139,57 @@ async function sendUniversalMessage(to, message, senderId, metadata = {}) {
     results.sms = await sendSMS(to, message, senderId, metadata);
   }
 
-  return { 
+  return {
     success: results.whatsapp?.success || results.sms?.success,
     method: results.whatsapp?.success && results.sms?.success ? 'dual' : (results.whatsapp?.success ? 'whatsapp' : 'sms'),
-    results 
+    results
   };
+}
+
+// Send SMS using a template from the database
+async function sendTemplateSMS(to, templateId, variables, senderId, metadata = {}) {
+  try {
+    const [templates] = await pool.execute(
+      'SELECT template_content FROM sms_templates WHERE template_id = ? AND is_active = 1',
+      [templateId]
+    );
+
+    if (templates.length === 0) {
+      return { success: false, error: 'Template not found or inactive' };
+    }
+
+    let message = templates[0].template_content;
+
+    // Replace variables {{var_name}}
+    if (variables) {
+      Object.keys(variables).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        message = message.replace(regex, variables[key] || '');
+      });
+    }
+
+    return await sendSMS(to, message, senderId, { ...metadata, templateId });
+  } catch (error) {
+    console.error('Send template SMS error:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 // Send bulk SMS
 async function sendBulkSMS(recipients, message, senderId, metadata = {}) {
   try {
     const phoneNumbers = recipients.map(formatPhoneNumber);
-    
+
     const options = {
       to: phoneNumbers,
       message: message,
       enqueue: true
     };
-    
+
     if (process.env.AFRICATALKING_SENDER_ID) {
       options.from = process.env.AFRICATALKING_SENDER_ID;
     }
-    
+
     const result = await sms.send(options);
 
     // Log each message
@@ -187,8 +216,8 @@ async function checkBalance() {
   try {
     const application = AT.APPLICATION;
     const balance = await application.fetchApplicationData();
-    return { 
-      success: true, 
+    return {
+      success: true,
       balance: balance.UserData?.balance || 'Unknown'
     };
   } catch (error) {
@@ -201,7 +230,7 @@ function formatPhoneNumber(phone) {
   if (!phone) return null;
   // Remove spaces and special characters
   let cleaned = phone.replace(/[^0-9+]/g, '');
-  
+
   if (cleaned.length < 8) return null;
 
   // Add country code if missing (Rwanda +250)
@@ -214,7 +243,7 @@ function formatPhoneNumber(phone) {
       cleaned = '+250' + cleaned;
     }
   }
-  
+
   return cleaned;
 }
 
@@ -327,12 +356,13 @@ async function getSMSStats(filters = {}) {
   }
 }
 
-module.exports = { 
-  sendSMS, 
+module.exports = {
+  sendSMS,
   sendWhatsApp,
   sendUniversalMessage,
-  sendBulkSMS, 
-  checkBalance, 
+  sendTemplateSMS,
+  sendBulkSMS,
+  checkBalance,
   formatPhoneNumber,
   isValidPhoneNumber,
   getMessageHistory,

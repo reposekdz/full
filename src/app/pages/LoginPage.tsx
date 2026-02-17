@@ -33,7 +33,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
     try {
       let endpoint = 'http://localhost:5000/api/auth/login';
       let loginData: any = { password: formData.password };
-      
+
       // Determine endpoint and data based on login method
       if (loginMethod === 'phone') {
         // Try parent login first, then fallback to regular login
@@ -59,12 +59,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
 
       if (response.ok && data.success) {
         setSuccess('Kwinjira byagenze neza!');
-        
+
         // Store token and user data
         const storage = formData.rememberMe ? localStorage : sessionStorage;
         storage.setItem('token', data.token);
         storage.setItem('user', JSON.stringify(data.user));
-        
+
         // Redirect based on role
         const role = data.user.role;
         const dashboardMap: Record<string, string> = {
@@ -80,10 +80,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
           stock_manager: 'dashboard-stock'
         };
         const dashboardPage = dashboardMap[role] || 'dashboard';
-        
+
         // Call onLogin to update app state
         onLogin(data.user);
-        
+
         // Navigate to dashboard
         setTimeout(() => {
           onNavigate(dashboardPage);
@@ -165,11 +165,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
                   <button
                     key={method.id}
                     onClick={() => setLoginMethod(method.id as any)}
-                    className={`py-3 px-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
-                      loginMethod === method.id
+                    className={`py-3 px-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${loginMethod === method.id
                         ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
                         : 'text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     <method.icon className="w-4 h-4" />
                     {method.label}
@@ -347,10 +346,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLogin }) => {
                     Ntufite konti?{' '}
                     <button
                       type="button"
-                      onClick={() => onNavigate('register')}
+                      onClick={() => onNavigate('parent-register')}
                       className="font-bold text-green-600 hover:text-green-700"
                     >
-                      Iyandikishe
+                      Iyandikishe nk'umubyeyi
                     </button>
                   </p>
                 </div>

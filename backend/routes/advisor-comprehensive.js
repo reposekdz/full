@@ -100,8 +100,8 @@ router.get('/comprehensive/overview', authenticateToken, requireRole('advisor', 
       trades: {
         all_trades: trades,
         enrollment_stats: trades.map(t => ({
-          trade_code: t.trade_code,
-          trade_name: t.trade_name,
+          trade_code: t.code,
+          trade_name: t.name,
           level: `${t.level_number}${t.level_suffix || ''}`,
           classes: t.class_count,
           students: t.student_count,
@@ -326,7 +326,7 @@ router.get('/students/comprehensive/:studentId?', authenticateToken, requireRole
 // Helper functions
 function groupByTrade(students) {
   return students.reduce((acc, student) => {
-    const trade = student.trade_code || 'Unassigned';
+    const trade = student.code || 'Unassigned';
     if (!acc[trade]) acc[trade] = [];
     acc[trade].push(student);
     return acc;

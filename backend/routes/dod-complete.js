@@ -96,7 +96,7 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, NOW())
     `, [
       student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.trade_code, student.level_number, conduct_type, severity,
+      student.code, student.level_number, conduct_type, severity,
       description, action_taken || '', conduct_points_deducted, new_conduct_score,
       removed_by_name
     ]);
@@ -125,7 +125,7 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
           {
             name: `${student.first_name} ${student.last_name}`,
             code: student.student_code,
-            trade: student.trade_code,
+            trade: student.code,
             level: student.level_number,
             parentName: conn.parent_name || 'Mubyeyi'
           },
@@ -198,7 +198,7 @@ router.post('/leave/grant', authenticateToken, async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false, false, NOW())
     `, [
       student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.trade_code, student.level_number, leave_type, reason,
+      student.code, student.level_number, leave_type, reason,
       start_time, end_time || start_time, approved_by_name
     ]);
     
@@ -219,7 +219,7 @@ router.post('/leave/grant', authenticateToken, async (req, res) => {
           {
             name: `${student.first_name} ${student.last_name}`,
             code: student.student_code,
-            trade: student.trade_code,
+            trade: student.code,
             level: student.level_number,
             parentName: conn.parent_name || 'Mubyeyi'
           },
@@ -304,7 +304,7 @@ router.post('/message-parents', authenticateToken, async (req, res) => {
             {
               name: `${student.first_name} ${student.last_name}`,
               code: student.student_code,
-              trade: student.trade_code,
+              trade: student.code,
               level: student.level_number,
               parentName: conn.parent_name || 'Mubyeyi'
             },
@@ -403,7 +403,7 @@ router.post('/message-all-parents', authenticateToken, async (req, res) => {
           {
             name: `${parent.first_name} ${parent.last_name}`,
             code: parent.student_code,
-            trade: parent.trade_code,
+            trade: parent.code,
             level: parent.level_number,
             parentName: parent.parent_name || 'Mubyeyi'
           },
