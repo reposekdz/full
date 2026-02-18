@@ -47,11 +47,16 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
   const [showLinkStudentModal, setShowLinkStudentModal] = useState(false);
   const [linkFormData, setLinkFormData] = useState({
     student_name: '',
+    student_code: '',
+    level: '',
+    trade: '',
     message: '',
     preferred_contact: 'email'
   });
   const [linkFormStatus, setLinkFormStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [linkFormLoading, setLinkFormLoading] = useState(false);
+  const [allChildren, setAllChildren] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const parent = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -61,10 +66,11 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // First check for linked students via the overview endpoint
+      // First try new endpoint - get overview with all stats
       const { data: overviewData } = await axios.get(`${API_URL}/parent-dashboard/overview`, { headers });
 
       if (overviewData.success && overviewData.children && overviewData.children.length > 0) {
@@ -75,26 +81,67 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
           first_name: firstChild.name?.split(' ')[0] || '',
           last_name: firstChild.name?.split(' ').slice(1).join(' ') || '',
           student_code: firstChild.student_code,
+          trade_name: firstChild.class_name?.includes('Level') ? firstChild.class_name.split(' Level ')[0] : firstChild.class_name,
           trade: firstChild.class_name,
+          level: firstChild.class_name?.includes('Level') ? firstChild.class_name.split(' Level ')[1] : '',
           gpa: firstChild.average_grade,
           attendance_percentage: firstChild.attendance,
-          balance: firstChild.pending_fees
+          balance: firstChild.pending_fees,
+          link_status: firstChild.link_status,
+          relationship: firstChild.relationship
         });
+
+        // Set the stats from overview
+        if (overviewData.stats) {
+          setGrades([]); // Will be fetched below
+          setAttendance({
+            present: 0,
+            absent: 0,
+            late: 0,
+            total: 0,
+            ...overviewData.stats
+          });
+        }
 
         const sid = firstChild.id;
 
-        // Fetch additional data for the student
+        // Fetch all student data in parallel
         try {
-          await Promise.all([
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance)).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees)).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || [])).catch(() => { }),
+          const [gradesRes, attendanceRes, feesRes, assignmentsRes, timetableRes, teachersRes, examsRes, behaviorRes] = await Promise.allSettled([
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers })
           ]);
+
+          if (gradesRes.status === 'fulfilled' && gradesRes.value.data.success) {
+            setGrades(gradesRes.value.data.grades || []);
+          }
+          if (attendanceRes.status === 'fulfilled' && attendanceRes.value.data.success) {
+            setAttendance(attendanceRes.value.data.attendance || attendanceRes.value.data);
+          }
+          if (feesRes.status === 'fulfilled' && feesRes.value.data.success) {
+            setFees(feesRes.value.data.fees || feesRes.value.data);
+          }
+          if (assignmentsRes.status === 'fulfilled' && assignmentsRes.value.data.success) {
+            setAssignments(assignmentsRes.value.data.assignments || []);
+          }
+          if (timetableRes.status === 'fulfilled' && timetableRes.value.data.success) {
+            setTimetable(timetableRes.value.data.timetable || []);
+          }
+          if (teachersRes.status === 'fulfilled' && teachersRes.value.data.success) {
+            setTeachers(teachersRes.value.data.teachers || []);
+          }
+          if (examsRes.status === 'fulfilled' && examsRes.value.data.success) {
+            setExams(examsRes.value.data.upcoming_exams || examsRes.value.data.exams || []);
+          }
+          if (behaviorRes.status === 'fulfilled' && behaviorRes.value.data.success) {
+            setBehavior(behaviorRes.value.data.behavior || []);
+          }
         } catch (innerError) {
           console.error('Error fetching student details:', innerError);
         }
@@ -105,30 +152,51 @@ export default function ModernParentDashboard({ onNavigate, onLogout }: ModernPa
           setStudent(studentData.student);
           const sid = studentData.student.id;
 
-          await Promise.all([
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance)).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees)).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])).catch(() => { }),
-            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || [])).catch(() => { }),
+          await Promise.allSettled([
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/grades`, { headers }).then(r => r.data.success && setGrades(r.data.grades || [])),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/attendance`, { headers }).then(r => r.data.success && setAttendance(r.data.attendance || r.data)),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/fees`, { headers }).then(r => r.data.success && setFees(r.data.fees || r.data)),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/assignments`, { headers }).then(r => r.data.success && setAssignments(r.data.assignments || [])),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/timetable`, { headers }).then(r => r.data.success && setTimetable(r.data.timetable || [])),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/teachers`, { headers }).then(r => r.data.success && setTeachers(r.data.teachers || [])),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/exams`, { headers }).then(r => r.data.success && setExams(r.data.exams || [])),
+            axios.get(`${API_URL}/parent-dashboard/student/${sid}/behavior`, { headers }).then(r => r.data.success && setBehavior(r.data.behavior || []))
           ]);
         }
       }
 
-      await Promise.all([
-        axios.get(`${API_URL}/parent-dashboard/messages/all`, { headers }).then(r => r.data.success && setMessages(r.data.messages || [])).catch(() => { }),
-        axios.get(`${API_URL}/parent-dashboard/notifications`, { headers }).then(r => r.data.success && setNotifications(r.data.notifications || [])).catch(() => { }),
+      // Fetch messages and notifications
+      const [messagesRes, notificationsRes, childrenRes] = await Promise.allSettled([
+        axios.get(`${API_URL}/parent-dashboard/messages/all`, { headers }),
+        axios.get(`${API_URL}/parent-dashboard/notifications`, { headers }),
+        axios.get(`${API_URL}/parent-dashboard/children`, { headers })
       ]);
 
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to load data');
+      if (messagesRes.status === 'fulfilled' && messagesRes.value.data.success) {
+        setMessages(messagesRes.value.data.messages || []);
+      }
+      if (notificationsRes.status === 'fulfilled' && notificationsRes.value.data.success) {
+        setNotifications(notificationsRes.value.data.notifications || []);
+      }
+      if (childrenRes.status === 'fulfilled' && childrenRes.value.data.success) {
+        setAllChildren(childrenRes.value.data.children || []);
+      }
+
+    } catch (error: any) {
+      console.error('Error fetching dashboard data:', error);
+      if (error.response?.status === 401) {
+        onLogout();
+      }
+      toast.error('Failed to load data. Please try again.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const refreshData = () => {
+    setRefreshing(true);
+    fetchDashboardData();
   };
 
   const sendMessage = async () => {

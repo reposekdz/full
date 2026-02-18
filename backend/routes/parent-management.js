@@ -444,4 +444,414 @@ router.get('/search-students', authenticateToken, async (req, res) => {
     }
 });
 
+// Get all parent linking requests - NEW ENDPOINT
+router.get('/linking-requests', authenticateToken, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 50 } = req.query;
+        const offset = (page - 1) * limit;
+
+        let sql = `
+      SELECT 
+        plr.id,
+        plr.student_first_name as student_name,
+        plr.student_id as student_code,
+        plr.level_number as level,
+        plr.trade_code as trade,
+        plr.relationship as message,
+        plr.created_at,
+        plr.updated_at,
+        u.id as parent_id,
+        u.first_name as parent_first_name,
+        u.last_name as parent_last_name,
+        u.email as parent_email,
+        u.phone as parent_phone
+      FROM parent_student_link_requests plr
+      JOIN users u ON plr.parent_id = u.id
+      WHERE 1=1
+    `;
+
+        const params = [];
+
+        if (status && status !== 'all') {
+            sql += ` AND plr.status = ?`;
+            params.push(status);
+        }
+
+        sql += ` ORDER BY plr.created_at DESC LIMIT ? OFFSET ?`;
+        params.push(parseInt(limit), offset);
+
+        const [requests] = await pool.execute(sql, params);
+
+        let countSql = `SELECT COUNT(*) as total FROM parent_student_link_requests`;
+        if (status && status !== 'all') {
+            countSql += ` WHERE status = ?`;
+        }
+        const [countResult] = await pool.execute(countSql, status && status !== 'all' ? [status] : []);
+
+        res.json({
+            success: true,
+            requests,
+            total: countResult[0].total,
+            page: parseInt(page),
+            limit: parseInt(limit)
+        });
+    } catch (error) {
+        console.error('Error fetching linking requests:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Respond to parent linking request - NEW ENDPOINT
+router.post('/linking-requests/:id/respond', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { student_code, response_message, action } = req.body;
+        const responder_id = req.user.userId;
+
+        await pool.execute(`
+      UPDATE parent_student_link_requests 
+      SET status = ?, 
+          student_id = COALESCE(?, student_id),
+          rejection_reason = ?,
+          approved_by = ?,
+          approved_at = NOW(),
+          updated_at = NOW()
+      WHERE id = ?
+    `, [action === 'approve' ? 'approved' : 'rejected', student_code || null, response_message, responder_id, id]);
+
+        if (action === 'approve' && student_code) {
+            const [request] = await pool.execute(
+                'SELECT parent_id, student_first_name as student_name FROM parent_student_link_requests WHERE id = ?',
+                [id]
+            );
+
+            if (request.length > 0) {
+                const [student] = await pool.execute(
+                    'SELECT id FROM global_student_sheets WHERE student_code = ? AND status = "active"',
+                    [student_code]
+                );
+
+                if (student.length > 0) {
+                    const [existing] = await pool.execute(
+                        'SELECT id FROM parent_student_links WHERE parent_id = ? AND student_id = ?',
+                        [request[0].parent_id, student[0].id]
+                    );
+
+                    if (existing.length === 0) {
+                        await pool.execute(`
+                  INSERT INTO parent_student_links (
+                    parent_id, student_id, relationship_type, status,
+                    match_confidence, verified_by, verified_at, linked_at, created_at
+                  ) VALUES (?, ?, 'Parent', 'approved', 100.00, ?, NOW(), NOW(), NOW())
+                `, [request[0].parent_id, student[0].id, responder_id]);
+                    }
+                }
+
+                const notificationMessage = `Your linking request for student "${request[0].student_name}" has been approved!`;
+                await pool.execute(
+                    'INSERT INTO notifications (user_id, user_type, message, created_at) VALUES (?, ?, ?, NOW())',
+                    [request[0].parent_id, 'parent', notificationMessage]
+                );
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Link request ${action === 'approve' ? 'approved' : 'rejected'} successfully`
+        });
+    } catch (error) {
+        console.error('Error responding to linking request:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get parent linking analytics - NEW ENDPOINT
+router.get('/analytics', authenticateToken, async (req, res) => {
+    try {
+        const [statusBreakdown] = await pool.execute(`
+      SELECT status, COUNT(*) as count 
+      FROM parent_student_links 
+      GROUP BY status
+    `);
+
+        const [monthlyTrends] = await pool.execute(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as month,
+        COUNT(*) as count
+      FROM parent_student_links
+      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      ORDER BY month
+    `);
+
+        const [relationshipTypes] = await pool.execute(`
+      SELECT relationship_type, COUNT(*) as count 
+      FROM parent_student_links 
+      GROUP BY relationship_type
+    `);
+
+        const [tradeDistribution] = await pool.execute(`
+      SELECT 
+        gss.trade_name,
+        COUNT(*) as count
+      FROM parent_student_links psl
+      JOIN global_student_sheets gss ON psl.student_id = gss.id
+      GROUP BY gss.trade_name
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+
+        const [avgConfidence] = await pool.execute(`
+      SELECT AVG(match_confidence) as avg_confidence FROM parent_student_links
+    `);
+
+        res.json({
+            success: true,
+            analytics: {
+                status_breakdown: statusBreakdown,
+                monthly_trends: monthlyTrends,
+                relationship_types: relationshipTypes,
+                trade_distribution: tradeDistribution,
+                average_confidence: avgConfidence[0]?.avg_confidence || 0
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get parent linking conflicts - NEW ENDPOINT
+router.get('/conflicts', authenticateToken, async (req, res) => {
+    try {
+        const [conflicts] = await pool.execute(`
+      SELECT 
+        student_id,
+        COUNT(*) as parent_count,
+        GROUP_CONCAT(parent_id) as parent_ids
+      FROM parent_student_links
+      WHERE status = 'approved'
+      GROUP BY student_id
+      HAVING parent_count > 1
+    `);
+
+        const conflictsWithDetails = await Promise.all(conflicts.map(async (c) => {
+            const [student] = await pool.execute(
+                'SELECT student_code, first_name, last_name, trade_name FROM global_student_sheets WHERE id = ?',
+                [c.student_id]
+            );
+
+            const parentIds = c.parent_ids.split(',');
+            const [parents] = await pool.execute(
+                `SELECT id, first_name, last_name, phone, email 
+             FROM users WHERE id IN (${parentIds.map(() => '?').join(',')})`,
+                parentIds
+            );
+
+            return {
+                student: student[0] || null,
+                parents,
+                parent_count: c.parent_count
+            };
+        }));
+
+        res.json({
+            success: true,
+            conflicts: conflictsWithDetails
+        });
+    } catch (error) {
+        console.error('Error fetching conflicts:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Resolve conflict by keeping one parent - NEW ENDPOINT
+router.post('/conflicts/:studentId/resolve', authenticateToken, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { keep_parent_id, remove_other_links } = req.body;
+        const resolver_id = req.user.userId;
+
+        if (remove_other_links) {
+            await pool.execute(`
+          DELETE FROM parent_student_links 
+          WHERE student_id = ? AND parent_id != ?
+        `, [studentId, keep_parent_id]);
+        }
+
+        await pool.execute(`
+          INSERT INTO parent_student_links (
+            parent_id, student_id, relationship_type, status,
+            match_confidence, verified_by, verified_at, linked_at, created_at
+          ) VALUES (?, ?, 'Conflict Resolution', 'approved', 100.00, ?, NOW(), NOW(), NOW())
+          ON DUPLICATE KEY UPDATE status = 'approved', verified_by = ?, verified_at = NOW()
+        `, [keep_parent_id, studentId, resolver_id, resolver_id]);
+
+        res.json({
+            success: true,
+            message: 'Conflict resolved successfully'
+        });
+    } catch (error) {
+        console.error('Error resolving conflict:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get parent activity log - NEW ENDPOINT
+router.get('/activity/:parentId', authenticateToken, async (req, res) => {
+    try {
+        const { parentId } = req.params;
+        const { limit = 50 } = req.query;
+
+        const [linkActivity] = await pool.execute(`
+      SELECT 
+        'link' as activity_type,
+        psl.id as reference_id,
+        psl.status,
+        psl.created_at,
+        psl.linked_at,
+        psl.verified_at
+      FROM parent_student_links psl
+      WHERE psl.parent_id = ?
+      ORDER BY psl.created_at DESC
+      LIMIT ?
+    `, [parentId, parseInt(limit)]);
+
+        const [requestActivity] = await pool.execute(`
+      SELECT 
+        'request' as activity_type,
+        plr.id as reference_id,
+        plr.status,
+        plr.created_at,
+        plr.approved_at as verified_at
+      FROM parent_student_link_requests plr
+      WHERE plr.parent_id = ?
+      ORDER BY plr.created_at DESC
+      LIMIT ?
+    `, [parentId, parseInt(limit)]);
+
+        const allActivity = [...linkActivity, ...requestActivity].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ).slice(0, parseInt(limit));
+
+        res.json({
+            success: true,
+            activity: allActivity
+        });
+    } catch (error) {
+        console.error('Error fetching activity:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Bulk operations - NEW ENDPOINT
+router.post('/bulk-action', authenticateToken, async (req, res) => {
+    try {
+        const { action, parent_ids, link_ids, reason } = req.body;
+        const actor_id = req.user.userId;
+
+        let result = { success: true, affected: 0 };
+
+        if (action === 'activate' && parent_ids) {
+            const placeholders = parent_ids.map(() => '?').join(',');
+            const [updateResult] = await pool.execute(
+                `UPDATE users SET is_active = 1, updated_at = NOW() WHERE id IN (${placeholders}) AND role = 'parent'`,
+                parent_ids
+            );
+            result.affected = updateResult.affectedRows;
+        } else if (action === 'deactivate' && parent_ids) {
+            const placeholders = parent_ids.map(() => '?').join(',');
+            const [updateResult] = await pool.execute(
+                `UPDATE users SET is_active = 0, updated_at = NOW() WHERE id IN (${placeholders}) AND role = 'parent'`,
+                parent_ids
+            );
+            result.affected = updateResult.affectedRows;
+        } else if (action === 'approve_links' && link_ids) {
+            const placeholders = link_ids.map(() => '?').join(',');
+            const [updateResult] = await pool.execute(
+                `UPDATE parent_student_links SET status = 'approved', verified_by = ?, verified_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders})`,
+                [actor_id, ...link_ids]
+            );
+            result.affected = updateResult.affectedRows;
+        } else if (action === 'reject_links' && link_ids) {
+            const placeholders = link_ids.map(() => '?').join(',');
+            const [updateResult] = await pool.execute(
+                `UPDATE parent_student_links SET status = 'rejected', verified_by = ?, verified_at = NOW(), rejection_reason = ?, updated_at = NOW() WHERE id IN (${placeholders})`,
+                [actor_id, reason || 'Not specified', ...link_ids]
+            );
+            result.affected = updateResult.affectedRows;
+        }
+
+        res.json({
+            success: true,
+            message: `${result.affected} item(s) ${action} successfully`,
+            affected: result.affected
+        });
+    } catch (error) {
+        console.error('Error performing bulk action:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Export parent links - NEW ENDPOINT
+router.get('/export', authenticateToken, async (req, res) => {
+    try {
+        const { format = 'json', status } = req.query;
+
+        let sql = `
+      SELECT 
+        u.id as parent_id,
+        u.first_name as parent_first_name,
+        u.last_name as parent_last_name,
+        u.email as parent_email,
+        u.phone as parent_phone,
+        u.is_active as parent_active,
+        gss.id as student_id,
+        gss.student_code,
+        gss.first_name as student_first_name,
+        gss.last_name as student_last_name,
+        gss.trade_name,
+        gss.level_number,
+        psl.relationship_type,
+        psl.status as link_status,
+        psl.match_confidence,
+        psl.linked_at
+      FROM parent_student_links psl
+      JOIN users u ON psl.parent_id = u.id
+      JOIN global_student_sheets gss ON psl.student_id = gss.id
+      WHERE u.role = 'parent'
+    `;
+
+        const params = [];
+
+        if (status && status !== 'all') {
+            sql += ` AND psl.status = ?`;
+            params.push(status);
+        }
+
+        sql += ` ORDER BY psl.linked_at DESC`;
+
+        const [links] = await pool.execute(sql, params);
+
+        if (format === 'csv') {
+            const headers = Object.keys(links[0] || {}).join(',');
+            const rows = links.map(link => Object.values(link).join(',')).join('\n');
+            const csv = `${headers}\n${rows}`;
+
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename=parent-links.csv');
+            return res.send(csv);
+        }
+
+        res.json({
+            success: true,
+            links,
+            total: links.length
+        });
+    } catch (error) {
+        console.error('Error exporting links:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

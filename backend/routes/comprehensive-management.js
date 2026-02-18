@@ -12,7 +12,7 @@ const bcrypt = require('bcrypt');
 router.get('/teachers', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { search, department, status, sort } = req.query;
-    
+
     let query = `
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.date_of_birth,
@@ -28,23 +28,23 @@ router.get('/teachers', authenticateToken, requireRole('dos', 'headmaster', 'adm
       LEFT JOIN student_subject_performance ssp ON u.id = ssp.teacher_id
       WHERE u.role = 'teacher'
     `;
-    
+
     const params = [];
-    
+
     if (search) {
       query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
     if (status === 'active') {
       query += ` AND u.is_active = TRUE`;
     } else if (status === 'inactive') {
       query += ` AND u.is_active = FALSE`;
     }
-    
+
     query += ` GROUP BY u.id`;
-    
+
     if (sort === 'name') {
       query += ` ORDER BY u.last_name, u.first_name`;
     } else if (sort === 'workload') {
@@ -52,7 +52,7 @@ router.get('/teachers', authenticateToken, requireRole('dos', 'headmaster', 'adm
     } else {
       query += ` ORDER BY u.created_at DESC`;
     }
-    
+
     const [teachers] = await pool.execute(query, params);
     res.json({ success: true, teachers, total: teachers.length });
   } catch (error) {
@@ -65,7 +65,7 @@ router.get('/teachers', authenticateToken, requireRole('dos', 'headmaster', 'adm
 router.get('/teachers/:id', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const [teachers] = await pool.execute(`
       SELECT u.*, 
         COUNT(DISTINCT tsa.subject_id) as subjects_count,
@@ -76,11 +76,11 @@ router.get('/teachers/:id', authenticateToken, requireRole('dos', 'headmaster', 
       WHERE u.id = ? AND u.role = 'teacher'
       GROUP BY u.id
     `, [id]);
-    
+
     if (teachers.length === 0) {
       return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
-    
+
     const [assignments] = await pool.execute(`
       SELECT tsa.*, s.name as subject_name, s.code as subject_code,
         tc.class_name, tl.trade_name, tl.level_number
@@ -90,7 +90,7 @@ router.get('/teachers/:id', authenticateToken, requireRole('dos', 'headmaster', 
       JOIN trade_levels tl ON tc.trade_level_id = tl.id
       WHERE tsa.teacher_id = ? AND tsa.is_active = TRUE
     `, [id]);
-    
+
     res.json({
       success: true,
       teacher: teachers[0],
@@ -109,23 +109,23 @@ router.post('/teachers/create', authenticateToken, requireRole('dos', 'headmaste
       date_of_birth, gender, address, qualification,
       specialization, experience_years, salary
     } = req.body;
-    
+
     // Check if email exists
     const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Email already exists' });
     }
-    
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password || 'Teacher@123', 10);
-    
+
     const [result] = await pool.execute(`
       INSERT INTO users (
         first_name, last_name, email, phone, password, role,
         date_of_birth, gender, address, is_active, created_at
       ) VALUES (?, ?, ?, ?, ?, 'teacher', ?, ?, ?, TRUE, NOW())
     `, [first_name, last_name, email, phone, hashedPassword, date_of_birth, gender, address]);
-    
+
     // Create teacher profile
     if (qualification || specialization || experience_years || salary) {
       await pool.execute(`
@@ -134,7 +134,7 @@ router.post('/teachers/create', authenticateToken, requireRole('dos', 'headmaste
         ) VALUES (?, ?, ?, ?, ?, NOW())
       `, [result.insertId, qualification, specialization, experience_years || 0, salary || 0]);
     }
-    
+
     res.json({
       success: true,
       message: 'Teacher created successfully',
@@ -154,14 +154,14 @@ router.put('/teachers/:id', authenticateToken, requireRole('dos', 'headmaster', 
       first_name, last_name, email, phone,
       date_of_birth, gender, address, is_active
     } = req.body;
-    
+
     await pool.execute(`
       UPDATE users SET
         first_name = ?, last_name = ?, email = ?, phone = ?,
         date_of_birth = ?, gender = ?, address = ?, is_active = ?
       WHERE id = ? AND role = 'teacher'
     `, [first_name, last_name, email, phone, date_of_birth, gender, address, is_active, id]);
-    
+
     res.json({ success: true, message: 'Teacher updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -172,16 +172,16 @@ router.put('/teachers/:id', authenticateToken, requireRole('dos', 'headmaster', 
 router.delete('/teachers/:id', authenticateToken, requireRole('headmaster', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await pool.execute(`
       UPDATE users SET is_active = FALSE WHERE id = ? AND role = 'teacher'
     `, [id]);
-    
+
     // Deactivate all assignments
     await pool.execute(`
       UPDATE teacher_subject_assignments SET is_active = FALSE WHERE teacher_id = ?
     `, [id]);
-    
+
     res.json({ success: true, message: 'Teacher deactivated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -192,14 +192,14 @@ router.delete('/teachers/:id', authenticateToken, requireRole('headmaster', 'adm
 router.post('/teachers/assign', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { teacher_id, subject_id, trade_class_id, academic_year_id, weekly_periods } = req.body;
-    
+
     const [result] = await pool.execute(`
       INSERT INTO teacher_subject_assignments (
         teacher_id, subject_id, trade_class_id, academic_year_id, weekly_periods, is_active, created_at
       ) VALUES (?, ?, ?, ?, ?, TRUE, NOW())
       ON DUPLICATE KEY UPDATE weekly_periods = ?, is_active = TRUE
     `, [teacher_id, subject_id, trade_class_id, academic_year_id || 1, weekly_periods || 4, weekly_periods || 4]);
-    
+
     res.json({ success: true, message: 'Teacher assigned successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -210,11 +210,11 @@ router.post('/teachers/assign', authenticateToken, requireRole('dos', 'headmaste
 router.delete('/teachers/assignments/:id', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await pool.execute(`
       UPDATE teacher_subject_assignments SET is_active = FALSE WHERE id = ?
     `, [id]);
-    
+
     res.json({ success: true, message: 'Assignment removed successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -225,7 +225,7 @@ router.delete('/teachers/assignments/:id', authenticateToken, requireRole('dos',
 router.get('/teachers/:id/analytics', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const [performance] = await pool.execute(`
       SELECT 
         s.name as subject_name,
@@ -238,7 +238,7 @@ router.get('/teachers/:id/analytics', authenticateToken, requireRole('dos', 'hea
       WHERE ssp.teacher_id = ?
       GROUP BY s.id
     `, [id]);
-    
+
     const [attendance] = await pool.execute(`
       SELECT 
         COUNT(*) as total_classes,
@@ -247,7 +247,7 @@ router.get('/teachers/:id/analytics', authenticateToken, requireRole('dos', 'hea
       FROM teacher_attendance
       WHERE teacher_id = ?
     `, [id]);
-    
+
     res.json({
       success: true,
       performance: performance,
@@ -265,8 +265,8 @@ router.get('/teachers/:id/analytics', authenticateToken, requireRole('dos', 'hea
 // Get all students with full details
 router.get('/students', authenticateToken, requireRole('dos', 'headmaster', 'admin', 'dod', 'advisor'), async (req, res) => {
   try {
-    const { search, class_id, trade_id, status, sort, limit = 100, offset = 0 } = req.query;
-    
+    const { search, class_id, trade_id, trade_code, level_number, status, sort, limit = 100, offset = 0 } = req.query;
+
     let query = `
       SELECT 
         u.id, u.first_name, u.last_name, u.student_id, u.email, u.phone,
@@ -299,33 +299,43 @@ router.get('/students', authenticateToken, requireRole('dos', 'headmaster', 'adm
       LEFT JOIN student_discipline_records sdr ON u.id = sdr.student_id
       WHERE u.role = 'student'
     `;
-    
+
     const params = [];
-    
+
     if (search) {
       query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.student_id LIKE ?)`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
     if (class_id) {
       query += ` AND e.class_id = ?`;
       params.push(class_id);
     }
-    
+
     if (trade_id) {
       query += ` AND u.trade_id = ?`;
       params.push(trade_id);
     }
-    
+
+    if (trade_code) {
+      query += ` AND t.code = ?`;
+      params.push(trade_code);
+    }
+
+    if (level_number) {
+      query += ` AND u.level = ?`;
+      params.push(level_number);
+    }
+
     if (status === 'active') {
       query += ` AND u.is_active = TRUE`;
     } else if (status === 'inactive') {
       query += ` AND u.is_active = FALSE`;
     }
-    
+
     query += ` GROUP BY u.id`;
-    
+
     if (sort === 'name') {
       query += ` ORDER BY u.last_name, u.first_name`;
     } else if (sort === 'fees') {
@@ -333,17 +343,17 @@ router.get('/students', authenticateToken, requireRole('dos', 'headmaster', 'adm
     } else {
       query += ` ORDER BY u.created_at DESC`;
     }
-    
+
     query += ` LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), parseInt(offset));
-    
+
     const [students] = await pool.execute(query, params);
-    
+
     // Get total count
     const [countResult] = await pool.execute(`
       SELECT COUNT(DISTINCT u.id) as total FROM users u WHERE u.role = 'student'
     `);
-    
+
     res.json({
       success: true,
       students,
@@ -361,7 +371,7 @@ router.get('/students', authenticateToken, requireRole('dos', 'headmaster', 'adm
 router.get('/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const [students] = await pool.execute(`
       SELECT u.*,
         e.status as enrollment_status, e.enrollment_date,
@@ -390,11 +400,11 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       ) sf ON u.id = sf.student_id
       WHERE u.id = ? AND u.role = 'student'
     `, [id]);
-    
+
     if (students.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     // Get subject performance
     const [subjects] = await pool.execute(`
       SELECT ssp.*, s.name as subject_name, s.code as subject_code
@@ -403,7 +413,7 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       WHERE ssp.student_id = ?
       ORDER BY s.name
     `, [id]);
-    
+
     // Get discipline records
     const [discipline] = await pool.execute(`
       SELECT * FROM student_discipline_records
@@ -411,7 +421,7 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       ORDER BY incident_date DESC
       LIMIT 10
     `, [id]);
-    
+
     // Get attendance summary
     const [attendance] = await pool.execute(`
       SELECT 
@@ -423,7 +433,7 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       FROM student_attendance_records
       WHERE student_id = ?
     `, [id]);
-    
+
     // Calculate academic performance
     const [performance] = await pool.execute(`
       SELECT 
@@ -433,7 +443,7 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       FROM student_subject_performance
       WHERE student_id = ?
     `, [id]);
-    
+
     // Get linked parents
     const [parents] = await pool.execute(`
       SELECT 
@@ -444,7 +454,7 @@ router.get('/students/:id', authenticateToken, async (req, res) => {
       WHERE ps.student_id = ?
       ORDER BY ps.is_primary_contact DESC, u.first_name
     `, [id]);
-    
+
     res.json({
       success: true,
       student: students[0],
@@ -468,7 +478,7 @@ router.post('/students/create', authenticateToken, requireRole('admin', 'headmas
       date_of_birth, gender, address, guardian_name, guardian_phone,
       class_id, enrollment_date, fees_amount
     } = req.body;
-    
+
     // Check if email or student_id exists
     const [existing] = await pool.execute(
       'SELECT id FROM users WHERE email = ? OR student_id = ?',
@@ -477,18 +487,18 @@ router.post('/students/create', authenticateToken, requireRole('admin', 'headmas
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Email or Student ID already exists' });
     }
-    
+
     const hashedPassword = await bcrypt.hash(password || 'Student@123', 10);
-    
+
     const [result] = await pool.execute(`
       INSERT INTO users (
         first_name, last_name, email, phone, password, student_id, role,
         date_of_birth, gender, address, is_active, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, 'student', ?, ?, ?, TRUE, NOW())
     `, [first_name, last_name, email, phone, hashedPassword, student_id, date_of_birth, gender, address]);
-    
+
     const newStudentId = result.insertId;
-    
+
     // Create enrollment
     if (class_id) {
       await pool.execute(`
@@ -496,7 +506,7 @@ router.post('/students/create', authenticateToken, requireRole('admin', 'headmas
         VALUES (?, ?, ?, 'active', NOW())
       `, [newStudentId, class_id, enrollment_date || new Date()]);
     }
-    
+
     // Create fee record
     if (fees_amount) {
       await pool.execute(`
@@ -505,7 +515,7 @@ router.post('/students/create', authenticateToken, requireRole('admin', 'headmas
         ) VALUES (?, (SELECT name FROM academic_years WHERE is_current = TRUE LIMIT 1), ?, 0, ?, 'unpaid', NOW())
       `, [newStudentId, fees_amount, fees_amount]);
     }
-    
+
     res.json({
       success: true,
       message: 'Student created successfully',
@@ -525,14 +535,14 @@ router.put('/students/:id', authenticateToken, requireRole('admin', 'headmaster'
       first_name, last_name, email, phone, student_id,
       date_of_birth, gender, address, is_active
     } = req.body;
-    
+
     await pool.execute(`
       UPDATE users SET
         first_name = ?, last_name = ?, email = ?, phone = ?, student_id = ?,
         date_of_birth = ?, gender = ?, address = ?, is_active = ?
       WHERE id = ? AND role = 'student'
     `, [first_name, last_name, email, phone, student_id, date_of_birth, gender, address, is_active, id]);
-    
+
     res.json({ success: true, message: 'Student updated successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -544,24 +554,24 @@ router.post('/students/:id/transfer', authenticateToken, requireRole('dos', 'hea
   try {
     const { id } = req.params;
     const { new_class_id, transfer_date, reason } = req.body;
-    
+
     // Deactivate current enrollment
     await pool.execute(`
       UPDATE enrollments SET status = 'completed' WHERE student_id = ? AND status = 'active'
     `, [id]);
-    
+
     // Create new enrollment
     await pool.execute(`
       INSERT INTO enrollments (student_id, class_id, enrollment_date, status, created_at)
       VALUES (?, ?, ?, 'active', NOW())
     `, [id, new_class_id, transfer_date || new Date()]);
-    
+
     // Log transfer
     await pool.execute(`
       INSERT INTO student_transfers (student_id, new_class_id, transfer_date, reason, created_at)
       VALUES (?, ?, ?, ?, NOW())
     `, [id, new_class_id, transfer_date || new Date(), reason || 'Class transfer']);
-    
+
     res.json({ success: true, message: 'Student transferred successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -572,7 +582,7 @@ router.post('/students/:id/transfer', authenticateToken, requireRole('dos', 'hea
 router.post('/students/bulk-action', authenticateToken, requireRole('admin', 'headmaster'), async (req, res) => {
   try {
     const { action, student_ids, data } = req.body;
-    
+
     if (action === 'activate') {
       await pool.execute(`
         UPDATE users SET is_active = TRUE WHERE id IN (?) AND role = 'student'
@@ -587,7 +597,7 @@ router.post('/students/bulk-action', authenticateToken, requireRole('admin', 'he
         await pool.execute(`INSERT INTO enrollments (student_id, class_id, status, created_at) VALUES (?, ?, 'active', NOW())`, [student_id, data.new_class_id]);
       }
     }
-    
+
     res.json({ success: true, message: `Bulk ${action} completed successfully` });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -602,7 +612,7 @@ router.post('/students/bulk-action', authenticateToken, requireRole('admin', 'he
 router.get('/parents', authenticateToken, requireRole('admin', 'headmaster'), async (req, res) => {
   try {
     const { search, verified, limit = 50, offset = 0 } = req.query;
-    
+
     let query = `
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone,
@@ -612,22 +622,22 @@ router.get('/parents', authenticateToken, requireRole('admin', 'headmaster'), as
       LEFT JOIN parent_student ps ON u.id = ps.parent_id AND ps.is_verified = TRUE
       WHERE u.role = 'parent'
     `;
-    
+
     const params = [];
-    
+
     if (search) {
       query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)`;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
     query += ` GROUP BY u.id ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), parseInt(offset));
-    
+
     const [parents] = await pool.execute(query, params);
-    
+
     const [countResult] = await pool.execute(`SELECT COUNT(*) as total FROM users WHERE role = 'parent'`);
-    
+
     res.json({
       success: true,
       parents,
@@ -642,15 +652,15 @@ router.get('/parents', authenticateToken, requireRole('admin', 'headmaster'), as
 router.get('/parents/:id', authenticateToken, requireRole('admin', 'headmaster'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const [parents] = await pool.execute(`
       SELECT * FROM users WHERE id = ? AND role = 'parent'
     `, [id]);
-    
+
     if (parents.length === 0) {
       return res.status(404).json({ success: false, message: 'Parent not found' });
     }
-    
+
     const [children] = await pool.execute(`
       SELECT u.*, ps.is_verified, ps.relationship, ps.linked_at,
         tc.class_name, tl.trade_name, tl.level_number
@@ -661,7 +671,7 @@ router.get('/parents/:id', authenticateToken, requireRole('admin', 'headmaster')
       LEFT JOIN trade_levels tl ON tc.trade_level_id = tl.id
       WHERE ps.parent_id = ?
     `, [id]);
-    
+
     res.json({
       success: true,
       parent: parents[0],
@@ -676,13 +686,13 @@ router.get('/parents/:id', authenticateToken, requireRole('admin', 'headmaster')
 router.post('/parents/link-student', authenticateToken, requireRole('admin', 'headmaster'), async (req, res) => {
   try {
     const { parent_id, student_id, relationship } = req.body;
-    
+
     await pool.execute(`
       INSERT INTO parent_student (parent_id, student_id, relationship, is_verified, linked_at)
       VALUES (?, ?, ?, TRUE, NOW())
       ON DUPLICATE KEY UPDATE is_verified = TRUE
     `, [parent_id, student_id, relationship || 'parent']);
-    
+
     res.json({ success: true, message: 'Parent linked to student successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -707,7 +717,7 @@ router.get('/classes', authenticateToken, async (req, res) => {
       GROUP BY tc.id
       ORDER BY tl.level_number, tc.class_name
     `);
-    
+
     res.json({ success: true, classes });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -729,7 +739,7 @@ router.get('/subjects', authenticateToken, async (req, res) => {
       GROUP BY s.id
       ORDER BY s.name
     `);
-    
+
     res.json({ success: true, subjects });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -742,7 +752,7 @@ router.get('/academic-years', authenticateToken, async (req, res) => {
     const [years] = await pool.execute(`
       SELECT * FROM academic_years ORDER BY start_date DESC
     `);
-    
+
     res.json({ success: true, academic_years: years });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -806,7 +816,7 @@ router.get('/students/:tradeId/:levelId', authenticateToken, async (req, res) =>
       WHERE u.role = 'student' AND u.trade_id = ? AND u.level = ?
       ORDER BY u.last_name, u.first_name
     `, [tradeId, levelId]);
-    
+
     res.json({ success: true, students, total: students.length });
   } catch (error) {
     console.error('Get students by trade/level error:', error);
@@ -823,7 +833,7 @@ router.get('/columns/:tradeId/:levelId', authenticateToken, async (req, res) => 
       WHERE trade_id = ? AND level_id = ?
       ORDER BY display_order, id
     `, [tradeId, levelId]);
-    
+
     res.json(columns);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -834,12 +844,12 @@ router.get('/columns/:tradeId/:levelId', authenticateToken, async (req, res) => 
 router.post('/columns', authenticateToken, requireRole('dos', 'headmaster', 'admin', 'accountant', 'dod', 'advisor'), async (req, res) => {
   try {
     const { trade_id, level_id, column_name, column_type, is_required, default_value, display_order } = req.body;
-    
+
     const [result] = await pool.execute(`
       INSERT INTO level_sheet_columns (trade_id, level_id, column_name, column_type, is_required, default_value, display_order, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [trade_id, level_id, column_name, column_type || 'text', is_required || false, default_value || '', display_order || 0, req.user.userId]);
-    
+
     res.json({ success: true, message: 'Column created', id: result.insertId });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -851,13 +861,13 @@ router.put('/columns/:columnId', authenticateToken, requireRole('dos', 'headmast
   try {
     const { columnId } = req.params;
     const { column_name, column_type, is_required, default_value, display_order } = req.body;
-    
+
     await pool.execute(`
       UPDATE level_sheet_columns
       SET column_name = ?, column_type = ?, is_required = ?, default_value = ?, display_order = ?
       WHERE id = ?
     `, [column_name, column_type, is_required, default_value, display_order, columnId]);
-    
+
     res.json({ success: true, message: 'Column updated' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -880,13 +890,13 @@ router.put('/students/:studentId/columns/:columnId', authenticateToken, async (r
   try {
     const { studentId, columnId } = req.params;
     const { column_value } = req.body;
-    
+
     await pool.execute(`
       INSERT INTO student_column_values (student_id, column_id, column_value)
       VALUES (?, ?, ?)
       ON DUPLICATE KEY UPDATE column_value = ?, updated_at = NOW()
     `, [studentId, columnId, column_value, column_value]);
-    
+
     res.json({ success: true, message: 'Value updated' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -896,13 +906,13 @@ router.put('/students/:studentId/columns/:columnId', authenticateToken, async (r
 // Add student (DOS/Headmaster)
 router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
-    const { 
-      first_name, last_name, email, phone, date_of_birth, gender, 
-      trade_id, level, class_id, 
+    const {
+      first_name, last_name, email, phone, date_of_birth, gender,
+      trade_id, level, class_id,
       guardian_name, guardian_phone, guardian_email,
-      password 
+      password
     } = req.body;
-    
+
     // Validate trade exists
     if (trade_id) {
       const [trade] = await pool.execute('SELECT id, code, name FROM trades WHERE id = ? AND is_active = 1', [trade_id]);
@@ -910,7 +920,7 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
         return res.status(404).json({ success: false, message: 'Trade not found or inactive' });
       }
     }
-    
+
     // Generate student_id based on trade and level
     let student_id;
     if (trade_id) {
@@ -918,7 +928,7 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
       const tradeCode = trade[0].code;
       const levelNum = level || 1;
       const [count] = await pool.execute(
-        'SELECT COUNT(*) as total FROM users WHERE role = "student" AND trade_id = ? AND level = ?', 
+        'SELECT COUNT(*) as total FROM users WHERE role = "student" AND trade_id = ? AND level = ?',
         [trade_id, levelNum]
       );
       student_id = `${tradeCode}${levelNum}${String(count[0].total + 1).padStart(3, '0')}`;
@@ -928,13 +938,13 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
       const [count] = await pool.execute('SELECT COUNT(*) as total FROM users WHERE role = "student"');
       student_id = `STU${year}${String(count[0].total + 1).padStart(4, '0')}`;
     }
-    
+
     // Hash password
     const hashedPassword = password ? await bcrypt.hash(password, 10) : await bcrypt.hash('Student@123', 10);
-    
+
     // Create username from email or student_id
     const username = email ? email.split('@')[0] : student_id.toLowerCase();
-    
+
     // Insert into users table
     const [result] = await pool.execute(`
       INSERT INTO users (
@@ -946,9 +956,9 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
       username, email, hashedPassword, hashedPassword, first_name, last_name, phone,
       date_of_birth, gender, student_id, trade_id, level
     ]);
-    
+
     const newStudentId = result.insertId;
-    
+
     // Create enrollment if class_id provided
     if (class_id) {
       await pool.execute(`
@@ -956,7 +966,7 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
         VALUES (?, ?, NOW(), 'active', NOW())
       `, [newStudentId, class_id]);
     }
-    
+
     // Create student profile entry
     if (guardian_name || guardian_phone || guardian_email) {
       await pool.execute(`
@@ -964,7 +974,7 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
         VALUES (?, ?)
         ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
       `, [newStudentId, class_id]);
-      
+
       // Store guardian info in address field temporarily or create parent record
       if (guardian_name) {
         await pool.execute(`
@@ -972,11 +982,11 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
         `, [`Guardian: ${guardian_name}, Phone: ${guardian_phone || 'N/A'}, Email: ${guardian_email || 'N/A'}`, newStudentId]);
       }
     }
-    
-    res.json({ 
-      success: true, 
-      message: 'Student added successfully', 
-      id: newStudentId, 
+
+    res.json({
+      success: true,
+      message: 'Student added successfully',
+      id: newStudentId,
       student_id,
       username
     });
@@ -990,12 +1000,12 @@ router.post('/students', authenticateToken, requireRole('dos', 'headmaster', 'ad
 router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { 
-      first_name, last_name, email, phone, date_of_birth, gender, 
+    const {
+      first_name, last_name, email, phone, date_of_birth, gender,
       trade_id, level, class_id, is_active,
-      guardian_name, guardian_phone, guardian_email 
+      guardian_name, guardian_phone, guardian_email
     } = req.body;
-    
+
     // Validate trade if provided
     if (trade_id) {
       const [trade] = await pool.execute('SELECT id FROM trades WHERE id = ? AND is_active = 1', [trade_id]);
@@ -1003,7 +1013,7 @@ router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headma
         return res.status(404).json({ success: false, message: 'Trade not found or inactive' });
       }
     }
-    
+
     // Update user table
     await pool.execute(`
       UPDATE users
@@ -1012,19 +1022,19 @@ router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headma
           is_active = ?, updated_at = NOW()
       WHERE id = ? AND role = 'student'
     `, [
-      first_name, last_name, email, phone, 
-      date_of_birth, gender, trade_id, level, 
-      is_active !== undefined ? is_active : true, 
+      first_name, last_name, email, phone,
+      date_of_birth, gender, trade_id, level,
+      is_active !== undefined ? is_active : true,
       studentId
     ]);
-    
+
     // Update enrollment if class_id changed
     if (class_id) {
       const [existing] = await pool.execute(
-        'SELECT id FROM enrollments WHERE student_id = ? AND status = "active"', 
+        'SELECT id FROM enrollments WHERE student_id = ? AND status = "active"',
         [studentId]
       );
-      
+
       if (existing.length > 0) {
         await pool.execute(
           'UPDATE enrollments SET class_id = ?, updated_at = NOW() WHERE student_id = ? AND status = "active"',
@@ -1037,7 +1047,7 @@ router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headma
         );
       }
     }
-    
+
     // Update guardian info in address field
     if (guardian_name || guardian_phone || guardian_email) {
       await pool.execute(
@@ -1045,7 +1055,7 @@ router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headma
         [`Guardian: ${guardian_name || 'N/A'}, Phone: ${guardian_phone || 'N/A'}, Email: ${guardian_email || 'N/A'}`, studentId]
       );
     }
-    
+
     res.json({ success: true, message: 'Student updated successfully' });
   } catch (error) {
     console.error('Update student error:', error);
@@ -1057,25 +1067,25 @@ router.put('/students/:studentId', authenticateToken, requireRole('dos', 'headma
 router.get('/students/:studentId/details', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+
     const [students] = await pool.execute(`
       SELECT u.*, t.name as trade_name, t.code as trade_code
       FROM users u
       LEFT JOIN trades t ON u.trade_id = t.id
       WHERE u.id = ? AND u.role = 'student'
     `, [studentId]);
-    
+
     if (!students[0]) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     const [customValues] = await pool.execute(`
       SELECT cv.*, lsc.column_name, lsc.column_type
       FROM student_column_values cv
       JOIN level_sheet_columns lsc ON cv.column_id = lsc.id
       WHERE cv.student_id = ?
     `, [studentId]);
-    
+
     res.json({ success: true, student: students[0], custom_values: customValues });
   } catch (error) {
     console.error('Get student details error:', error);
@@ -1098,7 +1108,7 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
         SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive_students
       FROM users WHERE role = 'student'
     `);
-    
+
     // Students by trade
     const [tradeStats] = await pool.execute(`
       SELECT 
@@ -1110,7 +1120,7 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
       GROUP BY t.id
       ORDER BY student_count DESC
     `);
-    
+
     // Students by level
     const [levelStats] = await pool.execute(`
       SELECT 
@@ -1121,7 +1131,7 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
       GROUP BY level
       ORDER BY level
     `);
-    
+
     // Gender distribution
     const [genderStats] = await pool.execute(`
       SELECT 
@@ -1131,14 +1141,14 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
       WHERE role = 'student'
       GROUP BY gender
     `);
-    
+
     // Recent enrollments
     const [recentEnrollments] = await pool.execute(`
       SELECT COUNT(*) as count
       FROM users
       WHERE role = 'student' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
     `);
-    
+
     // Fee statistics
     const [feeStats] = await pool.execute(`
       SELECT 
@@ -1151,7 +1161,7 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
         COUNT(DISTINCT CASE WHEN status = 'pending' OR status = 'overdue' THEN student_id END) as unpaid
       FROM fees
     `);
-    
+
     res.json({
       success: true,
       analytics: {
@@ -1173,20 +1183,20 @@ router.get('/students/analytics/overview', authenticateToken, requireRole('dos',
 router.get('/students/analytics/performance', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { trade_id, level } = req.query;
-    
+
     let whereClause = 'WHERE u.role = "student"';
     const params = [];
-    
+
     if (trade_id) {
       whereClause += ' AND u.trade_id = ?';
       params.push(trade_id);
     }
-    
+
     if (level) {
       whereClause += ' AND u.level = ?';
       params.push(level);
     }
-    
+
     // Academic performance
     const [performance] = await pool.execute(`
       SELECT 
@@ -1204,7 +1214,7 @@ router.get('/students/analytics/performance', authenticateToken, requireRole('do
       ORDER BY gpa DESC
       LIMIT 100
     `, params);
-    
+
     // Attendance statistics
     const [attendance] = await pool.execute(`
       SELECT 
@@ -1221,7 +1231,7 @@ router.get('/students/analytics/performance', authenticateToken, requireRole('do
         GROUP BY student_id
       ) attendance_data
     `);
-    
+
     res.json({
       success: true,
       performance: performance,
@@ -1237,13 +1247,13 @@ router.get('/students/analytics/performance', authenticateToken, requireRole('do
 router.post('/students/bulk', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { action, student_ids, data } = req.body;
-    
+
     if (!action || !student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid request data' });
     }
-    
+
     let result;
-    
+
     switch (action) {
       case 'activate':
         await pool.execute(
@@ -1252,7 +1262,7 @@ router.post('/students/bulk', authenticateToken, requireRole('dos', 'headmaster'
         );
         result = { message: `${student_ids.length} students activated successfully` };
         break;
-        
+
       case 'deactivate':
         await pool.execute(
           `UPDATE users SET is_active = 0, updated_at = NOW() WHERE id IN (${student_ids.map(() => '?').join(',')}) AND role = 'student'`,
@@ -1260,25 +1270,25 @@ router.post('/students/bulk', authenticateToken, requireRole('dos', 'headmaster'
         );
         result = { message: `${student_ids.length} students deactivated successfully` };
         break;
-        
+
       case 'assign_trade':
         if (!data || !data.trade_id) {
           return res.status(400).json({ success: false, message: 'Trade ID required for assignment' });
         }
-        
+
         // Validate trade
         const [trade] = await pool.execute('SELECT id FROM trades WHERE id = ? AND is_active = 1', [data.trade_id]);
         if (!trade || trade.length === 0) {
           return res.status(404).json({ success: false, message: 'Trade not found' });
         }
-        
+
         await pool.execute(
           `UPDATE users SET trade_id = ?, level = ?, updated_at = NOW() WHERE id IN (${student_ids.map(() => '?').join(',')}) AND role = 'student'`,
           [data.trade_id, data.level || 1, ...student_ids]
         );
         result = { message: `${student_ids.length} students assigned to trade successfully` };
         break;
-        
+
       case 'export':
         const [students] = await pool.execute(
           `SELECT u.*, t.code as trade_code, t.name as trade_name 
@@ -1289,11 +1299,11 @@ router.post('/students/bulk', authenticateToken, requireRole('dos', 'headmaster'
         );
         result = { students, count: students.length };
         break;
-        
+
       default:
         return res.status(400).json({ success: false, message: 'Invalid action' });
     }
-    
+
     res.json({ success: true, ...result });
   } catch (error) {
     console.error('Bulk operation error:', error);
@@ -1304,12 +1314,12 @@ router.post('/students/bulk', authenticateToken, requireRole('dos', 'headmaster'
 // Advanced student search
 router.post('/students/search', authenticateToken, requireRole('dos', 'headmaster', 'admin', 'dod', 'advisor'), async (req, res) => {
   try {
-    const { 
-      query, 
-      trade_id, 
-      level, 
-      status, 
-      gender, 
+    const {
+      query,
+      trade_id,
+      level,
+      status,
+      gender,
       enrollment_status,
       fee_status,
       date_from,
@@ -1319,63 +1329,63 @@ router.post('/students/search', authenticateToken, requireRole('dos', 'headmaste
       limit = 50,
       offset = 0
     } = req.body;
-    
+
     let whereConditions = ['u.role = "student"'];
     const params = [];
-    
+
     if (query) {
       whereConditions.push('(u.first_name LIKE ? OR u.last_name LIKE ? OR u.student_id LIKE ? OR u.email LIKE ?)');
       const searchTerm = `%${query}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
-    
+
     if (trade_id) {
       whereConditions.push('u.trade_id = ?');
       params.push(trade_id);
     }
-    
+
     if (level) {
       whereConditions.push('u.level = ?');
       params.push(level);
     }
-    
+
     if (status === 'active') {
       whereConditions.push('u.is_active = 1');
     } else if (status === 'inactive') {
       whereConditions.push('u.is_active = 0');
     }
-    
+
     if (gender) {
       whereConditions.push('u.gender = ?');
       params.push(gender);
     }
-    
+
     if (enrollment_status) {
       whereConditions.push('e.status = ?');
       params.push(enrollment_status);
     }
-    
+
     if (fee_status) {
       whereConditions.push('sf.payment_status = ?');
       params.push(fee_status);
     }
-    
+
     if (date_from) {
       whereConditions.push('u.created_at >= ?');
       params.push(date_from);
     }
-    
+
     if (date_to) {
       whereConditions.push('u.created_at <= ?');
       params.push(date_to);
     }
-    
+
     const whereClause = whereConditions.join(' AND ');
-    
+
     const validSortColumns = ['first_name', 'last_name', 'student_id', 'created_at', 'trade_name'];
     const sortColumn = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
     const sortDirection = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    
+
     const [students] = await pool.execute(`
       SELECT 
         u.id, u.first_name, u.last_name, u.student_id, u.email, u.phone,
@@ -1404,7 +1414,7 @@ router.post('/students/search', authenticateToken, requireRole('dos', 'headmaste
       ORDER BY ${sortColumn} ${sortDirection}
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), parseInt(offset)]);
-    
+
     const [countResult] = await pool.execute(`
       SELECT COUNT(DISTINCT u.id) as total 
       FROM users u
@@ -1412,7 +1422,7 @@ router.post('/students/search', authenticateToken, requireRole('dos', 'headmaste
       LEFT JOIN fees sf ON u.id = sf.student_id
       WHERE ${whereClause}
     `, params);
-    
+
     res.json({
       success: true,
       students,
@@ -1435,7 +1445,7 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { term, academic_year } = req.query;
-    
+
     // Get student info
     const [students] = await pool.execute(`
       SELECT u.*, t.code as trade_code, t.name as trade_name
@@ -1443,13 +1453,13 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
       LEFT JOIN trades t ON u.trade_id = t.id
       WHERE u.id = ? AND u.role = 'student'
     `, [id]);
-    
+
     if (!students[0]) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     const student = students[0];
-    
+
     // Get subject performance
     const [subjects] = await pool.execute(`
       SELECT 
@@ -1460,18 +1470,18 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
       WHERE student_id = ? ${term ? 'AND term = ?' : ''} ${academic_year ? 'AND academic_year = ?' : ''}
       ORDER BY subject_name
     `, term && academic_year ? [id, term, academic_year] : term ? [id, term] : academic_year ? [id, academic_year] : [id]);
-    
+
     // Calculate overall performance
     const totalSubjects = subjects.length;
     const totalMarks = subjects.reduce((sum, s) => sum + parseFloat(s.total_marks || 0), 0);
     const averagePercentage = totalSubjects > 0 ? subjects.reduce((sum, s) => sum + parseFloat(s.percentage || 0), 0) / totalSubjects : 0;
     const gpa = totalSubjects > 0 ? subjects.reduce((sum, s) => sum + parseFloat(s.grade_points || 0), 0) / totalSubjects : 0;
-    
-    const overallGrade = averagePercentage >= 90 ? 'A' : 
-                        averagePercentage >= 80 ? 'B' : 
-                        averagePercentage >= 70 ? 'C' : 
-                        averagePercentage >= 60 ? 'D' : 'F';
-    
+
+    const overallGrade = averagePercentage >= 90 ? 'A' :
+      averagePercentage >= 80 ? 'B' :
+        averagePercentage >= 70 ? 'C' :
+          averagePercentage >= 60 ? 'D' : 'F';
+
     // Get attendance
     const [attendance] = await pool.execute(`
       SELECT 
@@ -1482,10 +1492,10 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
       FROM student_attendance_records
       WHERE student_id = ?
     `, [id]);
-    
-    const attendanceRate = attendance[0].total_days > 0 ? 
+
+    const attendanceRate = attendance[0].total_days > 0 ?
       ((attendance[0].present / attendance[0].total_days) * 100).toFixed(2) : 100;
-    
+
     // Get discipline records
     const [discipline] = await pool.execute(`
       SELECT COUNT(*) as total_incidents,
@@ -1496,19 +1506,19 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
       FROM student_discipline_records
       WHERE student_id = ? AND status = 'active'
     `, [id]);
-    
-    const conductScore = Math.max(0, 100 - 
-      (discipline[0].critical || 0) * 20 - 
-      (discipline[0].high || 0) * 10 - 
-      (discipline[0].medium || 0) * 5 - 
+
+    const conductScore = Math.max(0, 100 -
+      (discipline[0].critical || 0) * 20 -
+      (discipline[0].high || 0) * 10 -
+      (discipline[0].medium || 0) * 5 -
       (discipline[0].low || 0) * 2
     );
-    
-    const conductGrade = conductScore >= 90 ? 'A' : 
-                        conductScore >= 80 ? 'B' : 
-                        conductScore >= 70 ? 'C' : 
-                        conductScore >= 60 ? 'D' : 'F';
-    
+
+    const conductGrade = conductScore >= 90 ? 'A' :
+      conductScore >= 80 ? 'B' :
+        conductScore >= 70 ? 'C' :
+          conductScore >= 60 ? 'D' : 'F';
+
     // Get class rank (if applicable)
     const [rankData] = await pool.execute(`
       SELECT student_id, AVG(percentage) as avg_perf
@@ -1519,10 +1529,10 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
       GROUP BY student_id
       ORDER BY avg_perf DESC
     `, [student.trade_id, student.level]);
-    
+
     const rank = rankData.findIndex(r => r.student_id === parseInt(id)) + 1;
     const totalInClass = rankData.length;
-    
+
     res.json({
       success: true,
       report_card: {
@@ -1582,62 +1592,62 @@ router.get('/students/:id/report-card', authenticateToken, async (req, res) => {
 router.post('/students/promote', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { student_ids, target_level, academic_year } = req.body;
-    
+
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Student IDs required' });
     }
-    
+
     if (!target_level) {
       return res.status(400).json({ success: false, message: 'Target level required' });
     }
-    
+
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       let promoted = 0;
       const results = [];
-      
+
       for (const student_id of student_ids) {
         // Get current student info
         const [students] = await connection.execute(
           'SELECT id, first_name, last_name, student_id, level, trade_id FROM users WHERE id = ? AND role = "student"',
           [student_id]
         );
-        
+
         if (students.length === 0) {
           results.push({ student_id, success: false, message: 'Student not found' });
           continue;
         }
-        
+
         const student = students[0];
-        
+
         // Update student level
         await connection.execute(
           'UPDATE users SET level = ?, updated_at = NOW() WHERE id = ?',
           [target_level, student_id]
         );
-        
+
         // Log promotion
         await connection.execute(`
           INSERT INTO student_transfers 
           (student_id, from_level, to_level, transfer_date, transfer_type, reason, created_at)
           VALUES (?, ?, ?, NOW(), 'promotion', 'Level promotion', NOW())
         `, [student_id, student.level, target_level]);
-        
+
         promoted++;
-        results.push({ 
-          student_id, 
-          success: true, 
+        results.push({
+          student_id,
+          success: true,
           name: `${student.first_name} ${student.last_name}`,
           from_level: student.level,
           to_level: target_level
         });
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: `Successfully promoted ${promoted} student(s)`,
@@ -1664,19 +1674,19 @@ router.post('/students/promote', authenticateToken, requireRole('dos', 'headmast
 router.post('/students/graduate', authenticateToken, requireRole('headmaster', 'admin'), async (req, res) => {
   try {
     const { student_ids, graduation_date, certificate_info } = req.body;
-    
+
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Student IDs required' });
     }
-    
+
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       let graduated = 0;
       const results = [];
-      
+
       for (const student_id of student_ids) {
         // Get student info
         const [students] = await connection.execute(
@@ -1686,36 +1696,36 @@ router.post('/students/graduate', authenticateToken, requireRole('headmaster', '
            WHERE u.id = ? AND u.role = 'student'`,
           [student_id]
         );
-        
+
         if (students.length === 0) {
           results.push({ student_id, success: false, message: 'Student not found' });
           continue;
         }
-        
+
         const student = students[0];
-        
+
         // Check if student has completed required level
         if (student.level < 5) {
-          results.push({ 
-            student_id, 
-            success: false, 
+          results.push({
+            student_id,
+            success: false,
             message: 'Student has not completed required level for graduation'
           });
           continue;
         }
-        
+
         // Update enrollment status to graduated
         await connection.execute(
           'UPDATE enrollments SET status = "completed", completion_date = ?, updated_at = NOW() WHERE student_id = ? AND status = "active"',
           [graduation_date || new Date(), student_id]
         );
-        
+
         // Update user status
         await connection.execute(
           'UPDATE users SET is_active = 0, updated_at = NOW() WHERE id = ?',
           [student_id]
         );
-        
+
         // Create certificate record (if certificates table exists)
         try {
           await connection.execute(`
@@ -1723,7 +1733,7 @@ router.post('/students/graduate', authenticateToken, requireRole('headmaster', '
             (student_id, certificate_type, issue_date, certificate_number, details, created_at)
             VALUES (?, 'graduation', ?, ?, ?, NOW())
           `, [
-            student_id, 
+            student_id,
             graduation_date || new Date(),
             `GRAD${new Date().getFullYear()}${String(student_id).padStart(6, '0')}`,
             JSON.stringify(certificate_info || {})
@@ -1731,19 +1741,19 @@ router.post('/students/graduate', authenticateToken, requireRole('headmaster', '
         } catch (certError) {
           console.log('Certificate table not available:', certError.message);
         }
-        
+
         graduated++;
-        results.push({ 
-          student_id, 
+        results.push({
+          student_id,
           success: true,
           name: `${student.first_name} ${student.last_name}`,
           trade: student.name,
           graduation_date: graduation_date || new Date()
         });
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: `Successfully processed graduation for ${graduated} student(s)`,
@@ -1770,11 +1780,11 @@ router.post('/students/graduate', authenticateToken, requireRole('headmaster', '
 router.post('/students/import', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { students_data, validate_only = false } = req.body;
-    
+
     if (!students_data || !Array.isArray(students_data)) {
       return res.status(400).json({ success: false, message: 'students_data array required' });
     }
-    
+
     const connection = await pool.getConnection();
     const results = {
       total: students_data.length,
@@ -1783,29 +1793,29 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
       errors: [],
       imported: []
     };
-    
+
     try {
       if (!validate_only) {
         await connection.beginTransaction();
       }
-      
+
       for (let i = 0; i < students_data.length; i++) {
         const student = students_data[i];
         const rowNum = i + 1;
-        
+
         try {
           // Validate required fields
           if (!student.first_name || !student.last_name) {
             throw new Error('First name and last name are required');
           }
-          
+
           // Validate trade if provided
           if (student.trade_id || student.code) {
-            const tradeQuery = student.trade_id 
+            const tradeQuery = student.trade_id
               ? 'SELECT id, code, name FROM trades WHERE id = ? AND is_active = 1'
               : 'SELECT id, code, name FROM trades WHERE code = ? AND is_active = 1';
             const tradeParam = student.trade_id || student.code;
-            
+
             const [trades] = await connection.execute(tradeQuery, [tradeParam]);
             if (!trades || trades.length === 0) {
               throw new Error(`Trade not found: ${tradeParam}`);
@@ -1813,7 +1823,7 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
             student.trade_id = trades[0].id;
             student.code = trades[0].code;
           }
-          
+
           // Generate student_id
           let student_id;
           if (student.student_id) {
@@ -1838,17 +1848,17 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
             const [count] = await connection.execute('SELECT COUNT(*) as total FROM users WHERE role = "student"');
             student_id = `STU${year}${String(count[0].total + 1).padStart(4, '0')}`;
           }
-          
+
           if (validate_only) {
             results.success++;
             results.imported.push({ row: rowNum, student_id, status: 'valid' });
             continue;
           }
-          
+
           // Hash password
           const password = student.password || 'password123';
           const hashedPassword = await bcrypt.hash(password, 10);
-          
+
           // Insert student
           const [result] = await connection.execute(`
             INSERT INTO users 
@@ -1868,9 +1878,9 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
             student.trade_id || null,
             student.level || 1
           ]);
-          
+
           const userId = result.insertId;
-          
+
           // Create enrollment if class_id provided
           if (student.class_id) {
             await connection.execute(`
@@ -1878,38 +1888,38 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
               VALUES (?, ?, NOW(), 'active', NOW())
             `, [userId, student.class_id]);
           }
-          
+
           results.success++;
-          results.imported.push({ 
-            row: rowNum, 
-            student_id, 
+          results.imported.push({
+            row: rowNum,
+            student_id,
             user_id: userId,
             name: `${student.first_name} ${student.last_name}`,
-            status: 'imported' 
+            status: 'imported'
           });
-          
+
         } catch (error) {
           results.failed++;
-          results.errors.push({ 
-            row: rowNum, 
+          results.errors.push({
+            row: rowNum,
             data: student,
-            error: error.message 
+            error: error.message
           });
         }
       }
-      
+
       if (!validate_only) {
         await connection.commit();
       }
-      
+
       res.json({
         success: true,
-        message: validate_only 
+        message: validate_only
           ? `Validation complete: ${results.success} valid, ${results.failed} invalid`
           : `Import complete: ${results.success} imported, ${results.failed} failed`,
         results
       });
-      
+
     } catch (error) {
       if (!validate_only) {
         await connection.rollback();
@@ -1932,27 +1942,27 @@ router.post('/students/import', authenticateToken, requireRole('dos', 'headmaste
 router.post('/students/export', authenticateToken, requireRole('dos', 'headmaster', 'admin', 'dod'), async (req, res) => {
   try {
     const { format = 'json', filters = {} } = req.body;
-    
+
     let whereConditions = ['u.role = "student"'];
     const params = [];
-    
+
     if (filters.trade_id) {
       whereConditions.push('u.trade_id = ?');
       params.push(filters.trade_id);
     }
-    
+
     if (filters.level) {
       whereConditions.push('u.level = ?');
       params.push(filters.level);
     }
-    
+
     if (filters.status) {
       whereConditions.push('u.is_active = ?');
       params.push(filters.status === 'active' ? 1 : 0);
     }
-    
+
     const whereClause = whereConditions.join(' AND ');
-    
+
     const [students] = await pool.execute(`
       SELECT 
         u.id, u.student_id, u.first_name, u.last_name, u.email, u.phone,
@@ -1968,7 +1978,7 @@ router.post('/students/export', authenticateToken, requireRole('dos', 'headmaste
       WHERE ${whereClause}
       ORDER BY u.last_name, u.first_name
     `, params);
-    
+
     if (format === 'csv') {
       // Generate CSV
       const headers = [
@@ -1976,9 +1986,9 @@ router.post('/students/export', authenticateToken, requireRole('dos', 'headmaste
         'Date of Birth', 'Gender', 'Address', 'Trade Code', 'Trade Name', 'Level',
         'Class', 'Enrollment Status', 'Enrollment Date', 'Status', 'Created At'
       ];
-      
+
       let csv = headers.join(',') + '\n';
-      
+
       students.forEach(student => {
         const row = [
           student.id,
@@ -2001,7 +2011,7 @@ router.post('/students/export', authenticateToken, requireRole('dos', 'headmaste
         ];
         csv += row.join(',') + '\n';
       });
-      
+
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=students_export_${Date.now()}.csv`);
       res.send(csv);
@@ -2029,16 +2039,16 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
   try {
     const { id } = req.params;
     const { new_trade_id, new_level, new_class_id, reason, effective_date } = req.body;
-    
+
     if (!new_trade_id) {
       return res.status(400).json({ success: false, message: 'New trade ID required' });
     }
-    
+
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       // Get student current info
       const [students] = await connection.execute(
         `SELECT u.*, t.name as current_trade_name 
@@ -2047,23 +2057,23 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
          WHERE u.id = ? AND u.role = 'student'`,
         [id]
       );
-      
+
       if (!students[0]) {
         return res.status(404).json({ success: false, message: 'Student not found' });
       }
-      
+
       const student = students[0];
-      
+
       // Validate new trade
       const [newTrade] = await connection.execute(
         'SELECT id, code, name FROM trades WHERE id = ? AND is_active = 1',
         [new_trade_id]
       );
-      
+
       if (!newTrade[0]) {
         return res.status(404).json({ success: false, message: 'New trade not found or inactive' });
       }
-      
+
       // Generate new student_id for new trade
       const levelNum = new_level || student.level || 1;
       const [count] = await connection.execute(
@@ -2071,7 +2081,7 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
         [new_trade_id, levelNum]
       );
       const new_student_id = `${newTrade[0].code}${levelNum}${String(count[0].total + 1).padStart(3, '0')}`;
-      
+
       // Update student
       await connection.execute(
         `UPDATE users 
@@ -2079,13 +2089,13 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
          WHERE id = ?`,
         [new_trade_id, levelNum, new_student_id, id]
       );
-      
+
       // Deactivate old enrollment
       await connection.execute(
         'UPDATE enrollments SET status = "transferred", updated_at = NOW() WHERE student_id = ? AND status = "active"',
         [id]
       );
-      
+
       // Create new enrollment if class provided
       if (new_class_id) {
         await connection.execute(
@@ -2094,7 +2104,7 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
           [id, new_class_id]
         );
       }
-      
+
       // Log transfer in student_transfers table (if exists)
       try {
         await connection.execute(`
@@ -2114,9 +2124,9 @@ router.post('/students/:id/transfer-trade', authenticateToken, requireRole('dos'
       } catch (transferError) {
         console.log('Transfer log table not available:', transferError.message);
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: 'Student transferred successfully',
@@ -2151,7 +2161,7 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
   try {
     const { id } = req.params;
     const { installments, start_date, frequency } = req.body;
-    
+
     // Get student's total outstanding fees
     const [feeData] = await pool.execute(`
       SELECT 
@@ -2161,14 +2171,14 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
       FROM fees
       WHERE student_id = ?
     `, [id]);
-    
+
     if (!feeData[0] || feeData[0].balance <= 0) {
       return res.status(400).json({ success: false, message: 'No outstanding fees found' });
     }
-    
+
     const balance = parseFloat(feeData[0].balance);
     const installmentAmount = balance / installments;
-    
+
     const plan = {
       student_id: id,
       total_amount: balance,
@@ -2179,11 +2189,11 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
       status: 'active',
       created_at: new Date()
     };
-    
+
     // Create installment schedule
     const schedule = [];
     let currentDate = new Date(plan.start_date);
-    
+
     for (let i = 1; i <= installments; i++) {
       schedule.push({
         installment_number: i,
@@ -2191,7 +2201,7 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
         amount: installmentAmount.toFixed(2),
         status: 'pending'
       });
-      
+
       // Increment date based on frequency
       if (frequency === 'weekly') {
         currentDate.setDate(currentDate.getDate() + 7);
@@ -2201,9 +2211,9 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
     }
-    
+
     plan.schedule = schedule;
-    
+
     res.json({
       success: true,
       message: 'Payment plan created successfully',
@@ -2219,7 +2229,7 @@ router.post('/students/:id/payment-plan', authenticateToken, requireRole('accoun
 router.get('/fees/reminders', authenticateToken, requireRole('accountant', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { days_ahead = 7 } = req.query;
-    
+
     // Get students with upcoming or overdue fees
     const [students] = await pool.execute(`
       SELECT 
@@ -2236,10 +2246,10 @@ router.get('/fees/reminders', authenticateToken, requireRole('accountant', 'head
         AND f.due_date <= DATE_ADD(NOW(), INTERVAL ? DAY)
       ORDER BY f.due_date ASC
     `, [days_ahead]);
-    
+
     const overdue = students.filter(s => s.days_until_due < 0);
     const upcoming = students.filter(s => s.days_until_due >= 0);
-    
+
     res.json({
       success: true,
       summary: {
@@ -2265,7 +2275,7 @@ router.get('/fees/reminders', authenticateToken, requireRole('accountant', 'head
 router.get('/students/:id/documents', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Try to get documents from student_documents table
     try {
       const [documents] = await pool.execute(`
@@ -2275,12 +2285,12 @@ router.get('/students/:id/documents', authenticateToken, async (req, res) => {
         WHERE student_id = ?
         ORDER BY uploaded_at DESC
       `, [id]);
-      
+
       res.json({ success: true, documents });
     } catch (tableError) {
       // Table might not exist, return empty array
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         documents: [],
         message: 'Document management system not yet configured'
       });
@@ -2296,14 +2306,14 @@ router.post('/students/:id/documents', authenticateToken, requireRole('dos', 'he
   try {
     const { id } = req.params;
     const { document_type, document_name, file_path, file_size } = req.body;
-    
+
     if (!document_type || !document_name || !file_path) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'document_type, document_name, and file_path required' 
+      return res.status(400).json({
+        success: false,
+        message: 'document_type, document_name, and file_path required'
       });
     }
-    
+
     try {
       const [result] = await pool.execute(`
         INSERT INTO student_documents 
@@ -2311,7 +2321,7 @@ router.post('/students/:id/documents', authenticateToken, requireRole('dos', 'he
          uploaded_by, uploaded_at)
         VALUES (?, ?, ?, ?, ?, ?, NOW())
       `, [id, document_type, document_name, file_path, file_size || 0, req.user.userId]);
-      
+
       res.json({
         success: true,
         message: 'Document uploaded successfully',
@@ -2338,9 +2348,9 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { limit = 50 } = req.query;
-    
+
     const timeline = [];
-    
+
     // Get enrollment history
     try {
       const [enrollments] = await pool.execute(`
@@ -2351,7 +2361,7 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
         WHERE e.student_id = ?
         ORDER BY e.enrollment_date DESC
       `, [id]);
-      
+
       enrollments.forEach(e => {
         timeline.push({
           date: e.enrollment_date,
@@ -2362,8 +2372,8 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
           metadata: e
         });
       });
-    } catch (err) {}
-    
+    } catch (err) { }
+
     // Get fee payments
     try {
       const [payments] = await pool.execute(`
@@ -2373,7 +2383,7 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
         WHERE f.student_id = ?
         ORDER BY fp.payment_date DESC
       `, [id]);
-      
+
       payments.forEach(p => {
         timeline.push({
           date: p.payment_date,
@@ -2383,8 +2393,8 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
           metadata: p
         });
       });
-    } catch (err) {}
-    
+    } catch (err) { }
+
     // Get transfers
     try {
       const [transfers] = await pool.execute(`
@@ -2397,7 +2407,7 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
         WHERE st.student_id = ?
         ORDER BY st.transfer_date DESC
       `, [id]);
-      
+
       transfers.forEach(t => {
         timeline.push({
           date: t.transfer_date,
@@ -2407,8 +2417,8 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
           metadata: t
         });
       });
-    } catch (err) {}
-    
+    } catch (err) { }
+
     // Get discipline records
     try {
       const [discipline] = await pool.execute(`
@@ -2417,7 +2427,7 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
         WHERE student_id = ?
         ORDER BY incident_date DESC
       `, [id]);
-      
+
       discipline.forEach(d => {
         timeline.push({
           date: d.incident_date,
@@ -2428,11 +2438,11 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
           metadata: d
         });
       });
-    } catch (err) {}
-    
+    } catch (err) { }
+
     // Sort timeline by date (most recent first)
     timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
     res.json({
       success: true,
       total_events: timeline.length,
@@ -2452,16 +2462,16 @@ router.get('/students/:id/timeline', authenticateToken, async (req, res) => {
 router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { trade_id, level, class_capacity = 30, create_classes = false } = req.body;
-    
+
     if (!trade_id || !level) {
       return res.status(400).json({ success: false, message: 'trade_id and level required' });
     }
-    
+
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       // Get students without active enrollment
       const [students] = await connection.execute(`
         SELECT u.id, u.student_id, u.first_name, u.last_name
@@ -2473,7 +2483,7 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
           AND e.id IS NULL
         ORDER BY u.created_at
       `, [trade_id, level]);
-      
+
       if (students.length === 0) {
         return res.json({
           success: true,
@@ -2481,7 +2491,7 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
           assigned: 0
         });
       }
-      
+
       // Get available classes for this trade and level
       let [classes] = await connection.execute(`
         SELECT tc.id, tc.class_name, COUNT(e.id) as current_enrollment
@@ -2492,18 +2502,18 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
         HAVING current_enrollment < ?
         ORDER BY current_enrollment ASC
       `, [trade_id, level, class_capacity]);
-      
+
       // Create new classes if needed
       if (create_classes && students.length > classes.length * class_capacity) {
         const classesNeeded = Math.ceil(students.length / class_capacity) - classes.length;
-        
+
         for (let i = 0; i < classesNeeded; i++) {
           const className = `Class ${String.fromCharCode(65 + classes.length + i)}`;
           const [result] = await connection.execute(`
             INSERT INTO trade_classes (trade_id, class_name, level, capacity, is_active, created_at)
             VALUES (?, ?, ?, ?, 1, NOW())
           `, [trade_id, className, level, class_capacity]);
-          
+
           classes.push({
             id: result.insertId,
             class_name: className,
@@ -2511,38 +2521,38 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
           });
         }
       }
-      
+
       if (classes.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'No available classes found. Set create_classes=true to auto-create classes.'
         });
       }
-      
+
       // Assign students to classes
       let assigned = 0;
       let classIndex = 0;
       const assignments = [];
-      
+
       for (const student of students) {
         const targetClass = classes[classIndex];
-        
+
         // Create enrollment
         await connection.execute(`
           INSERT INTO enrollments (student_id, class_id, enrollment_date, status, created_at)
           VALUES (?, ?, NOW(), 'active', NOW())
         `, [student.id, targetClass.id]);
-        
+
         assigned++;
         assignments.push({
           student_id: student.student_id,
           student_name: `${student.first_name} ${student.last_name}`,
           class_name: targetClass.class_name
         });
-        
+
         // Update class enrollment count
         targetClass.current_enrollment++;
-        
+
         // Move to next class if current class is full
         if (targetClass.current_enrollment >= class_capacity) {
           classIndex++;
@@ -2551,9 +2561,9 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
           }
         }
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: `Successfully assigned ${assigned} students to classes`,
@@ -2584,17 +2594,17 @@ router.post('/students/auto-assign-classes', authenticateToken, requireRole('dos
 router.post('/students/generate-certificates', authenticateToken, requireRole('headmaster', 'admin'), async (req, res) => {
   try {
     const { student_ids, certificate_type, issue_date, template } = req.body;
-    
+
     if (!student_ids || !Array.isArray(student_ids)) {
       return res.status(400).json({ success: false, message: 'student_ids array required' });
     }
-    
+
     const connection = await pool.getConnection();
     const certificates = [];
-    
+
     try {
       await connection.beginTransaction();
-      
+
       for (const student_id of student_ids) {
         const [students] = await connection.execute(
           `SELECT u.*, t.name as trade_name 
@@ -2603,12 +2613,12 @@ router.post('/students/generate-certificates', authenticateToken, requireRole('h
            WHERE u.id = ? AND u.role = 'student'`,
           [student_id]
         );
-        
+
         if (students.length === 0) continue;
-        
+
         const student = students[0];
         const certificateNumber = `CERT${new Date().getFullYear()}${String(student_id).padStart(6, '0')}`;
-        
+
         try {
           await connection.execute(`
             INSERT INTO certificates 
@@ -2621,7 +2631,7 @@ router.post('/students/generate-certificates', authenticateToken, requireRole('h
             certificateNumber,
             JSON.stringify({ template, generated_at: new Date() })
           ]);
-          
+
           certificates.push({
             student_id: student.student_id,
             student_name: `${student.first_name} ${student.last_name}`,
@@ -2632,9 +2642,9 @@ router.post('/students/generate-certificates', authenticateToken, requireRole('h
           console.log('Certificate table error:', certError.message);
         }
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: `Generated ${certificates.length} certificates`,
@@ -2660,37 +2670,37 @@ router.post('/students/generate-certificates', authenticateToken, requireRole('h
 router.get('/fees/collection-report', authenticateToken, requireRole('accountant', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { start_date, end_date, trade_id, level, fee_type } = req.query;
-    
+
     let whereConditions = [];
     const params = [];
-    
+
     if (start_date) {
       whereConditions.push('f.created_at >= ?');
       params.push(start_date);
     }
-    
+
     if (end_date) {
       whereConditions.push('f.created_at <= ?');
       params.push(end_date);
     }
-    
+
     if (trade_id) {
       whereConditions.push('u.trade_id = ?');
       params.push(trade_id);
     }
-    
+
     if (level) {
       whereConditions.push('u.level = ?');
       params.push(level);
     }
-    
+
     if (fee_type) {
       whereConditions.push('f.fee_type = ?');
       params.push(fee_type);
     }
-    
+
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
-    
+
     // Overall summary
     const [summary] = await pool.execute(`
       SELECT 
@@ -2703,7 +2713,7 @@ router.get('/fees/collection-report', authenticateToken, requireRole('accountant
       JOIN users u ON f.student_id = u.id
       ${whereClause}
     `, params);
-    
+
     // By trade breakdown
     const [byTrade] = await pool.execute(`
       SELECT 
@@ -2719,7 +2729,7 @@ router.get('/fees/collection-report', authenticateToken, requireRole('accountant
       GROUP BY t.id
       ORDER BY outstanding DESC
     `, params);
-    
+
     // By fee type
     const [byFeeType] = await pool.execute(`
       SELECT 
@@ -2734,7 +2744,7 @@ router.get('/fees/collection-report', authenticateToken, requireRole('accountant
       GROUP BY f.fee_type
       ORDER BY outstanding DESC
     `, params);
-    
+
     // Payment status distribution
     const [paymentStatus] = await pool.execute(`
       SELECT 
@@ -2752,7 +2762,7 @@ router.get('/fees/collection-report', authenticateToken, requireRole('accountant
       ${whereClause}
       GROUP BY payment_status
     `, params);
-    
+
     res.json({
       success: true,
       report: {
@@ -2778,18 +2788,18 @@ router.get('/fees/collection-report', authenticateToken, requireRole('accountant
 router.get('/dod/parents', authenticateToken, requireRole('dod', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { search, has_children, limit = 100, offset = 0 } = req.query;
-    
+
     let whereConditions = ['u.role = "parent"'];
     const params = [];
-    
+
     if (search) {
       whereConditions.push('(u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)');
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
-    
+
     const whereClause = whereConditions.join(' AND ');
-    
+
     const [parents] = await pool.execute(`
       SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone, u.address,
@@ -2806,14 +2816,14 @@ router.get('/dod/parents', authenticateToken, requireRole('dod', 'headmaster', '
       ORDER BY u.last_name, u.first_name
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), parseInt(offset)]);
-    
+
     // Get total count
     const [countResult] = await pool.execute(`
       SELECT COUNT(DISTINCT u.id) as total
       FROM users u
       WHERE ${whereClause}
     `, params);
-    
+
     res.json({
       success: true,
       parents: parents,
@@ -2834,7 +2844,7 @@ router.get('/dod/parents', authenticateToken, requireRole('dod', 'headmaster', '
 router.get('/dod/parents/:id', authenticateToken, requireRole('dod', 'headmaster', 'admin', 'advisor'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Get parent info
     const [parents] = await pool.execute(`
       SELECT u.*, 
@@ -2844,13 +2854,13 @@ router.get('/dod/parents/:id', authenticateToken, requireRole('dod', 'headmaster
       WHERE u.id = ? AND u.role = 'parent'
       GROUP BY u.id
     `, [id]);
-    
+
     if (!parents[0]) {
       return res.status(404).json({ success: false, message: 'Parent not found' });
     }
-    
+
     const parent = parents[0];
-    
+
     // Get all linked students with their details
     const [children] = await pool.execute(`
       SELECT 
@@ -2868,7 +2878,7 @@ router.get('/dod/parents/:id', authenticateToken, requireRole('dod', 'headmaster
       WHERE ps.parent_id = ?
       ORDER BY s.first_name, s.last_name
     `, [id]);
-    
+
     // Get discipline records for all children
     const [disciplineRecords] = await pool.execute(`
       SELECT 
@@ -2883,7 +2893,7 @@ router.get('/dod/parents/:id', authenticateToken, requireRole('dod', 'headmaster
       ORDER BY sdr.incident_date DESC
       LIMIT 20
     `, [id]);
-    
+
     res.json({
       success: true,
       parent: parent,
@@ -2901,30 +2911,30 @@ router.post('/dod/parents/:id/message', authenticateToken, requireRole('dod', 'h
   try {
     const { id } = req.params;
     const { subject, message, priority = 'normal', send_sms = false } = req.body;
-    
+
     if (!subject || !message) {
       return res.status(400).json({ success: false, message: 'Subject and message required' });
     }
-    
+
     // Get parent details
     const [parents] = await pool.execute(
       'SELECT id, first_name, last_name, email, phone FROM users WHERE id = ? AND role = "parent"',
       [id]
     );
-    
+
     if (!parents[0]) {
       return res.status(404).json({ success: false, message: 'Parent not found' });
     }
-    
+
     const parent = parents[0];
-    
+
     // Create message in database
     const [result] = await pool.execute(`
       INSERT INTO messages 
       (sender_id, recipient_id, subject, message, priority, status, created_at)
       VALUES (?, ?, ?, ?, ?, 'sent', NOW())
     `, [req.user.userId, id, subject, message, priority]);
-    
+
     // Send SMS if requested and phone available
     if (send_sms && parent.phone) {
       try {
@@ -2934,7 +2944,7 @@ router.post('/dod/parents/:id/message', authenticateToken, requireRole('dod', 'h
         console.error('SMS sending failed:', smsError);
       }
     }
-    
+
     res.json({
       success: true,
       message: 'Message sent successfully',
@@ -2951,15 +2961,15 @@ router.post('/dod/parents/:id/message', authenticateToken, requireRole('dod', 'h
 router.post('/dod/parents/bulk-message', authenticateToken, requireRole('dod', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { parent_ids, subject, message, priority = 'normal', send_sms = false } = req.body;
-    
+
     if (!parent_ids || !Array.isArray(parent_ids) || parent_ids.length === 0) {
       return res.status(400).json({ success: false, message: 'parent_ids array required' });
     }
-    
+
     if (!subject || !message) {
       return res.status(400).json({ success: false, message: 'Subject and message required' });
     }
-    
+
     const connection = await pool.getConnection();
     const results = {
       total: parent_ids.length,
@@ -2968,32 +2978,32 @@ router.post('/dod/parents/bulk-message', authenticateToken, requireRole('dod', '
       sms_sent: 0,
       errors: []
     };
-    
+
     try {
       await connection.beginTransaction();
-      
+
       for (const parent_id of parent_ids) {
         try {
           const [parents] = await connection.execute(
             'SELECT id, phone FROM users WHERE id = ? AND role = "parent"',
             [parent_id]
           );
-          
+
           if (!parents[0]) {
             results.failed++;
             results.errors.push({ parent_id, error: 'Parent not found' });
             continue;
           }
-          
+
           // Insert message
           await connection.execute(`
             INSERT INTO messages 
             (sender_id, recipient_id, subject, message, priority, status, created_at)
             VALUES (?, ?, ?, ?, ?, 'sent', NOW())
           `, [req.user.userId, parent_id, subject, message, priority]);
-          
+
           results.sent++;
-          
+
           // Send SMS if requested
           if (send_sms && parents[0].phone) {
             try {
@@ -3008,9 +3018,9 @@ router.post('/dod/parents/bulk-message', authenticateToken, requireRole('dod', '
           results.errors.push({ parent_id, error: error.message });
         }
       }
-      
+
       await connection.commit();
-      
+
       res.json({
         success: true,
         message: `Messages sent to ${results.sent} parents`,
@@ -3036,32 +3046,32 @@ router.post('/dod/parents/bulk-message', authenticateToken, requireRole('dod', '
 router.get('/dod/leave-requests', authenticateToken, requireRole('dod', 'headmaster', 'admin', 'advisor'), async (req, res) => {
   try {
     const { status, start_date, end_date, student_id, limit = 100, offset = 0 } = req.query;
-    
+
     let whereConditions = ['1=1'];
     const params = [];
-    
+
     if (status) {
       whereConditions.push('sl.status = ?');
       params.push(status);
     }
-    
+
     if (start_date) {
       whereConditions.push('sl.start_date >= ?');
       params.push(start_date);
     }
-    
+
     if (end_date) {
       whereConditions.push('sl.end_date <= ?');
       params.push(end_date);
     }
-    
+
     if (student_id) {
       whereConditions.push('sl.student_id = ?');
       params.push(student_id);
     }
-    
+
     const whereClause = whereConditions.join(' AND ');
-    
+
     const [leaveRequests] = await pool.execute(`
       SELECT 
         sl.id, sl.student_id, sl.leave_type, sl.reason, sl.start_date, sl.end_date,
@@ -3078,7 +3088,7 @@ router.get('/dod/leave-requests', authenticateToken, requireRole('dod', 'headmas
       ORDER BY sl.created_at DESC
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), parseInt(offset)]);
-    
+
     res.json({
       success: true,
       leave_requests: leaveRequests,
@@ -3094,30 +3104,30 @@ router.get('/dod/leave-requests', authenticateToken, requireRole('dod', 'headmas
 router.post('/dod/leave-requests', authenticateToken, requireRole('dod', 'headmaster', 'admin', 'advisor'), async (req, res) => {
   try {
     const { student_id, leave_type, reason, start_date, end_date, notes } = req.body;
-    
+
     if (!student_id || !leave_type || !start_date || !end_date) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'student_id, leave_type, start_date, and end_date required' 
+      return res.status(400).json({
+        success: false,
+        message: 'student_id, leave_type, start_date, and end_date required'
       });
     }
-    
+
     // Validate student exists
     const [students] = await pool.execute(
       'SELECT id, first_name, last_name FROM users WHERE id = ? AND role = "student"',
       [student_id]
     );
-    
+
     if (!students[0]) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     const [result] = await pool.execute(`
       INSERT INTO student_leave 
       (student_id, leave_type, reason, start_date, end_date, notes, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
     `, [student_id, leave_type, reason, start_date, end_date, notes]);
-    
+
     res.json({
       success: true,
       message: 'Leave request created successfully',
@@ -3134,17 +3144,17 @@ router.put('/dod/leave-requests/:id/status', authenticateToken, requireRole('dod
   try {
     const { id } = req.params;
     const { status, notes } = req.body;
-    
+
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
     }
-    
+
     await pool.execute(`
       UPDATE student_leave 
       SET status = ?, approved_by = ?, approved_at = NOW(), notes = CONCAT(COALESCE(notes, ''), '\n', ?)
       WHERE id = ?
     `, [status, req.user.userId, notes || `${status} by DOD`, id]);
-    
+
     res.json({
       success: true,
       message: `Leave request ${status} successfully`
@@ -3162,60 +3172,60 @@ router.put('/dod/leave-requests/:id/status', authenticateToken, requireRole('dod
 // Get all discipline records with advanced filtering (DOD)
 router.get('/dod/discipline-records', authenticateToken, requireRole('dod', 'headmaster', 'admin', 'advisor'), async (req, res) => {
   try {
-    const { 
+    const {
       status, severity, incident_type, student_id, trade_id, level,
       start_date, end_date, sort_by = 'incident_date', sort_order = 'DESC',
-      limit = 100, offset = 0 
+      limit = 100, offset = 0
     } = req.query;
-    
+
     let whereConditions = ['1=1'];
     const params = [];
-    
+
     if (status) {
       whereConditions.push('sdr.status = ?');
       params.push(status);
     }
-    
+
     if (severity) {
       whereConditions.push('sdr.severity = ?');
       params.push(severity);
     }
-    
+
     if (incident_type) {
       whereConditions.push('sdr.incident_type = ?');
       params.push(incident_type);
     }
-    
+
     if (student_id) {
       whereConditions.push('sdr.student_id = ?');
       params.push(student_id);
     }
-    
+
     if (trade_id) {
       whereConditions.push('s.trade_id = ?');
       params.push(trade_id);
     }
-    
+
     if (level) {
       whereConditions.push('s.level = ?');
       params.push(level);
     }
-    
+
     if (start_date) {
       whereConditions.push('sdr.incident_date >= ?');
       params.push(start_date);
     }
-    
+
     if (end_date) {
       whereConditions.push('sdr.incident_date <= ?');
       params.push(end_date);
     }
-    
+
     const whereClause = whereConditions.join(' AND ');
     const validSortColumns = ['incident_date', 'severity', 'student_name'];
     const sortColumn = validSortColumns.includes(sort_by) ? sort_by : 'incident_date';
     const sortDirection = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    
+
     const [records] = await pool.execute(`
       SELECT 
         sdr.id, sdr.student_id, sdr.incident_type, sdr.incident_date, sdr.description,
@@ -3235,7 +3245,7 @@ router.get('/dod/discipline-records', authenticateToken, requireRole('dod', 'hea
       ORDER BY ${sortColumn === 'student_name' ? 'student_name' : 'sdr.' + sortColumn} ${sortDirection}
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), parseInt(offset)]);
-    
+
     // Get statistics
     const [stats] = await pool.execute(`
       SELECT 
@@ -3250,7 +3260,7 @@ router.get('/dod/discipline-records', authenticateToken, requireRole('dod', 'hea
       JOIN users s ON sdr.student_id = s.id
       WHERE ${whereClause}
     `, params);
-    
+
     res.json({
       success: true,
       records: records,
@@ -3269,18 +3279,18 @@ router.get('/dod/discipline-records', authenticateToken, requireRole('dod', 'hea
 // Create discipline record (DOD)
 router.post('/dod/discipline-records', authenticateToken, requireRole('dod', 'headmaster', 'admin', 'advisor', 'teacher'), async (req, res) => {
   try {
-    const { 
-      student_id, incident_type, incident_date, description, 
-      severity, action_taken, notify_parent = true 
+    const {
+      student_id, incident_type, incident_date, description,
+      severity, action_taken, notify_parent = true
     } = req.body;
-    
+
     if (!student_id || !incident_type || !description) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'student_id, incident_type, and description required' 
+      return res.status(400).json({
+        success: false,
+        message: 'student_id, incident_type, and description required'
       });
     }
-    
+
     // Validate student
     const [students] = await pool.execute(
       `SELECT s.*, t.name as trade_name 
@@ -3289,13 +3299,13 @@ router.post('/dod/discipline-records', authenticateToken, requireRole('dod', 'he
        WHERE s.id = ? AND s.role = 'student'`,
       [student_id]
     );
-    
+
     if (!students[0]) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
-    
+
     const student = students[0];
-    
+
     const [result] = await pool.execute(`
       INSERT INTO student_discipline_records 
       (student_id, incident_type, incident_date, description, severity, action_taken, 
@@ -3310,7 +3320,7 @@ router.post('/dod/discipline-records', authenticateToken, requireRole('dod', 'he
       action_taken || 'Under review',
       req.user.userId
     ]);
-    
+
     // Notify parent if requested
     if (notify_parent) {
       try {
@@ -3320,7 +3330,7 @@ router.post('/dod/discipline-records', authenticateToken, requireRole('dod', 'he
           JOIN parent_students ps ON u.id = ps.parent_id
           WHERE ps.student_id = ?
         `, [student_id]);
-        
+
         for (const parent of parents) {
           await pool.execute(`
             INSERT INTO messages 
@@ -3337,7 +3347,7 @@ router.post('/dod/discipline-records', authenticateToken, requireRole('dod', 'he
         console.error('Parent notification failed:', notifyError);
       }
     }
-    
+
     res.json({
       success: true,
       message: 'Discipline record created successfully',
@@ -3355,48 +3365,48 @@ router.put('/dod/discipline-records/:id', authenticateToken, requireRole('dod', 
   try {
     const { id } = req.params;
     const { incident_type, description, severity, action_taken, status } = req.body;
-    
+
     const updates = [];
     const params = [];
-    
+
     if (incident_type) {
       updates.push('incident_type = ?');
       params.push(incident_type);
     }
-    
+
     if (description) {
       updates.push('description = ?');
       params.push(description);
     }
-    
+
     if (severity) {
       updates.push('severity = ?');
       params.push(severity);
     }
-    
+
     if (action_taken) {
       updates.push('action_taken = ?');
       params.push(action_taken);
     }
-    
+
     if (status) {
       updates.push('status = ?');
       params.push(status);
     }
-    
+
     if (updates.length === 0) {
       return res.status(400).json({ success: false, message: 'No fields to update' });
     }
-    
+
     updates.push('updated_at = NOW()');
     params.push(id);
-    
+
     await pool.execute(`
       UPDATE student_discipline_records 
       SET ${updates.join(', ')}
       WHERE id = ?
     `, params);
-    
+
     res.json({
       success: true,
       message: 'Discipline record updated successfully'
@@ -3412,7 +3422,7 @@ router.delete('/dod/discipline-records/:id', authenticateToken, requireRole('dod
   try {
     const { id } = req.params;
     const { permanent = false } = req.query;
-    
+
     if (permanent === 'true') {
       // Permanently delete
       await pool.execute('DELETE FROM student_discipline_records WHERE id = ?', [id]);
@@ -3423,7 +3433,7 @@ router.delete('/dod/discipline-records/:id', authenticateToken, requireRole('dod
         [id]
       );
     }
-    
+
     res.json({
       success: true,
       message: permanent === 'true' ? 'Record permanently deleted' : 'Record removed successfully'
@@ -3438,20 +3448,20 @@ router.delete('/dod/discipline-records/:id', authenticateToken, requireRole('dod
 router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', 'headmaster', 'admin'), async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
-    
+
     let dateFilter = '';
     const params = [];
-    
+
     if (start_date) {
       dateFilter += ' AND sdr.incident_date >= ?';
       params.push(start_date);
     }
-    
+
     if (end_date) {
       dateFilter += ' AND sdr.incident_date <= ?';
       params.push(end_date);
     }
-    
+
     // By trade
     const [byTrade] = await pool.execute(`
       SELECT 
@@ -3468,7 +3478,7 @@ router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', '
       GROUP BY t.id
       ORDER BY total_incidents DESC
     `, params);
-    
+
     // By level
     const [byLevel] = await pool.execute(`
       SELECT 
@@ -3484,7 +3494,7 @@ router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', '
       GROUP BY s.level
       ORDER BY s.level
     `, params);
-    
+
     // By incident type
     const [byType] = await pool.execute(`
       SELECT 
@@ -3501,7 +3511,7 @@ router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', '
       GROUP BY incident_type
       ORDER BY count DESC
     `, params);
-    
+
     // Top offenders
     const [topOffenders] = await pool.execute(`
       SELECT 
@@ -3518,7 +3528,7 @@ router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', '
       ORDER BY incident_count DESC, critical_count DESC
       LIMIT 20
     `, params);
-    
+
     res.json({
       success: true,
       statistics: {
@@ -3541,7 +3551,7 @@ router.get('/dod/discipline-statistics', authenticateToken, requireRole('dod', '
 router.get('/profile/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    
+
     const [users] = await pool.execute(`
       SELECT 
         u.id, u.student_id, u.first_name, u.last_name, u.email, u.phone,
@@ -3556,11 +3566,11 @@ router.get('/profile/me', authenticateToken, async (req, res) => {
       LEFT JOIN trade_classes tc ON e.class_id = tc.id
       WHERE u.id = ?
     `, [userId]);
-    
+
     if (!users[0]) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    
+
     res.json({
       success: true,
       user: users[0]
@@ -3578,20 +3588,20 @@ router.put('/profile/me', authenticateToken, async (req, res) => {
       first_name, last_name, email, phone, date_of_birth,
       gender, address, profile_image
     } = req.body;
-    
+
     const updateFields = [];
     const updateValues = [];
-    
+
     if (first_name !== undefined) {
       updateFields.push('first_name = ?');
       updateValues.push(first_name);
     }
-    
+
     if (last_name !== undefined) {
       updateFields.push('last_name = ?');
       updateValues.push(last_name);
     }
-    
+
     if (email !== undefined) {
       const [existing] = await pool.execute(
         'SELECT id FROM users WHERE email = ? AND id != ?',
@@ -3603,47 +3613,47 @@ router.put('/profile/me', authenticateToken, async (req, res) => {
       updateFields.push('email = ?');
       updateValues.push(email);
     }
-    
+
     if (phone !== undefined) {
       updateFields.push('phone = ?');
       updateValues.push(phone || null);
     }
-    
+
     if (date_of_birth !== undefined) {
       updateFields.push('date_of_birth = ?');
       updateValues.push(date_of_birth || null);
     }
-    
+
     if (gender !== undefined) {
       updateFields.push('gender = ?');
       updateValues.push(gender || null);
     }
-    
+
     if (address !== undefined) {
       updateFields.push('address = ?');
       updateValues.push(address || null);
     }
-    
+
     if (profile_image !== undefined) {
       updateFields.push('profile_image = ?');
       updateValues.push(profile_image || null);
     }
-    
+
     if (updateFields.length === 0) {
       return res.status(400).json({ success: false, message: 'No fields to update' });
     }
-    
+
     updateFields.push('updated_at = NOW()');
     updateValues.push(userId);
-    
+
     const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
     await pool.execute(query, updateValues);
-    
+
     const [updatedUser] = await pool.execute(
       'SELECT id, first_name, last_name, email, phone, date_of_birth, gender, address, profile_image, role FROM users WHERE id = ?',
       [userId]
     );
-    
+
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -3659,45 +3669,45 @@ router.put('/profile/change-password', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { current_password, new_password } = req.body;
-    
+
     if (!current_password || !new_password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Current password and new password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
       });
     }
-    
+
     if (new_password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'New password must be at least 6 characters' 
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters'
       });
     }
-    
+
     const [users] = await pool.execute(
       'SELECT password FROM users WHERE id = ?',
       [userId]
     );
-    
+
     if (!users[0]) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    
+
     const isValidPassword = await bcrypt.compare(current_password, users[0].password);
     if (!isValidPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Current password is incorrect' 
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
       });
     }
-    
+
     const hashedPassword = await bcrypt.hash(new_password, 10);
-    
+
     await pool.execute(
       'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?',
       [hashedPassword, userId]
     );
-    
+
     res.json({
       success: true,
       message: 'Password changed successfully'

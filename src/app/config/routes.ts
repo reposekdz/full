@@ -38,6 +38,18 @@ export const routes: Record<string, RouteConfig> = {
   'medical-system': { path: 'medical-system', title: { en: 'Medical System', rw: 'Sisitemu y\'Ubuvuzi', fr: 'Système Médical', sw: 'Mfumo wa Tiba' }, icon: 'Heart', requiresAuth: true },
   'library-system': { path: 'library-system', title: { en: 'Library System', rw: 'Sisitemu y\'Isomero', fr: 'Système de Bibliothèque', sw: 'Mfumo wa Maktaba' }, icon: 'Library', requiresAuth: true },
   search: { path: 'search', title: { en: 'Search', rw: 'Shakisha', fr: 'Rechercher', sw: 'Tafuta' }, icon: 'Search' },
+  'parent-link-child': {
+    path: 'parent/link-child',
+    title: {
+      en: 'Link Child',
+      rw: 'Fungisha Umwana',
+      fr: 'Lier mon enfant',
+      sw: 'Unganisha Mtoto'
+    },
+    icon: 'UserPlus',
+    requiresAuth: true,
+    roles: ['parent']
+  },
 };
 
 export const getRouteTitle = (path: string, language: 'en' | 'rw' | 'fr' | 'sw' = 'en'): string => {

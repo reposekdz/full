@@ -687,4 +687,513 @@ router.post('/parent-notifications/send', authenticateToken, async (req, res) =>
   }
 });
 
+// ============================================
+// SOD - STUDENTS OF DISCIPLINE
+// ============================================
+
+// Get SOD students (Students of Discipline)
+router.get('/sod-students', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos'), async (req, res) => {
+  try {
+    const { status, level, trade, search, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT DISTINCT
+        gs.student_id,
+        gs.first_name,
+        gs.last_name,
+        gs.gender,
+        gs.class_name,
+        gs.trade_code,
+        gs.trade_name,
+        gs.level_number,
+        gs.phone,
+        gs.gpa,
+        gs.attendance_percentage,
+        gs.status as student_status,
+        COUNT(DISTINCT scr.id) as total_incidents,
+        MAX(scr.incident_date) as last_incident_date,
+        MAX(CASE WHEN scr.severity = 'high' OR scr.severity = 'critical' THEN 1 ELSE 0 END) as has_critical,
+        sod.status as sod_status,
+        sod.admission_date as sod_admission_date,
+        sod.notes as sod_notes
+      FROM global_student_sheets gs
+      LEFT JOIN student_conduct_records scr ON gs.student_id = scr.student_id
+      LEFT JOIN sod_students sod ON gs.student_id = sod.student_id
+      WHERE gs.status = 'active'
+    `;
+    const params = [];
+
+    // Filter for SOD students
+    query += ` AND (sod.status = 'active' OR sod.status = 'monitoring' OR COUNT(DISTINCT scr.id) >= 3)`;
+
+    if (status) {
+      query += ` AND sod.status = ?`;
+      params.push(status);
+    }
+    if (level) {
+      query += ` AND gs.level_number = ?`;
+      params.push(level);
+    }
+    if (trade) {
+      query += ` AND gs.trade_code = ?`;
+      params.push(trade);
+    }
+    if (search) {
+      query += ` AND (gs.first_name LIKE ? OR gs.last_name LIKE ? OR gs.student_code LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    query += ` GROUP BY gs.student_id, sod.status, sod.admission_date, sod.notes`;
+    query += ` ORDER BY has_critical DESC, total_incidents DESC, gs.last_name`;
+    query += ` LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [students] = await pool.execute(query, params);
+
+    res.json({ success: true, students, total: students.length });
+  } catch (error) {
+    console.error('Error fetching SOD students:', error);
+    res.status(500).json({ success: false, message: 'Error fetching SOD students', error: error.message });
+  }
+});
+
+// Add student to SOD (Students of Discipline)
+router.post('/sod-students', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster'), async (req, res) => {
+  try {
+    const { student_id, notes, status = 'active' } = req.body;
+
+    // Check if already in SOD
+    const [existing] = await pool.execute('SELECT * FROM sod_students WHERE student_id = ?', [student_id]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Student is already in SOD program' });
+    }
+
+    await pool.execute(`
+      INSERT INTO sod_students (student_id, admission_date, status, notes, added_by)
+      VALUES (?, NOW(), ?, ?, ?)
+    `, [student_id, status, notes, req.user?.id || req.user?.userId]);
+
+    res.json({ success: true, message: 'Student added to SOD program successfully' });
+  } catch (error) {
+    console.error('Error adding student to SOD:', error);
+    res.status(500).json({ success: false, message: 'Error adding student to SOD', error: error.message });
+  }
+});
+
+// Update SOD student status
+router.put('/sod-students/:studentId', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster'), async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { status, notes } = req.body;
+
+    await pool.execute(`
+      UPDATE sod_students SET status = ?, notes = ?, updated_at = NOW()
+      WHERE student_id = ?
+    `, [status, notes, studentId]);
+
+    res.json({ success: true, message: 'SOD student status updated successfully' });
+  } catch (error) {
+    console.error('Error updating SOD student:', error);
+    res.status(500).json({ success: false, message: 'Error updating SOD student', error: error.message });
+  }
+});
+
+// Remove student from SOD
+router.delete('/sod-students/:studentId', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster'), async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    await pool.execute('DELETE FROM sod_students WHERE student_id = ?', [studentId]);
+
+    res.json({ success: true, message: 'Student removed from SOD program successfully' });
+  } catch (error) {
+    console.error('Error removing student from SOD:', error);
+    res.status(500).json({ success: false, message: 'Error removing student from SOD', error: error.message });
+  }
+});
+
+// ============================================
+// REMOVE CONDUCT RECORDS
+// ============================================
+
+// Remove conduct record with reason
+router.delete('/conduct/:recordId/remove', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos'), async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const { removal_reason, removal_type, notes, removed_by } = req.body;
+
+    // Valid removal types
+    const validTypes = ['leave', 'sick', 'lesson_cancelled', 'exonerated', 'appealed', 'time_expired', 'administrative'];
+    if (!validTypes.includes(removal_type)) {
+      return res.status(400).json({ success: false, message: 'Invalid removal type' });
+    }
+
+    // Get the original record
+    const [record] = await pool.execute('SELECT * FROM student_conduct_records WHERE id = ?', [recordId]);
+    if (record.length === 0) {
+      return res.status(404).json({ success: false, message: 'Conduct record not found' });
+    }
+
+    // Archive the removal
+    await pool.execute(`
+      INSERT INTO conduct_removals (
+        record_id, student_id, original_incident_type, original_severity,
+        removal_reason, removal_type, notes, removed_by, removed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      recordId,
+      record[0].student_id,
+      record[0].incident_type,
+      record[0].severity,
+      removal_reason,
+      removal_type,
+      notes,
+      removed_by || req.user?.id || req.user?.userId
+    ]);
+
+    // Delete the original record
+    await pool.execute('DELETE FROM student_conduct_records WHERE id = ?', [recordId]);
+
+    res.json({ success: true, message: 'Conduct record removed successfully', removal_type });
+  } catch (error) {
+    console.error('Error removing conduct record:', error);
+    res.status(500).json({ success: false, message: 'Error removing conduct record', error: error.message });
+  }
+});
+
+// Get removal history
+router.get('/conduct-removals', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos'), async (req, res) => {
+  try {
+    const { student_id, start_date, end_date, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT cr.*, gs.first_name, gs.last_name, gs.class_name,
+        u.first_name as removed_by_name, u.last_name as removed_by_lastname
+      FROM conduct_removals cr
+      LEFT JOIN global_student_sheets gs ON cr.student_id = gs.student_id
+      LEFT JOIN users u ON cr.removed_by = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (student_id) {
+      query += ` AND cr.student_id = ?`;
+      params.push(student_id);
+    }
+    if (start_date) {
+      query += ` AND cr.removed_at >= ?`;
+      params.push(start_date);
+    }
+    if (end_date) {
+      query += ` AND cr.removed_at <= ?`;
+      params.push(end_date);
+    }
+
+    query += ` ORDER BY cr.removed_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [removals] = await pool.execute(query, params);
+
+    res.json({ success: true, removals, total: removals.length });
+  } catch (error) {
+    console.error('Error fetching removal history:', error);
+    res.status(500).json({ success: false, message: 'Error fetching removal history', error: error.message });
+  }
+});
+
+// ============================================
+// PARENT-STUDENT LINKING
+// ============================================
+
+// Link parent to student
+router.post('/link-parent', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'patron'), async (req, res) => {
+  try {
+    const { student_id, parent_id, relationship = 'parent' } = req.body;
+
+    // Check if link already exists
+    const [existing] = await pool.execute(
+      'SELECT * FROM parent_student_links WHERE student_id = ? AND parent_id = ?',
+      [student_id, parent_id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'This parent is already linked to this student' });
+    }
+
+    await pool.execute(`
+      INSERT INTO parent_student_links (parent_id, student_id, relationship, linked_by, linked_at)
+      VALUES (?, ?, ?, ?, NOW())
+    `, [parent_id, student_id, relationship, req.user?.id || req.user?.userId]);
+
+    res.json({ success: true, message: 'Parent linked to student successfully' });
+  } catch (error) {
+    console.error('Error linking parent:', error);
+    res.status(500).json({ success: false, message: 'Error linking parent', error: error.message });
+  }
+});
+
+// Unlink parent from student
+router.delete('/link-parent', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'patron'), async (req, res) => {
+  try {
+    const { student_id, parent_id } = req.body;
+
+    await pool.execute(
+      'DELETE FROM parent_student_links WHERE student_id = ? AND parent_id = ?',
+      [student_id, parent_id]
+    );
+
+    res.json({ success: true, message: 'Parent unlinked from student successfully' });
+  } catch (error) {
+    console.error('Error unlinking parent:', error);
+    res.status(500).json({ success: false, message: 'Error unlinking parent', error: error.message });
+  }
+});
+
+// Get parent links for a student
+router.get('/student-parents/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const [links] = await pool.execute(`
+      SELECT psl.*, p.first_name as parent_first_name, p.last_name as parent_last_name,
+        p.phone as parent_phone, p.email as parent_email
+      FROM parent_student_links psl
+      JOIN parents p ON psl.parent_id = p.id
+      WHERE psl.student_id = ?
+    `, [studentId]);
+
+    res.json({ success: true, links });
+  } catch (error) {
+    console.error('Error fetching parent links:', error);
+    res.status(500).json({ success: false, message: 'Error fetching parent links', error: error.message });
+  }
+});
+
+// ============================================
+// SMS NOTIFICATIONS VIA AFRICAN TALKING
+// ============================================
+
+// Send SMS to parent via African Talking
+router.post('/sms/send', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'patron', 'teacher'), async (req, res) => {
+  try {
+    const { parent_id, student_id, message, priority = 'normal' } = req.body;
+
+    // Get parent phone number
+    let phone = '';
+    if (parent_id) {
+      const [parent] = await pool.execute('SELECT phone FROM parents WHERE id = ?', [parent_id]);
+      if (parent.length === 0) {
+        return res.status(404).json({ success: false, message: 'Parent not found' });
+      }
+      phone = parent[0].phone;
+    } else if (student_id) {
+      // Get linked parents
+      const [links] = await pool.execute(
+        'SELECT p.phone FROM parents p JOIN parent_student_links psl ON p.id = psl.parent_id WHERE psl.student_id = ?',
+        [student_id]
+      );
+      if (links.length === 0) {
+        return res.status(404).json({ success: false, message: 'No parent linked to this student' });
+      }
+      phone = links[0].phone;
+    } else {
+      return res.status(400).json({ success: false, message: 'Either parent_id or student_id is required' });
+    }
+
+    // Format phone number (add country code if not present)
+    let formattedPhone = phone.replace(/\s/g, '');
+    if (!formattedPhone.startsWith('+')) {
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = '+250' + formattedPhone.substring(1);
+      } else {
+        formattedPhone = '+' + formattedPhone;
+      }
+    }
+
+    // Send SMS via African Talking API
+    const axios = require('axios');
+    const AFRICAN_TALKING_API_KEY = process.env.AFRICAN_TALKING_API_KEY || 'atsk_test_key';
+    const AFRICAN_TALKING_USERNAME = process.env.AFRICAN_TALKING_USERNAME || 'sandbox';
+
+    try {
+      const smsResponse = await axios.post(
+        'https://api.africastalking.com/version1/messaging',
+        new URLSearchParams({
+          username: AFRICAN_TALKING_USERNAME,
+          to: formattedPhone,
+          message: message
+        }),
+        {
+          headers: {
+            'apiKey': AFRICAN_TALKING_API_KEY,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
+
+      // Log the SMS
+      await pool.execute(`
+        INSERT INTO sms_notifications (parent_id, student_id, phone, message, status, sent_via, priority, sent_at)
+        VALUES (?, ?, ?, ?, 'sent', 'african_talking', ?, NOW())
+      `, [parent_id || null, student_id || null, formattedPhone, message, priority]);
+
+      res.json({ 
+        success: true, 
+        message: 'SMS sent successfully',
+        sms_response: smsResponse.data
+      });
+    } catch (smsError) {
+      // If African Talking fails, store for retry
+      console.error('African Talking SMS Error:', smsError.message);
+      
+      await pool.execute(`
+        INSERT INTO sms_notifications (parent_id, student_id, phone, message, status, sent_via, priority, error_message, created_at)
+        VALUES (?, ?, ?, ?, 'failed', 'african_talking', ?, ?, NOW())
+      `, [parent_id || null, student_id || null, formattedPhone, message, priority, smsError.message]);
+
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to send SMS via African Talking',
+        error: smsError.message 
+      });
+    }
+  } catch (error: any) {
+    console.error('Error sending SMS:', error);
+    res.status(500).json({ success: false, message: 'Error sending SMS', error: error.message });
+  }
+});
+
+// Get SMS history
+router.get('/sms/history', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos'), async (req, res) => {
+  try {
+    const { parent_id, student_id, status, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT sms.*, 
+        p.first_name as parent_first_name, p.last_name as parent_last_name,
+        gs.first_name as student_first_name, gs.last_name as student_last_name
+      FROM sms_notifications sms
+      LEFT JOIN parents p ON sms.parent_id = p.id
+      LEFT JOIN global_student_sheets gs ON sms.student_id = gs.student_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (parent_id) {
+      query += ` AND sms.parent_id = ?`;
+      params.push(parent_id);
+    }
+    if (student_id) {
+      query += ` AND sms.student_id = ?`;
+      params.push(student_id);
+    }
+    if (status) {
+      query += ` AND sms.status = ?`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY sms.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [history] = await pool.execute(query, params);
+
+    res.json({ success: true, history, total: history.length });
+  } catch (error) {
+    console.error('Error fetching SMS history:', error);
+    res.status(500).json({ success: false, message: 'Error fetching SMS history', error: error.message });
+  }
+});
+
+// Bulk SMS to multiple parents
+router.post('/sms/bulk', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster'), async (req, res) => {
+  try {
+    const { parent_ids, student_ids, message, priority = 'normal' } = req.body;
+
+    if (!message || (!parent_ids?.length && !student_ids?.length)) {
+      return res.status(400).json({ success: false, message: 'Message and at least one recipient required' });
+    }
+
+    // Get all phone numbers
+    let phones: string[] = [];
+
+    if (parent_ids?.length) {
+      const [parents] = await pool.execute(
+        `SELECT phone FROM parents WHERE id IN (${parent_ids.map(() => '?').join(',')})`,
+        parent_ids
+      );
+      phones = parents.map((p: any) => p.phone);
+    }
+
+    if (student_ids?.length) {
+      const [links] = await pool.execute(
+        `SELECT DISTINCT p.phone FROM parents p 
+         JOIN parent_student_links psl ON p.id = psl.parent_id 
+         WHERE psl.student_id IN (${student_ids.map(() => '?').join(',')})`,
+        student_ids
+      );
+      phones = [...phones, ...links.map((l: any) => l.phone)];
+    }
+
+    // Remove duplicates
+    phones = [...new Set(phones)];
+
+    // Format all phone numbers
+    const formattedPhones = phones.map((phone: string) => {
+      let formatted = phone.replace(/\s/g, '');
+      if (!formatted.startsWith('+')) {
+        if (formatted.startsWith('0')) {
+          formatted = '+250' + formatted.substring(1);
+        } else {
+          formatted = '+' + formatted;
+        }
+      }
+      return formatted;
+    });
+
+    // Send bulk SMS via African Talking
+    const axios = require('axios');
+    const AFRICAN_TALKING_API_KEY = process.env.AFRICAN_TALKING_API_KEY || 'atsk_test_key';
+    const AFRICAN_TALKING_USERNAME = process.env.AFRICAN_TALKING_USERNAME || 'sandbox';
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const phone of formattedPhones) {
+      try {
+        await axios.post(
+          'https://api.africastalking.com/version1/messaging',
+          new URLSearchParams({
+            username: AFRICAN_TALKING_USERNAME,
+            to: phone,
+            message: message
+          }),
+          {
+            headers: {
+              'apiKey': AFRICAN_TALKING_API_KEY,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+          }
+        );
+        sentCount++;
+      } catch (err) {
+        failedCount++;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `SMS sent: ${sentCount} successful, ${failedCount} failed`,
+      sent_count: sentCount,
+      failed_count: failedCount
+    });
+  } catch (error: any) {
+    console.error('Error sending bulk SMS:', error);
+    res.status(500).json({ success: false, message: 'Error sending bulk SMS', error: error.message });
+  }
+});
+
 module.exports = router;

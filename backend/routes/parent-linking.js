@@ -3,6 +3,9 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// Import African Talking SMS Service for real SMS notifications
+const { sendSMS, isReady: isSMSReady } = require('../services/africanTalkingService');
+
 // ============================================================
 // CORE LINK MANAGEMENT
 // ============================================================
@@ -1151,6 +1154,334 @@ router.get('/admin/audit-log', authenticateToken, requireRole(['admin', 'headmas
       message: 'Failed to fetch audit log',
       error: error.message
     });
+  }
+});
+
+// POST /api/parent-linking/auto-connect - Auto-connect parent with student
+// Now includes gender for more accurate student matching and sends real SMS notifications
+router.post('/auto-connect', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.id || req.user.userId;
+    const { student_name, trade, level_id, level, relationship_type, relationship, student_gender, gender } = req.body;
+
+    if (!student_name || !trade || (!level_id && !level) || !(relationship_type || relationship)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: student_name, trade, level, relationship_type'
+      });
+    }
+
+    // Parse student name into first and last name
+    const nameParts = student_name.trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Parse level - level_id comes as "Level 1" or just a number
+    let levelNumber;
+    if (level_id) {
+      levelNumber = parseInt(String(level_id).replace('Level ', '')) || parseInt(level_id);
+    } else if (level) {
+      levelNumber = parseInt(String(level).replace('Level ', '')) || parseInt(level);
+    } else {
+      levelNumber = 1;
+    }
+
+    const relType = relationship_type || relationship || 'parent';
+    
+    // Gender for more accurate matching
+    const genderFilter = student_gender || gender || null;
+
+    // Find the student - now with optional gender matching for more accurate results
+    let studentQuery = `
+      SELECT id, student_id, first_name, last_name, trade_code, trade_name, level_number, gender
+      FROM global_student_sheets 
+      WHERE LOWER(first_name) = LOWER(?)
+        AND (LOWER(last_name) = LOWER(?) OR LOWER(CONCAT(first_name, ' ', last_name)) = LOWER(?))
+        AND trade_code = ?
+        AND level_number = ?
+        AND (status = 'active' OR enrollment_status = 'active')
+    `;
+    
+    let queryParams = [firstName, lastName, student_name.trim(), trade, levelNumber];
+    
+    // If gender is provided, add it to the query for more accurate matching
+    if (genderFilter) {
+      studentQuery += ` AND LOWER(gender) = LOWER(?)`;
+      queryParams.push(genderFilter);
+    }
+    
+    studentQuery += ` LIMIT 5`; // Get up to 5 matches for better accuracy
+
+    const [students] = await pool.execute(studentQuery, queryParams);
+
+    if (students.length === 0) {
+      // Try without gender if no results found with gender
+      if (genderFilter) {
+        const [fallbackStudents] = await pool.execute(`
+          SELECT id, student_id, first_name, last_name, trade_code, trade_name, level_number, gender
+          FROM global_student_sheets 
+          WHERE LOWER(first_name) = LOWER(?)
+            AND (LOWER(last_name) = LOWER(?) OR LOWER(CONCAT(first_name, ' ', last_name)) = LOWER(?))
+            AND trade_code = ?
+            AND level_number = ?
+            AND (status = 'active' OR enrollment_status = 'active')
+          LIMIT 5
+        `, [firstName, lastName, student_name.trim(), trade, levelNumber]);
+        
+        if (fallbackStudents.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: 'Student not found. Please check the details and try again or contact the school.',
+            code: 'NO_MATCHES',
+            error: 'NOT_FOUND'
+          });
+        }
+        
+        // Return multiple matches for user to choose
+        if (fallbackStudents.length > 1) {
+          return res.status(300).json({
+            success: true,
+            code: 'MULTIPLE_MATCHES',
+            message: 'Multiple students found. Please provide more details.',
+            students: fallbackStudents.map(s => ({
+              id: s.id,
+              studentId: s.student_id,
+              firstName: s.first_name,
+              lastName: s.last_name,
+              gender: s.gender,
+              trade: s.trade_name,
+              level: s.level_number
+            }))
+          });
+        }
+        
+        var student = fallbackStudents[0];
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'Student not found. Please check the details and try again or contact the school.',
+          code: 'NO_MATCHES',
+          error: 'NOT_FOUND'
+        });
+      }
+    }
+
+    // If multiple students found with gender, let user choose
+    if (!student && students.length > 1) {
+      return res.status(300).json({
+        success: true,
+        code: 'MULTIPLE_MATCHES',
+        message: 'Multiple students found with same details. Please confirm which one is yours.',
+        students: students.map(s => ({
+          id: s.id,
+          studentId: s.student_id,
+          firstName: s.first_name,
+          lastName: s.last_name,
+          gender: s.gender,
+          trade: s.trade_name,
+          level: s.level_number
+        }))
+      });
+    }
+
+    if (!student) {
+      student = students[0];
+    }
+    
+    const studentDbId = student.student_id;
+
+    // Check if already linked
+    const [existing] = await pool.execute(`
+      SELECT id FROM parent_student_links 
+      WHERE parent_id = ? AND student_id = ? AND status = 'active'
+    `, [parentId, studentDbId]);
+
+    if (existing.length > 0) {
+      return res.json({
+        success: true,
+        message: 'Student is already linked to your account!',
+        alreadyLinked: true,
+        child: {
+          id: student.id,
+          studentId: studentDbId,
+          firstName: student.first_name,
+          lastName: student.last_name,
+          gender: student.gender,
+          trade: student.trade_name,
+          level: student.level_number
+        }
+      });
+    }
+
+    // Create the link
+    await pool.execute(`
+      INSERT INTO parent_student_links 
+      (parent_id, student_id, can_view_marks, can_view_attendance, can_view_discipline, can_view_fees, can_receive_sms, status, linked_by, linked_at)
+      VALUES (?, ?, 1, 1, 1, 1, 1, 'active', ?, NOW())
+    `, [parentId, studentDbId, req.user.name || 'Parent']);
+
+    // Get parent info for SMS
+    const [parentInfo] = await pool.execute(
+      'SELECT first_name, last_name, phone FROM users WHERE id = ?',
+      [parentId]
+    );
+    
+    const parentName = parentInfo.length > 0 ? parentInfo[0].first_name : 'Parent';
+    const parentPhone = parentInfo.length > 0 ? parentInfo[0].phone : null;
+
+    // Send real SMS notification to parent via African Talking
+    let smsResult = null;
+    if (parentPhone && isSMSReady()) {
+      const smsMessage = `Hello ${parentName}, you have successfully linked with ${student.first_name} ${student.last_name} (${student.trade_name} Level ${student.level_number}) in Garden TVET School system. You can now view their progress.`;
+      smsResult = await sendSMS(parentPhone, smsMessage);
+      console.log(`[SMS] Parent notification sent: ${smsResult ? 'Success' : 'Failed'}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Student linked successfully! 🎉',
+      smsSent: smsResult ? smsResult.success : false,
+      child: {
+        id: student.id,
+        studentId: studentDbId,
+        firstName: student.first_name,
+        lastName: student.last_name,
+        gender: student.gender,
+        trade: student.trade_name,
+        level: student.level_number
+      }
+    });
+  } catch (error) {
+    console.error('Auto-connect error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to connect with student',
+      error: error.message
+    });
+  }
+});
+
+router.post('/link-student', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const parentId = req.user.userId || req.user.id;
+    const {
+      student_name,
+      student_trade,
+      student_level,
+      student_gender,
+      relationship_type = 'Parent'
+    } = req.body;
+
+    if (!student_name || !student_trade || !student_level) {
+      throw new Error('Student name, trade, and level are required');
+    }
+
+    const nameParts = student_name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    const levelNum = parseInt(student_level);
+
+    const [students] = await connection.execute(`
+      SELECT id, student_code, first_name, last_name, trade_code, trade_name, level_number, gender
+      FROM global_student_sheets
+      WHERE status = 'active'
+        AND trade_code = ?
+        AND level_number = ?
+        AND (
+          LOWER(CONCAT(first_name, ' ', last_name)) LIKE LOWER(?)
+          OR LOWER(first_name) LIKE LOWER(?)
+          OR LOWER(last_name) LIKE LOWER(?)
+        )
+    `, [student_trade, levelNum, `%${student_name}%`, `%${firstName}%`, `%${lastName}%`]);
+
+    if (students.length === 0) {
+      await connection.execute(`
+        INSERT INTO parent_student_link_requests 
+        (parent_id, student_first_name, student_last_name, trade_code, level_number, gender, relationship, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+      `, [parentId, firstName, lastName, student_trade, levelNum, student_gender, relationship_type]);
+
+      await connection.commit();
+      return res.json({
+        success: true,
+        message: 'No exact match found. A request has been submitted to the administration for manual verification.'
+      });
+    }
+
+    let bestMatch = students[0];
+    if (student_gender) {
+      const genderMatch = students.find(s => 
+        s.gender && s.gender.toLowerCase() === student_gender.toLowerCase()
+      );
+      if (genderMatch) bestMatch = genderMatch;
+    }
+
+    const [existing] = await connection.execute(`
+      SELECT id FROM parent_student_links
+      WHERE parent_id = ? AND student_id = ?
+    `, [parentId, bestMatch.id]);
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      return res.json({
+        success: false,
+        message: 'This student is already linked to your account.'
+      });
+    }
+
+    const matchMetadata = JSON.stringify({
+      search_name: student_name,
+      matched_name: `${bestMatch.first_name} ${bestMatch.last_name}`,
+      trade_match: true,
+      level_match: true,
+      manual_link: true
+    });
+
+    await connection.execute(`
+      INSERT INTO parent_student_links (
+        parent_id, student_id, relationship_type, status,
+        match_confidence, match_metadata, linked_at
+      ) VALUES (?, ?, ?, 'pending', ?, ?, NOW())
+    `, [parentId, bestMatch.id, relationship_type, 90, matchMetadata]);
+
+    const [linkResult] = await connection.execute(
+      'SELECT id FROM parent_student_links WHERE parent_id = ? AND student_id = ? ORDER BY id DESC LIMIT 1',
+      [parentId, bestMatch.id]
+    );
+
+    if (linkResult.length > 0) {
+      await connection.execute(`
+        INSERT INTO parent_student_link_activity (link_id, action, details)
+        VALUES (?, 'created', 'Parent requested student link from dashboard')
+      `, [linkResult[0].id]);
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `Link request submitted successfully! Found: ${bestMatch.first_name} ${bestMatch.last_name} (${bestMatch.trade_name} Level ${bestMatch.level_number}). Awaiting approval.`,
+      student: {
+        name: `${bestMatch.first_name} ${bestMatch.last_name}`,
+        trade: bestMatch.trade_name,
+        level: bestMatch.level_number,
+        code: bestMatch.student_code
+      }
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Link student error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to submit link request'
+    });
+  } finally {
+    connection.release();
   }
 });
 

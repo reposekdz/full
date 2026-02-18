@@ -245,14 +245,19 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
       });
 
       if (result.success) {
-        setMessage({ type: 'success', text: 'Login successful! Redirecting to dashboard...' });
+        setMessage({ type: 'success', text: 'Login successful! Checking credentials...' });
+        
+        // Cast result to access extended properties
+        const loginResult = result as { success: boolean; dashboardPage?: string; token?: string; user?: any };
         
         // Store token and user if provided
-        if (result.token) {
-          localStorage.setItem('token', result.token);
+        if (loginResult.token) {
+          localStorage.setItem('token', loginResult.token);
         }
-        if (result.user) {
-          localStorage.setItem('user', JSON.stringify(result.user));
+        if (loginResult.user) {
+          // Add must_change_password flag to user object
+          const userWithFlag = { ...loginResult.user, must_change_password: false };
+          localStorage.setItem('user', JSON.stringify(userWithFlag));
         }
         
         if (data.rememberMe) {
@@ -261,13 +266,41 @@ const RoleLoginPage: React.FC<RoleLoginPageProps> = ({ onNavigate, onRoleSelect,
           localStorage.removeItem('rememberedEmail');
         }
 
-        setTimeout(() => {
-          const dashboard = selectedRole === 'parent' ? 'dashboard-parent' : 
-                          getRoleDashboard(selectedRole);
-          onNavigate(dashboard);
+        // Check if password change is required
+        setTimeout(async () => {
+          try {
+            const token = loginResult.token || localStorage.getItem('token');
+            const checkRes = await fetch(
+              'http://localhost:5000/api/force-credential-change/check-default-credentials',
+              {
+                headers: { Authorization: `Bearer ${token}` }
+              }
+            );
+            const checkData = await checkRes.json();
+            
+            // Store the flag in localStorage for App.tsx to read
+            if (checkData.success) {
+              localStorage.setItem('needsPasswordChange', JSON.stringify(checkData.needsChange));
+              
+              // Update user in localStorage with the flag
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                const userObj = JSON.parse(storedUser);
+                userObj.must_change_password = checkData.needsChange;
+                localStorage.setItem('user', JSON.stringify(userObj));
+              }
+            }
+            
+            // Navigate to login page - App.tsx will handle showing ForceChangeCredentialsPage
+            onNavigate('login');
+          } catch (error) {
+            // On error, still redirect to login
+            onNavigate('login');
+          }
         }, 1000);
       } else {
-        setMessage({ type: 'error', text: result.message || 'Invalid credentials. Please try again.' });
+        const loginResult = result as { success: boolean; message?: string };
+        setMessage({ type: 'error', text: loginResult.message || 'Invalid credentials. Please try again.' });
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Network error. Please check your connection.' });

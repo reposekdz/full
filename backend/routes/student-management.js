@@ -153,12 +153,16 @@ router.get('/sheets/:tradeCode/:levelNumber', authenticateToken, authorizeRoles(
     const { tradeCode, levelNumber } = req.params;
     const { level_suffix } = req.query;
 
+    // Use global_student_sheets for proper trade/level filtering
     const [students] = await db.query(
-      `SELECT u.* FROM users u
-       WHERE u.role = 'student' AND u.status = 'active'
-       AND u.trade_code = ? AND u.level_number = ? AND u.level_suffix = ?
-       ORDER BY u.first_name, u.last_name`,
-      [tradeCode, levelNumber, level_suffix || '']
+      `SELECT gss.*, gss.student_code, gss.first_name, gss.last_name, gss.gender,
+              gss.trade_code, gss.level_number, gss.level_suffix, gss.status,
+              gss.total_fees, gss.paid_amount, gss.balance, gss.payment_status
+       FROM global_student_sheets gss
+       WHERE gss.status = 'active'
+       AND gss.trade_code = ? AND gss.level_number = ?
+       ORDER BY gss.first_name, gss.last_name`,
+      [tradeCode, parseInt(levelNumber)]
     );
 
     // Get custom columns
@@ -221,29 +225,32 @@ router.get('/students', authenticateToken, authorizeRoles('dos', 'director_study
   try {
     const { trade_code, level_number, search } = req.query;
 
+    // Use global_student_sheets for proper trade/level filtering
     let sql = `
-      SELECT u.*, u.trade_code, u.level_number
-      FROM users u
-      WHERE u.role = 'student' AND u.status = 'active'
+      SELECT gss.id, gss.student_id, gss.student_code, gss.first_name, gss.last_name, 
+             gss.gender, gss.trade_code, gss.level_number, gss.level_suffix,
+             gss.status, gss.total_fees, gss.paid_amount, gss.balance, gss.payment_status
+      FROM global_student_sheets gss
+      WHERE gss.status = 'active'
     `;
     const params = [];
 
     if (trade_code) {
-      sql += ` AND u.trade_code = ?`;
+      sql += ` AND gss.trade_code = ?`;
       params.push(trade_code);
     }
 
     if (level_number) {
-      sql += ` AND u.level_number = ?`;
-      params.push(level_number);
+      sql += ` AND gss.level_number = ?`;
+      params.push(parseInt(level_number));
     }
 
     if (search) {
-      sql += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ?)`;
+      sql += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR gss.student_code LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    sql += ` ORDER BY u.first_name, u.last_name`;
+    sql += ` ORDER BY gss.first_name, gss.last_name`;
 
     const [students] = await db.query(sql, params);
     res.json({ success: true, students });

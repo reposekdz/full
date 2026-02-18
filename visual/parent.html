@@ -41,6 +41,52 @@
         .alert.danger { background: #f8d7da; border-left-color: #dc3545; }
         .back-link { color: white; text-decoration: none; padding: 8px 15px; background: rgba(255,255,255,0.2); border-radius: 5px; }
         .back-link:hover { background: rgba(255,255,255,0.3); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        #linkingFormModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; z-index: 1001; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #e74c3c; padding-bottom: 15px; }
+        .modal-header h2 { color: #e74c3c; margin: 0; font-size: 1.5em; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.3s; }
+        .close-btn:hover { background: #f0f0f0; color: #e74c3c; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; transition: 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #e74c3c; box-shadow: 0 0 0 3px rgba(231,76,60,0.1); }
+        .form-actions { display: flex; gap: 15px; margin-top: 25px; }
+        .form-actions .btn { flex: 1; margin: 0; }
+        .btn-secondary { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+        
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 10px; padding: 15px; text-align: center; }
+            .logo { font-size: 1.1em; }
+            .user-info { flex-direction: column; gap: 10px; }
+            .container { padding: 15px 10px; }
+            .welcome { padding: 20px 15px; }
+            .welcome h1 { font-size: 1.5em; }
+            .children-selector { flex-direction: column; }
+            .child-card { width: 100%; text-align: center; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-number { font-size: 2em; }
+            .stat-label { font-size: 0.8em; }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+            .card { padding: 15px; }
+            .card-icon { font-size: 2em; }
+            .card-title { font-size: 1.1em; }
+            .feature-list li { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .modal-content { width: 95%; padding: 20px; }
+            .modal-header h2 { font-size: 1.2em; }
+            .form-actions { flex-direction: column; }
+            .form-actions .btn { width: 100%; }
+        }
+        
+        @media (max-width: 480px) {
+            .logo { font-size: 1em; }
+            .welcome h1 { font-size: 1.3em; }
+            .stats-row { grid-template-columns: 1fr; }
+            .stat-box { padding: 15px; }
+            .card-header { flex-direction: column; text-align: center; }
+            .badge { font-size: 0.75em; padding: 3px 8px; }
+        }
     </style>
 </head>
 <body>
@@ -60,6 +106,53 @@
             <div class="children-selector">
                 <div class="child-card">👨🎓 Mugabo Jean - S6 MCE</div>
                 <div class="child-card">👧🎓 Uwase Grace - S4 PCB</div>
+            </div>
+            <button class="btn" onclick="showLinkingForm()" style="margin-top: 20px;">➕ Iyandikishe</button>
+        </div>
+
+        <div id="linkingFormModal" style="display: none;">
+            <div class="modal-overlay" onclick="hideLinkingForm()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Link with your student</h2>
+                    <button class="close-btn" onclick="hideLinkingForm()">✖</button>
+                </div>
+                <form id="studentLinkForm" onsubmit="submitLinkingForm(event)">
+                    <div class="form-group">
+                        <label for="studentName">Student Name:</label>
+                        <input type="text" id="studentName" name="studentName" required placeholder="Enter student's full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="studentTrade">Trade:</label>
+                        <select id="studentTrade" name="studentTrade" required>
+                            <option value="">Select Trade</option>
+                            <option value="BDC">BDC - Building Construction</option>
+                            <option value="SOD">SOD - Software Development</option>
+                            <option value="AUT">AUT - Automotive Technology</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentLevel">Level:</label>
+                        <select id="studentLevel" name="studentLevel" required>
+                            <option value="">Select Level</option>
+                            <option value="1">Level 1</option>
+                            <option value="2">Level 2</option>
+                            <option value="3">Level 3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentGender">Gender:</label>
+                        <select id="studentGender" name="studentGender" required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Submit</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideLinkingForm()">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -292,5 +385,53 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function showLinkingForm() {
+            document.getElementById('linkingFormModal').style.display = 'flex';
+        }
+
+        function hideLinkingForm() {
+            document.getElementById('linkingFormModal').style.display = 'none';
+            document.getElementById('studentLinkForm').reset();
+        }
+
+        async function submitLinkingForm(event) {
+            event.preventDefault();
+            
+            const formData = {
+                student_name: document.getElementById('studentName').value,
+                student_trade: document.getElementById('studentTrade').value,
+                student_level: document.getElementById('studentLevel').value,
+                student_gender: document.getElementById('studentGender').value,
+                relationship_type: 'Parent'
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:3000/api/parent-linking/link-student', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Student link request submitted successfully! It will be reviewed by the administration.');
+                    hideLinkingForm();
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to submit link request'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the request. Please try again.');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -153,7 +153,13 @@ async function importStudents() {
                     `INSERT INTO global_student_sheets 
                     (student_id, student_code, first_name, last_name, gender, trade_code, level_number, level_suffix, total_fees, paid_amount, academic_year)
                     VALUES (?, ?, ?, ?, ?, 'SOD', 4, 'A', 500000, 0, '2025-2026')
-                    ON DUPLICATE KEY UPDATE first_name = VALUES(first_name), last_name = VALUES(last_name)`,
+                    ON DUPLICATE KEY UPDATE 
+                        first_name = VALUES(first_name), 
+                        last_name = VALUES(last_name),
+                        gender = VALUES(gender),
+                        trade_code = VALUES(trade_code),
+                        level_number = VALUES(level_number),
+                        level_suffix = VALUES(level_suffix)`,
                     [userId, student.code, firstName, lastName, student.gender]
                 );
 

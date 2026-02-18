@@ -207,7 +207,19 @@ router.post('/incidents/record', authenticateToken, requireRole(['dod', 'patron'
 
 router.put('/incidents/:incidentId/resolve', authenticateToken, requireRole(['dod', 'patron', 'matron']), async (req, res) => {
   try {
-    const { resolution, action_taken, parents_notified, follow_up_required, follow_up_date, resolution_notes } = req.body;
+    const { resolution, action_taken, parents_notified, follow_up_required, follow_up_date, resolution_notes, send_sms_to_parents } = req.body;
+    
+    // First get the incident details to find the student
+    const [incident] = await pool.execute(`
+      SELECT sdr.*, gs.first_name, gs.last_name, gs.guardian_phone, gs.parent_phone
+      FROM student_discipline_records sdr
+      LEFT JOIN global_student_sheets gs ON sdr.student_id = gs.student_id
+      WHERE sdr.id = ?
+    `, [req.params.incidentId]);
+    
+    if (!incident[0]) {
+      return res.status(404).json({ success: false, message: 'Incident not found' });
+    }
     
     await pool.execute(`
       UPDATE student_discipline_records 
@@ -223,7 +235,25 @@ router.put('/incidents/:incidentId/resolve', authenticateToken, requireRole(['do
       WHERE id = ?
     `, [resolution, action_taken, parents_notified, follow_up_required, follow_up_date, resolution_notes, req.user.userId, req.params.incidentId]);
     
-    res.json({ success: true, message: 'Incident resolved successfully' });
+    // Send SMS to parents if requested
+    if (send_sms_to_parents && incident[0].guardian_phone) {
+      const studentName = `${incident[0].first_name} ${incident[0].last_name}`;
+      const message = `Dear Parent/Guardian,\n\nGood news! The disciplinary action for ${studentName} has been resolved.\n\nResolution: ${resolution}\n\nThank you for your cooperation.\n- G.S RUHONGA SECONDARY SCHOOL`;
+      
+      try {
+        // Insert into SMS queue
+        await pool.execute(`
+          INSERT INTO sms_queue (phone, message, status, created_at)
+          VALUES (?, ?, 'pending', NOW())
+        `, [incident[0].guardian_phone, message]);
+        
+        console.log(`SMS queued for parent: ${incident[0].guardian_phone}`);
+      } catch (smsError) {
+        console.error('SMS queue error:', smsError);
+      }
+    }
+    
+    res.json({ success: true, message: 'Incident resolved successfully', sms_sent: !!send_sms_to_parents });
   } catch (error) {
     console.error('Resolve Incident Error:', error);
     res.status(500).json({ success: false, message: error.message });

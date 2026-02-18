@@ -1,3 +1,4 @@
+
 @echo off
 echo ========================================
 echo Rwanda Real Locations Database Seed

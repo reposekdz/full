@@ -16,6 +16,14 @@ const initializeRoleCredentials = async () => {
       return;
     }
     
+    // Test connection first
+    try {
+      await pool.execute('SELECT 1');
+    } catch (connError) {
+      console.warn('⚠️ Database not connected, skipping role credentials initialization:', connError.message);
+      return;
+    }
+    
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS role_credentials (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -107,12 +115,29 @@ const initializeRoleCredentials = async () => {
   }
 };
 
-// Initialize on module load
-initializeRoleCredentials();
+// Initialize on module load - but don't run the async function
+// The initialization will be called lazily on first request
+let roleCredentialsInitialized = false;
+
+const tryInitializeRoleCredentials = async () => {
+  if (roleCredentialsInitialized) return;
+  roleCredentialsInitialized = true;
+  
+  // Small delay to ensure DB is ready
+  setTimeout(() => {
+    initializeRoleCredentials().catch(err => {
+      console.warn('⚠️ Role credentials delayed init skipped:', err.message);
+      roleCredentialsInitialized = false; // Allow retry
+    });
+  }, 2000);
+};
 
 // Get role credentials (for login form)
 router.get('/role/:roleName', async (req, res) => {
   try {
+    // Try to initialize on first request
+    await tryInitializeRoleCredentials();
+    
     const { roleName } = req.params;
 
     const [rows] = await pool.execute(

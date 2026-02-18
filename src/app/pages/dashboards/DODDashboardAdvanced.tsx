@@ -8,7 +8,8 @@ import {
   Bell, Search, RefreshCw, Plus, CheckCircle, Eye, Phone, UserPlus,
   TrendingUp, TrendingDown, School, Gavel, Timer, Edit, Trash2,
   ChevronRight, Shield, Activity, BarChart3, Calendar, MapPin,
-  FileText, AlertCircle, Clock, ArrowUpRight, Flame, X, MessageSquare, Menu
+  FileText, AlertCircle, Clock, ArrowUpRight, Flame, X, MessageSquare, Menu,
+  XCircle
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -22,7 +23,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/app/components/ui/table';
@@ -122,6 +122,10 @@ const SIDEBAR_ITEMS = [
   { icon: AlertTriangle, label: 'Incidents', value: 'incidents' },
   { icon: UserCheck, label: 'Interventions', value: 'interventions' },
   { icon: Star, label: 'Conduct', value: 'conduct' },
+  { icon: Shield, label: 'SOD Students', value: 'sod-students' },
+  { icon: Trash2, label: 'Remove Conduct', value: 'remove-conduct' },
+  { icon: Phone, label: 'Parent SMS', value: 'parent-sms' },
+  { icon: UserPlus, label: 'Link Parents', value: 'link-parents' },
   { icon: Settings, label: 'Settings', value: 'settings' },
 ];
 
@@ -132,6 +136,10 @@ const TAB_TITLES: Record<string, string> = {
   incidents: 'Incident Management',
   interventions: 'Intervention Programs',
   conduct: 'Conduct Tracking',
+  'sod-students': 'SOD Students',
+  'remove-conduct': 'Remove Conduct Records',
+  'parent-sms': 'Parent SMS',
+  'link-parents': 'Link Parents',
   settings: 'Settings',
 };
 
@@ -206,6 +214,40 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
 
+  // SOD Students State
+  const [sodStudents, setSODStudents] = useState<any[]>([]);
+  const [openSODModal, setOpenSODModal] = useState(false);
+  const [sodForm, setSODForm] = useState({ student_id: '', notes: '', status: 'active' });
+
+  // Remove Conduct State
+  const [conductRecords, setConductRecords] = useState<any[]>([]);
+  const [openRemoveConductModal, setOpenRemoveConductModal] = useState(false);
+  const [selectedConductRecord, setSelectedConductRecord] = useState<any>(null);
+  const [removeConductForm, setRemoveConductForm] = useState({
+    removal_type: 'leave',
+    removal_reason: '',
+    notes: ''
+  });
+
+  // Parent Linking State
+  const [parentLinks, setParentLinks] = useState<any[]>([]);
+  const [openLinkParentModal, setOpenLinkParentModal] = useState(false);
+  const [linkParentForm, setLinkParentForm] = useState({
+    student_id: '',
+    parent_id: '',
+    relationship: 'parent'
+  });
+
+  // SMS State
+  const [smsHistory, setSMSHistory] = useState<any[]>([]);
+  const [openSMSModal, setOpenSMSModal] = useState(false);
+  const [smsForm, setSMSForm] = useState({
+    parent_id: '',
+    student_id: '',
+    message: '',
+    priority: 'normal'
+  });
+
   // Forms
   const [conductForm, setConductForm] = useState({
     conduct_type: '',
@@ -239,12 +281,19 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
         apiService.getDODRecentActivities()
       ]);
 
-      // Also fetch students for the list
-      const studentsRes = await fetch(`${API_BASE}/dod-complete/students/all`, { headers: authHeaders() });
+      // Fetch Level 4 SOD students specifically using comprehensive-roles API
+      const studentsRes = await fetch(`${API_BASE}/comprehensive-roles/students?level=4&trade=SOD`, { headers: authHeaders() });
       const studentsData = await studentsRes.json();
 
-      if (studentsData?.success && Array.isArray(studentsData.students)) {
+      if (studentsData?.students && Array.isArray(studentsData.students)) {
         setStudents(studentsData.students);
+      } else {
+        // Fallback to dod-complete if comprehensive-roles fails
+        const fallbackRes = await fetch(`${API_BASE}/dod-complete/students/all`, { headers: authHeaders() });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData?.success && Array.isArray(fallbackData.students)) {
+          setStudents(fallbackData.students);
+        }
       }
       if (statsRes.success && statsRes.data) {
         setStats({
@@ -265,6 +314,203 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   }, []);
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+
+  // Fetch SOD Students when tab changes
+  useEffect(() => {
+    if (activeTab === 'sod-students') {
+      fetchSODStudents();
+    }
+  }, [activeTab]);
+
+  // Fetch Conduct Records when tab changes
+  useEffect(() => {
+    if (activeTab === 'remove-conduct') {
+      fetchConductRecords();
+    }
+  }, [activeTab]);
+
+  // Fetch SMS History when tab changes
+  useEffect(() => {
+    if (activeTab === 'parent-sms') {
+      fetchSMSHistory();
+    }
+  }, [activeTab]);
+
+  // Fetch Parent Links when tab changes
+  useEffect(() => {
+    if (activeTab === 'link-parents') {
+      fetchParentLinks();
+    }
+  }, [activeTab]);
+
+  // API Functions
+  const fetchSODStudents = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/dod/sod-students`, { headers: authHeaders() });
+      const data = await response.json();
+      if (data.success) {
+        setSODStudents(data.students || []);
+      }
+    } catch (error) {
+      console.error('Error fetching SOD students:', error);
+    }
+  };
+
+  const fetchConductRecords = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/dod/conduct?limit=50`, { headers: authHeaders() });
+      const data = await response.json();
+      if (data.success) {
+        setConductRecords(data.records || []);
+      }
+    } catch (error) {
+      console.error('Error fetching conduct records:', error);
+    }
+  };
+
+  const fetchSMSHistory = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/dod/sms/history?limit=50`, { headers: authHeaders() });
+      const data = await response.json();
+      if (data.success) {
+        setSMSHistory(data.history || []);
+      }
+    } catch (error) {
+      console.error('Error fetching SMS history:', error);
+    }
+  };
+
+  const fetchParentLinks = async () => {
+    try {
+      // Get all parent links from parent_student_links table
+      const response = await fetch(`${API_BASE}/parents`, { headers: authHeaders() });
+      const data = await response.json();
+      if (data.success) {
+        setParentLinks(data.parents || []);
+      }
+    } catch (error) {
+      console.error('Error fetching parent links:', error);
+    }
+  };
+
+  // Handle add to SOD
+  const handleAddSOD = async () => {
+    if (!sodForm.student_id) {
+      toast.error('Please enter student ID');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/dod/sod-students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          student_id: parseInt(sodForm.student_id),
+          notes: sodForm.notes,
+          status: sodForm.status
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Student added to SOD program');
+        setOpenSODModal(false);
+        setSODForm({ student_id: '', notes: '', status: 'active' });
+        fetchSODStudents();
+      } else {
+        toast.error(data.message || 'Failed to add student to SOD');
+      }
+    } catch (error) {
+      toast.error('Error adding student to SOD');
+    }
+  };
+
+  // Handle remove conduct record
+  const handleRemoveConductRecord = async () => {
+    if (!selectedConductRecord) return;
+    try {
+      const response = await fetch(`${API_BASE}/dod/conduct/${selectedConductRecord.id}/remove`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          removal_type: removeConductForm.removal_type,
+          removal_reason: removeConductForm.removal_reason,
+          notes: removeConductForm.notes
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Conduct record removed successfully');
+        setOpenRemoveConductModal(false);
+        setSelectedConductRecord(null);
+        setRemoveConductForm({ removal_type: 'leave', removal_reason: '', notes: '' });
+        fetchConductRecords();
+      } else {
+        toast.error(data.message || 'Failed to remove conduct record');
+      }
+    } catch (error) {
+      toast.error('Error removing conduct record');
+    }
+  };
+
+  // Handle send SMS
+  const handleSendSMS = async () => {
+    if (!smsForm.message || (!smsForm.parent_id && !smsForm.student_id)) {
+      toast.error('Please fill required fields');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/dod/sms/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          parent_id: smsForm.parent_id ? parseInt(smsForm.parent_id) : undefined,
+          student_id: smsForm.student_id ? parseInt(smsForm.student_id) : undefined,
+          message: smsForm.message,
+          priority: smsForm.priority
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('SMS sent successfully via African Talking!');
+        setOpenSMSModal(false);
+        setSMSForm({ parent_id: '', student_id: '', message: '', priority: 'normal' });
+        fetchSMSHistory();
+      } else {
+        toast.error(data.message || 'Failed to send SMS');
+      }
+    } catch (error) {
+      toast.error('Error sending SMS');
+    }
+  };
+
+  // Handle link parent
+  const handleLinkParent = async () => {
+    if (!linkParentForm.student_id || !linkParentForm.parent_id) {
+      toast.error('Please enter student and parent IDs');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/dod/link-parent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          student_id: parseInt(linkParentForm.student_id),
+          parent_id: parseInt(linkParentForm.parent_id),
+          relationship: linkParentForm.relationship
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Parent linked to student successfully');
+        setOpenLinkParentModal(false);
+        setLinkParentForm({ student_id: '', parent_id: '', relationship: 'parent' });
+        fetchParentLinks();
+      } else {
+        toast.error(data.message || 'Failed to link parent');
+      }
+    } catch (error) {
+      toast.error('Error linking parent');
+    }
+  };
 
   // Handle conduct removal with automatic SMS
   const handleRemoveConduct = async () => {
@@ -1229,6 +1475,676 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                       </Table>
                     </Card>
                   </div>
+                )}
+
+                {/* ═══ SOD STUDENTS ═══ */}
+                {activeTab === 'sod-students' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-red-600 flex items-center gap-2">
+                          <Shield className="size-6" />
+                          SOD Students
+                        </h2>
+                        <p className="text-muted-foreground">Students of Discipline - Special Monitoring Program</p>
+                      </div>
+                      <Button 
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                        onClick={() => setOpenSODModal(true)}
+                      >
+                        <Plus className="size-4 mr-2" />
+                        Add to SOD
+                      </Button>
+                    </div>
+
+                    {/* SOD Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-red-500 rounded-lg">
+                              <Users className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{sodStudents.length}</p>
+                              <p className="text-sm text-muted-foreground">Total SOD</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-500 rounded-lg">
+                              <AlertTriangle className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{sodStudents.filter(s => s.has_critical).length}</p>
+                              <p className="text-sm text-muted-foreground">Critical</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500 rounded-lg">
+                              <UserCheck className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{sodStudents.filter(s => s.status === 'monitoring').length}</p>
+                              <p className="text-sm text-muted-foreground">Monitoring</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-500 rounded-lg">
+                              <CheckCircle className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{sodStudents.filter(s => s.status === 'released').length}</p>
+                              <p className="text-sm text-muted-foreground">Released</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* SOD Students Table */}
+                    <Card className="overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gradient-to-r from-red-500 to-red-600">
+                          <TableRow className="hover:bg-red-600">
+                            <TableHead className="text-white font-semibold">Student</TableHead>
+                            <TableHead className="text-white font-semibold">Class</TableHead>
+                            <TableHead className="text-white font-semibold">Incidents</TableHead>
+                            <TableHead className="text-white font-semibold">Status</TableHead>
+                            <TableHead className="text-white font-semibold">Last Incident</TableHead>
+                            <TableHead className="text-white font-semibold">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sodStudents.map((student, i) => (
+                            <motion.tr
+                              key={student.student_id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                              className="border-b hover:bg-muted/50"
+                            >
+                              <TableCell className="font-medium">
+                                {student.first_name} {student.last_name}
+                              </TableCell>
+                              <TableCell>{student.class_name}</TableCell>
+                              <TableCell>
+                                <Badge variant={student.total_incidents > 5 ? 'destructive' : 'secondary'}>
+                                  {student.total_incidents}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  student.status === 'active' ? 'bg-red-500' :
+                                  student.status === 'monitoring' ? 'bg-orange-500' : 'bg-green-500'
+                                }>
+                                  {student.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {student.last_incident_date || 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedStudent(student);
+                                      setOpenRemoveConductModal(true);
+                                    }}
+                                  >
+                                    <Trash2 className="size-3" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSODForm({ ...sodForm, student_id: student.student_id.toString() });
+                                      setOpenSODModal(true);
+                                    }}
+                                  >
+                                    <Edit className="size-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Card>
+
+                    {/* SOD Add/Edit Modal */}
+                    <Dialog open={openSODModal} onOpenChange={setOpenSODModal}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Shield className="size-5 text-red-500" />
+                            Add Student to SOD
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Student ID</Label>
+                            <Input 
+                              value={sodForm.student_id}
+                              onChange={(e) => setSODForm({ ...sodForm, student_id: e.target.value })}
+                              placeholder="Enter student ID"
+                            />
+                          </div>
+                          <div>
+                            <Label>Status</Label>
+                            <Select 
+                              value={sodForm.status}
+                              onValueChange={(v) => setSODForm({ ...sodForm, status: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="monitoring">Monitoring</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Notes</Label>
+                            <Textarea 
+                              value={sodForm.notes}
+                              onChange={(e) => setSODForm({ ...sodForm, notes: e.target.value })}
+                              placeholder="Add notes about this student..."
+                            />
+                          </div>
+                          <Button 
+                            className="w-full bg-red-500 hover:bg-red-600"
+                            onClick={handleAddSOD}
+                          >
+                            Add to SOD
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </motion.div>
+                )}
+
+                {/* ═══ REMOVE CONDUCT RECORDS ═══ */}
+                {activeTab === 'remove-conduct' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-orange-600 flex items-center gap-2">
+                          <Trash2 className="size-6" />
+                          Remove Conduct Records
+                        </h2>
+                        <p className="text-muted-foreground">Remove student conduct records with proper reasons</p>
+                      </div>
+                    </div>
+
+                    {/* Removal Types */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        { type: 'leave', label: 'Leave', icon: Calendar, color: 'bg-blue-500' },
+                        { type: 'sick', label: 'Sick', icon: Activity, color: 'bg-red-500' },
+                        { type: 'lesson_cancelled', label: 'Lesson Cancelled', icon: X, color: 'bg-gray-500' },
+                        { type: 'exonerated', label: 'Exonerated', icon: CheckCircle, color: 'bg-green-500' },
+                        { type: 'appealed', label: 'Appealed', icon: AlertTriangle, color: 'bg-yellow-500' },
+                        { type: 'time_expired', label: 'Time Expired', icon: Clock, color: 'bg-purple-500' },
+                        { type: 'administrative', label: 'Administrative', icon: Settings, color: 'bg-teal-500' },
+                      ].map((item) => (
+                        <Card 
+                          key={item.type}
+                          className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+                        >
+                          <CardContent className="p-4 text-center">
+                            <div className={`${item.color} rounded-lg p-2 w-12 h-12 mx-auto mb-2 flex items-center justify-center`}>
+                              <item.icon className="size-6 text-white" />
+                            </div>
+                            <p className="font-medium text-sm">{item.label}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Conduct Records to Remove */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Recent Conduct Records</CardTitle>
+                      </CardHeader>
+                      <Table>
+                        <TableHeader className="bg-orange-500">
+                          <TableRow>
+                            <TableHead className="text-white">Student</TableHead>
+                            <TableHead className="text-white">Type</TableHead>
+                            <TableHead className="text-white">Severity</TableHead>
+                            <TableHead className="text-white">Date</TableHead>
+                            <TableHead className="text-white">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {conductRecords.slice(0, 10).map((record, i) => (
+                            <TableRow key={record.id} className="hover:bg-muted/50">
+                              <TableCell className="font-medium">{record.student_name}</TableCell>
+                              <TableCell>{record.incident_type}</TableCell>
+                              <TableCell>
+                                <Badge variant={record.severity === 'high' ? 'destructive' : 'secondary'}>
+                                  {record.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{record.incident_date}</TableCell>
+                              <TableCell>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => {
+                                    setSelectedConductRecord(record);
+                                    setOpenRemoveConductModal(true);
+                                  }}
+                                >
+                                  <Trash2 className="size-3 mr-1" />
+                                  Remove
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Card>
+
+                    {/* Remove Conduct Modal */}
+                    <Dialog open={openRemoveConductModal} onOpenChange={setOpenRemoveConductModal}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2 text-orange-600">
+                            <Trash2 className="size-5" />
+                            Remove Conduct Record
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Removal Type *</Label>
+                            <Select 
+                              value={removeConductForm.removal_type}
+                              onValueChange={(v) => setRemoveConductForm({ ...removeConductForm, removal_type: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="leave">Leave</SelectItem>
+                                <SelectItem value="sick">Sick</SelectItem>
+                                <SelectItem value="lesson_cancelled">Lesson Cancelled</SelectItem>
+                                <SelectItem value="exonerated">Exonerated</SelectItem>
+                                <SelectItem value="appealed">Appealed</SelectItem>
+                                <SelectItem value="time_expired">Time Expired</SelectItem>
+                                <SelectItem value="administrative">Administrative</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Reason</Label>
+                            <Textarea 
+                              value={removeConductForm.removal_reason}
+                              onChange={(e) => setRemoveConductForm({ ...removeConductForm, removal_reason: e.target.value })}
+                              placeholder="Explain why this record is being removed..."
+                            />
+                          </div>
+                          <div>
+                            <Label>Notes</Label>
+                            <Textarea 
+                              value={removeConductForm.notes}
+                              onChange={(e) => setRemoveConductForm({ ...removeConductForm, notes: e.target.value })}
+                              placeholder="Additional notes..."
+                            />
+                          </div>
+                          <Button 
+                            className="w-full bg-orange-500 hover:bg-orange-600"
+                            onClick={handleRemoveConductRecord}
+                          >
+                            <Trash2 className="size-4 mr-2" />
+                            Confirm Removal
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </motion.div>
+                )}
+
+                {/* ═══ PARENT SMS ═══ */}
+                {activeTab === 'parent-sms' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-green-600 flex items-center gap-2">
+                          <Phone className="size-6" />
+                          Parent SMS
+                        </h2>
+                        <p className="text-muted-foreground">Send SMS notifications to parents via African Talking</p>
+                      </div>
+                      <Button 
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                        onClick={() => setOpenSMSModal(true)}
+                      >
+                        <Plus className="size-4 mr-2" />
+                        Compose SMS
+                      </Button>
+                    </div>
+
+                    {/* SMS Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-500 rounded-lg">
+                              <Phone className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{smsHistory.filter(s => s.status === 'sent').length}</p>
+                              <p className="text-sm text-muted-foreground">Sent</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500 rounded-lg">
+                              <CheckCircle className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{smsHistory.filter(s => s.status === 'delivered').length}</p>
+                              <p className="text-sm text-muted-foreground">Delivered</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-red-50 to-red-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-red-500 rounded-lg">
+                              <XCircle className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{smsHistory.filter(s => s.status === 'failed').length}</p>
+                              <p className="text-sm text-muted-foreground">Failed</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* SMS History */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>SMS History</CardTitle>
+                      </CardHeader>
+                      <Table>
+                        <TableHeader className="bg-green-500">
+                          <TableRow>
+                            <TableHead className="text-white">Phone</TableHead>
+                            <TableHead className="text-white">Message</TableHead>
+                            <TableHead className="text-white">Status</TableHead>
+                            <TableHead className="text-white">Sent At</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {smsHistory.map((sms, i) => (
+                            <TableRow key={i} className="hover:bg-muted/50">
+                              <TableCell className="font-mono">{sms.phone}</TableCell>
+                              <TableCell className="max-w-xs truncate">{sms.message}</TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  sms.status === 'sent' ? 'bg-green-500' :
+                                  sms.status === 'delivered' ? 'bg-blue-500' : 'bg-red-500'
+                                }>
+                                  {sms.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{sms.sent_at}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Card>
+
+                    {/* SMS Modal */}
+                    <Dialog open={openSMSModal} onOpenChange={setOpenSMSModal}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2 text-green-600">
+                            <Phone className="size-5" />
+                            Send SMS to Parent
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Parent ID</Label>
+                            <Input 
+                              value={smsForm.parent_id}
+                              onChange={(e) => setSMSForm({ ...smsForm, parent_id: e.target.value })}
+                              placeholder="Enter parent ID"
+                            />
+                          </div>
+                          <div>
+                            <Label>Or Student ID</Label>
+                            <Input 
+                              value={smsForm.student_id}
+                              onChange={(e) => setSMSForm({ ...smsForm, student_id: e.target.value })}
+                              placeholder="Enter student ID to find parent"
+                            />
+                          </div>
+                          <div>
+                            <Label>Message *</Label>
+                            <Textarea 
+                              value={smsForm.message}
+                              onChange={(e) => setSMSForm({ ...smsForm, message: e.target.value })}
+                              placeholder="Type your message here..."
+                              rows={4}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {smsForm.message.length}/160 characters
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Priority</Label>
+                            <Select 
+                              value={smsForm.priority}
+                              onValueChange={(v) => setSMSForm({ ...smsForm, priority: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button 
+                            className="w-full bg-green-500 hover:bg-green-600"
+                            onClick={handleSendSMS}
+                          >
+                            <Phone className="size-4 mr-2" />
+                            Send SMS
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </motion.div>
+                )}
+
+                {/* ═══ LINK PARENTS ═══ */}
+                {activeTab === 'link-parents' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-purple-600 flex items-center gap-2">
+                          <UserPlus className="size-6" />
+                          Link Parents
+                        </h2>
+                        <p className="text-muted-foreground">Link parents/guardians to students</p>
+                      </div>
+                      <Button 
+                        className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                        onClick={() => setOpenLinkParentModal(true)}
+                      >
+                        <Plus className="size-4 mr-2" />
+                        Link Parent
+                      </Button>
+                    </div>
+
+                    {/* Link Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-500 rounded-lg">
+                              <Users className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{parentLinks.length}</p>
+                              <p className="text-sm text-muted-foreground">Total Links</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500 rounded-lg">
+                              <Phone className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{new Set(parentLinks.map(l => l.parent_id)).size}</p>
+                              <p className="text-sm text-muted-foreground">Parents Linked</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Parent Links Table */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Parent-Student Links</CardTitle>
+                      </CardHeader>
+                      <Table>
+                        <TableHeader className="bg-purple-500">
+                          <TableRow>
+                            <TableHead className="text-white">Student</TableHead>
+                            <TableHead className="text-white">Parent</TableHead>
+                            <TableHead className="text-white">Relationship</TableHead>
+                            <TableHead className="text-white">Phone</TableHead>
+                            <TableHead className="text-white">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {parentLinks.slice(0, 10).map((link, i) => (
+                            <TableRow key={i} className="hover:bg-muted/50">
+                              <TableCell className="font-medium">{link.student_first_name} {link.student_last_name}</TableCell>
+                              <TableCell>{link.parent_first_name} {link.parent_last_name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{link.relationship}</Badge>
+                              </TableCell>
+                              <TableCell className="font-mono">{link.parent_phone}</TableCell>
+                              <TableCell>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => toast.success('Parent unlinked')}
+                                >
+                                  <XCircle className="size-3" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Card>
+
+                    {/* Link Parent Modal */}
+                    <Dialog open={openLinkParentModal} onOpenChange={setOpenLinkParentModal}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2 text-purple-600">
+                            <UserPlus className="size-5" />
+                            Link Parent to Student
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Student ID *</Label>
+                            <Input 
+                              value={linkParentForm.student_id}
+                              onChange={(e) => setLinkParentForm({ ...linkParentForm, student_id: e.target.value })}
+                              placeholder="Enter student ID"
+                            />
+                          </div>
+                          <div>
+                            <Label>Parent ID *</Label>
+                            <Input 
+                              value={linkParentForm.parent_id}
+                              onChange={(e) => setLinkParentForm({ ...linkParentForm, parent_id: e.target.value })}
+                              placeholder="Enter parent ID"
+                            />
+                          </div>
+                          <div>
+                            <Label>Relationship</Label>
+                            <Select 
+                              value={linkParentForm.relationship}
+                              onValueChange={(v) => setLinkParentForm({ ...linkParentForm, relationship: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="father">Father</SelectItem>
+                                <SelectItem value="mother">Mother</SelectItem>
+                                <SelectItem value="guardian">Guardian</SelectItem>
+                                <SelectItem value="parent">Parent</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button 
+                            className="w-full bg-purple-500 hover:bg-purple-600"
+                            onClick={handleLinkParent}
+                          >
+                            <UserPlus className="size-4 mr-2" />
+                            Link Parent
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </motion.div>
                 )}
 
                 {/* ═══ SETTINGS ═══ */}

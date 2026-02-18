@@ -4,6 +4,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const socketIO = require('socket.io');
+const compression = require('compression');
+const helmet = require('helmet');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Initialize Cron Jobs
@@ -19,7 +21,9 @@ const { generalLimiter, authLimiter, apiLimiter } = require('./middleware/rateLi
 const { sanitizeMiddleware } = require('./middleware/validation');
 const { cacheMiddleware, getCacheStats } = require('./middleware/cache');
 
-// Middleware
+// Production Middleware
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -34,7 +38,7 @@ app.use((req, res, next) => {
 });
 
 // Security middleware
-// app.use(generalLimiter); // DISABLED for high-load testing
+app.use(generalLimiter);
 app.use(sanitizeMiddleware);
 
 // Static files
@@ -216,6 +220,7 @@ const routes = {
   advisor: loadRoute('./routes/advisor', 'Advisor'),
   search: loadRoute('./routes/search', 'Search'),
   advancedSearch: loadRoute('./routes/advanced-search', 'Advanced Search'),
+  comprehensiveSearch: loadRoute('./routes/comprehensive-search', 'Comprehensive Search'),
   uploads: loadRoute('./routes/uploads', 'Uploads'),
   admin: loadRoute('./routes/admin', 'Admin'),
   adminManagement: loadRoute('./routes/admin-management', 'Admin Management'),
@@ -430,13 +435,26 @@ app.use('/api/parent-registration', require('./routes/parent-registration')); mo
 // Parent Management API for Headmaster/DOD/DOS
 app.use('/api/parent-management', require('./routes/parent-management')); mountedRoutes++;
 
+// Parent Links API for Parent
+app.use('/api/parent-links', require('./routes/parent-links')); mountedRoutes++;
+
+// Enhanced Parent Dashboard with Real Data
+app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced')); mountedRoutes++;
+
+// Payment Processing API (Mobile Money Integration)
+app.use('/api/payments', require('./routes/payments-api')); mountedRoutes++;
+
+// SMS Notification API (Africa's Talking Integration - Advanced)
+app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
+
 // Advanced Payment System
 app.use('/api/payments', require('./routes/payments')); mountedRoutes++;
 
 // Parent Payment Portal - GT Bank, BPR, Equity Bank Integration
 app.use('/api/parent-payment-portal', require('./routes/parent-payment-portal')); mountedRoutes++;
 
-
+// Comprehensive Stock Management System (Real Database APIs)
+app.use('/api/stock-comprehensive', require('./routes/stock-comprehensive')); mountedRoutes++;
 
 // Class Management
 if (routes.classManagement) { app.use('/api/class-management', routes.classManagement); mountedRoutes++; }
@@ -445,7 +463,7 @@ if (routes.classSheetsApi) { app.use('/api/class-sheets-api', routes.classSheets
 
 // Student Features
 if (routes.studentManagement) { app.use('/api/student-management', routes.studentManagement); mountedRoutes++; }
-app.use('/api/management', require('./routes/student-sheets-advanced')); mountedRoutes++;
+app.use('/api/student-sheets-advanced', require('./routes/student-sheets-advanced')); mountedRoutes++;
 if (routes.studentSheets) { app.use('/api/student-sheets', routes.studentSheets); mountedRoutes++; }
 if (routes.globalStudentSheets) { app.use('/api/global-sheets', routes.globalStudentSheets); mountedRoutes++; }
 if (routes.studentCompetitions) { app.use('/api/student-competitions', routes.studentCompetitions); mountedRoutes++; }
@@ -527,6 +545,7 @@ app.use('/api/dynamic-sheets', require('./routes/dynamic-student-sheets')); moun
 app.use('/api/staff-dynamic-sheets', require('./routes/staff-dynamic-sheets')); mountedRoutes++;
 app.use('/api/global-student-sheets', require('./routes/global-student-sheets')); // Teacher Marks & Global Sheets mountedRoutes++;
 app.use('/api/global-admin-accountant-sheets', require('./routes/global-admin-accountant-sheets')); mountedRoutes++; // Admin & Accountant Full Access
+app.use('/api/comprehensive-admin', require('./routes/comprehensive-admin-api')); mountedRoutes++; // Comprehensive Admin API
 app.use('/api/timetable-generator', require('./routes/timetable-generator')); mountedRoutes++;
 if (routes.developers) { app.use('/api/developers', routes.developers); mountedRoutes++; }
 if (routes.developersApi) { app.use('/api/developers-api', routes.developersApi); mountedRoutes++; }
@@ -541,6 +560,7 @@ if (routes.communicationHub) { app.use('/api/communication-hub', routes.communic
 if (routes.advancedReports) { app.use('/api/advanced-reports', routes.advancedReports); mountedRoutes++; }
 if (routes.search) { app.use('/api/search', routes.search); mountedRoutes++; }
 if (routes.advancedSearch) { app.use('/api/advanced-search', routes.advancedSearch); mountedRoutes++; }
+if (routes.comprehensiveSearch) { app.use('/api/comprehensive-search', routes.comprehensiveSearch); mountedRoutes++; }
 if (routes.uploads) { app.use('/api/uploads', routes.uploads); mountedRoutes++; }
 if (routes.admin) { app.use('/api/admin', routes.admin); mountedRoutes++; }
 if (routes.adminManagement) { app.use('/api/admin-management', routes.adminManagement); mountedRoutes++; }
@@ -643,6 +663,9 @@ app.use('/api/dos-reports', require('./routes/dos-reports')); mountedRoutes++;
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
 
+// Parent Student Link Dashboard API
+app.use('/api/parent-links', require('./routes/parent-links')); mountedRoutes++;
+
 // SMS Routes (African Talking)
 app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
 
@@ -695,6 +718,9 @@ if (routes.stockUltraAdvanced) { app.use('/api/stock-ultra-advanced', routes.sto
 if (routes.serialCodeSystem) { app.use('/api/serial-code-system', routes.serialCodeSystem); mountedRoutes++; }
 if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.teacherStudentMarks); mountedRoutes++; }
 
+// Comprehensive Teacher Portal API
+app.use('/api/teacher-comprehensive', require('./routes/teacher-comprehensive')); mountedRoutes++;
+
 // COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
 app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;
 
@@ -743,7 +769,7 @@ app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal server error',
+    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });

@@ -6,16 +6,10 @@ import Header from '@/app/components/Header';
 import { BottomNav } from '@/app/components/BottomNav';
 import HomePage from '@/app/pages/HomePage';
 import SportsPage from '@/app/pages/SportsPage';
-import EnhancedSportsPage from '@/app/pages/EnhancedSportsPage';
-import EnhancedSportsPageNew from '@/app/pages/EnhancedSportsPageNew';
-import BeautifulSportsPage from '@/app/pages/BeautifulSportsPage';
-import ModernSportsPage from '@/app/pages/ModernSportsPage';
 import PowerfulSportsPage from '@/app/pages/PowerfulSportsPage';
 import ServicesPage from '@/app/pages/ServicesPage';
 import TradesPage from '@/app/pages/TradesPage';
 import ContactPage from '@/app/pages/ContactPage';
-import SupportsPage from '@/app/pages/SupportsPage';
-import ModernSupportPage from '@/app/pages/ModernSupportPage';
 import AdvancedSupportPage from '@/app/pages/AdvancedSupportPage';
 import TeamsPage from '@/app/pages/TeamsPage';
 import DeveloperTeamPage from '@/app/pages/DeveloperTeamPage';
@@ -28,14 +22,12 @@ import LeadershipPage from '@/app/pages/LeadershipPage';
 import LeaderDetailPage from '@/app/pages/LeaderDetailPage';
 import ModernLoginPage from '@/app/pages/ModernLoginPage';
 import ModernRegisterPage from '@/app/pages/ModernRegisterPage';
-import SearchPage from '@/app/pages/SearchPage';
 import AdvancedSearchPage from '@/app/pages/AdvancedSearchPage';
 import RoleSelectionPage from '@/app/pages/RoleSelectionPage';
 import RoleLoginPage from '@/app/pages/RoleLoginPage';
 import ForceChangeCredentialsPage from '@/app/pages/ForceChangeCredentialsPage';
 import StaffRolesPage from '@/app/pages/StaffRolesPage';
 import TradesShowcasePage from '@/app/pages/TradesShowcasePage';
-import ModernTradesPage from '@/app/pages/ModernTradesPage';
 import TradeDetailPage from '@/app/pages/TradeDetailPage';
 import AdminPage from '@/app/pages/AdminPage';
 import SODTradePage from '@/app/pages/trades/SODTradePage';
@@ -45,20 +37,15 @@ import AUTTradePage from '@/app/pages/trades/AUTTradePage';
 import BasketballPage from '@/app/pages/sports/BasketballPage';
 import FootballDetailPage from '@/app/pages/FootballDetailPage';
 import VolleyballDetailPage from '@/app/pages/VolleyballDetailPage';
-import TeamDetailPage from '@/app/pages/TeamDetailPage';
 import ModernTeamDetailPage from '@/app/pages/ModernTeamDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
-import ParentDashboard from '@/app/pages/dashboards/ParentDashboard';
-import ModernParentDashboard from '@/app/pages/dashboards/ModernParentDashboard';
-import PowerfulParentDashboard from '@/app/pages/dashboards/PowerfulParentDashboard';
-import ParentPortalComprehensiveDashboard from '@/app/pages/dashboards/ParentPortalComprehensiveDashboard';
+import AdvancedParentPortal from '@/app/pages/parent/AdvancedParentPortal';
 import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
 import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
 import DOSDashboard from '@/app/pages/dashboards/DOSDashboard';
-import DOSDashboardUltraAdvanced from '@/app/pages/dashboards/DOSDashboardUltraAdvanced';
 import ModernHeadmasterDashboard from '@/app/pages/dashboards/ModernHeadmasterDashboard';
 import ModernStockManagerDashboard from '@/app/pages/dashboards/ModernStockManagerDashboard';
 import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';
@@ -73,12 +60,10 @@ import DODStudentSheetsPage from '@/app/pages/dod/DODStudentSheetsPage';
 import DODParentManagementPage from '@/app/pages/dod/DODParentManagementPage';
 import DODLeaveManagementPage from '@/app/pages/dod/DODLeaveManagementPage';
 import UniversalProfilePage from '@/app/pages/common/UniversalProfilePage';
-import HeadMasterDashboard from '@/app/pages/dashboards/HeadMasterDashboard';
 import TeacherDashboard from '@/app/pages/teacher/TeacherDashboard';
 import TeacherGradingPage from '@/app/pages/teacher/TeacherGradingPage';
 import TeacherCreateAssignmentPage from '@/app/pages/teacher/TeacherCreateAssignmentPage';
 import TeacherAttendancePage from '@/app/pages/teacher/TeacherAttendancePage';
-import TeacherProfilePage from '@/app/pages/teacher/TeacherProfilePage';
 import TeacherSearchPage from '@/app/pages/teacher/TeacherSearchPage';
 import TeacherNotificationsPage from '@/app/pages/teacher/TeacherNotificationsPage';
 import TeacherClassesPage from '@/app/pages/teacher/TeacherClassesPage';
@@ -87,8 +72,11 @@ import TeacherGradesPage from '@/app/pages/teacher/TeacherGradesPage';
 import TeacherAssignmentsPage from '@/app/pages/teacher/TeacherAssignmentsPage';
 import TeacherResourcesPage from '@/app/pages/teacher/TeacherResourcesPage';
 import TeacherSchedulePage from '@/app/pages/teacher/TeacherSchedulePage';
+import TeacherPortalUltraAdvanced from '@/app/pages/dashboards/TeacherPortalUltraAdvanced';
+import UltraAdvancedStockDashboard from '@/app/pages/dashboards/UltraAdvancedStockDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
-import StockManagerDashboard from '@/app/pages/dashboards/StockManagerDashboard';
+import ComprehensiveAdminDashboard from '@/app/pages/dashboards/ComprehensiveAdminDashboard';
+import ComprehensiveAccountantDashboard from '@/app/pages/dashboards/ComprehensiveAccountantDashboard';
 import ResponsesPage from '@/app/pages/ResponsesPage';
 import StudentsManagementPage from '@/app/pages/StudentsManagementPage';
 import PaymentsManagement from '@/app/pages/accountant/PaymentsManagement';
@@ -110,7 +98,6 @@ import NYTArticleViewPage from '@/app/pages/NYTArticleViewPage';
 import AdminArticleManagementPage from '@/app/pages/AdminArticleManagementPage';
 import Footer from '@/app/components/Footer';
 import { GlobalMobileMenu } from '@/app/components/GlobalMobileMenu';
-import ComprehensiveAdvisorPortal from '@/app/pages/portals/ComprehensiveAdvisorPortal';
 import HeadmasterStudentManagement from '@/app/pages/headmaster/HeadmasterStudentManagement';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import AdminAccountantGlobalSheets from '@/app/components/AdminAccountantGlobalSheets';
@@ -121,18 +108,20 @@ import StaffManagementPage from '@/app/pages/StaffManagementPage';
 import ApplicationManagementDashboard from '@/app/pages/admin/ApplicationManagementDashboard';
 import ParentRegistrationPage from '@/app/pages/ParentRegistrationPage';
 import ParentLinkingManagement from '@/app/components/ParentLinkingManagement';
+import ParentStudentLinkDashboard from '@/app/pages/dashboards/ParentStudentLinkDashboard';
+import ParentChildLinkingPage from './pages/ParentChildLinkingPage';
 
 const AppContent: React.FC = () => {
   // Mirror role-based navigation visibility used in Header
   const roleNavVisibility: Record<string, string[]> = {
-    school_owner: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
-    admin: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
+    school_owner: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers', 'comprehensive-admin', 'comprehensive-accountant'],
+    admin: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers', 'comprehensive-admin', 'comprehensive-accountant'],
     super_admin: ['home', 'academics', 'sports', 'services', 'trades', 'leadership', 'staff-management-advanced', 'contactUs', 'supports', 'developers'],
     headmaster: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
     director_study: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
     director_discipline: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
     dod: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
-    accountant: ['home', 'services', 'staff-management-advanced', 'leadership', 'supports', 'contactUs'],
+    accountant: ['home', 'services', 'staff-management-advanced', 'leadership', 'supports', 'contactUs', 'comprehensive-accountant'],
     stock_manager: ['home', 'trades', 'services', 'staff-management-advanced', 'supports', 'contactUs'],
     teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
     advisor: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
@@ -143,18 +132,18 @@ const AppContent: React.FC = () => {
   };
 
   const roleExtraAllowed: Record<string, string[]> = {
-    school_owner: ['profile', 'student-sheets'],
-    admin: ['profile', 'student-sheets', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
+    school_owner: ['profile', 'student-sheets', 'global-student-sheets', 'comprehensive-admin', 'comprehensive-accountant'],
+    admin: ['profile', 'student-sheets', 'global-student-sheets', 'comprehensive-admin', 'comprehensive-accountant', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
     super_admin: ['profile', 'student-sheets', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
     headmaster: ['profile', 'headmaster-students', 'student-sheets', 'dashboard-headmaster', 'application-management', 'parent-applications'],
     director_study: ['profile', 'dos-students', 'dos-report-cards', 'dos-teacher-marks', 'dos-parent-access', 'dos-sms', 'dos-comprehensive-management', 'student-sheets', 'dashboard-director-study', 'dashboard-dos', 'application-management', 'parent-applications'],
     director_discipline: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
     dod: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
-    accountant: ['profile', 'student-sheets', 'dashboard-accountant', 'payments-management', 'accountant-payments', 'expenses-management', 'invoices-management', 'budgets-management', 'salaries-management', 'transactions-management', 'financial-reports', 'timetable-view', 'students-management', 'student-payments-management', 'parent-applications'],
+    accountant: ['profile', 'student-sheets', 'dashboard-accountant', 'comprehensive-accountant', 'payments-management', 'accountant-payments', 'expenses-management', 'invoices-management', 'budgets-management', 'salaries-management', 'transactions-management', 'financial-reports', 'timetable-view', 'students-management', 'student-payments-management', 'parent-applications'],
     stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced'],
     teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher'],
     advisor: ['profile', 'student-sheets', 'dashboard-advisor', 'parent-applications'],
-    parent: ['profile', 'dashboard-parent'],
+    parent: ['profile', 'dashboard-parent', 'parent-link-child', 'parent-child-linking'],
     patron: ['profile'],
     matron: ['profile'],
     support_staff: ['profile'],
@@ -213,14 +202,16 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  // Auto-logout on page refresh
+  // Auto-logout on page refresh (disabled for better UX - tokens expire naturally)
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (user) {
-        logout();
-        localStorage.removeItem('app_current_page');
-        sessionStorage.clear();
-      }
+      // Don't logout on refresh - let JWT token expiry handle security
+      // This allows users to refresh without losing session
+      // if (user) {
+      //   logout();
+      //   localStorage.removeItem('app_current_page');
+      //   sessionStorage.clear();
+      // }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -264,10 +255,12 @@ const AppContent: React.FC = () => {
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="admin" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
         if (currentPage === 'global-student-sheets') return <AdminAccountantGlobalSheets />;
+        if (currentPage === 'comprehensive-admin') return <ComprehensiveAdminDashboard />;
+        if (currentPage === 'comprehensive-accountant') return <ComprehensiveAccountantDashboard />;
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
-        return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <AdvancedParentPortal />;
       case 'advisor':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-advisor" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
@@ -323,11 +316,13 @@ const AppContent: React.FC = () => {
         if (currentPage === 'teacher-grading') return <TeacherGradingPage teacherId={user.id} onNavigate={handleNavigate} />;
         if (currentPage === 'teacher-create-assignment') return <TeacherCreateAssignmentPage teacherId={user.id} onNavigate={handleNavigate} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
+        if (currentPage === 'ultra-teacher-dashboard') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
         return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'accountant':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-accountant" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} userId={user.id ?? 0} onNavigate={handleNavigate} />;
         if (currentPage === 'global-student-sheets') return <AdminAccountantGlobalSheets />;
+        if (currentPage === 'comprehensive-accountant') return <ComprehensiveAccountantDashboard />;
         if (currentPage.startsWith('payments-') || currentPage === 'accountant-payments' || currentPage.startsWith('student-payments') || currentPage.startsWith('expenses-') || currentPage.startsWith('invoices-') || currentPage.startsWith('budgets-') || currentPage.startsWith('salaries-') || currentPage.startsWith('transactions-') || currentPage.startsWith('financial-') || currentPage.startsWith('timetable') || currentPage === 'students-management') {
           return null;
         }
@@ -356,22 +351,59 @@ const AppContent: React.FC = () => {
   };
 
   const renderPage = () => {
+    // Check localStorage for password change requirement
+    const needsPasswordChange = localStorage.getItem('needsPasswordChange');
+    if (needsPasswordChange && JSON.parse(needsPasswordChange) === true) {
+      // Get user from localStorage and update must_change_password flag
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const userObj = JSON.parse(storedUser);
+        userObj.must_change_password = true;
+        localStorage.setItem('user', JSON.stringify(userObj));
+      }
+    }
+    
     // CRITICAL: Force credential change BEFORE any other page renders
     if (user && (user as any).must_change_password) {
       return <ForceChangeCredentialsPage onSuccess={() => handleNavigate('login')} />;
     }
 
     // Check for dashboard routes first
-    if (currentPage === 'admin' && user?.role === 'admin') return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-parent' && user?.role === 'parent') return <ParentPortalComprehensiveDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'admin' && user?.role === 'admin') return <ComprehensiveAdminDashboard />;
+    if (currentPage === 'dashboard-parent') {
+      if (!user) {
+        console.log('⏳ User not loaded yet, checking localStorage...');
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          console.log('📦 Found user in localStorage, waiting for context...');
+          return <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Tegereza...</p>
+            </div>
+          </div>;
+        }
+      }
+      if (user?.role === 'parent') {
+        console.log('📊 Rendering Parent Dashboard for user:', user);
+        return <AdvancedParentPortal />;
+      }
+    }
+    if (currentPage === 'parent-link-child' && user?.role === 'parent') {
+      return <ParentStudentLinkDashboard onNavigate={handleNavigate} />;
+    }
+    if (currentPage === 'parent-child-linking' && user?.role === 'parent') {
+      return <ParentChildLinkingPage onNavigate={handleNavigate} onComplete={() => handleNavigate('dashboard-parent')} />;
+    }
     if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-dos' && user?.role === 'director_study') return <DOSDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-director-discipline' && user?.role === 'director_discipline') return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-dod' && (user?.role === 'director_discipline' || user?.role === 'dod')) return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-director-discipline' && (user?.role === 'director_discipline' || user?.role === 'dod')) return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <AccountantDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <ComprehensiveAccountantDashboard />;
+    if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <UltraAdvancedStockDashboard />;
 
     // Check for dynamic routes first (works for all users)
     if (currentPage.startsWith('article/')) {

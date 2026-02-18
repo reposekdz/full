@@ -110,17 +110,27 @@ const EnhancedParentPortal: React.FC = () => {
     notes: ''
   });
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    sms_enabled: true,
-    whatsapp_enabled: false,
-    email_enabled: true,
-    attendance_alerts: true,
-    marks_alerts: true,
-    fee_reminders: true
-  });
-
   const [notificationSettings, setNotificationSettings] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
+
+  const fetchParentData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/enhanced-parent-portal/dashboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setParentInfo(data.data?.parent || null);
+        setChildren(data.data?.children || []);
+      }
+    } catch (error) {
+      console.error('Error fetching parent data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchParentData();

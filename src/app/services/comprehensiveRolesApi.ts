@@ -50,6 +50,52 @@ class ComprehensiveRolesApi {
   }
 
   // ============================================================
+  // LEVEL 4 SOD STUDENTS - For All Staff Roles
+  // ============================================================
+
+  // Fetch Level 4 SOD students (default for all staff dashboards) - limit to 29 students
+  async getLevel4SODStudents(params: any = {}) {
+    const queryParams = new URLSearchParams({
+      level: '4',
+      trade: 'SOD',
+      limit: '29',  // Fetch exactly 29 students
+      ...params
+    });
+    return this.request(`/comprehensive-roles/students?${queryParams}`);
+  }
+
+  // Fetch exactly 29 Level 4 SOD students with full details
+  async getLevel4SODStudentsFull() {
+    const queryParams = new URLSearchParams({
+      level: '4',
+      trade: 'SOD',
+      limit: '29'
+    });
+    return this.request(`/comprehensive-roles/students?${queryParams}`);
+  }
+
+  // Fetch students by trade and level (flexible)
+  async getStudentsByTradeAndLevel(trade: string, level: string, params: any = {}) {
+    const queryParams = new URLSearchParams({
+      trade,
+      level,
+      limit: params.limit || '50',
+      ...params
+    });
+    return this.request(`/comprehensive-roles/students?${queryParams}`);
+  }
+
+  // Get available trades from database
+  async getTrades() {
+    return this.request('/trades-levels/trades');
+  }
+
+  // Get levels for a specific trade
+  async getTradeLevels(tradeCode: string) {
+    return this.request(`/trades-levels/trades/${tradeCode}/levels`);
+  }
+
+  // ============================================================
   // ADMIN ENDPOINTS
   // ============================================================
 
@@ -145,6 +191,236 @@ class ComprehensiveRolesApi {
       method: 'POST',
       body: JSON.stringify(marksData),
     });
+  }
+
+  // Teacher Portal Ultra - Advanced Features
+  async getTeacherPortalUltraDashboard() {
+    return this.request('/teacher-portal-ultra/dashboard');
+  }
+
+  async getTeacherPortalUltraProfile() {
+    return this.request('/teacher-portal-ultra/profile');
+  }
+
+  // Notes Management
+  async getTeacherNotes(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-content/notes/my-notes?${query}`);
+  }
+
+  async uploadTeacherNote(noteData: any) {
+    return this.request('/teacher-content/notes/upload', {
+      method: 'POST',
+      body: JSON.stringify(noteData),
+    });
+  }
+
+  async deleteTeacherNote(noteId: number) {
+    return this.request(`/teacher-content/notes/${noteId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Works/Assignments Management
+  async getTeacherWorks(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-content/works/my-works?${query}`);
+  }
+
+  async uploadTeacherWork(workData: any) {
+    return this.request('/teacher-content/works/upload', {
+      method: 'POST',
+      body: JSON.stringify(workData),
+    });
+  }
+
+  async gradeWorkSubmission(workId: number, submissionId: number, gradeData: any) {
+    return this.request(`/teacher-content/works/submissions/${submissionId}/grade`, {
+      method: 'POST',
+      body: JSON.stringify(gradeData),
+    });
+  }
+
+  // Holiday Packages
+  async getHolidayPackages(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-content/holiday?${query}`);
+  }
+
+  async uploadHolidayPackage(packageData: any) {
+    return this.request('/teacher-content/holiday/upload', {
+      method: 'POST',
+      body: JSON.stringify(packageData),
+    });
+  }
+
+  // Quizzes - Advanced
+  async getTeacherQuizzes(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-portal-ultra/quizzes?${query}`);
+  }
+
+  async createTeacherQuiz(quizData: any) {
+    return this.request('/teacher-portal-ultra/quiz/create', {
+      method: 'POST',
+      body: JSON.stringify(quizData),
+    });
+  }
+
+  async getQuizSubmissions(quizId: number) {
+    return this.request(`/teacher-portal-ultra/quizzes/${quizId}/submissions`);
+  }
+
+  async gradeQuizSubmission(quizId: number, submissionId: number, gradeData: any) {
+    return this.request(`/teacher-portal-ultra/quizzes/${quizId}/submissions/${submissionId}/grade`, {
+      method: 'POST',
+      body: JSON.stringify(gradeData),
+    });
+  }
+
+  async getPendingGradingQuizzes() {
+    return this.request('/teacher-portal-ultra/quizzes/pending-grading');
+  }
+
+  // Assignments - Advanced
+  async getTeacherAssignments(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-portal-ultra/assignments?${query}`);
+  }
+
+  async createTeacherAssignment(assignmentData: any) {
+    return this.request('/teacher-portal-ultra/assignments/create', {
+      method: 'POST',
+      body: JSON.stringify(assignmentData),
+    });
+  }
+
+  async getAssignmentSubmissions(assignmentId: number) {
+    return this.request(`/teacher-portal-ultra/assignments/${assignmentId}/submissions`);
+  }
+
+  async gradeAssignmentSubmission(assignmentId: number, submissionId: number, gradeData: any) {
+    return this.request(`/teacher-portal-ultra/assignments/${assignmentId}/submissions/${submissionId}/grade`, {
+      method: 'POST',
+      body: JSON.stringify(gradeData),
+    });
+  }
+
+  async bulkGradeAssignments(assignmentId: number, grades: any[]) {
+    return this.request('/teacher-portal-ultra/assignments/bulk-grade', {
+      method: 'POST',
+      body: JSON.stringify({ assignment_id: assignmentId, grades }),
+    });
+  }
+
+  async assignBulkWork(workData: any) {
+    return this.request('/teacher-portal-ultra/work/assign-bulk', {
+      method: 'POST',
+      body: JSON.stringify(workData),
+    });
+  }
+
+  // Work Distribution Analytics
+  async getWorkDistributionAnalytics() {
+    return this.request('/teacher-portal-ultra/work-distribution/analytics');
+  }
+
+  // Student Marks Management
+  async addSubjectColumn(columnData: any) {
+    return this.request('/teacher-student-marks/add-subject-column', {
+      method: 'POST',
+      body: JSON.stringify(columnData),
+    });
+  }
+
+  async getSubjectColumns(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-student-marks/subject-columns?${query}`);
+  }
+
+  async recordStudentMarks(marksData: any) {
+    return this.request('/teacher-student-marks/record-marks', {
+      method: 'POST',
+      body: JSON.stringify(marksData),
+    });
+  }
+
+  async bulkRecordMarks(marksData: any) {
+    return this.request('/teacher-student-marks/bulk-record-marks', {
+      method: 'POST',
+      body: JSON.stringify(marksData),
+    });
+  }
+
+  async getClassMarksOverview(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-student-marks/class-marks-overview?${query}`);
+  }
+
+  // Analytics & Reports
+  async getTeacherAnalytics(period: string = 'week') {
+    return this.request(`/teacher-comprehensive/analytics?period=${period}`);
+  }
+
+  async getStudentPerformanceAnalytics(studentId: number) {
+    return this.request(`/teacher-comprehensive/students/${studentId}/performance`);
+  }
+
+  async getClassPerformanceReport(classId: number) {
+    return this.request(`/teacher-comprehensive/classes/${classId}/performance`);
+  }
+
+  async getAttendanceAnalytics(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-comprehensive/attendance/analytics?${query}`);
+  }
+
+  async getDashboardOverview() {
+    return this.request('/teacher-comprehensive/dashboard/overview');
+  }
+
+  // Parent Linking - Teacher can view parent links for their students
+  async getParentLinksForStudents(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/parent-linking/links?${query}`);
+  }
+
+  async getStudentParents(studentId: number) {
+    return this.request(`/parent-linking/student/${studentId}/parents`);
+  }
+
+  // Messaging
+  async getTeacherMessages(params?: any) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/teacher-comprehensive/messages?${query}`);
+  }
+
+  async sendTeacherMessage(messageData: any) {
+    return this.request('/teacher-comprehensive/messages/send', {
+      method: 'POST',
+      body: JSON.stringify(messageData),
+    });
+  }
+
+  async markMessageRead(messageId: number) {
+    return this.request(`/teacher-comprehensive/messages/${messageId}/read`, {
+      method: 'PUT',
+    });
+  }
+
+  async deleteTeacherMessage(messageId: number) {
+    return this.request(`/teacher-comprehensive/messages/${messageId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getUnreadMessageCount() {
+    return this.request('/teacher-comprehensive/messages/unread/count');
+  }
+
+  // Teacher Statistics
+  async getTeacherContentStatistics() {
+    return this.request('/teacher-content/statistics');
   }
 
   // ============================================================

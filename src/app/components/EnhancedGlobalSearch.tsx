@@ -39,6 +39,13 @@ const typeConfig: Record<string, { icon: any; color: string; label: string; grad
   gallery: { icon: Image, color: 'bg-purple-500', label: 'Gallery', gradient: 'from-purple-500 to-pink-500' },
   student: { icon: User, color: 'bg-teal-500', label: 'Students', gradient: 'from-teal-500 to-cyan-500' },
   teacher: { icon: Users, color: 'bg-violet-500', label: 'Teachers', gradient: 'from-violet-500 to-purple-500' },
+  // Additional types from comprehensive search
+  parent: { icon: Users, color: 'bg-cyan-500', label: 'Parents', gradient: 'from-cyan-500 to-blue-500' },
+  staff: { icon: Shield, color: 'bg-slate-500', label: 'Staff', gradient: 'from-slate-500 to-gray-500' },
+  leadership: { icon: Award, color: 'bg-amber-500', label: 'Leadership', gradient: 'from-amber-500 to-yellow-500' },
+  payment: { icon: FileText, color: 'bg-emerald-500', label: 'Payments', gradient: 'from-emerald-500 to-green-500' },
+  application: { icon: FileText, color: 'bg-lime-500', label: 'Applications', gradient: 'from-lime-500 to-emerald-500' },
+  event: { icon: Calendar, color: 'bg-rose-500', label: 'Events', gradient: 'from-rose-500 to-pink-500' },
 };
 
 const quickSearches = [
@@ -101,7 +108,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
 
   const fetchTrendingSearches = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/advanced-search/popular');
+      const response = await fetch('http://localhost:5000/api/comprehensive-search/popular');
       if (!response.ok) throw new Error('Not found');
       const data = await response.json();
       if (data.success) {
@@ -150,7 +157,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     setLoading(true);
     try {
       const typeParam = filterType !== 'all' ? `&type=${filterType}` : '';
-      const response = await fetch(`http://localhost:5000/api/search?q=${encodeURIComponent(searchQuery)}${typeParam}`);
+      const response = await fetch(`http://localhost:5000/api/comprehensive-search?q=${encodeURIComponent(searchQuery)}${typeParam}`);
       const data = await response.json();
       
       if (data.success) {

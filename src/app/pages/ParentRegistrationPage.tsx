@@ -113,13 +113,18 @@ const ParentRegistrationPage: React.FC<ParentRegistrationPageProps> = ({ onNavig
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('role', 'parent');
 
+          console.log('✅ Registration successful:', { token: data.token, user: data.user });
+
           if (setAuthFromRegistration) {
-            setAuthFromRegistration(data.user, data.token);
+            const dashboardRoute = setAuthFromRegistration(data.token, data.user);
+            console.log('✅ Auth context updated, dashboard route:', dashboardRoute);
           }
 
-          // Force redirect to parent dashboard
+          // Navigate to parent child linking page
           setTimeout(() => {
-            onNavigate('dashboard');
+            console.log('🚀 Navigating to parent-child-linking');
+            onNavigate('parent-child-linking');
+            window.scrollTo(0, 0);
           }, 1500);
         } else {
           setTimeout(() => onNavigate('login'), 2000);
@@ -127,9 +132,14 @@ const ParentRegistrationPage: React.FC<ParentRegistrationPageProps> = ({ onNavig
       } else {
         setError(data.message || "Kwiyandikisha ntibyakunze. Gerageza ukundi.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Registration error:', err);
-      setError("Habaye ikosa ryo kwiyandikisha. Gerageza ukundi.");
+      const errorMessage = err.message || "Habaye ikosa ryo kwiyandikisha. Gerageza ukundi.";
+      if (err.message && err.message.includes('fetch')) {
+        setError("Ntushobora guhuza na seriveri. Kugenzura niba seriveri irakoze.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

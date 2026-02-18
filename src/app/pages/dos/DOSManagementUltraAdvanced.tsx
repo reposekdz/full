@@ -225,16 +225,19 @@ const DOSManagementUltraAdvanced: React.FC<DOSManagementProps> = ({ onNavigate }
     try {
       const token = localStorage.getItem('token');
       const [studentsRes, teachersRes, coursesRes, tradesRes, marksRes,
-              reportsRes, parentsRes, notificationsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/global-sheets/students`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/teachers`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/courses`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/trades`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/global-sheets/students/marks/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/dos-management/report-cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/parent-linking/connections`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/notifications/sent`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
+        reportsRes, parentsRes, notificationsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/global-sheets/students`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/teachers`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/courses`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/trades`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/global-sheets/students/marks/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/dos-management/report-cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          // Use enhanced parent management API for real database data
+          fetch(`${API_BASE_URL}/management/parents`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/management/parents/pending-links`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/parent-linking/connections`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/notifications/sent`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
 
       const studentsData = await studentsRes.json();
       const teachersData = await teachersRes.json();
@@ -269,7 +272,7 @@ const DOSManagementUltraAdvanced: React.FC<DOSManagementProps> = ({ onNavigate }
   };
 
   const calculateStats = (studentsData: Student[], teachersData: Teacher[],
-                          coursesData: Course[], reportsData: ReportCard[], parentsData: ParentConnection[]) => {
+    coursesData: Course[], reportsData: ReportCard[], parentsData: ParentConnection[]) => {
     setStats({
       totalStudents: studentsData.length,
       totalTeachers: teachersData.length,

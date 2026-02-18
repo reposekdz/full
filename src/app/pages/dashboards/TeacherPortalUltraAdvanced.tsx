@@ -121,6 +121,18 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
   const [trades, setTrades] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
   
+  // Student filters for Level 4 SOD
+  const [studentFilters, setStudentFilters] = useState({
+    trade_code: 'SOD',
+    level: '4',
+    level_suffix: '',
+    search: ''
+  });
+  
+  // Real trades and levels from database
+  const [availableTrades, setAvailableTrades] = useState<any[]>([]);
+  const [availableLevels, setAvailableLevels] = useState<any[]>([]);
+  
   const [openUploadNote, setOpenUploadNote] = useState(false);
   const [openUploadWork, setOpenUploadWork] = useState(false);
   const [openUploadHoliday, setOpenUploadHoliday] = useState(false);
@@ -222,7 +234,10 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
     fetchTeacherProfile();
     fetchDashboard();
     fetchStatistics();
-    fetchTrades();
+    fetchTrades().then(() => {
+      // After fetching trades, fetch levels for default SOD
+      fetchLevels('SOD');
+    });
   }, []);
 
   useEffect(() => {
@@ -284,14 +299,53 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
   const fetchTrades = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/dos-ultra-advanced/dashboard/overview`, {
+      // Fetch real trades from database - BDC, SOD, AUT only
+      const response = await axios.get(`${API_BASE_URL}/trades-levels/trades`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        setTrades(response.data.dashboard.trade_stats || []);
+        setAvailableTrades(response.data.trades || []);
+        setTrades(response.data.trades || []);
       }
     } catch (error) {
       console.error('Error fetching trades:', error);
+      // Fallback to SOD if API fails
+      setAvailableTrades([
+        { trade_code: 'SOD', trade_name: 'Software Development' },
+        { trade_code: 'BDC', trade_name: 'Building and Construction' },
+        { trade_code: 'AUT', trade_name: 'Automotive Technology' }
+      ]);
+    }
+  };
+
+  // Fetch levels from database based on selected trade
+  const fetchLevels = async (tradeCode: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/trades-levels/trades/${tradeCode}/levels`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setAvailableLevels(response.data.levels || []);
+      }
+    } catch (error) {
+      console.error('Error fetching levels:', error);
+      // Fallback levels based on trade
+      if (tradeCode === 'AUT') {
+        setAvailableLevels([
+          { level_number: 3, level_suffix: '', level_display: '3' },
+          { level_number: 4, level_suffix: 'A', level_display: '4A' },
+          { level_number: 4, level_suffix: 'B', level_display: '4B' },
+          { level_number: 5, level_suffix: 'A', level_display: '5A' },
+          { level_number: 5, level_suffix: 'B', level_display: '5B' }
+        ]);
+      } else {
+        setAvailableLevels([
+          { level_number: 3, level_suffix: '', level_display: '3' },
+          { level_number: 4, level_suffix: '', level_display: '4' },
+          { level_number: 5, level_suffix: '', level_display: '5' }
+        ]);
+      }
     }
   };
 
@@ -371,15 +425,44 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/teacher-portal-ultra/students`, {
+      // Build query params with filters for Level 4 SOD - limit to 29 students
+      const queryParams = new URLSearchParams();
+      if (studentFilters.trade_code) queryParams.append('trade_code', studentFilters.trade_code);
+      if (studentFilters.level) queryParams.append('level_number', studentFilters.level);
+      if (studentFilters.level_suffix) queryParams.append('level_suffix', studentFilters.level_suffix);
+      if (studentFilters.search) queryParams.append('search', studentFilters.search);
+      // Default limit to 29 students for Level 4 SOD
+      queryParams.append('limit', '29');
+      
+      const response = await axios.get(`${API_BASE_URL}/teacher-comprehensive/students?${queryParams}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        setStudents(response.data.students);
+        setStudents(response.data.students || []);
+      } else {
+        // Fallback to teacher-portal-ultra if teacher-comprehensive doesn't work
+        const fallbackResponse = await axios.get(`${API_BASE_URL}/teacher-portal-ultra/students?limit=29`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (fallbackResponse.data.success) {
+          setStudents(fallbackResponse.data.students || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching students:', error);
-      showAlert('error', 'Failed to load students');
+      // Try the alternative endpoint
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/teacher-portal-ultra/students?limit=29`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.success) {
+          setStudents(response.data.students || []);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback error:', fallbackError);
+        showAlert('error', 'Failed to load students');
+      }
     } finally {
       setLoading(false);
     }
@@ -1184,6 +1267,92 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
   const renderStudents = () => (
     <Box>
       <Typography variant="h5" mb={3}>My Students</Typography>
+      
+      {/* Filters for Trade and Level - Real Database Values */}
+      <Box mb={3} p={2} sx={{ bgcolor: '#f5f5f5', borderRadius: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Trade</InputLabel>
+              <Select
+                value={studentFilters.trade_code}
+                label="Trade"
+                onChange={(e) => {
+                  const newTrade = e.target.value;
+                  setStudentFilters({ ...studentFilters, trade_code: newTrade, level: '4', level_suffix: '' });
+                  fetchLevels(newTrade);
+                  fetchStudents();
+                }}
+              >
+                {availableTrades.length > 0 ? (
+                  availableTrades.map((trade: any) => (
+                    <MenuItem key={trade.trade_code} value={trade.trade_code}>
+                      {trade.trade_code} - {trade.trade_name}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <>
+                    <MenuItem value="SOD">SOD - Software Development</MenuItem>
+                    <MenuItem value="BDC">BDC - Building and Construction</MenuItem>
+                    <MenuItem value="AUT">AUT - Automotive Technology</MenuItem>
+                  </>
+                )}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Level</InputLabel>
+              <Select
+                value={studentFilters.level}
+                label="Level"
+                onChange={(e) => {
+                  setStudentFilters({ ...studentFilters, level: e.target.value });
+                  fetchStudents();
+                }}
+              >
+                {availableLevels.length > 0 ? (
+                  availableLevels.map((level: any) => (
+                    <MenuItem key={level.level_display} value={String(level.level_number)}>
+                      Level {level.level_display}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <>
+                    <MenuItem value="3">Level 3</MenuItem>
+                    <MenuItem value="4">Level 4</MenuItem>
+                    <MenuItem value="5">Level 5</MenuItem>
+                  </>
+                )}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Search Student"
+              value={studentFilters.search}
+              onChange={(e) => setStudentFilters({ ...studentFilters, search: e.target.value })}
+              onKeyPress={(e) => e.key === 'Enter' && fetchStudents()}
+            />
+          </Grid>
+        </Grid>
+        <Box mt={2} display="flex" gap={1}>
+          <Button 
+            variant="contained" 
+            size="small" 
+            startIcon={<Refresh />}
+            onClick={fetchStudents}
+          >
+            Load Students
+          </Button>
+          <Typography variant="body2" color="textSecondary" sx={{ alignSelf: 'center' }}>
+            Currently showing: <strong>{studentFilters.trade_code} Level {studentFilters.level}</strong>
+          </Typography>
+        </Box>
+      </Box>
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>

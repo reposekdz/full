@@ -36,6 +36,7 @@ const upload = multer({
 // Get teacher's classes
 router.get('/teacher/:teacherId/classes', async (req, res) => {
   try {
+    // Try to get classes from dos_classes table
     const [classes] = await pool.query(`
       SELECT DISTINCT c.id, c.name, c.trade_id, c.level_id, t.name as trade_name, l.level_number
       FROM dos_classes c
@@ -46,10 +47,26 @@ router.get('/teacher/:teacherId/classes', async (req, res) => {
       )
       ORDER BY t.name, l.level_number
     `, [req.params.teacherId, req.params.teacherId]);
+    
+    // If no results, try alternative tables
+    if (classes.length === 0) {
+      const [altClasses] = await pool.query(`
+        SELECT DISTINCT tc.id, tc.name, tc.trade_code, tc.level_number, t.name as trade_name, tc.level_number as level_number
+        FROM trade_classes tc
+        LEFT JOIN trades t ON tc.trade_code = t.code
+        WHERE tc.id IN (
+          SELECT class_id FROM teacher_class_assignments WHERE teacher_id = ?
+        ) OR tc.teacher_id = ?
+        ORDER BY t.name, tc.level_number
+      `, [req.params.teacherId, req.params.teacherId]);
+      return res.json(altClasses);
+    }
+    
     res.json(classes);
   } catch (error) {
     console.error('Error fetching teacher classes:', error);
-    res.status(500).json({ message: 'Error fetching classes' });
+    // Return empty array instead of error
+    res.json([]);
   }
 });
 

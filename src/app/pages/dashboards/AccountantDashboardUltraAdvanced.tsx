@@ -166,16 +166,22 @@ const AccountantDashboardUltraAdvanced: React.FC = () => {
 
   const fetchStudents = useCallback(async () => {
     try {
-      // Use apiService for accountant students
+      // Use apiService for accountant students - it defaults to fetching all students
       const data = await apiService.getAccountantStudents();
       if (data.success) {
-        setStudents(data.students || data.data || []);
+        // Filter to show only Level 4 SOD students
+        const allStudents = data.students || data.data || [];
+        const filteredStudents = allStudents.filter((s: any) => 
+          (s.level === 4 || s.level_number === 4 || s.level?.includes('4')) && 
+          (s.trade_code === 'SOD' || s.trade === 'SOD')
+        );
+        setStudents(filteredStudents.length > 0 ? filteredStudents : allStudents);
       }
     } catch {
       setStudents([
-        { student_id: 'STU001', student_name: 'John Doe', trade_code: 'SOD', level: 2, total_fees: 500000, paid_amount: 350000, balance: 150000, payment_status: 'partial' },
-        { student_id: 'STU002', student_name: 'Jane Smith', trade_code: 'AUT', level: 3, total_fees: 450000, paid_amount: 450000, balance: 0, payment_status: 'paid' },
-        { student_id: 'STU003', student_name: 'Bob Wilson', trade_code: 'BDC', level: 1, total_fees: 400000, paid_amount: 100000, balance: 300000, payment_status: 'pending' },
+        { student_id: 'STU001', student_name: 'John Doe', trade_code: 'SOD', level: 4, total_fees: 500000, paid_amount: 350000, balance: 150000, payment_status: 'partial' },
+        { student_id: 'STU002', student_name: 'Jane Smith', trade_code: 'SOD', level: 4, total_fees: 450000, paid_amount: 450000, balance: 0, payment_status: 'paid' },
+        { student_id: 'STU003', student_name: 'Bob Wilson', trade_code: 'SOD', level: 4, total_fees: 400000, paid_amount: 100000, balance: 300000, payment_status: 'pending' },
       ]);
     }
   }, []);

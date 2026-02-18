@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/app/config/apiBase';
 
-export type UserRole = 
-  | 'student' 
-  | 'parent' 
-  | 'director_study' 
-  | 'director_discipline' 
-  | 'headmaster' 
-  | 'teacher' 
-  | 'accountant' 
-  | 'stock_manager' 
+export type UserRole =
+  | 'student'
+  | 'parent'
+  | 'director_study'
+  | 'director_discipline'
+  | 'headmaster'
+  | 'teacher'
+  | 'accountant'
+  | 'stock_manager'
   | 'admin'
   | 'super_admin';
 
@@ -59,16 +59,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const dashboardMap: Record<string, string> = {
       student: 'dashboard-student',
       parent: 'dashboard-parent',
+      advisor: 'dashboard-advisor',
       director_study: 'dashboard-director-study',
       director_discipline: 'dashboard-director-discipline',
+      dod: 'dashboard-director-discipline',
       headmaster: 'dashboard-headmaster',
       teacher: 'dashboard-teacher',
-      accountant: 'dashboard-accountant',
+      accountant: 'comprehensive-accountant',
       stock_manager: 'dashboard-stock',
-      admin: 'admin',
-      super_admin: 'admin',
+      admin: 'comprehensive-admin',
+      super_admin: 'comprehensive-admin',
     };
-    return dashboardMap[role] || 'dashboard';
+    return dashboardMap[role] || 'home';
   };
 
   // Check if user is authenticated on app load
@@ -82,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               'Authorization': `Bearer ${savedToken}`
             }
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data.success) {
@@ -119,7 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setUser(data.user);
         setToken(data.token);
@@ -146,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         // Auto-login after successful registration
         return await login(userData.username, userData.password);

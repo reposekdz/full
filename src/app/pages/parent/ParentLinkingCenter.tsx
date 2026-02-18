@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Search, UserPlus, ShieldCheck, AlertCircle, CheckCircle2,
     ArrowRight, ArrowLeft, School, GraduationCap, MessageSquare,
-    HelpCircle, Mail, Phone, MapPin
+    HelpCircle, Mail, Phone, MapPin, User
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -26,6 +26,7 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
         student_name: '',
         trade: '',
         level_id: '',
+        gender: '', // Added gender field for accurate student matching
     });
     const [linkResult, setLinkResult] = useState<any>(null);
     const [errorType, setErrorType] = useState<'NONE' | 'MULTIPLE' | 'NOT_FOUND'>('NONE');
@@ -57,7 +58,9 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                     student_name: searchForm.student_name,
                     trade: searchForm.trade,
                     level: selectedLevel.level_number,
-                    level_suffix: selectedLevel.level_suffix
+                    level_suffix: selectedLevel.level_suffix,
+                    student_gender: searchForm.gender || undefined,
+                    relationship_type: 'parent'
                 })
             });
 
@@ -188,6 +191,25 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                                                     {activeTradeLevels.map(l => (
                                                         <SelectItem key={l.id} value={l.id}>{formatLevelDisplay(l.level_number, l.level_suffix)}</SelectItem>
                                                     ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-bold flex items-center gap-2">
+                                                <User className="w-4 h-4 text-blue-500" />
+                                                IGITSINA / GENDER
+                                            </Label>
+                                            <Select
+                                                value={searchForm.gender}
+                                                onValueChange={v => setSearchForm({ ...searchForm, gender: v })}
+                                            >
+                                                <SelectTrigger className="h-12 border-2">
+                                                    <SelectValue placeholder="Hitamo Igitsina (Ntakwisho)" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="male">Gabo (Male)</SelectItem>
+                                                    <SelectItem value="female">Gore (Female)</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

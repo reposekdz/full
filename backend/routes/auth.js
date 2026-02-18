@@ -846,12 +846,17 @@ router.post('/register/parent', [
   body('email').isEmail().withMessage('Valid email is required'),
   body('phone').notEmpty().withMessage('Phone number is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('district').notEmpty().withMessage('District is required'),
-  body('province').notEmpty().withMessage('Province is required'),
-  body('relationship_type').isIn(['father', 'mother', 'guardian']).withMessage('Relationship type must be father, mother, or guardian'),
+  body('district').optional(),
+  body('province').optional(),
+  body('relationship_type').optional(),
   body('address').optional(),
   body('occupation').optional(),
-  body('children').optional().isArray().withMessage('Children must be an array')
+  body('children').optional().isArray().withMessage('Children must be an array'),
+  // Student linking fields
+  body('student_first_name').optional(),
+  body('student_last_name').optional(),
+  body('student_trade').optional(),
+  body('student_level').optional()
 ], async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -877,7 +882,14 @@ router.post('/register/parent', [
       relationship_type,
       address,
       occupation,
-      children
+      children,
+      // Student linking fields
+      student_first_name,
+      student_last_name,
+      student_trade,
+      student_level,
+      student_id,
+      relationshipType
     } = req.body;
 
     // Check if email already exists in parents table
@@ -930,6 +942,32 @@ router.post('/register/parent', [
             [parent_id, child.student_id]
           );
         }
+      }
+    }
+
+    // Link student by name/trade/level during registration
+    const relType = relationship_type || relationshipType || 'parent';
+    if (student_first_name && student_last_name && student_trade) {
+      const levelNum = parseInt(String(student_level).replace('Level ', '')) || parseInt(student_level) || 1;
+      
+      // Try to find the student
+      const [students] = await connection.execute(`
+        SELECT student_id FROM global_student_sheets 
+        WHERE LOWER(first_name) = LOWER(?) 
+          AND LOWER(last_name) = LOWER(?)
+          AND trade_code = ?
+          AND level_number = ?
+          AND (status = 'active' OR enrollment_status = 'active')
+        LIMIT 1
+      `, [student_first_name, student_last_name, student_trade, levelNum]);
+
+      if (students.length > 0) {
+        // Link the student
+        await connection.execute(`
+          INSERT INTO parent_student_links 
+          (parent_id, student_id, can_view_marks, can_view_attendance, can_view_discipline, can_view_fees, can_receive_sms, status, linked_by, linked_at)
+          VALUES (?, ?, 1, 1, 1, 1, 1, 'active', ?, NOW())
+        `, [parent_id, students[0].student_id, `Registration - ${relType}`]);
       }
     }
 

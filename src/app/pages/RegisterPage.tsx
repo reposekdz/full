@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config/apiBase';
 
 interface RegisterPageProps {
   onNavigate: (page: string) => void;
@@ -123,7 +124,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
       let payload: any = {};
 
       if (formData.role === 'parent') {
-        endpoint = 'http://localhost:5000/api/auth/register/parent';
+        endpoint = `${API_BASE_URL}/auth/register/parent`;
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -142,7 +143,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           relationship_type: formData.relationshipType
         };
       } else if (formData.role === 'student') {
-        endpoint = 'http://localhost:5000/api/auth/register/student';
+        endpoint = `${API_BASE_URL}/auth/register/student`;
         payload = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -532,89 +533,186 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
                     {formData.role === 'parent' && (
                       <>
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl mb-4">
-                          <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5 text-blue-600" />
-                            Amakuru y'Umwana Wiga
-                          </h3>
-                          <p className="text-sm text-gray-600">Injiza amakuru y'umwana wawe wiga muri Garden TVET School</p>
-                        </div>
+                        {/* Enhanced Parent Student Linking Section */}
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200 shadow-lg mb-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                              <UserPlus className="h-7 w-7 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-purple-800">Fungisha Umwana wawe</h3>
+                              <p className="text-sm text-purple-600 font-medium">Link with your student</p>
+                            </div>
+                          </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Izina ry'Umwana</label>
+                          <p className="text-sm text-gray-600 mb-6 bg-white p-3 rounded-xl border border-purple-100">
+                            📱 Fillsha amakuru y'umwana uri kuganira kugira ngo abone ibitekerezo bijyanye n'amasomo, amafaranga, imyitwarire n'ibindi bikenewe.
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <User className="h-4 w-4 text-purple-500" />
+                                Izina ry'Umwana
+                              </label>
+                              <Input
+                                value={formData.studentFirstName}
+                                onChange={(e) => setFormData({ ...formData, studentFirstName: e.target.value })}
+                                placeholder="Marie"
+                                className="h-12 bg-white border-purple-200 focus:border-purple-500 focus:ring-purple-200 font-semibold"
+                              />
+                              {validationErrors.studentFirstName && <p className="text-red-500 text-xs flex items-center gap-1">{validationErrors.studentFirstName}</p>}
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <User className="h-4 w-4 text-purple-500" />
+                                Izina Ryukuri
+                              </label>
+                              <Input
+                                value={formData.studentLastName}
+                                onChange={(e) => setFormData({ ...formData, studentLastName: e.target.value })}
+                                placeholder="UWASE"
+                                className="h-12 bg-white border-purple-200 focus:border-purple-500 focus:ring-purple-200 font-semibold"
+                              />
+                              {validationErrors.studentLastName && <p className="text-red-500 text-xs flex items-center gap-1">{validationErrors.studentLastName}</p>}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <Briefcase className="h-4 w-4 text-purple-500" />
+                                Umwuga w'Umwana
+                              </label>
+                              <select
+                                value={formData.studentTrade}
+                                onChange={(e) => setFormData({ ...formData, studentTrade: e.target.value })}
+                                className="w-full h-12 bg-white border-purple-200 rounded-lg px-3 focus:border-purple-500 focus:ring-purple-200 font-medium"
+                              >
+                                <option value="">Hitamo umwuga</option>
+                                {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                              {validationErrors.studentTrade && <p className="text-red-500 text-xs flex items-center gap-1">{validationErrors.studentTrade}</p>}
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <GraduationCap className="h-4 w-4 text-purple-500" />
+                                Urwego rw'Umwana
+                              </label>
+                              <select
+                                value={formData.studentLevel}
+                                onChange={(e) => setFormData({ ...formData, studentLevel: e.target.value })}
+                                className="w-full h-12 bg-white border-purple-200 rounded-lg px-3 focus:border-purple-500 focus:ring-purple-200 font-medium"
+                              >
+                                <option value="">Hitamo urwego</option>
+                                {levels.map(l => <option key={l} value={l}>{l}</option>)}
+                              </select>
+                              {validationErrors.studentLevel && <p className="text-red-500 text-xs flex items-center gap-1">{validationErrors.studentLevel}</p>}
+                            </div>
+                          </div>
+
+                          <div className="mb-4 space-y-2">
+                            <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-purple-500" />
+                              Igitsina (Gender)
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <label className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                formData.gender === 'Male' 
+                                  ? 'border-purple-500 bg-purple-100 text-purple-800 font-bold' 
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300 font-medium'
+                              }`}>
+                                <input
+                                  type="radio"
+                                  name="studentGender"
+                                  value="Male"
+                                  checked={formData.gender === 'Male'}
+                                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                  className="sr-only"
+                                />
+                                🔵 Gabo (Male)
+                              </label>
+                              <label className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                formData.gender === 'Female' 
+                                  ? 'border-pink-500 bg-pink-100 text-pink-800 font-bold' 
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-pink-300 font-medium'
+                              }`}>
+                                <input
+                                  type="radio"
+                                  name="studentGender"
+                                  value="Female"
+                                  checked={formData.gender === 'Female'}
+                                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                  className="sr-only"
+                                />
+                                🔴 Gore (Female)
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="mb-4 space-y-2">
+                            <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-purple-500" />
+                              Nimero y'Umwana (Optional)
+                            </label>
                             <Input
-                              value={formData.studentFirstName}
-                              onChange={(e) => setFormData({ ...formData, studentFirstName: e.target.value })}
-                              placeholder="Marie"
-                              className="h-12"
+                              value={formData.studentId}
+                              onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                              placeholder="SWD0012026"
+                              className="h-12 bg-white border-purple-200 focus:border-purple-500 focus:ring-purple-200 font-semibold"
                             />
-                            {validationErrors.studentFirstName && <p className="text-red-600 text-xs mt-1">{validationErrors.studentFirstName}</p>}
+                            <p className="text-xs text-purple-600 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Niba uzi nimero y'umwana, yinjize hano kugira ngo fungusho vuba
+                            </p>
                           </div>
-                          <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Izina Ryukuri</label>
-                            <Input
-                              value={formData.studentLastName}
-                              onChange={(e) => setFormData({ ...formData, studentLastName: e.target.value })}
-                              placeholder="UWASE"
-                              className="h-12"
-                            />
-                            {validationErrors.studentLastName && <p className="text-red-600 text-xs mt-1">{validationErrors.studentLastName}</p>}
-                          </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Umwuga w'Umwana</label>
-                            <select
-                              value={formData.studentTrade}
-                              onChange={(e) => setFormData({ ...formData, studentTrade: e.target.value })}
-                              className="w-full h-12 border rounded-lg px-3"
-                            >
-                              <option value="">Hitamo umwuga</option>
-                              {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                            {validationErrors.studentTrade && <p className="text-red-600 text-xs mt-1">{validationErrors.studentTrade}</p>}
+                          <div className="space-y-2">
+                            <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                              <User className="h-4 w-4 text-purple-500" />
+                              Isano n'Umwana
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[
+                                { value: 'father', label: '👨 Data', color: 'blue' },
+                                { value: 'mother', label: '👩 Mama', color: 'pink' },
+                                { value: 'guardian', label: '👤 Umurezi', color: 'purple' },
+                                { value: 'other', label: '👥 Ikindi', color: 'gray' }
+                              ].map((rel) => (
+                                <label key={rel.value} className={`flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all font-semibold text-sm ${
+                                  formData.relationshipType === rel.value
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
+                                }`}>
+                                  <input
+                                    type="radio"
+                                    name="relationshipType"
+                                    value={rel.value}
+                                    checked={formData.relationshipType === rel.value}
+                                    onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value })}
+                                    className="sr-only"
+                                  />
+                                  {rel.label}
+                                </label>
+                              ))}
+                            </div>
+                            {validationErrors.relationshipType && <p className="text-red-500 text-xs flex items-center gap-1">{validationErrors.relationshipType}</p>}
                           </div>
-                          <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Urwego rw'Umwana</label>
-                            <select
-                              value={formData.studentLevel}
-                              onChange={(e) => setFormData({ ...formData, studentLevel: e.target.value })}
-                              className="w-full h-12 border rounded-lg px-3"
-                            >
-                              <option value="">Hitamo urwego</option>
-                              {levels.map(l => <option key={l} value={l}>{l}</option>)}
-                            </select>
-                            {validationErrors.studentLevel && <p className="text-red-600 text-xs mt-1">{validationErrors.studentLevel}</p>}
+
+                          {/* Info Box */}
+                          <div className="mt-6 p-4 bg-white rounded-xl border border-purple-200 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-800">Ibyatanze</h4>
+                                <p className="text-sm text-gray-600">
+                                  Iyi nimero izafashanya amakuru n'umwana mu bihe byose. Uzajya ubona amakuru y'amasomo, amafaranga, imyitwarire, n'ibindi bijyanye n'umwana wawe.
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Nimero y'Umwana (Optional)</label>
-                          <Input
-                            value={formData.studentId}
-                            onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                            placeholder="SWD0012026"
-                            className="h-12"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Niba uzi nimero y'umwana, yinjize hano</p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Isano n'Umwana</label>
-                          <select
-                            value={formData.relationshipType}
-                            onChange={(e) => setFormData({ ...formData, relationshipType: e.target.value })}
-                            className="w-full h-12 border rounded-lg px-3"
-                          >
-                            <option value="">Hitamo isano</option>
-                            <option value="father">Data</option>
-                            <option value="mother">Mama</option>
-                            <option value="guardian">Umurezi</option>
-                            <option value="other">Ikindi</option>
-                          </select>
-                          {validationErrors.relationshipType && <p className="text-red-600 text-xs mt-1">{validationErrors.relationshipType}</p>}
                         </div>
                       </>
                     )}

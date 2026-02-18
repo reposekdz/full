@@ -36,6 +36,12 @@ import LiveStudySessionsPage from '../admin/LiveStudySessionsPage';
 import CollaborationStudyGroupsPage from '../admin/CollaborationStudyGroupsPage';
 import QuizSystemPage from '../admin/QuizSystemPage';
 import SportsManagementPage from '../admin/SportsManagementPage';
+import TradesManagementPage from '../trades/TradesManagementPage';
+import LeadershipManagementPage from '../leadership/LeadershipManagementPage';
+import StudentColumnsManager from '../admin/StudentColumnsManager';
+import SystemSettingsPage from '../admin/SystemSettingsPage';
+import PageManagerPage from '../admin/PageManagerPage';
+import GalleryManagerPage from '../admin/GalleryManagerPage';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 import ClassLevelSheetsDashboard from '@/app/components/admin/ClassLevelSheetsDashboard';
 
@@ -104,6 +110,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, onLogout })
         return <QuizSystemPage />;
       case 'sports-management':
         return <SportsManagementPage />;
+      case 'trades-management':
+        return <TradesManagementPage />;
+      case 'leadership-management':
+        return <LeadershipManagementPage />;
+      case 'student-columns':
+        return <StudentColumnsManager />;
+      case 'system-settings':
+        return <SystemSettingsPage />;
+      case 'page-manager':
+        return <PageManagerPage />;
+      case 'gallery-manager':
+        return <GalleryManagerPage />;
       case 'class-sheets':
         return <ClassLevelSheetsDashboard userRole="admin" userId={user?.id || 1} />;
       case 'articles':

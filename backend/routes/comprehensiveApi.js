@@ -96,7 +96,7 @@ router.get('/dashboard/recent-activities', authenticateToken, async (req, res) =
       SELECT 'grade_posted' as type, CONCAT('Grade posted for ', s.subject_name) as description, g.created_at as timestamp
       FROM grades g JOIN subjects s ON g.subject_id = s.id WHERE g.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
       UNION ALL
-      SELECT 'payment_made' as type, CONCAT('Payment of ', fp.amount, ' RWF received') as description, fp.created_at as timestamp
+      SELECT 'payment_made' as type, CONCAT('Payment received') as description, fp.created_at as timestamp
       FROM fee_payments fp WHERE fp.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
       ORDER BY timestamp DESC LIMIT 20
     `);

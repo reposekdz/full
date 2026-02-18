@@ -95,10 +95,12 @@ const DOSDashboardUltraAdvanced: React.FC<DOSDashboardProps> = ({ onNavigate, on
           pendingExams: dashboardData.academic_stats?.find((s: any) => s.stat_name === 'pending_exams')?.stat_value || 0
         });
 
-        // Hydrate students
+        // Hydrate students - Fetch Level 4 SOD students
         try {
-          const studentsRes = await apiService.getManagementStudents();
-          if (studentsRes.success) setStudents(studentsRes.data || []);
+          const studentsRes = await apiService.getManagementStudents({ level: 4, trade: 'SOD' });
+          if (studentsRes.success) {
+            setStudents(studentsRes.data || []);
+          }
         } catch (e) {
           setStudents(getDemoStudents());
         }

@@ -160,6 +160,12 @@ class ApiService {
     return this.request(`/users?role=student&${query}`);
   }
 
+  // Comprehensive Search - Get students with filters (trade, level)
+  async getFilteredStudents(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/management/students?${query}`);
+  }
+
   async createStudent(studentData: any) {
     return this.request('/users', {
       method: 'POST',
@@ -308,6 +314,79 @@ class ApiService {
     return this.request('/parent-dashboard/notifications');
   }
 
+  // Parent Dashboard - Enhanced Real API Methods
+  async getParentProfile() {
+    return this.request('/parent-dashboard/profile');
+  }
+
+  async getParentOverview() {
+    return this.request('/parent-dashboard/overview');
+  }
+
+  async getParentChildren() {
+    return this.request('/parent-dashboard/children');
+  }
+
+  async getParentQuickStats() {
+    return this.request('/parent-dashboard/quick-stats');
+  }
+
+  async getParentStudentGrades(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/grades`);
+  }
+
+  async getParentStudentAttendance(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/attendance`);
+  }
+
+  async getParentStudentAttendanceDetails(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/attendance-details`);
+  }
+
+  async getParentStudentFees(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/fees`);
+  }
+
+  async getParentStudentAssignments(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/assignments`);
+  }
+
+  async getParentStudentTimetable(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/timetable`);
+  }
+
+  async getParentStudentBehavior(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/behavior`);
+  }
+
+  async getParentStudentExams(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/exams`);
+  }
+
+  async getParentStudentTeachers(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/teachers`);
+  }
+
+  async getParentStudentReportCard(studentId: number) {
+    return this.request(`/parent-dashboard/student/${studentId}/report-card`);
+  }
+
+  async getParentMessages() {
+    return this.request('/parent-dashboard/messages/all');
+  }
+
+  async markNotificationRead(notificationId: number) {
+    return this.request(`/parent-dashboard/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/parent-dashboard/notifications/read-all', {
+      method: 'PUT'
+    });
+  }
+
   async requestLinkingCodeHelp(requestData: { student_name: string; message: string; preferred_contact?: string }) {
     return this.request('/parent-linking/request-code-help', {
       method: 'POST',
@@ -317,6 +396,17 @@ class ApiService {
 
   async getMyHelpRequests() {
     return this.request('/parent-linking/my-help-requests');
+  }
+
+  async getMyLinkingRequests() {
+    return this.request('/parent-dashboard/my-linking-requests');
+  }
+
+  async requestStudentLinking(requestData: { student_name: string; message: string; preferred_contact?: string; student_code?: string; level?: string; trade?: string }) {
+    return this.request('/parent-dashboard/request-linking', {
+      method: 'POST',
+      body: JSON.stringify(requestData)
+    });
   }
 
   async generateSerialCodes(codeData: { trade_code: string; level_number: number; level_suffix?: string; quantity: number; academic_year?: string; expires_at?: string; notes?: string }) {
@@ -615,7 +705,7 @@ class ApiService {
 
   async getParents(params = {}) {
     const query = new URLSearchParams(params as any).toString();
-    return this.request(`/management/parents?${query}`);
+    return this.request(`/parent-management/parents?${query}`);
   }
 
   async getParentDetails(id: number) {
@@ -627,6 +717,51 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(linkData)
     });
+  }
+
+  // Parent Management - Enhanced Management APIs
+  async getParentLinkingRequests(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/parent-management/linking-requests?${query}`);
+  }
+
+  async respondToLinkingRequest(requestId: number, data: { student_code?: string; response_message: string; action: 'approve' | 'reject' }) {
+    return this.request(`/management/parents/linking-requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getParentManagementAnalytics() {
+    return this.request('/parent-management/analytics');
+  }
+
+  async getParentLinkingConflicts() {
+    return this.request('/management/parents/conflicts');
+  }
+
+  async resolveParentLinkingConflict(studentId: number, data: { keep_parent_id: number; remove_other_links: boolean }) {
+    return this.request(`/management/parents/conflicts/${studentId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getParentActivity(parentId: number, params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/parents/activity/${parentId}?${query}`);
+  }
+
+  async performBulkParentAction(data: { action: string; parent_ids?: number[]; link_ids?: number[]; reason?: string }) {
+    return this.request('/management/parents/bulk-action', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async exportParentLinks(params = {}) {
+    const query = new URLSearchParams(params as any).toString();
+    return this.request(`/management/parents/export?${query}`);
   }
 
   async getManagementClasses(params = {}) {

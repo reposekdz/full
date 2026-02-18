@@ -7,7 +7,8 @@ import {
   PieChart, LineChart, Calculator, CreditCard, Truck, Warehouse, ShoppingCart, Receipt,
   UserPlus, UserMinus, Search, Filter, Download, Upload, Eye, Edit, Trash2, Plus,
   Mail, Phone, MapPin, Globe, Star, Heart, Bookmark, Flag, AlertTriangle, CheckCircle,
-  XCircle, Info, HelpCircle, ExternalLink, Zap, Lightbulb, Compass, Navigation, Brain, Video, Bed
+  XCircle, Info, HelpCircle, ExternalLink, Zap, Lightbulb, Compass, Navigation, Brain, Video, Bed,
+  Columns, Crown, Layout, Image
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -95,9 +96,15 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
       admin: [
         { key: 'users', icon: Users, label: 'Abakoresha', color: 'from-blue-500 to-indigo-500' },
         { key: 'student-sheets', icon: FileText, label: 'Student Sheets (Global)', color: 'from-cyan-500 to-teal-500' },
+        { key: 'student-columns', icon: Columns, label: 'Student Columns', color: 'from-teal-500 to-green-500' },
+        { key: 'trades-management', icon: Award, label: 'Trades & Courses', color: 'from-orange-500 to-amber-500' },
+        { key: 'leadership-management', icon: Crown, label: 'Leadership', color: 'from-yellow-500 to-orange-500' },
         { key: 'comprehensive-content', icon: FileText, label: 'Gucunga Ibikubiyemo', color: 'from-yellow-500 to-green-500' },
+        { key: 'page-manager', icon: Layout, label: 'Page Manager', color: 'from-indigo-500 to-purple-500' },
+        { key: 'gallery-manager', icon: Image, label: 'Gallery Manager', color: 'from-pink-500 to-rose-500' },
+        { key: 'system-settings', icon: Settings, label: 'System Settings', color: 'from-slate-500 to-zinc-500' },
         { key: 'student-management', icon: GraduationCap, label: 'Abanyeshuri & Abarimu', color: 'from-green-500 to-emerald-500' },
-        { key: 'content-management', icon: Briefcase, label: 'Content (Old)', color: 'from-purple-500 to-pink-500' },
+        { key: 'comprehensive-staff', icon: Users, label: 'Staff Management', color: 'from-purple-500 to-violet-500' },
         { key: 'homework-management', icon: BookOpen, label: 'Homework', color: 'from-orange-500 to-red-500' },
         { key: 'assignments-management', icon: ClipboardList, label: 'Assignments', color: 'from-teal-500 to-cyan-500' },
         { key: 'quiz-system', icon: Brain, label: 'Quiz System', color: 'from-purple-500 to-pink-500' },
@@ -107,7 +114,6 @@ const AdvancedLeftSidebar: React.FC<AdvancedLeftSidebarProps> = ({
         { key: 'collaboration', icon: Users, label: 'Study Groups', color: 'from-green-500 to-teal-500' },
         { key: 'analytics', icon: BarChart3, label: 'Imibare', color: 'from-green-500 to-teal-500' },
         { key: 'reports', icon: FileText, label: 'Raporo', color: 'from-purple-500 to-violet-500' },
-        { key: 'settings', icon: Settings, label: 'Igenamiterere', color: 'from-orange-500 to-red-500' },
         { key: 'security', icon: Shield, label: 'Umutekano', color: 'from-yellow-500 to-amber-500' },
         { key: 'backup', icon: Database, label: 'Backup', color: 'from-pink-500 to-rose-500' },
         { key: 'logs', icon: Activity, label: 'Logs', color: 'from-indigo-500 to-blue-500' },

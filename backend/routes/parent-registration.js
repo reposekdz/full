@@ -4,6 +4,9 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Import African Talking SMS Service for real SMS notifications
+const { sendSMS, isReady: isSMSReady } = require('../services/africanTalkingService');
+
 // Helper function for fuzzy matching
 function calculateNameSimilarity(name1, name2) {
     const s1 = name1.toLowerCase().trim();
@@ -354,6 +357,16 @@ router.post('/register', async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRE || '7d' }
         );
 
+        // Send SMS notification to parent via African Talking
+        let smsResult = null;
+        if (isSMSReady()) {
+            const smsMessage = autoLinked 
+                ? `Hello ${first_name}, welcome to Garden TVET School Parent Portal! Your account has been created and linked with your child. You can now view their progress, attendance, and more.`
+                : `Hello ${first_name}, welcome to Garden TVET School Parent Portal! Your account has been created. Please login and use "Add Child" to link with your child.`;
+            smsResult = await sendSMS(phone, smsMessage);
+            console.log(`[SMS] Parent registration welcome SMS: ${smsResult ? 'Sent' : 'Failed'}`);
+        }
+
         // Return user data and token
         res.status(201).json({
             success: true,
@@ -362,6 +375,7 @@ router.post('/register', async (req, res) => {
                 : (manualRequestCreated
                     ? 'Parent registration successful. A manual linking request has been sent to staff.'
                     : 'Parent registration successful.'),
+            smsSent: smsResult ? smsResult.success : false,
             token: token,
             user: {
                 id: parentId,

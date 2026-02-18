@@ -18,6 +18,193 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// ============================================
+// STUDENTS FOR ALL STAFF ROLES
+// Universal student data access for all roles
+// ============================================
+
+// GET all students (Level 4 SOD default) - for all staff roles
+router.get('/students', authenticateToken, async (req, res) => {
+  try {
+    const { level, trade, search, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let whereConditions = ['status = "active"'];
+    let params = [];
+    
+    // Default to Level 4 SOD if no filter
+    if (!level && !trade) {
+      whereConditions.push('(level_number = 4 OR level_suffix = "4")');
+      whereConditions.push('(trade_code LIKE "%SOD%" OR trade_name LIKE "%SOD%" OR trade_name LIKE "%Social%")');
+    } else {
+      if (level) {
+        whereConditions.push('level_number = ?');
+        params.push(parseInt(level));
+      }
+      if (trade) {
+        whereConditions.push('(trade_code LIKE ? OR trade_name LIKE ?)');
+        params.push(`%${trade}%`, `%${trade}%`);
+      }
+    }
+    
+    if (search) {
+      whereConditions.push('(first_name LIKE ? OR last_name LIKE ? OR student_id LIKE ? OR student_code LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    
+    const whereClause = 'WHERE ' + whereConditions.join(' AND ');
+    
+    // Get total count
+    const [countResult] = await pool.execute(
+      `SELECT COUNT(*) as total FROM global_student_sheets ${whereClause}`,
+      params
+    );
+    const total = countResult[0].total;
+    
+    // Get students with computed fields
+    const [students] = await pool.execute(
+      `SELECT 
+        *,
+        0 as total_fees,
+        0 as total_paid,
+        0 as balance,
+        'unpaid' as payment_status,
+        100 as conduct_score
+      FROM global_student_sheets 
+      ${whereClause}
+      ORDER BY last_name, first_name
+      LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+    
+    res.json({
+      success: true,
+      students,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get students error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET students by level
+router.get('/students/by-level', authenticateToken, async (req, res) => {
+  try {
+    const { level } = req.query;
+    
+    let query = `
+      SELECT 
+        level_number,
+        level_suffix,
+        COUNT(*) as student_count,
+        trade_name,
+        trade_code
+      FROM global_student_sheets 
+      WHERE status = "active"
+    `;
+    let params = [];
+    
+    if (level) {
+      query += ' AND level_number = ?';
+      params.push(parseInt(level));
+    }
+    
+    query += ' GROUP BY level_number, level_suffix, trade_name, trade_code ORDER BY level_number, trade_name';
+    
+    const [results] = await pool.execute(query, params);
+    
+    res.json({ success: true, students_by_level: results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET single student details
+router.get('/students/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const [students] = await pool.execute(
+      `SELECT 
+        *,
+        0 as total_fees,
+        0 as total_paid,
+        0 as balance,
+        'unpaid' as payment_status,
+        100 as conduct_score
+      FROM global_student_sheets 
+      WHERE student_id = ? OR student_code = ?`,
+      [req.params.studentId, req.params.studentId]
+    );
+    
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    // Get linked parents
+    const [parents] = await pool.execute(
+      'SELECT * FROM parent_student_links WHERE student_id = ?',
+      [req.params.studentId]
+    );
+    
+    res.json({
+      success: true,
+      student: students[0],
+      linked_parents: parents
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET student summary/stats
+router.get('/students-summary', authenticateToken, async (req, res) => {
+  try {
+    const [total] = await pool.execute(
+      'SELECT COUNT(*) as count FROM global_student_sheets WHERE status = "active"'
+    );
+    
+    const [byLevel] = await pool.execute(
+      `SELECT level_number, COUNT(*) as count 
+       FROM global_student_sheets 
+       WHERE status = "active" 
+       GROUP BY level_number 
+       ORDER BY level_number`
+    );
+    
+    const [byTrade] = await pool.execute(
+      `SELECT trade_name, COUNT(*) as count 
+       FROM global_student_sheets 
+       WHERE status = "active" 
+       GROUP BY trade_name 
+       ORDER BY count DESC`
+    );
+    
+    const [byGender] = await pool.execute(
+      `SELECT gender, COUNT(*) as count 
+       FROM global_student_sheets 
+       WHERE status = "active" 
+       GROUP BY gender`
+    );
+    
+    res.json({
+      success: true,
+      summary: {
+        total_students: total[0].count,
+        by_level: byLevel,
+        by_trade: byTrade,
+        by_gender: byGender
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Role definitions
 const ROLES = {
   ADMIN: ['admin'],
@@ -513,16 +700,36 @@ router.get('/teacher/dashboard', authenticateToken, requireRole(...ROLES.TEACHER
   try {
     const teacherId = req.user.id;
 
-    // Get teacher's classes
-    const [[classes]] = await pool.execute(`
-      SELECT 
-        c.*,
-        COUNT(DISTINCT e.student_id) as student_count
-      FROM classes c
-      LEFT JOIN class_enrollments e ON c.id = e.class_id
-      WHERE c.teacher_id = ? AND c.status = 'active'
-      GROUP BY c.id
-    `, [teacherId]);
+    // Get teacher's classes - try multiple sources
+    let classes = [];
+    try {
+      const [classesResult] = await pool.execute(`
+        SELECT 
+          c.*,
+          COUNT(DISTINCT e.student_id) as student_count
+        FROM classes c
+        LEFT JOIN class_enrollments e ON c.id = e.class_id
+        WHERE c.teacher_id = ? AND c.status = 'active'
+        GROUP BY c.id
+      `, [teacherId]);
+      classes = classesResult;
+    } catch (e) {
+      // Try alternative with trade_classes
+      try {
+        const [altClasses] = await pool.execute(`
+          SELECT 
+            tc.*,
+            tc.name as class_name,
+            t.name as trade_name
+          FROM trade_classes tc
+          LEFT JOIN trades t ON tc.trade_code = t.code
+          WHERE tc.teacher_id = ?
+        `, [teacherId]);
+        classes = altClasses;
+      } catch (e2) {
+        classes = [];
+      }
+    }
 
     // Get pending assignments
     const [[pendingGrading]] = await pool.execute(`
@@ -534,13 +741,19 @@ router.get('/teacher/dashboard', authenticateToken, requireRole(...ROLES.TEACHER
 
     // Get today's schedule
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    const [[todaySchedule]] = await pool.execute(`
-      SELECT t.*, c.class_name, c.class_code
-      FROM timetable t
-      JOIN classes c ON t.class_id = c.id
-      WHERE t.teacher_id = ? AND t.day_of_week = ?
-      ORDER BY t.start_time
-    `, [teacherId, today]);
+    let todaySchedule = null;
+    try {
+      const [[schedule]] = await pool.execute(`
+        SELECT t.*, c.name as class_name, c.class_code
+        FROM timetable t
+        LEFT JOIN trade_classes c ON t.class_id = c.id
+        WHERE t.teacher_id = ? AND t.day_of_week = ?
+        ORDER BY t.start_time
+      `, [teacherId, today]);
+      todaySchedule = schedule;
+    } catch (e) {
+      todaySchedule = null;
+    }
 
     // Get recent activities
     const [[recentActivities]] = await pool.execute(`
@@ -574,17 +787,19 @@ router.get('/teacher/classes', authenticateToken, requireRole(...ROLES.TEACHER),
   try {
     const teacherId = req.user.id;
 
-    const [classes] = await pool.execute(`
-      SELECT 
-        c.*,
-        s.subject_name,
-        COUNT(DISTINCT ce.student_id) as student_count
-      FROM classes c
-      LEFT JOIN subjects s ON c.subject_id = s.id
-      LEFT JOIN class_enrollments ce ON c.id = ce.class_id
-      WHERE c.teacher_id = ? AND c.status = 'active'
-      GROUP BY c.id
-      ORDER BY c.class_code
+    let classes = [];
+    try {
+      const [classesResult] = await pool.execute(`
+        SELECT 
+          c.*,
+          s.subject_name,
+          COUNT(DISTINCT ce.student_id) as student_count
+        FROM classes c
+        LEFT JOIN subjects s ON c.subject_id = s.id
+        LEFT JOIN class_enrollments ce ON c.id = ce.class_id
+        WHERE c.teacher_id = ? AND c.status = 'active'
+        GROUP BY c.id
+        ORDER BY c.class_code
     `, [teacherId]);
 
     res.json({ success: true, classes });
@@ -1594,6 +1809,164 @@ router.get('/stock/categories', authenticateToken, requireRole(...ROLES.STOCK_MA
     const [categories] = await pool.execute('SELECT DISTINCT category FROM stock_items WHERE category IS NOT NULL ORDER BY category');
 
     res.json({ success: true, categories: categories.map(c => c.category) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================================
+// STAFF PROFILE MANAGEMENT
+// ============================================================
+
+// GET current user's profile
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    const [users] = await pool.execute(
+      'SELECT id, name, email, phone, role, created_at FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Check if password change is required
+    const [staff] = await pool.execute(
+      'SELECT id, employee_id, department, position FROM staff WHERE user_id = ?',
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      user: users[0],
+      staff: staff[0] || null,
+      requiresPasswordChange: users[0].password_changed_at === null
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// UPDATE current user's profile (email, phone, name)
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { name, email, phone } = req.body;
+    
+    if (!name && !email && !phone) {
+      return res.status(400).json({ success: false, message: 'At least one field required' });
+    }
+    
+    // Check if email already exists for another user
+    if (email) {
+      const [existing] = await pool.execute(
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [email, userId]
+      );
+      if (existing.length > 0) {
+        return res.status(400).json({ success: false, message: 'Email already in use' });
+      }
+    }
+    
+    const updates = [];
+    const params = [];
+    
+    if (name) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (email) {
+      updates.push('email = ?');
+      params.push(email);
+    }
+    if (phone) {
+      updates.push('phone = ?');
+      params.push(phone);
+    }
+    
+    params.push(userId);
+    
+    await pool.execute(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// CHANGE password (with forced password change support)
+router.put('/profile/password', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { currentPassword, newPassword, forceChange } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters' 
+      });
+    }
+    
+    // Get current user
+    const [users] = await pool.execute(
+      'SELECT password FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // If not forced change, verify current password
+    if (!forceChange && currentPassword) {
+      const bcrypt = require('bcrypt');
+      const validPassword = await bcrypt.compare(currentPassword, users[0].password);
+      if (!validPassword) {
+        return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+      }
+    }
+    
+    // Hash new password
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await pool.execute(
+      'UPDATE users SET password = ?, password_changed_at = NOW() WHERE id = ?',
+      [hashedPassword, userId]
+    );
+    
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// CHECK if password change is required
+router.get('/profile/requires-password-change', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    const [users] = await pool.execute(
+      'SELECT password_changed_at FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Password change is required if password_changed_at is null
+    const requiresChange = users[0].password_changed_at === null;
+    
+    res.json({ 
+      success: true, 
+      requiresPasswordChange: requiresChange 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

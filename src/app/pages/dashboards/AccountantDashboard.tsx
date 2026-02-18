@@ -20,7 +20,8 @@ import {
   Activity,
   Plus,
   RefreshCw,
-  Grid
+  Grid,
+  Edit
 } from 'lucide-react';
 import {
   BarChart,
@@ -68,6 +69,9 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   const [trends, setTrends] = useState<any[]>([]);
   const [methods, setMethods] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
+  const [parents, setParents] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,17 +81,21 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, trendsRes, methodsRes, recentRes] = await Promise.all([
+      const [statsRes, trendsRes, methodsRes, recentRes, parentsRes, studentsRes] = await Promise.all([
         apiService.request('global-student-sheets/statistics'),
         apiService.request('payments/statistics/trends').catch(() => ({ success: true, trends: [] })),
         apiService.request('payments/statistics/methods').catch(() => ({ success: true, methods: [] })),
-        apiService.request('payments/history/recent').catch(() => ({ success: true, payments: [] }))
+        apiService.request('payments/history/recent').catch(() => ({ success: true, payments: [] })),
+        apiService.request('parent-registration/all').catch(() => ({ success: true, parents: [] })),
+        apiService.request('comprehensive-admin/students?limit=100').catch(() => ({ success: true, students: [] }))
       ]);
 
       if (statsRes.success) setStats(statsRes.statistics);
       if (trendsRes.success) setTrends(trendsRes.trends || []);
       if (methodsRes.success) setMethods(methodsRes.methods || []);
       if (recentRes.success) setRecentPayments(recentRes.payments || []);
+      if (parentsRes.success) setParents(parentsRes.parents || []);
+      if (studentsRes.success) setStudents(studentsRes.students || []);
 
     } catch (error) {
       console.error('Dashboard Error:', error);
@@ -180,6 +188,12 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-blue-200 transition-all font-bold text-gray-500">
                   <Activity className="w-4 h-4 mr-2" /> Advanced Analytics
+                </TabsTrigger>
+                <TabsTrigger value="parents" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-green-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-green-200 transition-all font-bold text-gray-500">
+                  <Users className="w-4 h-4 mr-2" /> Parents
+                </TabsTrigger>
+                <TabsTrigger value="fees" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-amber-600 data-[state=active]:text-white shadow-none data-[state=active]:shadow-lg data-[state=active]:shadow-amber-200 transition-all font-bold text-gray-500">
+                  <DollarSign className="w-4 h-4 mr-2" /> Fees
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -392,6 +406,153 @@ const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ onNavigate, o
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* Parents Management Tab */}
+              <TabsContent value="parents">
+                <Card className="rounded-2xl border-0 shadow-sm bg-white">
+                  <CardHeader className="border-b">
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Parent Accounts Management</CardTitle>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Search parents..." 
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-64"
+                        />
+                        <Button><Plus className="w-4 h-4 mr-2" />Add Parent</Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                          <tr>
+                            <th className="px-6 py-4">Parent Name</th>
+                            <th className="px-6 py-4">Phone</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Linked Students</th>
+                            <th className="px-6 py-4">Total Paid</th>
+                            <th className="px-6 py-4">Balance</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {parents.filter(p => 
+                            p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.phone?.includes(searchQuery)
+                          ).map((parent) => {
+                            const parentStudents = students.filter((s: any) => s.parent_id === parent.id);
+                            const totalPaid = parentStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
+                            const totalFees = parentStudents.reduce((sum: number, s: any) => sum + (s.total_fees || 0), 0);
+                            return (
+                              <tr key={parent.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium">{parent.name}</td>
+                                <td className="px-6 py-4">{parent.phone}</td>
+                                <td className="px-6 py-4">{parent.email || '-'}</td>
+                                <td className="px-6 py-4">{parentStudents.length}</td>
+                                <td className="px-6 py-4 font-medium text-green-600">{formatCurrency(totalPaid)}</td>
+                                <td className="px-6 py-4 font-medium text-amber-600">{formatCurrency(totalFees - totalPaid)}</td>
+                                <td className="px-6 py-4">
+                                  <Badge className={parent.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                    {parent.is_active ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <Button variant="ghost" size="sm"><Edit className="w-4 h-4" /></Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Fees Management Tab */}
+              <TabsContent value="fees">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <Card className="bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+                    <CardContent className="p-6">
+                      <p className="text-blue-100">Total Expected</p>
+                      <p className="text-3xl font-bold">{formatCurrency(stats?.total_fees || 0)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-green-500 to-green-700 text-white">
+                    <CardContent className="p-6">
+                      <p className="text-green-100">Total Collected</p>
+                      <p className="text-3xl font-bold">{formatCurrency(stats?.total_paid || 0)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-amber-500 to-amber-700 text-white">
+                    <CardContent className="p-6">
+                      <p className="text-amber-100">Outstanding Balance</p>
+                      <p className="text-3xl font-bold">{formatCurrency(stats?.total_balance || 0)}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <Card className="rounded-2xl border-0 shadow-sm bg-white">
+                  <CardHeader className="border-b">
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Fee Management</CardTitle>
+                      <div className="flex gap-2">
+                        <Button variant="outline"><Download className="w-4 h-4 mr-2" />Export</Button>
+                        <Button><Plus className="w-4 h-4 mr-2" />Create Fee</Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                          <tr>
+                            <th className="px-6 py-4">Student</th>
+                            <th className="px-6 py-4">Level</th>
+                            <th className="px-6 py-4">Trade</th>
+                            <th className="px-6 py-4">Total Fees</th>
+                            <th className="px-6 py-4">Amount Paid</th>
+                            <th className="px-6 py-4">Balance</th>
+                            <th className="px-6 py-4">Payment Status</th>
+                            <th className="px-6 py-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {students.slice(0, 20).map((student: any) => {
+                            const balance = (student.total_fees || 0) - (student.total_paid || 0);
+                            const paymentStatus = balance <= 0 ? 'paid' : balance < (student.total_fees || 0) * 0.5 ? 'partial' : 'unpaid';
+                            return (
+                              <tr key={student.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium">{student.first_name} {student.last_name}</td>
+                                <td className="px-6 py-4">{student.level_number || student.level || '-'}</td>
+                                <td className="px-6 py-4">{student.trade_name || student.trade || '-'}</td>
+                                <td className="px-6 py-4">{formatCurrency(student.total_fees || 0)}</td>
+                                <td className="px-6 py-4 text-green-600">{formatCurrency(student.total_paid || 0)}</td>
+                                <td className="px-6 py-4 text-amber-600">{formatCurrency(balance)}</td>
+                                <td className="px-6 py-4">
+                                  <Badge className={
+                                    paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                                    paymentStatus === 'partial' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-red-100 text-red-800'
+                                  }>
+                                    {paymentStatus.toUpperCase()}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <Button variant="ghost" size="sm"><Plus className="w-4 h-4" />Record Payment</Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
             </AnimatePresence>
           </Tabs>

@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { Label } from '../components/ui/label';
 import RwandaLocationSelector from '../components/RwandaLocationSelector';
 import { Settings, HelpCircle, Trophy, Plus, Edit, Trash2, Save, Upload, Image as ImageIcon } from 'lucide-react';
 
