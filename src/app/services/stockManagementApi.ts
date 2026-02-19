@@ -176,6 +176,35 @@ export const stockApi = {
     return res.json();
   },
 
+  // Create category
+  createCategory: async (data: { category_code?: string; category_name: string; description?: string; parent_category_id?: number }) => {
+    const res = await fetch(`${API_BASE_URL}/stock-advanced/categories`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Update category
+  updateCategory: async (id: number, data: { category_code?: string; category_name?: string; description?: string; parent_category_id?: number; is_active?: boolean }) => {
+    const res = await fetch(`${API_BASE_URL}/stock-advanced/categories/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Delete category
+  deleteCategory: async (id: number) => {
+    const res = await fetch(`${API_BASE_URL}/stock-advanced/categories/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.json();
+  },
+
   // Get stock alerts
   getAlerts: async () => {
     const res = await fetch(`${API_BASE_URL}/stock-advanced/alerts`, {

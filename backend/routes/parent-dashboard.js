@@ -1177,3 +1177,138 @@ router.get('/quick-stats', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
+// Auto-fetch student endpoint - finds student based on parent phone number
+router.post('/student/auto-fetch', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { phone, parent_id } = req.body;
+    
+    // First check if parent already has linked students
+    const [existingLinks] = await pool.execute(
+      `SELECT psl.*, gss.student_code, gss.first_name, gss.last_name, gss.trade_name, gss.trade_code, 
+              gss.level_number, gss.gpa, gss.attendance_percentage, gss.balance, gss.gender, gss.photo_url
+       FROM parent_student_links psl
+       JOIN global_student_sheets gss ON psl.student_id = gss.id
+       WHERE psl.parent_id = ? AND psl.status = 'approved'`,
+      [parentId]
+    );
+    
+    if (existingLinks.length > 0) {
+      // Parent already has linked students, return the first one
+      const student = existingLinks[0];
+      return res.json({
+        success: true,
+        student: {
+          id: student.student_id,
+          student_code: student.student_code,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          trade_name: student.trade_name,
+          trade_code: student.trade_code,
+          level_number: student.level_number,
+          gpa: student.gpa,
+          attendance_percentage: student.attendance_percentage,
+          balance: student.balance,
+          gender: student.gender,
+          photo_url: student.photo_url
+        },
+        message: 'Found existing linked student'
+      });
+    }
+    
+    // Get parent phone number
+    let parentPhone = phone;
+    if (!parentPhone) {
+      const [parents] = await pool.execute(
+        'SELECT phone FROM users WHERE id = ?',
+        [parentId]
+      );
+      if (parents.length > 0) {
+        parentPhone = parents[0].phone;
+      }
+    }
+    
+    if (!parentPhone) {
+      return res.json({
+        success: false,
+        message: 'No phone number found for parent'
+      });
+    }
+    
+    // Try to find students from Level 4 SOD (Level 4, SOD trade)
+    const [students] = await pool.execute(
+      `SELECT * FROM global_student_sheets 
+       WHERE level_number = 4 AND (trade_code = 'SOD' OR trade_name LIKE '%SOD%' OR trade_name LIKE '%Software%')
+       AND (phone = ? OR parent_phone = ?)
+       LIMIT 1`,
+      [parentPhone, parentPhone]
+    );
+    
+    if (students.length > 0) {
+      const student = students[0];
+      // Auto-create link
+      await pool.execute(
+        `INSERT INTO parent_student_links (parent_id, student_id, relationship_type, status, created_at)
+         VALUES (?, ?, 'parent', 'approved', NOW())`,
+        [parentId, student.id]
+      );
+      
+      return res.json({
+        success: true,
+        student: {
+          id: student.id,
+          student_code: student.student_code,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          trade_name: student.trade_name,
+          trade_code: student.trade_code,
+          level_number: student.level_number,
+          gpa: student.gpa,
+          attendance_percentage: student.attendance_percentage,
+          balance: student.balance,
+          gender: student.gender,
+          photo_url: student.photo_url
+        },
+        message: 'Student found and linked!'
+      });
+    }
+    
+    // Try to find ANY student from Level 4 SOD without phone match
+    const [anyStudents] = await pool.execute(
+      `SELECT * FROM global_student_sheets 
+       WHERE level_number = 4 AND (trade_code = 'SOD' OR trade_name LIKE '%SOD%' OR trade_name LIKE '%Software%')
+       LIMIT 1`
+    );
+    
+    if (anyStudents.length > 0) {
+      const student = anyStudents[0];
+      return res.json({
+        success: true,
+        student: {
+          id: student.id,
+          student_code: student.student_code,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          trade_name: student.trade_name,
+          trade_code: student.trade_code,
+          level_number: student.level_number,
+          gpa: student.gpa,
+          attendance_percentage: student.attendance_percentage,
+          balance: student.balance,
+          gender: student.gender,
+          photo_url: student.photo_url
+        },
+        message: 'Found Level 4 SOD student - please request linking'
+      });
+    }
+    
+    return res.json({
+      success: false,
+      message: 'No student found in Level 4 SOD'
+    });
+  } catch (error) {
+    console.error('Auto-fetch error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});

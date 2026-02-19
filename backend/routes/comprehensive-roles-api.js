@@ -18,6 +18,18 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// Role definitions - must be before use
+const ROLES = {
+  ADMIN: ['admin'],
+  ACCOUNTANT: ['accountant', 'admin', 'headmaster'],
+  TEACHER: ['teacher', 'admin', 'dos'],
+  ADVISOR: ['advisor', 'admin', 'counselor'],
+  DOS: ['director_study', 'admin', 'headmaster'],
+  DOD: ['director_discipline', 'matron', 'patron', 'admin'],
+  HEADMASTER: ['headmaster', 'admin', 'owner'],
+  STOCK_MANAGER: ['stock_manager', 'admin', 'headmaster']
+};
+
 // ============================================
 // STUDENTS FOR ALL STAFF ROLES
 // Universal student data access for all roles
@@ -204,18 +216,6 @@ router.get('/students-summary', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
-// Role definitions
-const ROLES = {
-  ADMIN: ['admin'],
-  ACCOUNTANT: ['accountant', 'admin', 'headmaster'],
-  TEACHER: ['teacher', 'admin', 'dos'],
-  ADVISOR: ['advisor', 'admin', 'counselor'],
-  DOS: ['director_study', 'admin', 'headmaster'],
-  DOD: ['director_discipline', 'matron', 'patron', 'admin'],
-  HEADMASTER: ['headmaster', 'admin', 'owner'],
-  STOCK_MANAGER: ['stock_manager', 'admin', 'headmaster']
-};
 
 // ============================================================
 // UTILITY FUNCTIONS
@@ -802,9 +802,13 @@ router.get('/teacher/classes', authenticateToken, requireRole(...ROLES.TEACHER),
         ORDER BY c.class_code
     `, [teacherId]);
 
-    res.json({ success: true, classes });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+      res.json({ success: true, classes });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  } catch (outerError) {
+    console.error('Teacher classes error:', outerError);
+    res.status(500).json({ success: false, message: outerError.message });
   }
 });
 

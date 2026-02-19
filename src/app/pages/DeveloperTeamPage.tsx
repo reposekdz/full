@@ -25,7 +25,9 @@ const DeveloperTeamPage: React.FC<DeveloperTeamPageProps> = ({ onNavigate }) => 
       try {
         const response = await fetch('http://localhost:5000/api/developers/team');
         const data = await response.json();
+        console.log('Developers API response:', data);
         if (data.success) {
+          // Show ALL developers, with or without images - add gradient to each
           const devsWithGradients = data.developers.map((dev: any, index: number) => ({
             ...dev,
             gradient: gradients[index % gradients.length]
@@ -127,14 +129,25 @@ const DeveloperTeamPage: React.FC<DeveloperTeamPageProps> = ({ onNavigate }) => 
                   
                   <div className={`relative ${gradientClass} p-1 rounded-3xl shadow-2xl overflow-hidden hover:shadow-3xl transition-all`}>
                     <div className="bg-white rounded-3xl overflow-hidden">
-                      <div className="relative h-64 overflow-hidden">
-                        <motion.img
-                          src={dev.image_url ? `http://localhost:5000${dev.image_url}` : '/api/placeholder/400/400'}
-                          alt={dev.name}
-                          className="w-full h-full object-cover"
-                          whileHover={{ scale: 1.15, rotate: 2 }}
-                          transition={{ duration: 0.6 }}
-                        />
+                      <div className="relative h-64 overflow-hidden bg-gray-200">
+                        {dev.image_url ? (
+                          <motion.img
+                            src={`http://localhost:5000${encodeURI(dev.image_url)}`}
+                            alt={dev.name}
+                            className="w-full h-full object-cover"
+                            whileHover={{ scale: 1.15, rotate: 2 }}
+                            transition={{ duration: 0.6 }}
+                          />
+                        ) : (
+                          <div className={`w-full h-full ${gradientClass} flex items-center justify-center`}>
+                            <div className="text-white text-center p-4">
+                              <div className="w-20 h-20 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
+                                <span className="text-4xl font-black">{dev.name?.charAt(0) || 'D'}</span>
+                              </div>
+                              <p className="text-sm font-bold opacity-80">{language === 'rw' ? 'Nta ifoto' : 'No Photo'}</p>
+                            </div>
+                          </div>
+                        )}
                         <div className={`absolute inset-0 ${gradientClass} opacity-20 group-hover:opacity-40 transition-opacity`}></div>
                         
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">

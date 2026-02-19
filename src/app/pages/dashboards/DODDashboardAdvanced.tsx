@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, School, Gavel, Timer, Edit, Trash2,
   ChevronRight, Shield, Activity, BarChart3, Calendar, MapPin,
   FileText, AlertCircle, Clock, ArrowUpRight, Flame, X, MessageSquare, Menu,
-  XCircle
+  XCircle, BookOpen
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -124,6 +124,7 @@ const SIDEBAR_ITEMS = [
   { icon: Star, label: 'Conduct', value: 'conduct' },
   { icon: Shield, label: 'SOD Students', value: 'sod-students' },
   { icon: Trash2, label: 'Remove Conduct', value: 'remove-conduct' },
+  { icon: BookOpen, label: 'Give Lessons', value: 'give-lessons' },
   { icon: Phone, label: 'Parent SMS', value: 'parent-sms' },
   { icon: UserPlus, label: 'Link Parents', value: 'link-parents' },
   { icon: Settings, label: 'Settings', value: 'settings' },
@@ -138,6 +139,7 @@ const TAB_TITLES: Record<string, string> = {
   conduct: 'Conduct Tracking',
   'sod-students': 'SOD Students',
   'remove-conduct': 'Remove Conduct Records',
+  'give-lessons': 'Give Lessons',
   'parent-sms': 'Parent SMS',
   'link-parents': 'Link Parents',
   settings: 'Settings',
@@ -232,6 +234,19 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   // Parent Linking State
   const [parentLinks, setParentLinks] = useState<any[]>([]);
   const [openLinkParentModal, setOpenLinkParentModal] = useState(false);
+  
+  // Lessons State
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [openGiveLessonModal, setOpenGiveLessonModal] = useState(false);
+  const [giveLessonForm, setGiveLessonForm] = useState({
+    student_id: '',
+    subject: '',
+    lesson_date: new Date().toISOString().split('T')[0],
+    lesson_topics: '',
+    duration_hours: 1,
+    notes: '',
+    send_notification: true
+  });
   const [linkParentForm, setLinkParentForm] = useState({
     student_id: '',
     parent_id: '',
@@ -340,6 +355,12 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   useEffect(() => {
     if (activeTab === 'link-parents') {
       fetchParentLinks();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'give-lessons') {
+      fetchAllLessons();
     }
   }, [activeTab]);
 
@@ -509,6 +530,61 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
       }
     } catch (error) {
       toast.error('Error linking parent');
+    }
+  };
+
+  // Fetch all lessons
+  const fetchAllLessons = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/dod/all-lessons`, { headers: authHeaders() });
+      const data = await response.json();
+      if (data.success) {
+        setLessons(data.lessons || []);
+      }
+    } catch (error) {
+      console.error('Error fetching lessons:', error);
+    }
+  };
+
+  // Handle give lesson
+  const handleGiveLesson = async () => {
+    if (!giveLessonForm.student_id || !giveLessonForm.subject || !giveLessonForm.lesson_date) {
+      toast.error('Please fill student, subject, and date');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/dod/give-lesson`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          student_id: parseInt(giveLessonForm.student_id),
+          subject: giveLessonForm.subject,
+          lesson_date: giveLessonForm.lesson_date,
+          lesson_topics: giveLessonForm.lesson_topics,
+          duration_hours: giveLessonForm.duration_hours,
+          notes: giveLessonForm.notes,
+          send_notification: giveLessonForm.send_notification
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Lesson recorded successfully! Parent notified.');
+        setOpenGiveLessonModal(false);
+        setGiveLessonForm({
+          student_id: '',
+          subject: '',
+          lesson_date: new Date().toISOString().split('T')[0],
+          lesson_topics: '',
+          duration_hours: 1,
+          notes: '',
+          send_notification: true
+        });
+        fetchAllLessons();
+      } else {
+        toast.error(data.message || 'Failed to record lesson');
+      }
+    } catch (error) {
+      toast.error('Error recording lesson');
     }
   };
 
@@ -1821,6 +1897,189 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           >
                             <Trash2 className="size-4 mr-2" />
                             Confirm Removal
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </motion.div>
+                )}
+
+                {/* ═══ GIVE LESSONS ═══ */}
+                {activeTab === 'give-lessons' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-blue-600 flex items-center gap-2">
+                          <BookOpen className="size-6" />
+                          Give Lessons
+                        </h2>
+                        <p className="text-muted-foreground">Record lessons given to students who were absent</p>
+                      </div>
+                      <Button 
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                        onClick={() => setOpenGiveLessonModal(true)}
+                      >
+                        <Plus className="size-4 mr-2" />
+                        Record Lesson
+                      </Button>
+                    </div>
+
+                    {/* Lessons Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500 rounded-lg">
+                              <BookOpen className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{lessons.length}</p>
+                              <p className="text-sm text-muted-foreground">Total Lessons</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-500 rounded-lg">
+                              <CheckCircle className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{lessons.filter(l => l.duration_hours >= 1).length}</p>
+                              <p className="text-sm text-muted-foreground">Completed</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-500 rounded-lg">
+                              <Users className="size-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{new Set(lessons.map(l => l.student_id)).size}</p>
+                              <p className="text-sm text-muted-foreground">Students</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Lessons Table */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Recent Lessons</CardTitle>
+                      </CardHeader>
+                      <Table>
+                        <TableHeader className="bg-blue-500">
+                          <TableRow>
+                            <TableHead className="text-white">Student</TableHead>
+                            <TableHead className="text-white">Subject</TableHead>
+                            <TableHead className="text-white">Date</TableHead>
+                            <TableHead className="text-white">Duration</TableHead>
+                            <TableHead className="text-white">Topics</TableHead>
+                            <TableHead className="text-white">Teacher</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lessons.slice(0, 15).map((lesson, i) => (
+                            <TableRow key={i} className="hover:bg-muted/50">
+                              <TableCell className="font-medium">{lesson.first_name} {lesson.last_name}</TableCell>
+                              <TableCell><Badge variant="outline">{lesson.subject}</Badge></TableCell>
+                              <TableCell>{lesson.lesson_date}</TableCell>
+                              <TableCell>{lesson.duration_hours} hr(s)</TableCell>
+                              <TableCell className="max-w-xs truncate">{lesson.lesson_topics || '-'}</TableCell>
+                              <TableCell>{lesson.teacher_first_name} {lesson.teacher_last_name}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Card>
+
+                    {/* Give Lesson Modal */}
+                    <Dialog open={openGiveLessonModal} onOpenChange={setOpenGiveLessonModal}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2 text-blue-600">
+                            <BookOpen className="size-5" />
+                            Record Lesson
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Student ID *</Label>
+                            <Input 
+                              value={giveLessonForm.student_id}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, student_id: e.target.value })}
+                              placeholder="Enter student ID"
+                            />
+                          </div>
+                          <div>
+                            <Label>Subject *</Label>
+                            <Input 
+                              value={giveLessonForm.subject}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, subject: e.target.value })}
+                              placeholder="e.g., Mathematics, Physics"
+                            />
+                          </div>
+                          <div>
+                            <Label>Date *</Label>
+                            <Input 
+                              type="date"
+                              value={giveLessonForm.lesson_date}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, lesson_date: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Topics Covered</Label>
+                            <Textarea 
+                              value={giveLessonForm.lesson_topics}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, lesson_topics: e.target.value })}
+                              placeholder="What topics were covered..."
+                            />
+                          </div>
+                          <div>
+                            <Label>Duration (hours)</Label>
+                            <Input 
+                              type="number"
+                              min="0.5"
+                              step="0.5"
+                              value={giveLessonForm.duration_hours}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, duration_hours: parseFloat(e.target.value) || 1 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Notes</Label>
+                            <Textarea 
+                              value={giveLessonForm.notes}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, notes: e.target.value })}
+                              placeholder="Additional notes..."
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="checkbox"
+                              id="send_notification"
+                              checked={giveLessonForm.send_notification}
+                              onChange={(e) => setGiveLessonForm({ ...giveLessonForm, send_notification: e.target.checked })}
+                              className="w-4 h-4"
+                            />
+                            <Label htmlFor="send_notification" className="cursor-pointer">
+                              Send SMS notification to parent
+                            </Label>
+                          </div>
+                          <Button 
+                            className="w-full bg-blue-500 hover:bg-blue-600"
+                            onClick={handleGiveLesson}
+                          >
+                            <BookOpen className="size-4 mr-2" />
+                            Record Lesson
                           </Button>
                         </div>
                       </DialogContent>

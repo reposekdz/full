@@ -1,0 +1,32 @@
+{
+  "name": "Garden TVET School Management System",
+  "short_name": "Garden TVET",
+  "description": "Powerful School Management System for Garden TVET School",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#eab308",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ]
+}

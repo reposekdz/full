@@ -103,7 +103,9 @@ router.delete('/delete/:filename', (req, res) => {
 // Get gallery images for a specific trade
 router.get('/gallery/:tradeCode', (req, res) => {
   try {
-    const tradeCode = req.params.tradeCode.toUpperCase();
+    let tradeCode = req.params.tradeCode.toUpperCase();
+    // Normalize AUT to AUTO for file system
+    if (tradeCode === 'AUT') tradeCode = 'AUTO';
     const tradeDir = path.join(__dirname, '../uploads/trades', tradeCode);
     const toolsDir = path.join(tradeDir, 'tools');
     

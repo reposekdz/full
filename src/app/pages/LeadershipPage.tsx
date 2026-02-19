@@ -31,7 +31,17 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
     try {
       const response = await fetch('http://localhost:5000/api/leadership');
       const data = await response.json();
+      console.log('Leadership API response:', data);
       const leadersData = data.leaders || data || [];
+      
+      // Show ALL leaders with or without images - use placeholder if no image
+      const leadersWithFallback = leadersData.map((leader: any) => ({
+        ...leader,
+        hasImage: !!leader.image_url
+      }));
+      console.log('Total leaders:', leadersWithFallback.length);
+      console.log('Image URLs:', leadersWithFallback.map((l: any) => l.image_url));
+      
       const roleOrder = {
         'Umwene Ishuri': 1,
         'School Owner': 1,
@@ -48,7 +58,7 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
         'DOD': 7,
         'Matron': 8
       };
-      const sortedData = Array.isArray(leadersData) ? leadersData.sort((a, b) => {
+      const sortedData = Array.isArray(leadersWithFallback) ? leadersWithFallback.sort((a, b) => {
         const aOrder = roleOrder[a.role] || 999;
         const bOrder = roleOrder[b.role] || 999;
         return aOrder - bOrder;
@@ -116,14 +126,30 @@ const LeadershipPage: React.FC<LeadershipPageProps> = ({ onNavigate }) => {
                 </motion.div>
               </div>
 
-              <div className="relative h-72 overflow-hidden">
-                <motion.img
-                  src={`http://localhost:5000${leader.image_url}`}
-                  alt={leader.name}
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.15, rotate: 2 }}
-                  transition={{ duration: 0.6 }}
-                />
+              <div className="relative h-72 overflow-hidden bg-gray-200">
+                {leader.image_url ? (
+                  <motion.img
+                    src={`http://localhost:5000${encodeURI(leader.image_url)}`}
+                    alt={leader.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Leader image failed:', leader.image_url);
+                      // Show placeholder on error
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                    whileHover={{ scale: 1.15, rotate: 2 }}
+                    transition={{ duration: 0.6 }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-yellow-400 via-green-400 to-yellow-500 flex items-center justify-center">
+                    <div className="text-white text-center p-4">
+                      <div className="w-24 h-24 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
+                        <span className="text-5xl font-black">{leader.name?.charAt(0) || 'L'}</span>
+                      </div>
+                      <p className="text-sm font-bold opacity-80">Nta ifoto</p>
+                    </div>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 
                 <motion.div

@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 // GET team developers (alias for main endpoint)
 router.get('/team', async (req, res) => {
   try {
-    const [developers] = await pool.query('SELECT * FROM developers WHERE is_active = true ORDER BY sort_order ASC');
+    const [developers] = await pool.query('SELECT * FROM developers ORDER BY sort_order ASC');
     res.json({ success: true, developers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -911,7 +911,13 @@ router.get('/conduct-removals', authenticateToken, requireRole('director_discipl
 // Link parent to student
 router.post('/link-parent', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'patron'), async (req, res) => {
   try {
-    const { student_id, parent_id, relationship = 'parent' } = req.body;
+    const { student_id, parent_id, relationship = 'parent', auto_sms = true, one_parent_one_child = false } = req.body;
+
+    // Check if one-parent-one-child mode is enabled
+    if (one_parent_one_child) {
+      // Remove any existing links for this parent
+      await pool.execute('DELETE FROM parent_student_links WHERE parent_id = ?', [parent_id]);
+    }
 
     // Check if link already exists
     const [existing] = await pool.execute(
@@ -923,12 +929,47 @@ router.post('/link-parent', authenticateToken, requireRole('director_discipline'
       return res.status(400).json({ success: false, message: 'This parent is already linked to this student' });
     }
 
+    // Get parent and student info for SMS
+    let studentName = '';
+    let parentPhone = '';
+    
+    if (auto_sms) {
+      const [studentResult] = await pool.execute(
+        'SELECT first_name, last_name FROM global_student_sheets WHERE id = ?',
+        [student_id]
+      );
+      const [parentResult] = await pool.execute(
+        'SELECT first_name, last_name, phone FROM users WHERE id = ?',
+        [parent_id]
+      );
+      
+      if (studentResult.length > 0) {
+        studentName = `${studentResult[0].first_name} ${studentResult[0].last_name}`;
+      }
+      if (parentResult.length > 0) {
+        parentPhone = parentResult[0].phone;
+      }
+    }
+
     await pool.execute(`
       INSERT INTO parent_student_links (parent_id, student_id, relationship, linked_by, linked_at)
       VALUES (?, ?, ?, ?, NOW())
     `, [parent_id, student_id, relationship, req.user?.id || req.user?.userId]);
 
-    res.json({ success: true, message: 'Parent linked to student successfully' });
+    // Send auto SMS to parent if enabled
+    if (auto_sms && parentPhone) {
+      try {
+        const message = `Garden TVET: Ubu mubyeyi wa ${studentName} washatse kuri sisitemu. uzabona amakuru y'umwana wawe ukoresheje iyi phone. Murakoze!`;
+        await pool.execute(
+          `INSERT INTO sms_queue (phone_number, message, status, priority, created_at) VALUES (?, ?, 'pending', 'high', NOW())`,
+          [parentPhone, message]
+        );
+      } catch (smsError) {
+        console.error('Auto SMS error:', smsError);
+      }
+    }
+
+    res.json({ success: true, message: 'Parent linked to student successfully' + (auto_sms ? ' and SMS notification sent' : '') });
   } catch (error) {
     console.error('Error linking parent:', error);
     res.status(500).json({ success: false, message: 'Error linking parent', error: error.message });
@@ -1060,7 +1101,7 @@ router.post('/sms/send', authenticateToken, requireRole('director_discipline', '
         error: smsError.message 
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending SMS:', error);
     res.status(500).json({ success: false, message: 'Error sending SMS', error: error.message });
   }
@@ -1118,14 +1159,14 @@ router.post('/sms/bulk', authenticateToken, requireRole('director_discipline', '
     }
 
     // Get all phone numbers
-    let phones: string[] = [];
+    let phones = [];
 
     if (parent_ids?.length) {
       const [parents] = await pool.execute(
         `SELECT phone FROM parents WHERE id IN (${parent_ids.map(() => '?').join(',')})`,
         parent_ids
       );
-      phones = parents.map((p: any) => p.phone);
+      phones = parents.map((p) => p.phone);
     }
 
     if (student_ids?.length) {
@@ -1135,14 +1176,14 @@ router.post('/sms/bulk', authenticateToken, requireRole('director_discipline', '
          WHERE psl.student_id IN (${student_ids.map(() => '?').join(',')})`,
         student_ids
       );
-      phones = [...phones, ...links.map((l: any) => l.phone)];
+      phones = [...phones, ...links.map((l) => l.phone)];
     }
 
     // Remove duplicates
     phones = [...new Set(phones)];
 
     // Format all phone numbers
-    const formattedPhones = phones.map((phone: string) => {
+    const formattedPhones = phones.map((phone) => {
       let formatted = phone.replace(/\s/g, '');
       if (!formatted.startsWith('+')) {
         if (formatted.startsWith('0')) {
@@ -1190,10 +1231,178 @@ router.post('/sms/bulk', authenticateToken, requireRole('director_discipline', '
       sent_count: sentCount,
       failed_count: failedCount
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending bulk SMS:', error);
     res.status(500).json({ success: false, message: 'Error sending bulk SMS', error: error.message });
   }
 });
 
 module.exports = router;
+
+// GET all registered parents (not just linked ones)
+router.get('/all-parents', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'patron', 'matron'), async (req, res) => {
+  try {
+    const { search, limit = 50, offset = 0 } = req.query;
+    
+    let query = `
+      SELECT 
+        u.id, u.first_name, u.last_name, u.email, u.phone, u.gender,
+        u.province, u.district, u.sector,
+        (SELECT COUNT(*) FROM parent_student_links WHERE parent_id = u.id) as linked_children_count,
+        (SELECT GROUP_CONCAT(CONCAT(gss.first_name, ' ', gss.last_name) SEPARATOR ', ') 
+         FROM parent_student_links psl 
+         JOIN global_student_sheets gss ON psl.student_id = gss.id 
+         WHERE psl.parent_id = u.id AND psl.status = 'approved') as linked_children_names
+      FROM users u
+      WHERE u.role = 'parent'
+    `;
+    
+    const params = [];
+    
+    if (search) {
+      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    query += ` ORDER BY u.first_name, u.last_name LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const [parents] = await pool.execute(query, params);
+    
+    // Get total count
+    let countQuery = 'SELECT COUNT(*) as total FROM users WHERE role = \'parent\'';
+    const [total] = await pool.execute(countQuery);
+    
+    res.json({ success: true, parents, total: total[0].total });
+  } catch (error) {
+    console.error('Error fetching all parents:', error);
+    res.status(500).json({ success: false, message: 'Error fetching parents' });
+  }
+});
+
+// POST Give Lesson - Record lessons given to absent students
+router.post('/give-lesson', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'teacher'), async (req, res) => {
+  try {
+    const { student_id, subject, lesson_date, lesson_topics, duration_hours, notes, send_notification = true } = req.body;
+    
+    if (!student_id || !subject || !lesson_date) {
+      return res.status(400).json({ success: false, message: 'Student, subject, and date are required' });
+    }
+    
+    // Insert lesson record
+    const [result] = await pool.execute(
+      `INSERT INTO student_lessons (student_id, subject, lesson_date, lesson_topics, duration_hours, notes, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [student_id, subject, lesson_date, lesson_topics || '', duration_hours || 1, notes || '', req.user?.userId || req.user?.id]
+    );
+    
+    // Get student and parent info
+    let parentPhone = '';
+    let studentName = '';
+    
+    if (send_notification) {
+      const [studentResult] = await pool.execute(
+        `SELECT gss.first_name, gss.last_name, u.phone 
+         FROM global_student_sheets gss 
+         LEFT JOIN parent_student_links psl ON gss.id = psl.student_id AND psl.status = 'approved'
+         LEFT JOIN users u ON psl.parent_id = u.id
+         WHERE gss.id = ?`, 
+        [student_id]
+      );
+      
+      if (studentResult.length > 0) {
+        studentName = `${studentResult[0].first_name} ${studentResult[0].last_name}`;
+        parentPhone = studentResult[0].phone;
+      }
+    }
+    
+    // Send notification to parent
+    if (send_notification && parentPhone) {
+      try {
+        const message = `Garden TVET: Umwana ${studentName} yahawe ikiganiro cya ${subject} tariki ${lesson_date}. Mugaragire ko yigeze aha. Murakoze!`;
+        await pool.execute(
+          `INSERT INTO sms_queue (phone_number, message, status, priority, created_at) VALUES (?, ?, 'pending', 'normal', NOW())`,
+          [parentPhone, message]
+        );
+      } catch (smsError) {
+        console.error('SMS notification error:', smsError);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Lesson recorded successfully' + (send_notification && parentPhone ? ' and parent notified' : ''),
+      lesson_id: result.insertId
+    });
+  } catch (error) {
+    console.error('Error giving lesson:', error);
+    res.status(500).json({ success: false, message: 'Error recording lesson' });
+  }
+});
+
+// GET lessons for a student
+router.get('/student-lessons/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { limit = 20 } = req.query;
+    
+    const [lessons] = await pool.execute(
+      `SELECT sl.*, u.first_name as teacher_first_name, u.last_name as teacher_last_name
+       FROM student_lessons sl
+       LEFT JOIN users u ON sl.created_by = u.id
+       WHERE sl.student_id = ?
+       ORDER BY sl.lesson_date DESC
+       LIMIT ?`,
+      [studentId, parseInt(limit)]
+    );
+    
+    res.json({ success: true, lessons });
+  } catch (error) {
+    console.error('Error fetching lessons:', error);
+    res.status(500).json({ success: false, message: 'Error fetching lessons' });
+  }
+});
+
+// GET all lessons (for DOD dashboard)
+router.get('/all-lessons', authenticateToken, requireRole('director_discipline', 'admin', 'headmaster', 'dos', 'teacher'), async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, student_id, date_from, date_to } = req.query;
+    
+    let query = `
+      SELECT sl.*, gss.first_name, gss.last_name, gss.student_code, gss.trade_name,
+             u.first_name as teacher_first_name, u.last_name as teacher_last_name
+      FROM student_lessons sl
+      JOIN global_student_sheets gss ON sl.student_id = gss.id
+      LEFT JOIN users u ON sl.created_by = u.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (student_id) {
+      query += ' AND sl.student_id = ?';
+      params.push(parseInt(student_id));
+    }
+    
+    if (date_from) {
+      query += ' AND sl.lesson_date >= ?';
+      params.push(date_from);
+    }
+    
+    if (date_to) {
+      query += ' AND sl.lesson_date <= ?';
+      params.push(date_to);
+    }
+    
+    query += ' ORDER BY sl.lesson_date DESC, sl.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+    
+    const [lessons] = await pool.execute(query, params);
+    
+    res.json({ success: true, lessons });
+  } catch (error) {
+    console.error('Error fetching all lessons:', error);
+    res.status(500).json({ success: false, message: 'Error fetching lessons' });
+  }
+});

@@ -32,8 +32,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob:;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https: http://localhost:*; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob:;"
   );
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 });
 
@@ -45,7 +46,7 @@ app.use(sanitizeMiddleware);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Create uploads directories
-const uploadDirs = ['uploads', 'uploads/contact', 'uploads/assignments', 'uploads/tickets', 'uploads/profiles', 'uploads/documents', 'uploads/staff', 'uploads/leadership', 'uploads/services', 'uploads/trades', 'uploads/sports', 'uploads/system'];
+const uploadDirs = ['uploads', 'uploads/contact', 'uploads/assignments', 'uploads/tickets', 'uploads/profiles', 'uploads/documents', 'uploads/staff', 'uploads/leadership', 'uploads/developers', 'uploads/services', 'uploads/trades', 'uploads/sports', 'uploads/system'];
 uploadDirs.forEach(dir => {
   const dirPath = path.join(__dirname, dir);
   if (!fs.existsSync(dirPath)) {
@@ -219,6 +220,7 @@ const routes = {
   developersApi: loadRoute('./routes/developers-api', 'Developers API'),
   advisor: loadRoute('./routes/advisor', 'Advisor'),
   search: loadRoute('./routes/search', 'Search'),
+  searchApi: loadRoute('./routes/search-api', 'Search API'),
   advancedSearch: loadRoute('./routes/advanced-search', 'Advanced Search'),
   comprehensiveSearch: loadRoute('./routes/comprehensive-search', 'Comprehensive Search'),
   uploads: loadRoute('./routes/uploads', 'Uploads'),
@@ -559,6 +561,7 @@ if (routes.eventManagement) { app.use('/api/event-management', routes.eventManag
 if (routes.communicationHub) { app.use('/api/communication-hub', routes.communicationHub); mountedRoutes++; }
 if (routes.advancedReports) { app.use('/api/advanced-reports', routes.advancedReports); mountedRoutes++; }
 if (routes.search) { app.use('/api/search', routes.search); mountedRoutes++; }
+if (routes.searchApi) { app.use('/api/search', routes.searchApi); mountedRoutes++; }
 if (routes.advancedSearch) { app.use('/api/advanced-search', routes.advancedSearch); mountedRoutes++; }
 if (routes.comprehensiveSearch) { app.use('/api/comprehensive-search', routes.comprehensiveSearch); mountedRoutes++; }
 if (routes.uploads) { app.use('/api/uploads', routes.uploads); mountedRoutes++; }

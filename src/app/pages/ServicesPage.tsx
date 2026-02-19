@@ -14,14 +14,16 @@ interface Service {
   id: number;
   name_rw: string;
   name_en: string;
+  name?: string;
   description_rw: string;
   description_en: string;
+  description?: string;
   category: string;
   contact_person?: string;
   contact_email?: string;
   contact_phone?: string;
   location?: string;
-  schedule?: string;
+  schedule?: string | any;
   is_active: boolean;
 }
 
@@ -46,13 +48,36 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
     try {
       const response = await fetch('http://localhost:5000/api/services-advanced/services');
       const data = await response.json();
-      if (data.success && Array.isArray(data.services)) {
-        setServices(data.services);
-      } else if (Array.isArray(data)) {
-        setServices(data);
-      } else {
-        setServices([]);
+      console.log('Services API response:', data);
+      
+      // Handle different response formats
+      let servicesList = [];
+      if (Array.isArray(data)) {
+        servicesList = data;
+      } else if (data.success && Array.isArray(data.services)) {
+        servicesList = data.services;
+      } else if (data.services) {
+        servicesList = data.services;
       }
+      
+      // Map to expected format
+      const mappedServices = servicesList.map(s => ({
+        id: s.id,
+        name_rw: s.name_rw || s.name || '',
+        name_en: s.name_en || s.name || '',
+        description_rw: s.description_rw || s.description || '',
+        description_en: s.description_en || s.description || '',
+        category: s.category || 'other',
+        contact_person: s.contact_person,
+        contact_email: s.contact_email,
+        contact_phone: s.contact_phone,
+        location: s.location,
+        schedule: s.schedule,
+        is_active: s.is_active !== false
+      }));
+      
+      console.log('Mapped services:', mappedServices);
+      setServices(mappedServices);
     } catch (error) {
       console.error('Error fetching services:', error);
       setServices([]);
@@ -87,8 +112,11 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
     );
   };
 
+  const educationServices = filteredServices.filter(s => s.category === 'other' && s.name && s.name.includes('Education'));
+
   const categories = [
     { id: 'all', name: 'Byose', nameEn: 'All', icon: Briefcase, color: 'from-green-600 to-yellow-500', count: filteredServices.length },
+    { id: 'other', name: 'Uburezi', nameEn: 'Education', icon: BookOpen, color: 'from-blue-500 to-indigo-500', count: educationServices.length },
     { id: 'library', name: 'Isomero', nameEn: 'Library', icon: BookOpen, color: 'from-green-500 to-lime-400', count: libraryServices.length },
     { id: 'counseling', name: 'Ubujyanama', nameEn: 'Counseling', icon: HelpCircle, color: 'from-yellow-500 to-green-500', count: counselingServices.length },
     { id: 'health', name: 'Ubuvuzi', nameEn: 'Health', icon: Heart, color: 'from-lime-500 to-yellow-400', count: healthServices.length }
@@ -96,6 +124,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
 
   const ServiceCard = ({ service, index }: { service: Service; index: number }) => {
     const colors = {
+      other: 'from-blue-500 to-indigo-500',
       library: 'from-green-500 to-lime-400',
       counseling: 'from-yellow-500 to-green-500',
       health: 'from-lime-500 to-yellow-400'
@@ -133,8 +162,8 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-3">
-                  <Badge className={`bg-gradient-to-r ${colors[service.category as keyof typeof colors]} text-white border-0`}>
-                    {service.category === 'library' ? 'Isomero' : service.category === 'counseling' ? 'Ubujyanama' : 'Ubuvuzi'}
+                  <Badge className={`bg-gradient-to-r ${colors[service.category as keyof typeof colors] || 'from-gray-500 to-gray-600'} text-white border-0`}>
+                    {service.category === 'other' && service.name_rw.includes('Kwiga') ? 'Uburezi' : service.category === 'library' ? 'Isomero' : service.category === 'counseling' ? 'Ubujyanama' : service.category === 'health' ? 'Ubuvuzi' : service.category}
                   </Badge>
                   <button onClick={(e) => { e.stopPropagation(); toggleBookmark(service.id); }} className="p-2 hover:bg-green-100 rounded-full transition-colors">
                     <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-green-600 text-green-600' : 'text-gray-400'}`} />
@@ -332,7 +361,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
         </motion.div>
 
         {/* Categories */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {categories.map((category, index) => (
             <motion.button
               key={category.id}

@@ -20,7 +20,7 @@ const upload = multer({ storage });
 router.get('/', async (req, res) => {
   try {
     const [leaders] = await pool.execute(
-      'SELECT * FROM leadership WHERE status = "active" AND image_url IS NOT NULL ORDER BY display_order ASC'
+      'SELECT * FROM leadership WHERE status = "active" ORDER BY display_order ASC'
     );
     
     res.json({ success: true, leaders });

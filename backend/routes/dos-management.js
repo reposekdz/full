@@ -87,7 +87,7 @@ router.get('/report-cards/:id', authenticateToken, async (req, res) => {
     const query = `
       SELECT rc.*, 
         u.first_name, u.last_name, u.username, u.email,
-        sp.admission_number, sp.date_of_birth,
+        sp.admission_number,
         t.name
       FROM report_cards rc
       LEFT JOIN users u ON rc.student_id = u.id
@@ -122,7 +122,7 @@ router.post('/reports/generate-report-card', authenticateToken, requireRole('dir
     // Get student data from database
     const studentQuery = `
       SELECT u.id, u.first_name, u.last_name, u.username,
-        sp.admission_number, sp.date_of_birth, sp.gender
+        sp.admission_number
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       WHERE u.id = ? AND u.role = 'student'
@@ -338,7 +338,7 @@ router.get('/students', authenticateToken, async (req, res) => {
 
     let query = `
       SELECT DISTINCT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
-        sp.admission_number, sp.date_of_birth, sp.gender,
+        sp.admission_number,
         t.code, t.name,
         e.level_number, e.level_suffix
       FROM users u
@@ -797,7 +797,7 @@ router.get('/student-sheets', authenticateToken, async (req, res) => {
     // Get students with their data
     let query = `
       SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
-        sp.admission_number, sp.date_of_birth, sp.gender, sp.address,
+        sp.admission_number,
         t.code, t.name,
         e.level_number, e.level_suffix,
         (SELECT COUNT(*) FROM attendances a WHERE a.student_id = u.id AND a.status = 'present' AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as attendance_present,

@@ -201,31 +201,19 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
             {/* Right Side - Desktop Only */}
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-              {/* Desktop Search */}
               <div className="flex-1 max-w-md xl:max-w-2xl">
                 <EnhancedGlobalSearch onNavigate={onNavigate} />
               </div>
-
-              {/* Desktop Icons */}
               <div className="flex items-center gap-1.5">
-                {/* Language Icon */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full border border-blue-300 h-9 w-9 p-0 flex-shrink-0"
-                    >
+                    <Button variant="outline" size="icon" className="rounded-full border border-blue-300 h-9 w-9 p-0 flex-shrink-0">
                       <Globe className="w-4 h-4 text-blue-600" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
                     {(['en', 'fr', 'rw', 'sw'] as Language[]).map((lang) => (
-                      <DropdownMenuItem
-                        key={lang}
-                        onClick={() => setLanguage(lang)}
-                        className={language === lang ? 'bg-yellow-100 font-bold' : ''}
-                      >
+                      <DropdownMenuItem key={lang} onClick={() => setLanguage(lang)} className={language === lang ? 'bg-yellow-100 font-bold' : ''}>
                         <div className="flex items-center justify-between w-full">
                           <span className="text-sm">
                             {lang === 'en' && '🇬🇧 English'}
@@ -239,31 +227,18 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                {/* Desktop Auth Buttons */}
                 {!displayUser && (
                   <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onNavigate('login')}
-                      className="rounded-full border-yellow-400 h-8 px-3"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => onNavigate('login')} className="rounded-full border-yellow-400 h-8 px-3">
                       <LogIn className="w-3 h-3 mr-1" />
                       <span className="text-xs">{t('login')}</span>
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => onNavigate('parent-register')}
-                      className="rounded-full bg-gradient-to-br from-yellow-500 to-green-500 h-8 px-3"
-                    >
+                    <Button size="sm" onClick={() => onNavigate('parent-register')} className="rounded-full bg-gradient-to-br from-yellow-500 to-green-500 h-8 px-3">
                       <UserPlus className="w-3 h-3 mr-1" />
                       <span className="text-xs">{t('register')}</span>
                     </Button>
                   </div>
                 )}
-
-                {/* User Menu */}
                 {displayUser && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -283,9 +258,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                       <DropdownMenuItem onClick={() => {
                         const dashboard = getRoleDashboard(displayUser.role);
                         window.location.href = `/${dashboard}`;
-                      }}>
-                        Dashboard
-                      </DropdownMenuItem>
+                      }}>Dashboard</DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600" onClick={() => {
                         localStorage.removeItem('user');
                         localStorage.removeItem('token');
@@ -294,80 +267,26 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                         setCurrentUser(null);
                         logout();
                         onNavigate('home');
-                      }}>
-                        Logout
-                      </DropdownMenuItem>
+                      }}>Logout</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
-                {/* Desktop Menu Icon - Enhanced */}
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsSidebarOpen(true)}
-                    className="relative rounded-2xl border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-green-50 h-11 w-11 p-0 shadow-lg hover:shadow-2xl hover:border-yellow-400 transition-all group overflow-hidden"
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-30 transition-opacity"
-                    />
+                <motion.div whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(true)} className="relative rounded-2xl border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-green-50 h-11 w-11 p-0 shadow-lg hover:shadow-2xl hover:border-yellow-400 transition-all group overflow-hidden">
+                    <motion.div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-30 transition-opacity" />
                     <Menu className="w-5 h-5 text-green-700 relative z-10" />
                   </Button>
                 </motion.div>
               </div>
             </div>
 
-            {/* Mobile/Tablet - Enhanced Menu Button with School Name */}
-            <div className="lg:hidden flex items-center gap-3 flex-1 justify-end">
-              {/* Dynamic Page Title - Mobile/Tablet */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex-1 text-center"
-              >
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={pageTitle}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-sm sm:text-base md:text-lg font-black bg-gradient-to-r from-yellow-600 via-green-600 to-yellow-600 bg-clip-text text-transparent leading-tight"
-                  >
-                    {pageTitle}
-                  </motion.p>
-                </AnimatePresence>
-              </motion.div>
-
-              {/* Menu Button */}
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="relative rounded-2xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-green-50 h-14 w-14 p-0 shadow-lg hover:shadow-xl hover:border-yellow-500 transition-all group overflow-hidden flex-shrink-0"
-                >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-20 transition-opacity"
-                  />
-                  <motion.div
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <Menu className="w-7 h-7 text-green-700 relative z-10" />
-                  </motion.div>
-                </Button>
-              </motion.div>
-            </div>
+            {/* Mobile/Tablet - Menu Button Only */}
+            <motion.div className="lg:hidden" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(true)} className="relative rounded-2xl border-2 border-yellow-400 bg-gradient-to-br from-yellow-50 to-green-50 h-12 w-12 sm:h-14 sm:w-14 p-0 shadow-lg hover:shadow-xl hover:border-yellow-500 transition-all group overflow-hidden flex-shrink-0">
+                <motion.div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-green-400 opacity-0 group-hover:opacity-20 transition-opacity" />
+                <Menu className="w-6 h-6 sm:w-7 sm:h-7 text-green-700 relative z-10" />
+              </Button>
+            </motion.div>
           </div>
         </div>
       </motion.header>
@@ -448,6 +367,42 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
 
               {/* Enhanced Navigation */}
               <div className="flex-1 py-6 px-4">
+                {/* Search Bar - Mobile/Tablet */}
+                <div className="mb-6 lg:hidden">
+                  <h3 className="px-3 mb-3 text-xs font-bold text-green-700 uppercase tracking-wider">{t('search') || 'Shakisha'}</h3>
+                  <div className="px-3">
+                    <EnhancedGlobalSearch onNavigate={(page) => {
+                      onNavigate(page);
+                      setIsSidebarOpen(false);
+                    }} />
+                  </div>
+                </div>
+
+                {/* Language Selector - Mobile/Tablet */}
+                <div className="mb-6 lg:hidden">
+                  <h3 className="px-3 mb-3 text-xs font-bold text-green-700 uppercase tracking-wider">{t('language') || 'Ururimi'}</h3>
+                  <div className="px-3 grid grid-cols-2 gap-2">
+                    {(['en', 'fr', 'rw', 'sw'] as Language[]).map((lang) => (
+                      <Button
+                        key={lang}
+                        variant={language === lang ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setLanguage(lang)}
+                        className={`w-full justify-start rounded-xl ${language === lang ? 'bg-gradient-to-r from-yellow-400 to-green-400 text-white font-bold' : 'border-yellow-300 hover:bg-yellow-50'}`}
+                      >
+                        <span className="text-sm">
+                          {lang === 'en' && '🇬🇧 English'}
+                          {lang === 'fr' && '🇫🇷 Français'}
+                          {lang === 'rw' && '🇷🇼 Kinyarwanda'}
+                          {lang === 'sw' && '🇰🇪 Kiswahili'}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator className="my-4 lg:hidden" />
+
                 <div className="space-y-2">
                   <h3 className="px-3 mb-3 text-xs font-bold text-green-700 uppercase tracking-wider">{t('navigation') || 'Ibikubiyemo'}</h3>
                   {visibleNavItems.map((item, index) => {

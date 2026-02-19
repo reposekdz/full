@@ -42,7 +42,7 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeId, t
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
-  const normalizedTradeCode = useMemo(() => tradeCode === 'AUT' ? 'AUTO' : tradeCode, [tradeCode]);
+  const normalizedTradeCode = useMemo(() => tradeCode, [tradeCode]);
 
   // Save active tab to localStorage
   useEffect(() => {
@@ -50,7 +50,7 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeId, t
   }, [activeTab, tradeCode]);
 
   useEffect(() => {
-    if (normalizedTradeCode === 'AUTO') {
+    if (normalizedTradeCode === 'AUT') {
       const heroImageFiles = [
         'IMG-20260128-WA0062.jpg', 'IMG-20260128-WA0067.jpg', 'IMG-20260128-WA0070.jpg',
         'IMG-20260128-WA0076.jpg', 'IMG-20260128-WA0080.jpg', 'IMG-20260128-WA0082.jpg',
@@ -178,18 +178,16 @@ const TradeDetailPage: React.FC<TradeDetailPageProps> = React.memo(({ tradeId, t
   }, [normalizedTradeCode]);
 
   const getTradeIcon = useCallback((code: string) => {
-    const normalized = code === 'AUT' ? 'AUTO' : code;
-    if (normalized === 'SOD') return Code;
-    if (normalized === 'BDC') return HardHat;
-    if (normalized === 'AUTO') return Wrench;
+    if (code === 'SOD') return Code;
+    if (code === 'BDC') return HardHat;
+    if (code === 'AUT') return Wrench;
     return Code;
   }, []);
 
   const getGradientColors = useCallback((code: string) => {
-    const normalized = code === 'AUT' ? 'AUTO' : code;
-    if (normalized === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
-    if (normalized === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
-    if (normalized === 'AUTO') return 'from-green-600 via-emerald-500 to-teal-400';
+    if (code === 'SOD') return 'from-emerald-500 via-green-400 to-lime-300';
+    if (code === 'BDC') return 'from-amber-500 via-yellow-400 to-lime-300';
+    if (code === 'AUT') return 'from-green-600 via-emerald-500 to-teal-400';
     return 'from-green-600 to-yellow-400';
   }, []);
 
