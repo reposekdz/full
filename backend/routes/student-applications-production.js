@@ -473,7 +473,7 @@ router.get('/:id', async (req, res) => {
       SELECT 
         sa.*,
         p.name as province_name, d.name as district_name, s.name as sector_name,
-        c.name as cell_name, v.name as village_name,
+        c.name_en as cell_name, v.name_en as village_name,
         t.name as trade_name, t.description as trade_description,
         u.name as reviewed_by_name, u.email as reviewer_email
       FROM student_applications sa
@@ -795,12 +795,59 @@ router.get('/locations/sectors/:districtId', async (req, res) => {
 
 router.get('/trades', async (req, res) => {
   try {
+    // Fetch only the 3 real trades from global_student_sheets
     const [trades] = await pool.execute(`
-      SELECT code, name, description, duration, requirements, level_1, level_2, level_3
-      FROM trades WHERE active = 1 ORDER BY name
+      SELECT DISTINCT
+        trade_code as code,
+        trade_name as name,
+        trade_code,
+        'Active trade program' as description,
+        '3 years' as duration,
+        'S3 completion' as requirements
+      FROM global_student_sheets
+      WHERE trade_code IN ('BDC', 'SOD', 'AUT')
+      AND status = 'active'
+      ORDER BY trade_name
     `);
+    
+    // Add available levels for each trade
+    for (let trade of trades) {
+      const [levels] = await pool.execute(`
+        SELECT DISTINCT level_number
+        FROM global_student_sheets
+        WHERE trade_code = ? AND status = 'active'
+        ORDER BY level_number
+      `, [trade.code]);
+      trade.available_levels = levels.map(l => l.level_number);
+    }
+    
     res.json({ success: true, data: trades });
   } catch (error) {
+    console.error('Fetch trades error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch trades' });
+  }
+});
+
+// Get levels for a specific trade
+router.get('/trades/:tradeCode/levels', async (req, res) => {
+  try {
+    const { tradeCode } = req.params;
+    const [levels] = await pool.execute(`
+      SELECT DISTINCT level_number
+      FROM global_student_sheets
+      WHERE trade_code = ? AND status = 'active'
+      ORDER BY level_number
+    `, [tradeCode]);
+    
+    res.json({ 
+      success: true, 
+      levels: levels.map(l => ({
+        level_number: l.level_number,
+        description: `Level ${l.level_number}`
+      }))
+    });
+  } catch (error) {
+    console.error('Fetch levels error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch levels' });
   }
 });

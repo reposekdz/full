@@ -200,7 +200,7 @@ BEGIN
     DECLARE v_student_id INT;
     DECLARE v_total_incidents INT DEFAULT 0;
     DECLARE v_critical_incidents INT DEFAULT 0;
-    DECLARE v_conduct_score DECIMAL(5,2) DEFAULT 100;
+    DECLARE v_conduct_score DECIMAL(5,2) DEFAULT 40;
     DECLARE v_conduct_grade VARCHAR(5) DEFAULT 'A';
     
     SELECT student_id INTO v_student_id FROM global_student_sheets WHERE id = p_sheet_id;
@@ -212,15 +212,15 @@ BEGIN
     FROM student_discipline_records 
     WHERE student_id = v_student_id AND status = 'active';
     
-    -- Calculate conduct score (start with 100, deduct points for incidents)
-    SET v_conduct_score = 100 - (v_total_incidents * 5) - (v_critical_incidents * 10);
+    -- Calculate conduct score (start with 40, deduct points for incidents)
+    SET v_conduct_score = 40 - (v_total_incidents * 2) - (v_critical_incidents * 4);
     SET v_conduct_score = CASE WHEN v_conduct_score < 0 THEN 0 ELSE v_conduct_score END;
     
     SET v_conduct_grade = CASE 
-        WHEN v_conduct_score >= 90 THEN 'A'
-        WHEN v_conduct_score >= 80 THEN 'B'
-        WHEN v_conduct_score >= 70 THEN 'C'
-        WHEN v_conduct_score >= 60 THEN 'D'
+        WHEN v_conduct_score >= 36 THEN 'A'
+        WHEN v_conduct_score >= 32 THEN 'B'
+        WHEN v_conduct_score >= 28 THEN 'C'
+        WHEN v_conduct_score >= 24 THEN 'D'
         ELSE 'F'
     END;
     

@@ -56,6 +56,8 @@ export default function ParentDashboardWithLinking() {
   const [hasLinkedStudent, setHasLinkedStudent] = useState(false);
   const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [linkFormData, setLinkFormData] = useState<LinkFormData>({
     student_name: '',
     student_trade: '',
@@ -68,12 +70,13 @@ export default function ParentDashboardWithLinking() {
 
   useEffect(() => {
     checkLinkedStudents();
+    fetchNotifications();
   }, []);
 
   const checkLinkedStudents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/api/parent-dashboard/children', {
+      const response = await fetch('http://localhost:5000/api/parent-dashboard/children', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -91,20 +94,31 @@ export default function ParentDashboardWithLinking() {
     }
   };
 
-  const stats = {
-    averageGrade: 85,
-    attendanceRate: 95,
-    pendingFees: 100000,
-    notifications: 5
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/parent-links/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setNotifications(result.notifications || []);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
   };
 
-  const subjects = [
-    { name: 'Imibare', grade: 'A', color: 'bg-green-500' },
-    { name: 'Ubumenyi bwa Sisitemu', grade: 'A-', color: 'bg-green-500' },
-    { name: 'Ikoranabuhanga', grade: 'B+', color: 'bg-yellow-500' },
-    { name: 'Icyongereza', grade: 'A', color: 'bg-green-500' },
-    { name: 'Kinyarwanda', grade: 'A+', color: 'bg-green-500' }
-  ];
+  const stats = {
+    averageGrade: 0,
+    attendanceRate: 0,
+    pendingFees: 0,
+    notifications: notifications.length
+  };
+
+  const subjects: any[] = [];
 
   const handleSubmitLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,31 +128,41 @@ export default function ParentDashboardWithLinking() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/api/parent-linking/link-student', {
+      
+      // Parse student name into first and last name
+      const nameParts = linkFormData.student_name.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+
+      const response = await fetch('http://localhost:5000/api/parent-links/link-student', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...linkFormData,
-          relationship_type: 'Parent'
+          student_first_name: firstName,
+          student_last_name: lastName,
+          trade_code: linkFormData.student_trade,
+          level: linkFormData.student_level,
+          gender: linkFormData.student_gender,
+          relationship: 'Parent'
         })
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setSuccessMessage(result.message || 'Student link request submitted successfully!');
+        setSuccessMessage(result.message || 'Student linked successfully!');
         setTimeout(() => {
           checkLinkedStudents();
         }, 2000);
       } else {
-        setErrorMessage(result.message || 'Failed to submit link request');
+        setErrorMessage(result.message || 'Failed to link student');
       }
     } catch (error) {
-      console.error('Error:', error);
-      setErrorMessage('An error occurred while submitting the request. Please try again.');
+      console.error('Error linking student:', error);
+      setErrorMessage('Cannot connect to server. Please ensure the backend is running.');
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +173,7 @@ export default function ParentDashboardWithLinking() {
       <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-400 to-green-500 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-white mx-auto mb-4" />
-          <p className="text-white text-lg">Loading...</p>
+          <p className="text-white text-lg">Tegereza...</p>
         </div>
       </div>
     );
@@ -167,16 +191,16 @@ export default function ParentDashboardWithLinking() {
             <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <GraduationCap className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Link with your student</h2>
-            <p className="text-gray-600">Please provide your student's details to link your account</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Huza n'Umwana Wawe</h2>
+            <p className="text-gray-600">Shyiramo amakuru y'umwana wawe. Ntakwisho kwa nimero y'umunyeshuri!</p>
           </div>
 
           <form onSubmit={handleSubmitLink} className="space-y-4">
             <div>
-              <Label htmlFor="studentName" className="text-gray-700 font-semibold">Student Name *</Label>
+              <Label htmlFor="studentName" className="text-gray-700 font-semibold">Izina ry'Umwana *</Label>
               <Input
                 id="studentName"
-                placeholder="Enter student's full name"
+                placeholder="Urugero: Jean Claude"
                 value={linkFormData.student_name}
                 onChange={(e) => setLinkFormData({ ...linkFormData, student_name: e.target.value })}
                 required
@@ -185,54 +209,54 @@ export default function ParentDashboardWithLinking() {
             </div>
 
             <div>
-              <Label htmlFor="studentTrade" className="text-gray-700 font-semibold">Trade *</Label>
+              <Label htmlFor="studentTrade" className="text-gray-700 font-semibold">Umwuga *</Label>
               <Select
                 value={linkFormData.student_trade}
                 onValueChange={(value) => setLinkFormData({ ...linkFormData, student_trade: value })}
                 required
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Trade" />
+                  <SelectValue placeholder="Hitamo Umwuga" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BDC">BDC - Building Construction</SelectItem>
-                  <SelectItem value="SOD">SOD - Software Development</SelectItem>
-                  <SelectItem value="AUT">AUT - Automotive Technology</SelectItem>
+                  <SelectItem value="BDC">BDC - Kubaka</SelectItem>
+                  <SelectItem value="SOD">SOD - Ikoranabuhanga</SelectItem>
+                  <SelectItem value="AUT">AUT - Imodoka</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="studentLevel" className="text-gray-700 font-semibold">Level *</Label>
+              <Label htmlFor="studentLevel" className="text-gray-700 font-semibold">Urwego *</Label>
               <Select
                 value={linkFormData.student_level}
                 onValueChange={(value) => setLinkFormData({ ...linkFormData, student_level: value })}
                 required
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Level" />
+                  <SelectValue placeholder="Hitamo Urwego" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Level 1</SelectItem>
-                  <SelectItem value="2">Level 2</SelectItem>
-                  <SelectItem value="3">Level 3</SelectItem>
+                  <SelectItem value="1">Urwego 1</SelectItem>
+                  <SelectItem value="2">Urwego 2</SelectItem>
+                  <SelectItem value="3">Urwego 3</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="studentGender" className="text-gray-700 font-semibold">Gender *</Label>
+              <Label htmlFor="studentGender" className="text-gray-700 font-semibold">Igitsina *</Label>
               <Select
                 value={linkFormData.student_gender}
                 onValueChange={(value) => setLinkFormData({ ...linkFormData, student_gender: value })}
                 required
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Gender" />
+                  <SelectValue placeholder="Hitamo Igitsina" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Male">Gabo</SelectItem>
+                  <SelectItem value="Female">Gore</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -257,12 +281,12 @@ export default function ParentDashboardWithLinking() {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Submitting...
+                  Tegereza...
                 </>
               ) : (
                 <>
                   <Search className="w-5 h-5 mr-2" />
-                  Link Student
+                  Huza Umwana
                 </>
               )}
             </Button>
@@ -272,156 +296,33 @@ export default function ParentDashboardWithLinking() {
     );
   }
 
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: HomeIcon },
+    { id: 'children', label: 'My Children', icon: GraduationCap },
+    { id: 'performance', label: 'Performance', icon: BarChart },
+    { id: 'attendance', label: 'Attendance', icon: CheckCircle },
+    { id: 'exams', label: 'Exams', icon: FileCheck },
+    { id: 'timetable', label: 'Timetable', icon: BookOpen },
+    { id: 'fees', label: 'Fees', icon: DollarSign },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
+    { id: 'teachers', label: 'Teachers', icon: User },
+    { id: 'trade', label: 'Trade Info', icon: Trophy },
+    { id: 'link', label: 'Link Student', icon: Plus },
+    { id: 'settings', label: 'Settings', icon: Bell }
+  ];
+
   const dashboardCards = [
     {
-      icon: BarChart,
-      title: "Amanota y'Umwana",
-      color: 'from-red-500 to-red-600',
-      items: subjects.map(s => ({ label: s.name, value: s.grade, badge: true })),
-      action: 'Reba Amanota Yose'
-    },
-    {
-      icon: CheckCircle,
-      title: 'Kwitabira Amasomo',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Iminsi yitabiriye', value: '95%', badge: true, badgeColor: 'bg-green-500' },
-        { label: 'Iminsi yataye', value: '2', badge: true },
-        { label: 'Iminsi yatinze', value: '3', badge: true },
-        { label: 'Raporo z\'ukwezi', value: '', badge: false },
-        { label: 'Kumenyesha ku kwitabira', value: '', badge: false }
-      ],
-      action: 'Reba Kwitabira'
-    },
-    {
-      icon: DollarSign,
-      title: 'Amafaranga y\'Ishuri',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Yishyuwe', value: '500,000 RWF', badge: true, badgeColor: 'bg-green-500' },
-        { label: 'Asigaye', value: '100,000 RWF', badge: true, badgeColor: 'bg-yellow-500' },
-        { label: 'Amateka y\'kwishyura', value: '', badge: false },
-        { label: 'Kwishyura online', value: '', badge: false },
-        { label: 'Raporo z\'amafaranga', value: '', badge: false }
-      ],
-      action: 'Ishyura Ubu'
-    },
-    {
-      icon: FileText,
-      title: 'Ibizamini n\'Ibikorwa',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Ibizamini bizaza', value: '5', badge: true },
-        { label: 'Amanota y\'ibizamini', value: '', badge: false },
-        { label: 'Ibikorwa by\'amasomo', value: '', badge: false },
-        { label: 'Raporo z\'ibizamini', value: '', badge: false },
-        { label: 'Kumenyesha k\'ibizamini', value: '', badge: false }
-      ],
-      action: 'Reba Ibizamini'
-    },
-    {
-      icon: MessageSquare,
-      title: 'Itumanaho n\'Abarimu',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Kohereza ubutumwa', value: '', badge: false },
-        { label: 'Gusaba inama', value: '', badge: false },
-        { label: 'Inama z\'ababyeyi', value: '', badge: false },
-        { label: 'Raporo z\'abarimu', value: '', badge: false },
-        { label: 'Kumenyesha k\'abarimu', value: '', badge: false }
-      ],
-      action: 'Vugana n\'Umwarimu'
-    },
-    {
-      icon: Heart,
-      title: 'Imyitwarire y\'Umwana',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Imyitwarire', value: 'Nziza', badge: true, badgeColor: 'bg-green-500' },
-        { label: 'Indangagaciro', value: '', badge: false },
-        { label: 'Ibihano', value: '', badge: false },
-        { label: 'Ibihembo', value: '', badge: false },
-        { label: 'Raporo z\'imyitwarire', value: '', badge: false }
-      ],
-      action: 'Reba Imyitwarire'
-    },
-    {
-      icon: HomeIcon,
-      title: 'Ubuzima bw\'Umwana',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Amateka y\'ubuzima', value: '', badge: false },
-        { label: 'Imiti n\'ubuvuzi', value: '', badge: false },
-        { label: 'Gukurikirana indwara', value: '', badge: false },
-        { label: 'Raporo z\'ubuzima', value: '', badge: false },
-        { label: 'Kumenyesha k\'ubuzima', value: '', badge: false }
-      ],
-      action: 'Reba Ubuzima'
-    },
-    {
-      icon: HomeIcon,
-      title: 'Icumbi cy\'Umwana',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Icumbi', value: 'Block A', badge: true },
-        { label: 'Icyumba', value: 'Room 205', badge: true },
-        { label: 'Kwishyura icumbi', value: '', badge: false },
-        { label: 'Raporo z\'icumbi', value: '', badge: false },
-        { label: 'Kumenyesha k\'icumbi', value: '', badge: false }
-      ],
-      action: 'Reba Icumbi'
-    },
-    {
-      icon: BookOpen,
-      title: 'Ibitabo by\'Umwana',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Ibitabo yahagaritse', value: '', badge: false },
-        { label: 'Amateka y\'ibitabo', value: '', badge: false },
-        { label: 'Amande y\'ibitabo', value: '', badge: false },
-        { label: 'Raporo z\'isomero', value: '', badge: false },
-        { label: 'Kumenyesha k\'ibitabo', value: '', badge: false }
-      ],
-      action: 'Reba Ibitabo'
-    },
-    {
-      icon: Trophy,
-      title: 'Siporo n\'Ibikorwa',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Amakipe y\'umwana', value: '', badge: false },
-        { label: 'Amarushanwa', value: '', badge: false },
-        { label: 'Ibihembo', value: '', badge: false },
-        { label: 'Raporo za siporo', value: '', badge: false },
-        { label: 'Kumenyesha k\'ibikorwa', value: '', badge: false }
-      ],
-      action: 'Reba Siporo'
-    },
-    {
       icon: Bell,
-      title: 'Kumenyesha',
+      title: 'Notifications',
       color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Kumenyesha gishya', value: '5', badge: true },
-        { label: 'Itangazo ry\'ishuri', value: '', badge: false },
-        { label: 'Kumenyesha k\'amanota', value: '', badge: false },
-        { label: 'Kumenyesha k\'amafaranga', value: '', badge: false },
-        { label: 'Kumenyesha k\'imyitwarire', value: '', badge: false }
-      ],
-      action: 'Reba Kumenyesha'
-    },
-    {
-      icon: FileCheck,
-      title: 'Raporo z\'Iterambere',
-      color: 'from-red-500 to-red-600',
-      items: [
-        { label: 'Raporo z\'ukwezi', value: '', badge: false },
-        { label: 'Raporo z\'igihembwe', value: '', badge: false },
-        { label: 'Raporo z\'umwaka', value: '', badge: false },
-        { label: 'Gusuzuma iterambere', value: '', badge: false },
-        { label: 'Inama z\'iterambere', value: '', badge: false }
-      ],
-      action: 'Reba Raporo'
+      items: notifications.slice(0, 5).map(n => ({
+        label: n.type === 'conduct' ? `Conduct: ${n.description}` : `Leave: ${n.reason}`,
+        value: new Date(n.created_at).toLocaleDateString(),
+        badge: true,
+        badgeColor: n.type === 'conduct' ? 'bg-red-500' : 'bg-blue-500'
+      })),
+      action: 'View All'
     }
   ];
 
@@ -450,6 +351,31 @@ export default function ParentDashboardWithLinking() {
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto p-4 md:p-8">
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-xl shadow-lg mb-6 p-2 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.id === 'link') {
+                    setHasLinkedStudent(false);
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  activeTab === item.id
+                    ? 'bg-gradient-to-r from-green-500 to-yellow-500 text-white shadow-md'
+                    : 'hover:bg-gray-100 text-gray-700'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -487,15 +413,25 @@ export default function ParentDashboardWithLinking() {
           </Button>
         </motion.div>
 
-        {/* Alert */}
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-8">
-          <div className="flex items-start">
-            <Bell className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
-            <div>
-              <strong>🔔 Kumenyesha:</strong> Mugabo Jean afite ikizamini cy'Imibare kuwa Kane. Musabe amufashe kwiga!
+        {/* Alert - Show latest notification */}
+        {notifications.length > 0 && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-8">
+            <div className="flex items-start">
+              <Bell className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+              <div>
+                <strong>🔔 Latest Update:</strong>
+                {notifications[0].type === 'conduct' ? (
+                  <span> {notifications[0].student_name} - Conduct removed: {notifications[0].description}</span>
+                ) : (
+                  <span> {notifications[0].student_name} - Leave approved: {notifications[0].reason}</span>
+                )}
+                <div className="text-xs text-gray-600 mt-1">
+                  {new Date(notifications[0].created_at).toLocaleString()}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -504,8 +440,8 @@ export default function ParentDashboardWithLinking() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-gradient-to-r from-green-500 to-yellow-500 text-white p-6 rounded-xl text-center"
           >
-            <div className="text-4xl font-bold">{stats.averageGrade}%</div>
-            <div className="text-sm mt-2 opacity-90">Amanota Rusange</div>
+            <div className="text-4xl font-bold">{linkedStudents.length}</div>
+            <div className="text-sm mt-2 opacity-90">My Children</div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -513,8 +449,8 @@ export default function ParentDashboardWithLinking() {
             transition={{ delay: 0.1 }}
             className="bg-gradient-to-r from-green-500 to-yellow-500 text-white p-6 rounded-xl text-center"
           >
-            <div className="text-4xl font-bold">{stats.attendanceRate}%</div>
-            <div className="text-sm mt-2 opacity-90">Kwitabira</div>
+            <div className="text-4xl font-bold">{notifications.length}</div>
+            <div className="text-sm mt-2 opacity-90">Notifications</div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -522,8 +458,8 @@ export default function ParentDashboardWithLinking() {
             transition={{ delay: 0.2 }}
             className="bg-gradient-to-r from-green-500 to-yellow-500 text-white p-6 rounded-xl text-center"
           >
-            <div className="text-4xl font-bold">{stats.pendingFees / 1000}K</div>
-            <div className="text-sm mt-2 opacity-90">Amafaranga Asigaye</div>
+            <div className="text-4xl font-bold">{notifications.filter(n => n.type === 'conduct').length}</div>
+            <div className="text-sm mt-2 opacity-90">Conduct Updates</div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -531,8 +467,8 @@ export default function ParentDashboardWithLinking() {
             transition={{ delay: 0.3 }}
             className="bg-gradient-to-r from-green-500 to-yellow-500 text-white p-6 rounded-xl text-center"
           >
-            <div className="text-4xl font-bold">{stats.notifications}</div>
-            <div className="text-sm mt-2 opacity-90">Kumenyesha Gishya</div>
+            <div className="text-4xl font-bold">{notifications.filter(n => n.type === 'leave').length}</div>
+            <div className="text-sm mt-2 opacity-90">Leave Approvals</div>
           </motion.div>
         </div>
 

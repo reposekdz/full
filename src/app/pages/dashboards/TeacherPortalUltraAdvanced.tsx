@@ -72,6 +72,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '@/app/config/apiBase';
 import axios from 'axios';
+import { ParentManagementWidget } from '@/app/components/shared/ParentManagementWidget';
 import {
   LineChart,
   Line,

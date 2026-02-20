@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Newspaper, Calendar, User, Eye, Heart, Share2, Filter, Search } from 'lucide-react';
+import { Newspaper, Calendar, User, Eye, Heart, Share2, Filter, Search, Image } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -78,6 +78,41 @@ const NewsArticles: React.FC = () => {
 
   const loadMore = () => {
     setShowCount(prev => prev + 8);
+  };
+
+  /**
+   * Build a properly-encoded image URL.
+   * image_url comes from the DB as e.g. "/uploads/news/my file.jpg"
+   * Browsers reject URLs with raw spaces, so we encode each path segment.
+   */
+  const getImageUrl = (imageUrl: string): string => {
+    if (!imageUrl) return '';
+    // Already a full URL – return as-is
+    if (imageUrl.startsWith('http')) return imageUrl;
+    // Encode each segment (preserves the slashes)
+    const encoded = imageUrl
+      .split('/')
+      .map(segment => encodeURIComponent(segment))
+      .join('/');
+    return `http://localhost:5000${encoded}`;
+  };
+
+  const categoryGradients: Record<string, string> = {
+    academic: 'from-blue-400 to-indigo-600',
+    academics: 'from-blue-400 to-indigo-600',
+    sports: 'from-green-400 to-emerald-600',
+    events: 'from-purple-400 to-violet-600',
+    achievements: 'from-yellow-400 to-orange-500',
+    announcements: 'from-red-400 to-rose-600',
+    community: 'from-teal-400 to-cyan-600',
+    technology: 'from-sky-400 to-blue-600',
+    culture: 'from-pink-400 to-fuchsia-600',
+    school_life: 'from-amber-400 to-yellow-600',
+    counseling: 'from-lime-400 to-green-600',
+    leadership: 'from-orange-400 to-amber-600',
+    environment: 'from-emerald-400 to-green-700',
+    staff: 'from-slate-400 to-gray-600',
+    other: 'from-yellow-400 to-green-500',
   };
 
   const categories = [
@@ -168,23 +203,35 @@ const NewsArticles: React.FC = () => {
               >
                 <Card className="h-full hover:shadow-2xl transition-all duration-300 border-2 border-yellow-100 hover:border-yellow-300 overflow-hidden group">
                   {/* Image */}
-                  {article.image_url && (
-                    <div className="relative h-48 overflow-hidden bg-gray-200">
+                  <div className="relative h-48 overflow-hidden">
+                    {/* Gradient placeholder always rendered underneath */}
+                    <div
+                      className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${categoryGradients[article.category] || categoryGradients.other
+                        }`}
+                    >
+                      <Newspaper className="h-12 w-12 text-white opacity-60 mb-1" />
+                      <span className="text-white text-xs font-semibold opacity-70 uppercase tracking-wide">
+                        {categories.find(c => c.value === article.category)?.label || article.category}
+                      </span>
+                    </div>
+                    {/* Real image overlaid on top; hidden if it fails to load */}
+                    {article.image_url && (
                       <img
-                        src={`http://localhost:5000${article.image_url}`}
+                        src={getImageUrl(article.image_url)}
                         alt={article.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        className="relative w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
+                          // Hide broken image → gradient placeholder shows through
+                          e.currentTarget.style.display = 'none';
                         }}
                       />
-                      {article.is_featured && (
-                        <Badge className="absolute top-4 right-4 bg-yellow-500 text-white">
-                          Nyamukuru
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    {article.is_featured && (
+                      <Badge className="absolute top-4 right-4 bg-yellow-500 text-white">
+                        Nyamukuru
+                      </Badge>
+                    )}
+                  </div>
 
                   <CardHeader>
                     <div className="flex items-center gap-2 mb-2">

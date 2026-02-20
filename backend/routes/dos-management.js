@@ -333,14 +333,23 @@ router.put('/parent-access/revoke/:id', authenticateToken, requireRole('director
 // GET students for report cards
 router.get('/students', authenticateToken, async (req, res) => {
   try {
-    const { search, trade_code, level_number, status = 'active', page = 1, limit = 100 } = req.query;
+    const { search, trade_code, level_number, gender, status = 'active', page = 1, limit = 100 } = req.query;
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT DISTINCT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.is_active,
+      SELECT DISTINCT u.id, u.first_name, u.last_name, u.username, u.email, u.phone, u.gender, u.is_active,
         sp.admission_number,
-        t.code, t.name,
-        e.level_number, e.level_suffix
+        t.code as trade_code, t.name as trade_name,
+        e.level_number, e.level_suffix,
+        COALESCE(
+          (SELECT AVG(cm.final_score) FROM course_marks cm WHERE cm.student_id = u.id AND cm.status = 'approved'),
+          0
+        ) as average_grade,
+        COALESCE(
+          (SELECT ROUND((COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / COUNT(*)), 2)
+           FROM attendances a WHERE a.student_id = u.id AND a.date >= DATE_SUB(NOW(), INTERVAL 30 DAY)),
+          100
+        ) as attendance_percentage
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active'
@@ -349,35 +358,100 @@ router.get('/students', authenticateToken, async (req, res) => {
     `;
     const params = [];
 
-    if (search) {
-      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR sp.admission_number LIKE ?)`;
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam);
+    // Only add filters if they have valid, non-empty values
+    if (search && typeof search === 'string' && search.trim()) {
+      query += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR sp.admission_number LIKE ? OR u.username LIKE ?)`;
+      const searchParam = `%${search.trim()}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
     }
-    if (trade_code) {
+    
+    if (trade_code && trade_code !== 'all' && typeof trade_code === 'string' && trade_code.trim()) {
       query += ` AND e.trade_code = ?`;
-      params.push(trade_code);
+      params.push(trade_code.trim());
     }
-    if (level_number) {
-      query += ` AND e.level_number = ?`;
-      params.push(parseInt(level_number));
+    
+    if (level_number && level_number !== 'all') {
+      const lvl = parseInt(level_number);
+      if (!isNaN(lvl) && lvl > 0) {
+        query += ` AND e.level_number = ?`;
+        params.push(lvl);
+      }
     }
+    
+    if (gender && gender !== 'all' && typeof gender === 'string' && gender.trim()) {
+      query += ` AND u.gender = ?`;
+      params.push(gender.trim());
+    }
+    
     if (status === 'active') {
       query += ` AND u.is_active = 1`;
+    } else if (status === 'inactive') {
+      query += ` AND u.is_active = 0`;
     }
 
     query += ` ORDER BY u.last_name, u.first_name LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), offset);
+    const limitNum = parseInt(limit) || 100;
+    const offsetNum = parseInt(offset) || 0;
+    params.push(limitNum, offsetNum);
 
+    console.log('Executing query with params:', { query, params });
     const [students] = await pool.execute(query, params);
 
-    const [[{ total }]] = await pool.execute(
-      `SELECT COUNT(DISTINCT u.id) as total FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id LEFT JOIN enrollments e ON u.id = e.student_id WHERE u.role = 'student'` +
-      (status === 'active' ? ` AND u.is_active = 1` : ''),
-      []
-    );
+    // Get total count with all filters
+    let countQuery = `
+      SELECT COUNT(DISTINCT u.id) as total 
+      FROM users u 
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id 
+      LEFT JOIN enrollments e ON u.id = e.student_id AND e.status = 'active' 
+      LEFT JOIN trades t ON e.trade_code = t.code 
+      WHERE u.role = 'student'
+    `;
+    const countParams = [];
+    
+    if (search && typeof search === 'string' && search.trim()) {
+      countQuery += ` AND (u.first_name LIKE ? OR u.last_name LIKE ? OR sp.admission_number LIKE ? OR u.username LIKE ?)`;
+      const searchParam = `%${search.trim()}%`;
+      countParams.push(searchParam, searchParam, searchParam, searchParam);
+    }
+    
+    if (trade_code && trade_code !== 'all' && typeof trade_code === 'string' && trade_code.trim()) {
+      countQuery += ` AND e.trade_code = ?`;
+      countParams.push(trade_code.trim());
+    }
+    
+    if (level_number && level_number !== 'all') {
+      const lvl = parseInt(level_number);
+      if (!isNaN(lvl) && lvl > 0) {
+        countQuery += ` AND e.level_number = ?`;
+        countParams.push(lvl);
+      }
+    }
+    
+    if (gender && gender !== 'all' && typeof gender === 'string' && gender.trim()) {
+      countQuery += ` AND u.gender = ?`;
+      countParams.push(gender.trim());
+    }
+    
+    if (status === 'active') {
+      countQuery += ` AND u.is_active = 1`;
+    } else if (status === 'inactive') {
+      countQuery += ` AND u.is_active = 0`;
+    }
 
-    res.json({ success: true, students, total, pagination: { page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / limit) } });
+    const [[{ total }]] = await pool.execute(countQuery, countParams);
+
+    res.json({ 
+      success: true, 
+      students, 
+      total, 
+      pagination: { 
+        page: parseInt(page), 
+        limit: limitNum, 
+        total_pages: Math.ceil(total / limitNum),
+        current_page: parseInt(page),
+        per_page: limitNum
+      } 
+    });
   } catch (error) {
     console.error('Error fetching students:', error);
     res.status(500).json({ success: false, message: 'Error fetching students', error: error.message });

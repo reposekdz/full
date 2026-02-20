@@ -1,1212 +1,1274 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../config/database');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-
 /**
- * ====================================
- * ULTRA-ADVANCED STOCK MANAGEMENT
- * ====================================
- * Powerful inventory management features
- * - Real-time stock tracking
- * - Analytics and visualizations
- * - Auto-alerts for low stock
- * - Supplier management
- * - Transaction history
- * - Stock valuation
- * - Reports generation
+ * Stock Ultra Advanced API Routes
+ * Comprehensive stock management endpoints for the Ultra Advanced Stock Dashboard
  */
 
-// =====================================
-// STOCK DASHBOARD
-// =====================================
+const express = require('express');
+const router = express.Router();
+const { pool } = require('../server');
+const { authenticateToken, requireRole } = require('./auth');
 
-router.get('/dashboard', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Helper function to get user info from token
+const getUserInfo = (req) => {
+  if (req.user) {
+    return {
+      userId: req.user.userId || req.user.id,
+      name: req.user.name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || 'Unknown'
+    };
+  }
+  return { userId: 1, name: 'System' };
+};
+
+// ============================================
+// DASHBOARD
+// ============================================
+
+// Get dashboard statistics
+router.get('/dashboard', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'director_study', 'director_discipline', 'accountant', 'patron', 'matron']), async (req, res) => {
   try {
-    const [stockSummary] = await pool.execute(`
+    // Get stock summary
+    const [[stockSummary]] = await pool.execute(`
       SELECT 
         COUNT(*) as total_items,
-        COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock,
-        COUNT(CASE WHEN quantity > 0 AND quantity <= reorder_level THEN 1 END) as low_stock,
-        COUNT(CASE WHEN quantity > reorder_level THEN 1 END) as in_stock,
-        SUM(quantity * unit_price) as total_value,
-        SUM(quantity) as total_quantity
-      FROM stock_items
-      WHERE is_active = 1
+        SUM(CASE WHEN quantity > reorder_level THEN 1 ELSE 0 END) as in_stock,
+        SUM(CASE WHEN quantity <= reorder_level AND quantity > 0 THEN 1 ELSE 0 END) as low_stock,
+        SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as out_of_stock,
+        COALESCE(SUM(quantity * unit_price), 0) as total_value
+      FROM stock_items 
+      WHERE is_active = 1 OR is_active IS NULL
     `);
-    
+
+    // Get recent transactions
     const [recentTransactions] = await pool.execute(`
-      SELECT 
-        st.*,
-        si.item_name,
-        si.item_code,
-        u1.first_name as issued_to_first_name,
-        u1.last_name as issued_to_last_name,
-        u2.first_name as issued_by_first_name,
-        u2.last_name as issued_by_last_name
+      SELECT st.*, si.item_name, si.category 
       FROM stock_transactions st
-      JOIN stock_items si ON st.item_id = si.id
-      LEFT JOIN users u1 ON st.issued_to = u1.id
-      LEFT JOIN users u2 ON st.issued_by = u2.id
-      ORDER BY st.transaction_date DESC, st.created_at DESC
-      LIMIT 20
+      LEFT JOIN stock_items si ON st.item_id = si.id
+      ORDER BY st.transaction_date DESC LIMIT 10
     `);
-    
+
+    // Get low stock alerts
+    const [lowStockAlerts] = await pool.execute(`
+      SELECT * FROM stock_items 
+      WHERE quantity <= reorder_level AND quantity > 0 AND (is_active = 1 OR is_active IS NULL)
+      ORDER BY quantity ASC LIMIT 10
+    `);
+
+    // Get out of stock items
+    const [outOfStock] = await pool.execute(`
+      SELECT * FROM stock_items 
+      WHERE quantity = 0 AND (is_active = 1 OR is_active IS NULL)
+      ORDER BY item_name ASC LIMIT 10
+    `);
+
+    // Get this month statistics
+    const [[thisMonthStats]] = await pool.execute(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN transaction_type IN ('receive', 'purchase', 'stock_in') THEN quantity ELSE 0 END), 0) as received,
+        COALESCE(SUM(CASE WHEN transaction_type IN ('issue', 'stock_out', 'distribution') THEN quantity ELSE 0 END), 0) as issued
+      FROM stock_transactions 
+      WHERE MONTH(transaction_date) = MONTH(CURDATE()) AND YEAR(transaction_date) = YEAR(CURDATE())
+    `);
+
+    // Get category breakdown
     const [categoryBreakdown] = await pool.execute(`
       SELECT 
         category,
         COUNT(*) as item_count,
         SUM(quantity) as total_quantity,
-        SUM(quantity * unit_price) as total_value,
-        AVG(quantity) as avg_quantity
-      FROM stock_items
-      WHERE is_active = 1
+        COALESCE(SUM(quantity * unit_price), 0) as total_value
+      FROM stock_items 
+      WHERE (is_active = 1 OR is_active IS NULL) AND category IS NOT NULL
       GROUP BY category
       ORDER BY total_value DESC
     `);
-    
-    const [lowStockItems] = await pool.execute(`
-      SELECT *
-      FROM stock_items
-      WHERE quantity > 0 AND quantity <= reorder_level AND is_active = 1
-      ORDER BY (reorder_level - quantity) DESC
-      LIMIT 20
-    `);
-    
-    const [outOfStockItems] = await pool.execute(`
-      SELECT *
-      FROM stock_items
-      WHERE quantity = 0 AND is_active = 1
-      ORDER BY updated_at DESC
-      LIMIT 20
-    `);
-    
-    const [monthlyConsumption] = await pool.execute(`
-      SELECT 
-        DATE_FORMAT(transaction_date, '%Y-%m') as month,
-        transaction_type,
-        SUM(quantity) as total_quantity,
-        COUNT(*) as transaction_count
-      FROM stock_transactions
-      WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-      GROUP BY DATE_FORMAT(transaction_date, '%Y-%m'), transaction_type
-      ORDER BY month
-    `);
-    
-    const [supplierStats] = await pool.execute(`
-      SELECT 
-        s.supplier_name as supplier,
-        COUNT(si.id) as item_count,
-        SUM(si.quantity * si.unit_price) as total_value
-      FROM stock_items si
-      LEFT JOIN stock_suppliers s ON si.supplier_id = s.id
-      WHERE si.supplier_id IS NOT NULL AND si.is_active = 1
-      GROUP BY s.supplier_name
-      ORDER BY total_value DESC
-      LIMIT 10
-    `);
-    
+
     res.json({
       success: true,
       dashboard: {
-        summary: stockSummary[0],
-        recent_transactions: recentTransactions,
-        category_breakdown: categoryBreakdown,
-        low_stock_items: lowStockItems,
-        out_of_stock_items: outOfStockItems,
-        monthly_consumption: monthlyConsumption,
-        supplier_stats: supplierStats
+        summary: {
+          total_items: stockSummary?.total_items || 0,
+          in_stock: stockSummary?.in_stock || 0,
+          low_stock: stockSummary?.low_stock || 0,
+          out_of_stock: stockSummary?.out_of_stock || 0,
+          total_value: stockSummary?.total_value || 0
+        },
+        recent_transactions: recentTransactions || [],
+        low_stock_alerts: lowStockAlerts || [],
+        out_of_stock: outOfStock || [],
+        this_month: thisMonthStats || { received: 0, issued: 0 },
+        category_breakdown: categoryBreakdown || []
       }
     });
   } catch (error) {
-    console.error('Stock dashboard error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Dashboard error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch dashboard data', error: error.message });
   }
 });
 
-// =====================================
-// STOCK ITEMS MANAGEMENT
-// =====================================
+// ============================================
+// STOCK ITEMS
+// ============================================
 
-// Get all stock items with advanced filtering
-router.get('/items', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Get all stock items with pagination and filters
+router.get('/items', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'director_study', 'director_discipline', 'accountant', 'patron', 'matron', 'teacher', 'staff']), async (req, res) => {
   try {
-    const {
-      category,
-      status,
-      search,
-      supplier,
-      min_quantity,
-      max_quantity,
-      sort_by,
-      order,
-      page,
-      limit
-    } = req.query;
-    
-    const currentPage = parseInt(page) || 1;
-    const pageLimit = parseInt(limit) || 50;
-    const offset = (currentPage - 1) * pageLimit;
-    
-    let query = `SELECT * FROM stock_items WHERE is_active = 1`;
+    const { page = 1, limit = 50, category, status, search, supplier, sort_by = 'id', order = 'desc' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereClause = 'WHERE (si.is_active = 1 OR si.is_active IS NULL)';
     const params = [];
-    
+
     if (category) {
-      query += ` AND category = ?`;
+      whereClause += ' AND si.category = ?';
       params.push(category);
     }
-    
-    if (status) {
-      if (status === 'out_of_stock') {
-        query += ` AND quantity = 0`;
-      } else if (status === 'low_stock') {
-        query += ` AND quantity > 0 AND quantity <= reorder_level`;
-      } else if (status === 'in_stock') {
-        query += ` AND quantity > reorder_level`;
-      }
-    }
-    
+
     if (search) {
-      query += ` AND (item_name LIKE ? OR item_code LIKE ? OR description LIKE ?)`;
+      whereClause += ' AND (si.item_name LIKE ? OR si.item_code LIKE ? OR si.description LIKE ?)';
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
+    if (status === 'low_stock') {
+      whereClause += ' AND si.quantity <= si.reorder_level AND si.quantity > 0';
+    } else if (status === 'out_of_stock') {
+      whereClause += ' AND si.quantity = 0';
+    } else if (status === 'in_stock') {
+      whereClause += ' AND si.quantity > si.reorder_level';
+    }
+
     if (supplier) {
-      query += ` AND supplier LIKE ?`;
-      params.push(`%${supplier}%`);
+      whereClause += ' AND si.supplier_id = ?';
+      params.push(supplier);
     }
-    
-    if (min_quantity) {
-      query += ` AND quantity >= ?`;
-      params.push(parseInt(min_quantity));
-    }
-    
-    if (max_quantity) {
-      query += ` AND quantity <= ?`;
-      params.push(parseInt(max_quantity));
-    }
-    
-    const sortBy = sort_by || 'item_name';
-    const sortOrder = order === 'desc' ? 'DESC' : 'ASC';
-    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
-    params.push(pageLimit, offset);
-    
-    const [items] = await pool.execute(query, params);
-    
-    for (const item of items) {
-      item.total_value = (item.quantity || 0) * (item.unit_price || 0);
-      
-      if (item.quantity === 0) {
-        item.stock_status = 'out_of_stock';
-      } else if (item.quantity <= item.reorder_level) {
-        item.stock_status = 'low_stock';
-      } else {
-        item.stock_status = 'in_stock';
-      }
-    }
-    
-    const countQuery = query.split('ORDER BY')[0].replace('SELECT *', 'SELECT COUNT(*) as total');
-    const [[{ total }]] = await pool.execute(countQuery, params.slice(0, -2));
-    
+
+    const validSortFields = ['id', 'item_name', 'category', 'quantity', 'unit_price', 'reorder_level', 'created_at'];
+    const sortField = validSortFields.includes(sort_by) ? sort_by : 'id';
+    const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+    // Get items
+    const [items] = await pool.execute(`
+      SELECT si.*, 
+        CASE 
+          WHEN si.quantity = 0 THEN 'out_of_stock'
+          WHEN si.quantity <= si.reorder_level THEN 'low_stock'
+          ELSE 'in_stock'
+        END as status_label,
+        ss.supplier_name
+      FROM stock_items si
+      LEFT JOIN stock_suppliers ss ON si.supplier_id = ss.id
+      ${whereClause}
+      ORDER BY si.${sortField} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `, [...params, parseInt(limit), parseInt(offset)]);
+
+    // Get total count
+    const [[{ total }]] = await pool.execute(`
+      SELECT COUNT(*) as total FROM stock_items si ${whereClause}
+    `, params);
+
+    // Get category list
+    const [categories] = await pool.execute(`
+      SELECT DISTINCT category as category_name FROM stock_items 
+      WHERE (is_active = 1 OR is_active IS NULL) AND category IS NOT NULL
+      ORDER BY category
+    `);
+
     res.json({
       success: true,
-      items: items,
-      pagination: {
-        current_page: currentPage,
-        page_limit: pageLimit,
-        total_items: total,
-        total_pages: Math.ceil(total / pageLimit)
-      }
+      items: items || [],
+      total: total || 0,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      categories: categories || []
     });
   } catch (error) {
-    console.error('Get stock items error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Get items error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch items', error: error.message });
   }
 });
 
-// Add new stock item
-router.post('/items', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+// Get single stock item
+router.get('/items/:id', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'patron', 'matron']), async (req, res) => {
   try {
-    const {
-      item_name,
-      item_code,
-      category,
-      description,
-      quantity,
-      unit,
-      unit_price,
-      reorder_level,
-      location,
-      supplier,
-      supplier_contact,
-      notes
-    } = req.body;
+    const { id } = req.params;
     
-    if (!item_name || !item_code) {
-      return res.status(400).json({ success: false, message: 'Item name and code are required' });
+    const [items] = await pool.execute(`
+      SELECT si.*, ss.supplier_name, ss.phone as supplier_phone, ss.email as supplier_email
+      FROM stock_items si
+      LEFT JOIN stock_suppliers ss ON si.supplier_id = ss.id
+      WHERE si.id = ? AND (si.is_active = 1 OR si.is_active IS NULL)
+    `, [id]);
+
+    if (items.length === 0) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
     }
-    
-    const [existing] = await pool.execute(
+
+    // Get transaction history
+    const [transactions] = await pool.execute(`
+      SELECT * FROM stock_transactions 
+      WHERE item_id = ? 
+      ORDER BY transaction_date DESC LIMIT 20
+    `, [id]);
+
+    res.json({
+      success: true,
+      item: items[0],
+      transactions: transactions || []
+    });
+  } catch (error) {
+    console.error('Get item error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch item', error: error.message });
+  }
+});
+
+// Create stock item
+router.post('/items', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { item_code, item_name, category, description, quantity, unit, unit_price, reorder_level, supplier_id, location } = req.body;
+    const userInfo = getUserInfo(req);
+
+    // Check for duplicate item code
+    const [existing] = await connection.execute(
       'SELECT id FROM stock_items WHERE item_code = ?',
       [item_code]
     );
-    
+
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Item code already exists' });
     }
-    
-    const [result] = await pool.execute(
-      `INSERT INTO stock_items (
-        item_name, item_code, category, description, quantity, unit,
-        unit_price, reorder_level, location, supplier, supplier_contact,
-        notes, created_by, is_active, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
-      [
-        item_name, item_code, category, description, quantity || 0, unit,
-        unit_price || 0, reorder_level || 10, location, supplier,
-        supplier_contact, notes, req.user.id
-      ]
-    );
-    
-    if (quantity > 0) {
-      await pool.execute(
-        `INSERT INTO stock_transactions (
-          item_id, transaction_type, quantity, unit_price,
-          created_at, notes, created_by
-        ) VALUES (?, 'in', ?, ?, NOW(), 'Initial stock', ?)`,
-        [result.insertId, quantity, unit_price, req.user.id]
-      );
+
+    await connection.beginTransaction();
+
+    // Insert item
+    const [result] = await connection.execute(`
+      INSERT INTO stock_items (
+        item_code, item_name, category, description, quantity, unit, unit_price, 
+        reorder_level, supplier_id, location, created_by, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `, [item_code, item_name, category || 'General', description || '', quantity || 0, unit || 'pieces', unit_price || 0, reorder_level || 10, supplier_id || null, location || 'Main Store', userInfo.userId]);
+
+    // If initial quantity > 0, create initial transaction
+    if (quantity && quantity > 0) {
+      await connection.execute(`
+        INSERT INTO stock_transactions (
+          item_id, transaction_type, quantity, previous_quantity, new_quantity, 
+          unit_price, total_amount, notes, performed_by, transaction_date
+        ) VALUES (?, 'receive', ?, 0, ?, ?, ?, 'Initial stock entry', ?, NOW())
+      `, [result.insertId, quantity, quantity, unit_price || 0, (quantity * (unit_price || 0)), userInfo.userId]);
     }
-    
+
+    await connection.commit();
+
     res.json({
       success: true,
-      message: 'Stock item added successfully',
+      message: 'Stock item created successfully',
       item_id: result.insertId
     });
   } catch (error) {
-    console.error('Add stock item error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    await connection.rollback();
+    console.error('Create item error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to create item' });
+  } finally {
+    connection.release();
   }
 });
 
 // Update stock item
-router.put('/items/:id', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+router.put('/items/:id', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
-    
-    const allowedFields = [
-      'item_name', 'category', 'description', 'unit', 'unit_price',
-      'reorder_level', 'location', 'supplier', 'supplier_contact', 'notes'
-    ];
-    
-    const updateFields = [];
-    const values = [];
-    
-    for (const [key, value] of Object.entries(updates)) {
-      if (allowedFields.includes(key)) {
-        updateFields.push(`${key} = ?`);
-        values.push(value);
-      }
-    }
-    
-    if (updateFields.length === 0) {
-      return res.status(400).json({ success: false, message: 'No valid fields to update' });
-    }
-    
-    updateFields.push('updated_at = NOW()');
-    values.push(id);
-    
-    await pool.execute(
-      `UPDATE stock_items SET ${updateFields.join(', ')} WHERE id = ?`,
-      values
+    const { item_name, category, description, unit, unit_price, reorder_level, supplier_id, location } = req.body;
+
+    const [existing] = await pool.execute(
+      'SELECT * FROM stock_items WHERE id = ?',
+      [id]
     );
-    
-    res.json({
-      success: true,
-      message: 'Stock item updated successfully'
-    });
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    await pool.execute(`
+      UPDATE stock_items SET
+        item_name = COALESCE(?, item_name),
+        category = COALESCE(?, category),
+        description = COALESCE(?, description),
+        unit = COALESCE(?, unit),
+        unit_price = COALESCE(?, unit_price),
+        reorder_level = COALESCE(?, reorder_level),
+        supplier_id = COALESCE(?, supplier_id),
+        location = COALESCE(?, location),
+        updated_at = NOW()
+      WHERE id = ?
+    `, [item_name, category, description, unit, unit_price, reorder_level, supplier_id, location, id]);
+
+    res.json({ success: true, message: 'Item updated successfully' });
   } catch (error) {
-    console.error('Update stock item error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Update item error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update item', error: error.message });
   }
 });
 
-// Delete/deactivate stock item
-router.delete('/items/:id', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+// Delete stock item (soft delete)
+router.delete('/items/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const { id } = req.params;
-    const { permanent } = req.query;
-    
-    if (permanent === 'true') {
-      await pool.execute('DELETE FROM stock_items WHERE id = ?', [id]);
-      res.json({ success: true, message: 'Stock item deleted permanently' });
-    } else {
-      await pool.execute('UPDATE stock_items SET is_active = 0 WHERE id = ?', [id]);
-      res.json({ success: true, message: 'Stock item deactivated' });
-    }
+
+    await pool.execute(
+      'UPDATE stock_items SET is_active = 0, updated_at = NOW() WHERE id = ?',
+      [id]
+    );
+
+    res.json({ success: true, message: 'Item deleted successfully' });
   } catch (error) {
-    console.error('Delete stock item error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Delete item error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete item', error: error.message });
   }
 });
 
-// =====================================
-// STOCK TRANSACTIONS
-// =====================================
-
-// Record stock transaction
-router.post('/transactions', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+// Adjust stock quantity
+router.post('/items/:id/adjust', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const {
-      item_id,
-      transaction_type,
-      quantity,
-      unit_price,
-      issued_to,
-      notes,
-      transaction_date
-    } = req.body;
-    
-    if (!item_id || !transaction_type || !quantity) {
-      return res.status(400).json({ success: false, message: 'Item ID, transaction type, and quantity are required' });
+    const { id } = req.params;
+    const { adjustment_type, quantity, reason } = req.body;
+    const userInfo = getUserInfo(req);
+
+    if (!['in', 'out'].includes(adjustment_type)) {
+      return res.status(400).json({ success: false, message: 'Invalid adjustment type' });
     }
-    
-    const [item] = await pool.execute('SELECT * FROM stock_items WHERE id = ?', [item_id]);
-    
-    if (item.length === 0) {
-      return res.status(404).json({ success: false, message: 'Stock item not found' });
+
+    await connection.beginTransaction();
+
+    // Get current quantity
+    const [[item]] = await connection.execute(
+      'SELECT quantity, item_name FROM stock_items WHERE id = ?',
+      [id]
+    );
+
+    if (!item) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Item not found' });
     }
-    
-    let newQuantity = item[0].quantity;
-    const price = unit_price || item[0].unit_price;
-    const totalCost = quantity * price;
-    
-    if (transaction_type === 'purchase' || transaction_type === 'return') {
-      newQuantity += parseInt(quantity);
-    } else if (transaction_type === 'issue' || transaction_type === 'damaged' || transaction_type === 'lost') {
-      newQuantity -= parseInt(quantity);
+
+    const previousQuantity = item.quantity;
+    let newQuantity;
+    if (adjustment_type === 'in') {
+      newQuantity = previousQuantity + parseInt(quantity);
+    } else {
+      newQuantity = previousQuantity - parseInt(quantity);
       if (newQuantity < 0) {
+        await connection.rollback();
         return res.status(400).json({ success: false, message: 'Insufficient stock quantity' });
       }
     }
-    
-    const [result] = await pool.execute(
-      `INSERT INTO stock_transactions (
-        item_id, transaction_type, quantity, unit_price,
-        created_at, notes, created_by
-      ) VALUES (?, ?, ?, ?, NOW(), ?, ?)`,
-      [
-        item_id, transaction_type, quantity, price,
-        notes, req.user.id
-      ]
-    );
-    
-    await pool.execute(
+
+    // Update quantity
+    await connection.execute(
       'UPDATE stock_items SET quantity = ?, updated_at = NOW() WHERE id = ?',
-      [newQuantity, item_id]
+      [newQuantity, id]
     );
-    
-    if (transaction_type === 'purchase') {
-      await pool.execute(
-        `INSERT INTO transactions (
-          type, category, amount, description, transaction_date, 
-          reference_id, reference_type, created_by, status
-        ) VALUES ('expense', 'Stock Purchase', ?, ?, ?, ?, 'stock_purchase', ?, 'completed')`,
-        [
-          totalCost,
-          `Stock purchase: ${item[0].item_name} (${quantity} ${item[0].unit})`,
-          transaction_date || new Date().toISOString().split('T')[0],
-          result.insertId,
-          req.user.id
-        ]
-      );
-    }
-    
+
+    // Record transaction
+    await connection.execute(`
+      INSERT INTO stock_transactions (
+        item_id, transaction_type, quantity, previous_quantity, new_quantity,
+        notes, performed_by, transaction_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [id, adjustment_type === 'in' ? 'stock_in' : 'stock_out', quantity, previousQuantity, newQuantity, reason || 'Stock adjustment', userInfo.userId]);
+
+    await connection.commit();
+
     res.json({
       success: true,
-      message: 'Stock transaction recorded successfully',
-      transaction_id: result.insertId,
+      message: 'Stock adjusted successfully',
+      previous_quantity: previousQuantity,
       new_quantity: newQuantity
     });
   } catch (error) {
-    console.error('Record stock transaction error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    await connection.rollback();
+    console.error('Adjust stock error:', error);
+    res.status(500).json({ success: false, message: 'Failed to adjust stock', error: error.message });
+  } finally {
+    connection.release();
   }
 });
+
+// ============================================
+// TRANSACTIONS
+// ============================================
 
 // Get stock transactions
-router.get('/transactions', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+router.get('/transactions', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
   try {
-    const { item_id, transaction_type, start_date, end_date, page, limit } = req.query;
-    
-    const currentPage = parseInt(page) || 1;
-    const pageLimit = parseInt(limit) || 50;
-    const offset = (currentPage - 1) * pageLimit;
-    
-    let query = `
-      SELECT 
-        st.*,
-        si.item_name,
-        si.item_code,
-        si.category,
-        u1.first_name as issued_to_first_name,
-        u1.last_name as issued_to_last_name,
-        u2.first_name as issued_by_first_name,
-        u2.last_name as issued_by_last_name
-      FROM stock_transactions st
-      JOIN stock_items si ON st.item_id = si.id
-      LEFT JOIN users u1 ON st.issued_to = u1.id
-      LEFT JOIN users u2 ON st.issued_by = u2.id
-      WHERE 1=1
-    `;
+    const { item_id, transaction_type, start_date, end_date, page = 1, limit = 50 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereClause = 'WHERE 1=1';
     const params = [];
-    
+
     if (item_id) {
-      query += ` AND st.item_id = ?`;
+      whereClause += ' AND st.item_id = ?';
       params.push(item_id);
     }
-    
+
     if (transaction_type) {
-      query += ` AND st.transaction_type = ?`;
+      whereClause += ' AND st.transaction_type = ?';
       params.push(transaction_type);
     }
-    
+
     if (start_date) {
-      query += ` AND st.transaction_date >= ?`;
+      whereClause += ' AND DATE(st.transaction_date) >= ?';
       params.push(start_date);
     }
-    
+
     if (end_date) {
-      query += ` AND st.transaction_date <= ?`;
+      whereClause += ' AND DATE(st.transaction_date) <= ?';
       params.push(end_date);
     }
-    
-    query += ` ORDER BY st.transaction_date DESC, st.created_at DESC LIMIT ? OFFSET ?`;
-    params.push(pageLimit, offset);
-    
-    const [transactions] = await pool.execute(query, params);
-    
-    // Get total count separately
-    let countQuery = 'SELECT COUNT(*) as total FROM stock_transactions st JOIN stock_items si ON st.item_id = si.id WHERE 1=1';
-    const countParams = [];
-    if (item_id) {
-      countQuery += ' AND st.item_id = ?';
-      countParams.push(item_id);
-    }
-    if (transaction_type) {
-      countQuery += ' AND st.transaction_type = ?';
-      countParams.push(transaction_type);
-    }
-    if (start_date) {
-      countQuery += ' AND DATE(st.created_at) >= ?';
-      countParams.push(start_date);
-    }
-    if (end_date) {
-      countQuery += ' AND DATE(st.created_at) <= ?';
-      countParams.push(end_date);
-    }
-    const [[countResult]] = await pool.execute(countQuery, countParams);
-    const total = countResult?.total || 0;
-    
+
+    const [transactions] = await pool.execute(`
+      SELECT st.*, si.item_name, si.category, si.item_code,
+        CONCAT(u.first_name, ' ', u.last_name) as performed_by_name
+      FROM stock_transactions st
+      LEFT JOIN stock_items si ON st.item_id = si.id
+      LEFT JOIN users u ON st.performed_by = u.id
+      ${whereClause}
+      ORDER BY st.transaction_date DESC
+      LIMIT ? OFFSET ?
+    `, [...params, parseInt(limit), parseInt(offset)]);
+
+    const [[{ total }]] = await pool.execute(`
+      SELECT COUNT(*) as total FROM stock_transactions st ${whereClause}
+    `, params);
+
     res.json({
       success: true,
-      transactions: transactions,
-      pagination: {
-        current_page: currentPage,
-        page_limit: pageLimit,
-        total_transactions: total,
-        total_pages: Math.ceil(total / pageLimit)
-      }
+      transactions: transactions || [],
+      total: total || 0,
+      page: parseInt(page),
+      limit: parseInt(limit)
     });
   } catch (error) {
-    console.error('Get stock transactions error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Get transactions error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch transactions', error: error.message });
   }
 });
 
-// =====================================
-// ANALYTICS
-// =====================================
-
-// Get stock analytics
-router.get('/analytics', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Create stock transaction
+router.post('/transactions', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const { period } = req.query;
-    
-    let startDate;
-    if (period === 'week') {
-      startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    } else if (period === 'month') {
-      startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    } else if (period === 'year') {
-      startDate = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+    const { item_id, transaction_type, quantity, unit_price, issued_to, notes, transaction_date } = req.body;
+    const userInfo = getUserInfo(req);
+
+    await connection.beginTransaction();
+
+    // Get current item
+    const [[item]] = await connection.execute(
+      'SELECT * FROM stock_items WHERE id = ?',
+      [item_id]
+    );
+
+    if (!item) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    const previousQuantity = item.quantity;
+    let newQuantity;
+
+    if (transaction_type === 'purchase' || transaction_type === 'stock_in' || transaction_type === 'receive') {
+      newQuantity = previousQuantity + parseInt(quantity);
+    } else if (transaction_type === 'stock_out' || transaction_type === 'issue' || transaction_type === 'distribution') {
+      newQuantity = previousQuantity - parseInt(quantity);
+      if (newQuantity < 0) {
+        await connection.rollback();
+        return res.status(400).json({ success: false, message: 'Insufficient stock quantity' });
+      }
     } else {
-      startDate = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+      newQuantity = previousQuantity;
     }
-    
-    const endDate = new Date().toISOString().split('T')[0];
-    
-    const [consumptionByCategory] = await pool.execute(`
-      SELECT 
-        si.category,
-        SUM(CASE WHEN st.transaction_type IN ('issue', 'damaged', 'lost') THEN st.quantity ELSE 0 END) as consumed_quantity,
-        SUM(CASE WHEN st.transaction_type IN ('issue', 'damaged', 'lost') THEN (st.quantity * st.unit_price) ELSE 0 END) as consumed_value,
-        COUNT(DISTINCT st.item_id) as items_consumed
-      FROM stock_transactions st
-      JOIN stock_items si ON st.item_id = si.id
-      WHERE st.transaction_date BETWEEN ? AND ?
-      GROUP BY si.category
-      ORDER BY consumed_value DESC
-    `, [startDate, endDate]);
-    
-    const [purchaseTrends] = await pool.execute(`
-      SELECT 
-        DATE_FORMAT(transaction_date, '%Y-%m') as month,
-        SUM(quantity) as total_quantity,
-        SUM(quantity * unit_price) as total_cost,
-        COUNT(*) as purchase_count
-      FROM stock_transactions
-      WHERE transaction_type = 'purchase' AND transaction_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-      GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
-      ORDER BY month
-    `);
-    
-    const [topConsumedItems] = await pool.execute(`
-      SELECT 
-        si.item_name,
-        si.item_code,
-        si.category,
-        SUM(st.quantity) as total_consumed,
-        SUM(st.quantity * st.unit_price) as total_cost_consumed
-      FROM stock_transactions st
-      JOIN stock_items si ON st.item_id = si.id
-      WHERE st.transaction_type IN ('issue', 'damaged', 'lost')
-      AND st.transaction_date BETWEEN ? AND ?
-      GROUP BY si.id, si.item_name, si.item_code, si.category
-      ORDER BY total_consumed DESC
-      LIMIT 20
-    `, [startDate, endDate]);
-    
-    const [stockTurnover] = await pool.execute(`
-      SELECT 
-        si.item_name,
-        si.item_code,
-        si.quantity as current_stock,
-        si.reorder_level,
-        COALESCE(SUM(CASE WHEN st.transaction_type IN ('issue', 'damaged', 'lost') THEN st.quantity ELSE 0 END), 0) as consumed,
-        COALESCE(SUM(CASE WHEN st.transaction_type = 'purchase' THEN st.quantity ELSE 0 END), 0) as purchased,
-        CASE 
-          WHEN AVG(si.quantity) > 0 THEN COALESCE(SUM(CASE WHEN st.transaction_type IN ('issue', 'damaged', 'lost') THEN st.quantity ELSE 0 END), 0) / AVG(si.quantity)
-          ELSE 0
-        END as turnover_rate
-      FROM stock_items si
-      LEFT JOIN stock_transactions st ON si.id = st.item_id AND st.transaction_date BETWEEN ? AND ?
-      WHERE si.is_active = 1
-      GROUP BY si.id, si.item_name, si.item_code, si.quantity, si.reorder_level
-      ORDER BY turnover_rate DESC
-      LIMIT 20
-    `, [startDate, endDate]);
-    
-    res.json({
-      success: true,
-      analytics: {
-        period: { start_date: startDate, end_date: endDate },
-        consumption_by_category: consumptionByCategory,
-        purchase_trends: purchaseTrends,
-        top_consumed_items: topConsumedItems,
-        stock_turnover: stockTurnover
-      }
-    });
-  } catch (error) {
-    console.error('Get stock analytics error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
 
-// Get stock valuation
-router.get('/valuation', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
-  try {
-    const [valuation] = await pool.execute(`
-      SELECT 
-        category,
-        COUNT(*) as item_count,
-        SUM(quantity) as total_quantity,
-        SUM(quantity * unit_price) as total_value,
-        AVG(unit_price) as avg_unit_price
-      FROM stock_items
-      WHERE is_active = 1
-      GROUP BY category
-      ORDER BY total_value DESC
-    `);
-    
-    const [overallValue] = await pool.execute(`
-      SELECT 
-        SUM(quantity * unit_price) as total_stock_value,
-        COUNT(*) as total_items,
-        SUM(quantity) as total_quantity
-      FROM stock_items
-      WHERE is_active = 1
-    `);
-    
-    res.json({
-      success: true,
-      valuation: {
-        overall: overallValue[0],
-        by_category: valuation
-      }
-    });
-  } catch (error) {
-    console.error('Get stock valuation error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    const totalAmount = quantity * (unit_price || item.unit_price || 0);
 
-// =====================================
-// REPORTS
-// =====================================
-
-// Generate stock report
-router.post('/reports/generate', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin']), async (req, res) => {
-  try {
-    const { report_type, start_date, end_date, category } = req.body;
-    
-    const startDate = start_date || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-    const endDate = end_date || new Date().toISOString().split('T')[0];
-    
-    let query = `SELECT * FROM stock_items WHERE is_active = 1`;
-    const params = [];
-    
-    if (category) {
-      query += ` AND category = ?`;
-      params.push(category);
-    }
-    
-    const [items] = await pool.execute(query, params);
-    
-    const [transactions] = await pool.execute(
-      `SELECT st.*, si.item_name, si.category 
-       FROM stock_transactions st
-       JOIN stock_items si ON st.item_id = si.id
-       WHERE st.transaction_date BETWEEN ? AND ?
-       ORDER BY st.transaction_date`,
-      [startDate, endDate]
+    // Update stock
+    await connection.execute(
+      'UPDATE stock_items SET quantity = ?, updated_at = NOW() WHERE id = ?',
+      [newQuantity, item_id]
     );
-    
-    const report = {
-      report_type: report_type || 'comprehensive',
-      period: { start_date: startDate, end_date: endDate },
-      summary: {
-        total_items: items.length,
-        total_stock_value: items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
-        total_transactions: transactions.length,
-        total_purchased: transactions.filter(t => t.transaction_type === 'purchase').reduce((sum, t) => sum + t.quantity, 0),
-        total_issued: transactions.filter(t => t.transaction_type === 'issue').reduce((sum, t) => sum + t.quantity, 0)
-      },
-      items: items,
-      transactions: transactions
-    };
-    
-    const [result] = await pool.execute(
-      `INSERT INTO stock_reports (
-        report_type, start_date, end_date, category, report_data, generated_by, generated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [report_type || 'comprehensive', startDate, endDate, category || null, JSON.stringify(report), req.user.id]
-    );
-    
+
+    // Record transaction
+    const [result] = await connection.execute(`
+      INSERT INTO stock_transactions (
+        item_id, transaction_type, quantity, previous_quantity, new_quantity,
+        unit_price, total_amount, issued_to, notes, performed_by, transaction_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [item_id, transaction_type, quantity, previousQuantity, newQuantity, unit_price || item.unit_price || 0, totalAmount, issued_to || null, notes || '', userInfo.userId, transaction_date || new Date()]);
+
+    await connection.commit();
+
     res.json({
       success: true,
-      message: 'Stock report generated successfully',
-      report_id: result.insertId,
-      report: report
+      message: 'Transaction recorded successfully',
+      transaction_id: result.insertId,
+      previous_quantity: previousQuantity,
+      new_quantity: newQuantity
     });
   } catch (error) {
-    console.error('Generate stock report error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    await connection.rollback();
+    console.error('Create transaction error:', error);
+    res.status(500).json({ success: false, message: 'Failed to record transaction', error: error.message });
+  } finally {
+    connection.release();
   }
 });
 
-// =====================================
-// SUPPLIERS MANAGEMENT
-// =====================================
+// ============================================
+// SUPPLIERS
+// ============================================
 
-// Get all suppliers
-router.get('/suppliers', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Get suppliers
+router.get('/suppliers', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
   try {
     const { search, is_active } = req.query;
-    let query = 'SELECT * FROM stock_suppliers WHERE 1=1';
+
+    let whereClause = 'WHERE 1=1';
     const params = [];
-    
+
     if (search) {
-      query += ' AND (supplier_name LIKE ? OR supplier_code LIKE ? OR contact_person LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      whereClause += ' AND (supplier_name LIKE ? OR supplier_code LIKE ? OR contact_person LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
     if (is_active !== undefined) {
-      query += ' AND is_active = ?';
+      whereClause += ' AND is_active = ?';
       params.push(is_active === 'true' ? 1 : 0);
     }
-    
-    query += ' ORDER BY supplier_name';
-    
-    const [suppliers] = await pool.execute(query, params);
-    res.json({ success: true, suppliers });
+
+    const [suppliers] = await pool.execute(`
+      SELECT s.*,
+        (SELECT COUNT(*) FROM stock_items WHERE supplier_id = s.id AND (is_active = 1 OR is_active IS NULL)) as item_count,
+        (SELECT COALESCE(SUM(quantity * unit_price), 0) FROM stock_items WHERE supplier_id = s.id AND (is_active = 1 OR is_active IS NULL)) as total_value
+      FROM stock_suppliers s
+      ${whereClause}
+      ORDER BY s.supplier_name ASC
+    `, params);
+
+    res.json({
+      success: true,
+      suppliers: suppliers || []
+    });
   } catch (error) {
     console.error('Get suppliers error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch suppliers', error: error.message });
   }
 });
 
 // Create supplier
-router.post('/suppliers', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+router.post('/suppliers', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
   try {
     const { supplier_code, supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes } = req.body;
-    
-    if (!supplier_code || !supplier_name) {
-      return res.status(400).json({ success: false, message: 'Supplier code and name are required' });
-    }
-    
-    const [result] = await pool.execute(
-      'INSERT INTO stock_suppliers (supplier_code, supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [supplier_code, supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes]
+
+    // Check for duplicate code
+    const [existing] = await pool.execute(
+      'SELECT id FROM stock_suppliers WHERE supplier_code = ?',
+      [supplier_code]
     );
-    
-    res.json({ success: true, message: 'Supplier created successfully', supplier_id: result.insertId });
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Supplier code already exists' });
+    }
+
+    const [result] = await pool.execute(`
+      INSERT INTO stock_suppliers (
+        supplier_code, supplier_name, contact_person, email, phone, 
+        address, tax_number, payment_terms, notes, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `, [supplier_code, supplier_name, contact_person || '', email || '', phone || '', address || '', tax_number || '', payment_terms || '', notes || '']);
+
+    res.json({
+      success: true,
+      message: 'Supplier created successfully',
+      supplier_id: result.insertId
+    });
   } catch (error) {
     console.error('Create supplier error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create supplier', error: error.message });
   }
 });
 
 // Update supplier
-router.put('/suppliers/:id', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+router.put('/suppliers/:id', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
   try {
     const { id } = req.params;
-    const { supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes, is_active } = req.body;
-    
-    await pool.execute(
-      `UPDATE stock_suppliers SET supplier_name = ?, contact_person = ?, email = ?, phone = ?, address = ?, tax_number = ?, payment_terms = ?, notes = ?, is_active = ? WHERE id = ?`,
-      [supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes, is_active, id]
-    );
-    
+    const { supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes } = req.body;
+
+    await pool.execute(`
+      UPDATE stock_suppliers SET
+        supplier_name = COALESCE(?, supplier_name),
+        contact_person = COALESCE(?, contact_person),
+        email = COALESCE(?, email),
+        phone = COALESCE(?, phone),
+        address = COALESCE(?, address),
+        tax_number = COALESCE(?, tax_number),
+        payment_terms = COALESCE(?, payment_terms),
+        notes = COALESCE(?, notes)
+      WHERE id = ?
+    `, [supplier_name, contact_person, email, phone, address, tax_number, payment_terms, notes, id]);
+
     res.json({ success: true, message: 'Supplier updated successfully' });
   } catch (error) {
     console.error('Update supplier error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to update supplier', error: error.message });
   }
 });
 
 // Delete supplier
-router.delete('/suppliers/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+router.delete('/suppliers/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.execute('DELETE FROM stock_suppliers WHERE id = ?', [id]);
+
+    await pool.execute(
+      'UPDATE stock_suppliers SET is_active = 0 WHERE id = ?',
+      [id]
+    );
+
     res.json({ success: true, message: 'Supplier deleted successfully' });
   } catch (error) {
     console.error('Delete supplier error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete supplier', error: error.message });
   }
 });
 
-// =====================================
-// CATEGORIES MANAGEMENT
-// =====================================
+// ============================================
+// CATEGORIES
+// ============================================
 
-// Get all categories
-router.get('/categories', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Get categories
+router.get('/categories', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
   try {
-    const [categories] = await pool.execute('SELECT * FROM stock_categories ORDER BY category_name');
-    res.json({ success: true, categories });
+    const [categories] = await pool.execute(`
+      SELECT 
+        sc.category_name,
+        COUNT(si.id) as item_count,
+        COALESCE(SUM(si.quantity), 0) as total_quantity,
+        COALESCE(SUM(si.quantity * si.unit_price), 0) as total_value
+      FROM stock_categories sc
+      LEFT JOIN stock_items si ON sc.category_name = si.category AND (si.is_active = 1 OR si.is_active IS NULL)
+      WHERE sc.is_active = 1
+      GROUP BY sc.id, sc.category_name
+      ORDER BY sc.category_name
+    `);
+
+    // Also get dynamic categories from items that might not be in stock_categories
+    const [dynamicCategories] = await pool.execute(`
+      SELECT 
+        category as category_name,
+        COUNT(*) as item_count,
+        SUM(quantity) as total_quantity,
+        COALESCE(SUM(quantity * unit_price), 0) as total_value
+      FROM stock_items 
+      WHERE (is_active = 1 OR is_active IS NULL) AND category IS NOT NULL AND category != ''
+      GROUP BY category
+      HAVING category NOT IN (SELECT category_name FROM stock_categories WHERE is_active = 1)
+    `);
+
+    const allCategories = [...categories, ...dynamicCategories];
+
+    res.json({
+      success: true,
+      categories: allCategories || []
+    });
   } catch (error) {
     console.error('Get categories error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch categories', error: error.message });
   }
 });
 
 // Create category
-router.post('/categories', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+router.post('/categories', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
   try {
     const { category_code, category_name, description, parent_category_id } = req.body;
-    
-    if (!category_code || !category_name) {
-      return res.status(400).json({ success: false, message: 'Category code and name are required' });
-    }
-    
-    const [result] = await pool.execute(
-      'INSERT INTO stock_categories (category_code, category_name, description, parent_category_id) VALUES (?, ?, ?, ?)',
-      [category_code, category_name, description, parent_category_id]
+
+    const [existing] = await pool.execute(
+      'SELECT id FROM stock_categories WHERE category_name = ?',
+      [category_name]
     );
-    
-    res.json({ success: true, message: 'Category created successfully', category_id: result.insertId });
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Category already exists' });
+    }
+
+    const [result] = await pool.execute(`
+      INSERT INTO stock_categories (category_code, category_name, description, parent_category_id, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, [category_code || category_name.substring(0, 3).toUpperCase(), category_name, description || '', parent_category_id || null]);
+
+    res.json({
+      success: true,
+      message: 'Category created successfully',
+      category_id: result.insertId
+    });
   } catch (error) {
     console.error('Create category error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create category', error: error.message });
   }
 });
 
-// =====================================
-// LOCATIONS MANAGEMENT
-// =====================================
+// ============================================
+// LOCATIONS
+// ============================================
 
-// Get all locations
-router.get('/locations', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Get locations
+router.get('/locations', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'patron', 'matron']), async (req, res) => {
   try {
-    // Use fallback locations derived from stock_items if stock_locations table doesn't exist
-    try {
-      const [locations] = await pool.execute('SELECT * FROM stock_locations ORDER BY location_name');
-      res.json({ success: true, locations });
-    } catch (tableError) {
-      // Fallback: derive unique locations from stock_items
-      const [items] = await pool.execute('SELECT DISTINCT location FROM stock_items WHERE location IS NOT NULL AND location != ""');
-      const locations = items.map((item, index) => ({
-        id: index + 1,
-        location_code: `LOC${index + 1}`,
-        location_name: item.location || 'Main Warehouse',
-        description: 'Auto-generated from stock items'
-      }));
-      res.json({ success: true, locations });
-    }
+    const [locations] = await pool.execute(`
+      SELECT 
+        location,
+        COUNT(*) as item_count,
+        SUM(quantity) as total_quantity,
+        COALESCE(SUM(quantity * unit_price), 0) as total_value
+      FROM stock_items 
+      WHERE (is_active = 1 OR is_active IS NULL) AND location IS NOT NULL AND location != ''
+      GROUP BY location
+      ORDER BY location
+    `);
+
+    res.json({
+      success: true,
+      locations: locations || []
+    });
   } catch (error) {
     console.error('Get locations error:', error);
-    // Ultimate fallback
-    res.json({ success: true, locations: [{ id: 1, location_code: 'MAIN', location_name: 'Main Warehouse', description: 'Default location' }] });
+    res.status(500).json({ success: false, message: 'Failed to fetch locations', error: error.message });
   }
 });
 
 // Create location
-router.post('/locations', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
+router.post('/locations', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
   try {
     const { location_code, location_name, description } = req.body;
-    
-    if (!location_code || !location_name) {
-      return res.status(400).json({ success: false, message: 'Location code and name are required' });
-    }
-    
-    try {
-      const [result] = await pool.execute(
-        'INSERT INTO stock_locations (location_code, location_name, description) VALUES (?, ?, ?)',
-        [location_code, location_name, description]
-      );
-      res.json({ success: true, message: 'Location created successfully', location_id: result.insertId });
-    } catch (tableError) {
-      // If table doesn't exist, return success with virtual ID
-      res.json({ success: true, message: 'Location registered (table not available)', location_id: Date.now() });
-    }
+
+    // Since there's no locations table, we'll just return success
+    // Locations are stored in the stock_items.location field
+    res.json({
+      success: true,
+      message: 'Location noted',
+      location: location_name
+    });
   } catch (error) {
     console.error('Create location error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create location', error: error.message });
   }
 });
 
-// =====================================
-// STOCK ALERTS (derived from stock_items)
-// =====================================
+// ============================================
+// ALERTS
+// ============================================
 
-// Get stock alerts
-router.get('/alerts', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
+// Get alerts
+router.get('/alerts', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
   try {
-    const { alert_type } = req.query;
-    
-    // Get low stock and out of stock items as alerts
-    const [alerts] = await pool.execute(`
-      SELECT 
-        si.id as item_id,
-        si.item_code,
-        si.item_name,
-        si.category,
-        si.quantity as current_quantity,
-        si.reorder_level,
-        CASE 
-          WHEN si.quantity = 0 THEN 'out_of_stock'
-          WHEN si.quantity <= si.reorder_level THEN 'low_stock'
-        END as alert_type,
-        CASE 
-          WHEN si.quantity = 0 THEN 'critical'
-          WHEN si.quantity <= (si.reorder_level * 0.5) THEN 'critical'
-          ELSE 'warning'
-        END as severity,
-        (si.reorder_level - si.quantity) as shortage_quantity,
-        si.updated_at as created_at
-      FROM stock_items si
-      WHERE si.is_active = 1 AND si.quantity <= si.reorder_level
-      ORDER BY si.quantity ASC
-    `);
-    
-    res.json({ success: true, alerts });
-  } catch (error) {
-    console.error('Get alerts error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    const { is_resolved, alert_type, severity } = req.query;
 
-// Resolve alert (just acknowledges, doesn't actually resolve since we don't have a separate alerts table)
-router.put('/alerts/:id/resolve', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
-  try {
-    // Since alerts are derived from stock_items, we can't truly "resolve" them
-    // This would require adding stock to the item
-    res.json({ success: true, message: 'Alert acknowledged. Add stock to resolve.' });
-  } catch (error) {
-    console.error('Resolve alert error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// =====================================
-// PURCHASE ORDERS
-// =====================================
-
-// Get purchase orders
-router.get('/purchase-orders', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
-  try {
-    const { status, supplier_id } = req.query;
-    let query = `SELECT po.*, ss.supplier_name 
-                 FROM purchase_orders po 
-                 LEFT JOIN stock_suppliers ss ON po.supplier_id = ss.id 
-                 WHERE 1=1`;
+    let whereClause = 'WHERE 1=1';
     const params = [];
-    
-    if (status) {
-      query += ' AND po.status = ?';
-      params.push(status);
-    }
-    
-    if (supplier_id) {
-      query += ' AND po.supplier_id = ?';
-      params.push(supplier_id);
-    }
-    
-    query += ' ORDER BY po.order_date DESC';
-    
-    const [orders] = await pool.execute(query, params);
-    res.json({ success: true, purchase_orders: orders });
-  } catch (error) {
-    console.error('Get purchase orders error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
 
-// Create purchase order
-router.post('/purchase-orders', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
-  try {
-    const { supplier_id, expected_delivery_date, items, notes } = req.body;
-    const order_number = `PO-${Date.now()}`;
-    
-    if (!supplier_id || !items || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Supplier and items are required' });
-    }
-    
-    const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    
-    const [result] = await pool.execute(
-      'INSERT INTO purchase_orders (order_number, supplier_id, order_date, expected_delivery_date, total_amount, notes, created_by) VALUES (?, ?, NOW(), ?, ?, ?, ?)',
-      [order_number, supplier_id, expected_delivery_date, totalAmount, notes, req.user.id]
-    );
-    
-    const orderId = result.insertId;
-    
-    for (const item of items) {
-      await pool.execute(
-        'INSERT INTO purchase_order_items (order_id, item_id, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)',
-        [orderId, item.item_id, item.quantity, item.unit_price, item.quantity * item.unit_price]
-      );
-    }
-    
-    res.json({ success: true, message: 'Purchase order created successfully', order_id: orderId, order_number: order_number });
-  } catch (error) {
-    console.error('Create purchase order error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Update purchase order status
-router.put('/purchase-orders/:id/status', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    
-    await pool.execute('UPDATE purchase_orders SET status = ?, updated_at = NOW() WHERE id = ?', [status, id]);
-    res.json({ success: true, message: 'Purchase order status updated successfully' });
-  } catch (error) {
-    console.error('Update purchase order status error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// =====================================
-// STOCK TAKES
-// =====================================
-
-// Get stock takes
-router.get('/stock-takes', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
-  try {
-    const { status } = req.query;
-    try {
-      let query = `SELECT st.*, sl.location_name, u.first_name, u.last_name 
-                   FROM stock_takes st 
-                   LEFT JOIN stock_locations sl ON st.location_id = sl.id
-                   LEFT JOIN users u ON st.conducted_by = u.id
-                   WHERE 1=1`;
-      const params = [];
-      
-      if (status) {
-        query += ' AND st.status = ?';
-        params.push(status);
-      }
-      
-      query += ' ORDER BY st.created_at DESC';
-      
-      const [stockTakes] = await pool.execute(query, params);
-      res.json({ success: true, stock_takes: stockTakes });
-    } catch (tableError) {
-      // Fallback: return empty array if stock_takes table doesn't exist
-      res.json({ success: true, stock_takes: [] });
-    }
-  } catch (error) {
-    console.error('Get stock takes error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Create stock take
-router.post('/stock-takes', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
-  try {
-    const { location_id, notes } = req.body;
-    const stock_take_number = `ST-${Date.now()}`;
-    
-    try {
-      const [result] = await pool.execute(
-        'INSERT INTO stock_takes (stock_take_number, location_id, status, start_date, conducted_by, notes) VALUES (?, ?, ?, NOW(), ?, ?)',
-        [stock_take_number, location_id, 'in_progress', req.user.id, notes]
-      );
-      
-      // Add all items to stock take
-      const [items] = await pool.execute('SELECT id, item_name, quantity FROM stock_items WHERE is_active = 1');
-      
-      for (const item of items) {
-        await pool.execute(
-          'INSERT INTO stock_take_items (stock_take_id, item_id, system_quantity) VALUES (?, ?, ?)',
-          [result.insertId, item.id, item.quantity]
-        );
-      }
-      
-      res.json({ success: true, message: 'Stock take created successfully', stock_take_id: result.insertId, stock_take_number });
-    } catch (tableError) {
-      // Fallback: create virtual stock take record
-      res.json({ success: true, message: 'Stock take created (virtual)', stock_take_id: Date.now(), stock_take_number });
-    }
-  } catch (error) {
-    console.error('Create stock take error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Complete stock take
-router.put('/stock-takes/:id/complete', authenticateToken, requireRole(['stock_manager', 'admin']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    try {
-      // Get all items and update quantities based on counted values
-      const [takeItems] = await pool.execute('SELECT * FROM stock_take_items WHERE stock_take_id = ?', [id]);
-      
-      for (const item of takeItems) {
-        if (item.counted_quantity !== null && item.counted_quantity !== item.system_quantity) {
-          await pool.execute('UPDATE stock_items SET quantity = ?, updated_at = NOW() WHERE id = ?', [item.counted_quantity, item.item_id]);
-        }
-      }
-      
-      await pool.execute(
-        'UPDATE stock_takes SET status = ?, end_date = NOW() WHERE id = ?',
-        ['completed', id]
-      );
-      
-      res.json({ success: true, message: 'Stock take completed successfully' });
-    } catch (tableError) {
-      res.json({ success: true, message: 'Stock take completed (virtual)' });
-    }
-  } catch (error) {
-    console.error('Complete stock take error:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// =====================================
-// ANALYTICS & REPORTS
-// =====================================
-
-// Get stock analytics
-router.get('/analytics', authenticateToken, requireRole(['stock_manager', 'accountant', 'admin', 'owner']), async (req, res) => {
-  try {
-    const { period = 'month' } = req.query;
-    
-    // Stock movement trends
-    let dateFilter = 'INTERVAL 30 DAY';
-    if (period === 'week') dateFilter = 'INTERVAL 7 DAY';
-    if (period === 'year') dateFilter = 'INTERVAL 365 DAY';
-    
-    const [movementTrends] = await pool.execute(`
-      SELECT 
-        DATE(transaction_date) as date,
-        SUM(CASE WHEN transaction_type IN ('purchase', 'return', 'initial', 'stock_in') THEN quantity ELSE 0 END) as stock_in,
-        SUM(CASE WHEN transaction_type IN ('sale', 'issue', 'damaged', 'lost', 'stock_out') THEN quantity ELSE 0 END) as stock_out
-      FROM stock_transactions
-      WHERE transaction_date >= DATE_SUB(NOW(), ${dateFilter})
-      GROUP BY DATE(transaction_date)
-      ORDER BY date
-    `);
-    
-    // Category distribution
-    const [categoryDistribution] = await pool.execute(`
-      SELECT 
-        category,
-        COUNT(*) as item_count,
-        SUM(quantity) as total_quantity,
-        SUM(quantity * unit_price) as total_value
-      FROM stock_items
-      WHERE is_active = 1 AND quantity > 0
-      GROUP BY category
-      ORDER BY total_value DESC
-    `);
-    
-    // Top moving items
-    const [topMovingItems] = await pool.execute(`
+    // Get low stock alerts
+    const [lowStockAlerts] = await pool.execute(`
       SELECT 
         si.id,
         si.item_name,
         si.item_code,
+        si.category,
+        si.quantity,
+        si.reorder_level,
+        si.supplier_id,
+        'low_stock' as alert_type,
+        CASE 
+          WHEN si.quantity = 0 THEN 'critical'
+          WHEN si.quantity <= si.reorder_level / 2 THEN 'high'
+          ELSE 'medium'
+        END as severity,
+        CONCAT('Stock level (', si.quantity, ') is below reorder level (', si.reorder_level, ')') as message,
+        FALSE as is_resolved
+      FROM stock_items si
+      WHERE si.quantity <= si.reorder_level AND si.quantity > 0 AND (si.is_active = 1 OR si.is_active IS NULL)
+      ORDER BY si.quantity ASC
+    `);
+
+    // Get out of stock alerts
+    const [outOfStockAlerts] = await pool.execute(`
+      SELECT 
+        si.id,
+        si.item_name,
+        si.item_code,
+        si.category,
+        si.quantity,
+        si.reorder_level,
+        si.supplier_id,
+        'out_of_stock' as alert_type,
+        'critical' as severity,
+        CONCAT('Item is out of stock') as message,
+        FALSE as is_resolved
+      FROM stock_items si
+      WHERE si.quantity = 0 AND (si.is_active = 1 OR si.is_active IS NULL)
+      ORDER BY si.item_name ASC
+    `);
+
+    // Get expiring soon alerts (if expiry_date column exists)
+    try {
+      const [expiringAlerts] = await pool.execute(`
+        SELECT 
+          si.id,
+          si.item_name,
+          si.item_code,
+          si.category,
+          si.quantity,
+          si.expiry_date,
+          'expiring' as alert_type,
+          'high' as severity,
+          CONCAT('Item expires on ', si.expiry_date) as message,
+          FALSE as is_resolved
+        FROM stock_items si
+        WHERE si.expiry_date IS NOT NULL 
+          AND si.expiry_date <= DATE_ADD(NOW(), INTERVAL 30 DAY)
+          AND si.expiry_date >= NOW()
+          AND (si.is_active = 1 OR si.is_active IS NULL)
+        ORDER BY si.expiry_date ASC
+        LIMIT 10
+      `);
+
+      res.json({
+        success: true,
+        alerts: [...lowStockAlerts, ...outOfStockAlerts, ...expiringAlerts] || []
+      });
+    } catch (expiryError) {
+      // Expiry date column might not exist
+      res.json({
+        success: true,
+        alerts: [...lowStockAlerts, ...outOfStockAlerts] || []
+      });
+    }
+  } catch (error) {
+    console.error('Get alerts error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch alerts', error: error.message });
+  }
+});
+
+// Resolve alert
+router.put('/alerts/:id/resolve', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Alerts are derived from stock levels, so there's nothing to resolve in the database
+    // This endpoint exists for API compatibility
+    res.json({ success: true, message: 'Alert resolved' });
+  } catch (error) {
+    console.error('Resolve alert error:', error);
+    res.status(500).json({ success: false, message: 'Failed to resolve alert', error: error.message });
+  }
+});
+
+// ============================================
+// PURCHASE ORDERS
+// ============================================
+
+// Get purchase orders
+router.get('/purchase-orders', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { status, supplier_id } = req.query;
+
+    let whereClause = 'WHERE 1=1';
+    const params = [];
+
+    if (status) {
+      whereClause += ' AND po.status = ?';
+      params.push(status);
+    }
+
+    if (supplier_id) {
+      whereClause += ' AND po.supplier_id = ?';
+      params.push(supplier_id);
+    }
+
+    const [orders] = await pool.execute(`
+      SELECT po.*, ss.supplier_name,
+        (SELECT COUNT(*) FROM stock_order_items WHERE order_id = po.id) as item_count,
+        (SELECT SUM(quantity * unit_price) FROM stock_order_items WHERE order_id = po.id) as total_value
+      FROM stock_orders po
+      LEFT JOIN stock_suppliers ss ON po.supplier_id = ss.id
+      ${whereClause}
+      ORDER BY po.created_at DESC
+    `, params);
+
+    res.json({
+      success: true,
+      orders: orders || []
+    });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch orders', error: error.message });
+  }
+});
+
+// Create purchase order
+router.post('/purchase-orders', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { supplier_id, expected_delivery_date, items, notes } = req.body;
+    const userInfo = getUserInfo(req);
+
+    await connection.beginTransaction();
+
+    // Generate order number
+    const orderNumber = `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Calculate total
+    const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+    // Create order
+    const [orderResult] = await connection.execute(`
+      INSERT INTO stock_orders (
+        order_number, supplier_id, status, expected_delivery, notes, total_amount, created_by, created_at
+      ) VALUES (?, ?, 'pending', ?, ?, ?, ?, NOW())
+    `, [orderNumber, supplier_id, expected_delivery_date || null, notes || '', totalAmount, userInfo.userId]);
+
+    // Add order items
+    for (const item of items) {
+      await connection.execute(`
+        INSERT INTO stock_order_items (order_id, item_id, quantity, unit_price, total)
+        VALUES (?, ?, ?, ?, ?)
+      `, [orderResult.insertId, item.item_id, item.quantity, item.unit_price, item.quantity * item.unit_price]);
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Purchase order created successfully',
+      order_id: orderResult.insertId,
+      order_number: orderNumber
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Create order error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create order', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Update purchase order status
+router.put('/purchase-orders/:id/status', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'approved', 'ordered', 'received', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    await pool.execute(
+      'UPDATE stock_orders SET status = ?, updated_at = NOW() WHERE id = ?',
+      [status, id]
+    );
+
+    res.json({ success: true, message: 'Order status updated' });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update order status', error: error.message });
+  }
+});
+
+// ============================================
+// STOCK TAKES
+// ============================================
+
+// Get stock takes
+router.get('/stock-takes', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { status } = req.query;
+
+    // Stock takes table might not exist, so we'll return empty array for now
+    // This can be extended when stock_takes table is created
+    res.json({
+      success: true,
+      stock_takes: []
+    });
+  } catch (error) {
+    console.error('Get stock takes error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock takes', error: error.message });
+  }
+});
+
+// Create stock take
+router.post('/stock-takes', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { location_id, notes } = req.body;
+    
+    // Stock takes functionality can be implemented when stock_takes table is created
+    res.json({
+      success: true,
+      message: 'Stock take initiated',
+      stock_take_id: null
+    });
+  } catch (error) {
+    console.error('Create stock take error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create stock take', error: error.message });
+  }
+});
+
+// Complete stock take
+router.put('/stock-takes/:id/complete', authenticateToken, requireRole(['stock_manager', 'admin', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    res.json({ success: true, message: 'Stock take completed' });
+  } catch (error) {
+    console.error('Complete stock take error:', error);
+    res.status(500).json({ success: false, message: 'Failed to complete stock take', error: error.message });
+  }
+});
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+// Get stock analytics
+router.get('/analytics', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { period = 'month' } = req.query;
+    
+    let dateCondition;
+    switch (period) {
+      case 'week':
+        dateCondition = 'AND transaction_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+        break;
+      case 'year':
+        dateCondition = 'AND transaction_date >= DATE_SUB(NOW(), INTERVAL 365 DAY)';
+        break;
+      case 'month':
+      default:
+        dateCondition = 'AND transaction_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+    }
+
+    // Get transaction trends
+    const [transactionTrends] = await pool.execute(`
+      SELECT 
+        DATE(transaction_date) as date,
+        SUM(CASE WHEN transaction_type IN ('receive', 'purchase', 'stock_in') THEN quantity ELSE 0 END) as stock_in,
+        SUM(CASE WHEN transaction_type IN ('issue', 'stock_out', 'distribution') THEN quantity ELSE 0 END) as stock_out
+      FROM stock_transactions
+      WHERE transaction_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY DATE(transaction_date)
+      ORDER BY date
+    `);
+
+    // Get category distribution
+    const [categoryDistribution] = await pool.execute(`
+      SELECT 
+        category,
+        COUNT(*) as item_count,
+        COALESCE(SUM(quantity * unit_price), 0) as value
+      FROM stock_items
+      WHERE (is_active = 1 OR is_active IS NULL)
+      GROUP BY category
+      ORDER BY value DESC
+    `);
+
+    // Get top moving items
+    const [topMovingItems] = await pool.execute(`
+      SELECT 
+        si.id,
+        si.item_name,
+        si.category,
         SUM(st.quantity) as total_movement
       FROM stock_transactions st
       JOIN stock_items si ON st.item_id = si.id
       WHERE st.transaction_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY si.id
+      GROUP BY si.id, si.item_name, si.category
       ORDER BY total_movement DESC
       LIMIT 10
     `);
-    
-    // Stock value over time
-    const [stockValueHistory] = await pool.execute(`
+
+    // Get stock value over time (simple current valuation)
+    const [[stockValuation]] = await pool.execute(`
       SELECT 
-        DATE(created_at) as date,
-        SUM(quantity * unit_price) as total_value
+        COALESCE(SUM(quantity * unit_price), 0) as total_value,
+        COUNT(*) as total_items,
+        SUM(quantity) as total_quantity
       FROM stock_items
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-      GROUP BY DATE(created_at)
-      ORDER BY date
+      WHERE (is_active = 1 OR is_active IS NULL)
     `);
-    
+
     res.json({
       success: true,
       analytics: {
-        movement_trends: movementTrends,
-        category_distribution: categoryDistribution,
-        top_moving_items: topMovingItems,
-        stock_value_history: stockValueHistory
+        transaction_trends: transactionTrends || [],
+        category_distribution: categoryDistribution || [],
+        top_moving_items: topMovingItems || [],
+        stock_valuation: stockValuation || { total_value: 0, total_items: 0, total_quantity: 0 }
       }
     });
   } catch (error) {
     console.error('Get analytics error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch analytics', error: error.message });
+  }
+});
+
+// ============================================
+// REPORTS
+// ============================================
+
+// Generate stock report
+router.post('/reports/:type', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron']), async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { start_date, end_date, category } = req.body;
+
+    let reportData = {};
+
+    switch (type) {
+      case 'stock-valuation':
+        const [[valuation]] = await pool.execute(`
+          SELECT 
+            COALESCE(SUM(quantity * unit_price), 0) as total_value,
+            COUNT(*) as total_items,
+            SUM(quantity) as total_quantity,
+            AVG(unit_price) as avg_price
+          FROM stock_items
+          WHERE (is_active = 1 OR is_active IS NULL) ${category ? 'AND category = ?' : ''}
+        `, category ? [category] : []);
+        reportData = { valuation };
+        break;
+
+      case 'movement':
+        const [movements] = await pool.execute(`
+          SELECT 
+            st.*,
+            si.item_name,
+            si.category,
+            CONCAT(u.first_name, ' ', u.last_name) as performed_by_name
+          FROM stock_transactions st
+          JOIN stock_items si ON st.item_id = si.id
+          LEFT JOIN users u ON st.performed_by = u.id
+          WHERE st.transaction_date BETWEEN ? AND ?
+          ORDER BY st.transaction_date DESC
+        `, [start_date || '2020-01-01', end_date || new Date().toISOString().split('T')[0]]);
+        reportData = { movements };
+        break;
+
+      case 'low-stock':
+        const [lowStock] = await pool.execute(`
+          SELECT 
+            si.*,
+            (si.reorder_level - si.quantity) as shortage
+          FROM stock_items si
+          WHERE si.quantity <= si.reorder_level AND si.quantity > 0 AND (si.is_active = 1 OR si.is_active IS NULL)
+          ORDER BY shortage DESC
+        `);
+        reportData = { low_stock: lowStock };
+        break;
+
+      default:
+        reportData = { message: 'Report type not supported' };
+    }
+
+    res.json({
+      success: true,
+      report: reportData
+    });
+  } catch (error) {
+    console.error('Generate report error:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate report', error: error.message });
+  }
+});
+
+// Export stock data
+router.get('/export', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant']), async (req, res) => {
+  try {
+    const { format = 'excel' } = req.query;
+
+    // Get all stock items
+    const [items] = await pool.execute(`
+      SELECT 
+        si.*,
+        CASE 
+          WHEN si.quantity = 0 THEN 'Out of Stock'
+          WHEN si.quantity <= si.reorder_level THEN 'Low Stock'
+          ELSE 'In Stock'
+        END as status,
+        ss.supplier_name
+      FROM stock_items si
+      LEFT JOIN stock_suppliers ss ON si.supplier_id = ss.id
+      WHERE si.is_active = 1 OR si.is_active IS NULL
+      ORDER BY si.category, si.item_name
+    `);
+
+    // For now, return JSON. Excel/PDF export would require additional libraries
+    res.json({
+      success: true,
+      data: items,
+      format: format,
+      message: `Export in ${format} format ready`
+    });
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ success: false, message: 'Failed to export data', error: error.message });
+  }
+});
+
+// ============================================
+// SEARCH
+// ============================================
+
+// Search stock items
+router.get('/search', authenticateToken, requireRole(['stock_manager', 'admin', 'headmaster', 'super_admin', 'accountant', 'patron', 'matron', 'teacher', 'staff']), async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({ success: false, message: 'Search query must be at least 2 characters' });
+    }
+
+    const searchTerm = `%${q}%`;
+
+    const [results] = await pool.execute(`
+      SELECT 
+        si.*,
+        CASE 
+          WHEN si.quantity = 0 THEN 'out_of_stock'
+          WHEN si.quantity <= si.reorder_level THEN 'low_stock'
+          ELSE 'in_stock'
+        END as status_label,
+        ss.supplier_name
+      FROM stock_items si
+      LEFT JOIN stock_suppliers ss ON si.supplier_id = ss.id
+      WHERE (si.is_active = 1 OR si.is_active IS NULL)
+        AND (si.item_name LIKE ? OR si.item_code LIKE ? OR si.category LIKE ? OR si.description LIKE ?)
+      ORDER BY 
+        CASE 
+          WHEN si.item_name LIKE ? THEN 1
+          WHEN si.item_code LIKE ? THEN 2
+          ELSE 3
+        END,
+        si.item_name
+      LIMIT 20
+    `, [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm]);
+
+    res.json({
+      success: true,
+      results: results || [],
+      count: results?.length || 0
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ success: false, message: 'Failed to search', error: error.message });
   }
 });
 

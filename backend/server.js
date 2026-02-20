@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https: http://localhost:*; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob:;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https: https://images.unsplash.com; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:* https://images.unsplash.com https://api.unsplash.com; media-src 'self' blob:; worker-src 'self' blob:;"
   );
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
@@ -146,6 +146,7 @@ const routes = {
 
   // Teacher Features
   teacherPortal: loadRoute('./routes/teacher-portal', 'Teacher Portal'),
+  teacherPortalComplete: loadRoute('./routes/teacher-portal-complete', 'Teacher Portal Complete'),
   teacherAdvanced: loadRoute('./routes/teacher-advanced', 'Teacher Advanced'),
   marksManagement: loadRoute('./routes/marks-management', 'Marks Management'),
 
@@ -394,6 +395,7 @@ if (routes.exams) { app.use('/api/exams', routes.exams); mountedRoutes++; }
 if (routes.assignments) { app.use('/api/assignments', routes.assignments); mountedRoutes++; }
 if (routes.homework) { app.use('/api/homework', routes.homework); mountedRoutes++; }
 if (routes.timetable) { app.use('/api/timetable', routes.timetable); mountedRoutes++; }
+app.use('/api/timetable-dos', require('./routes/timetable-dos')); mountedRoutes++;
 
 // Advanced Academic Features
 if (routes.advancedAcademics) { app.use('/api/advanced-academics', routes.advancedAcademics); mountedRoutes++; }
@@ -426,10 +428,21 @@ if (routes.dos) { app.use('/api/dos', routes.dos); mountedRoutes++; }
 if (routes.dosAdvanced) { app.use('/api/dos-advanced', routes.dosAdvanced); mountedRoutes++; }
 if (routes.dosManagement) { app.use('/api/dos-management', routes.dosManagement); mountedRoutes++; }
 
-// Parent Features
-if (routes.parentDashboard) { app.use('/api/parent-dashboard', routes.parentDashboard); mountedRoutes++; }
+// Parent Features - Only load enhanced version to avoid conflicts
+// Note: parent-dashboard-enhanced.js has all the features
+app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced')); mountedRoutes++;
+
+// Parent Linking API
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
+
+// Parent Monitoring API
 if (routes.parentMonitoring) { app.use('/api/parent-monitoring', routes.parentMonitoring); mountedRoutes++; }
+
+// Parent Activity Updates
+app.use('/api/parent-activity', require('./routes/parent-activity-updates')); mountedRoutes++;
+
+// Parent Notifications
+app.use('/api/parent', require('./routes/parent-notifications')); mountedRoutes++;
 
 // Parent Registration with Auto-Linking
 app.use('/api/parent-registration', require('./routes/parent-registration')); mountedRoutes++;
@@ -440,8 +453,11 @@ app.use('/api/parent-management', require('./routes/parent-management')); mounte
 // Parent Links API for Parent
 app.use('/api/parent-links', require('./routes/parent-links')); mountedRoutes++;
 
-// Enhanced Parent Dashboard with Real Data
-app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced')); mountedRoutes++;
+// Parent Student Dashboard - Real Data
+app.use('/api/parent-student-dashboard', require('./routes/parent-student-dashboard')); mountedRoutes++;
+
+// Parent Child Dashboard - Comprehensive Real Data
+app.use('/api/parent-child-dashboard', require('./routes/parent-child-dashboard')); mountedRoutes++;
 
 // Payment Processing API (Mobile Money Integration)
 app.use('/api/payments', require('./routes/payments-api')); mountedRoutes++;
@@ -454,6 +470,12 @@ app.use('/api/payments', require('./routes/payments')); mountedRoutes++;
 
 // Parent Payment Portal - GT Bank, BPR, Equity Bank Integration
 app.use('/api/parent-payment-portal', require('./routes/parent-payment-portal')); mountedRoutes++;
+
+// Parent Portal Interactive - Full Child Monitoring
+app.use('/api/parent-portal-interactive', require('./routes/parent-portal-interactive')); mountedRoutes++;
+
+// Enhanced Parent Portal with Full Kinyarwanda Support
+app.use('/api/parent-portal', require('./routes/parent-portal-enhanced-kinyarwanda')); mountedRoutes++;
 
 // Comprehensive Stock Management System (Real Database APIs)
 app.use('/api/stock-comprehensive', require('./routes/stock-comprehensive')); mountedRoutes++;
@@ -473,6 +495,7 @@ if (routes.studentAdvanced) { app.use('/api/student-advanced', routes.studentAdv
 
 // Teacher Features
 if (routes.teacherPortal) { app.use('/api/teacher-portal', routes.teacherPortal); mountedRoutes++; }
+if (routes.teacherPortalComplete) { app.use('/api/teacher', routes.teacherPortalComplete); mountedRoutes++; }
 if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
 app.use('/api/teacher-content', require('./routes/teacher-content-management')); mountedRoutes++;
 if (routes.marksManagement) { app.use('/api/marks-management', routes.marksManagement); mountedRoutes++; }
@@ -665,9 +688,10 @@ app.use('/api/dos-reports', require('./routes/dos-reports')); mountedRoutes++;
 
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
+app.use('/api/parent-linking-advanced', require('./routes/parent-linking-advanced')); mountedRoutes++;
 
-// Parent Student Link Dashboard API
-app.use('/api/parent-links', require('./routes/parent-links')); mountedRoutes++;
+// DOD Parent Management - Advanced System with Auto-Linking
+app.use('/api/dod-parent-management', require('./routes/dod-parent-management')); mountedRoutes++;
 
 // SMS Routes (African Talking)
 app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
@@ -723,6 +747,12 @@ if (routes.teacherStudentMarks) { app.use('/api/teacher-student-marks', routes.t
 
 // Comprehensive Teacher Portal API
 app.use('/api/teacher-comprehensive', require('./routes/teacher-comprehensive')); mountedRoutes++;
+
+// Global Sheets API - Teacher Access to All Students
+app.use('/api/global-sheets', require('./routes/global-sheets')); mountedRoutes++;
+
+// Teacher Marks API - Save/Load Marks for Global Sheets
+app.use('/api/teacher-marks', require('./routes/teacher-marks')); mountedRoutes++;
 
 // COMPREHENSIVE ROLE-BASED API (All 8 Roles Unified)
 app.use('/api/comprehensive-roles', require('./routes/comprehensive-roles-api')); mountedRoutes++;

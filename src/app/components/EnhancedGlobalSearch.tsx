@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, User, BookOpen, FileText, Calendar, Trophy, Bell, TrendingUp, Award, Users, Sparkles, ArrowRight, Clock, Hash, Mail, Phone, MapPin, Filter, SortAsc, Mic, MicOff, Image, Newspaper, Star, Zap, History, TrendingDown, Globe, Shield } from 'lucide-react';
+import { Search, X, Loader2, User, BookOpen, FileText, Calendar, Trophy, Bell, TrendingUp, Award, Users, Sparkles, ArrowRight, Clock, Hash, Mail, Phone, MapPin, Filter, SortAsc, Mic, MicOff, Image, Newspaper, Star, Zap, History, TrendingDown, Globe, Shield, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
@@ -30,32 +30,24 @@ interface EnhancedSearchProps {
 
 const typeConfig: Record<string, { icon: any; color: string; label: string; gradient: string }> = {
   course: { icon: BookOpen, color: 'bg-green-500', label: 'Courses', gradient: 'from-green-500 to-emerald-500' },
-  assignment: { icon: FileText, color: 'bg-orange-500', label: 'Assignments', gradient: 'from-orange-500 to-amber-500' },
   exam: { icon: Calendar, color: 'bg-red-500', label: 'Exams', gradient: 'from-red-500 to-rose-500' },
   sport: { icon: Trophy, color: 'bg-yellow-500', label: 'Sports', gradient: 'from-yellow-500 to-orange-500' },
-  notification: { icon: Bell, color: 'bg-pink-500', label: 'Notifications', gradient: 'from-pink-500 to-rose-500' },
   trade: { icon: Award, color: 'bg-indigo-500', label: 'Trades', gradient: 'from-indigo-500 to-purple-500' },
   news: { icon: Newspaper, color: 'bg-blue-500', label: 'News', gradient: 'from-blue-500 to-cyan-500' },
   gallery: { icon: Image, color: 'bg-purple-500', label: 'Gallery', gradient: 'from-purple-500 to-pink-500' },
-  student: { icon: User, color: 'bg-teal-500', label: 'Students', gradient: 'from-teal-500 to-cyan-500' },
-  teacher: { icon: Users, color: 'bg-violet-500', label: 'Teachers', gradient: 'from-violet-500 to-purple-500' },
-  // Additional types from comprehensive search
-  parent: { icon: Users, color: 'bg-cyan-500', label: 'Parents', gradient: 'from-cyan-500 to-blue-500' },
-  staff: { icon: Shield, color: 'bg-slate-500', label: 'Staff', gradient: 'from-slate-500 to-gray-500' },
   leadership: { icon: Award, color: 'bg-amber-500', label: 'Leadership', gradient: 'from-amber-500 to-yellow-500' },
-  payment: { icon: FileText, color: 'bg-emerald-500', label: 'Payments', gradient: 'from-emerald-500 to-green-500' },
-  application: { icon: FileText, color: 'bg-lime-500', label: 'Applications', gradient: 'from-lime-500 to-emerald-500' },
   event: { icon: Calendar, color: 'bg-rose-500', label: 'Events', gradient: 'from-rose-500 to-pink-500' },
+  service: { icon: Briefcase, color: 'bg-teal-500', label: 'Services', gradient: 'from-teal-500 to-cyan-500' },
 };
 
 const quickSearches = [
-  { query: 'amasomo', icon: BookOpen, label: 'Amasomo', color: 'green' },
-  { query: 'ibizamini', icon: Calendar, label: 'Ibizamini', color: 'red' },
-  { query: 'siporo', icon: Trophy, label: 'Siporo', color: 'yellow' },
-  { query: 'amahugurwa', icon: Award, label: 'Amahugurwa', color: 'indigo' },
-  { query: 'amakuru', icon: Newspaper, label: 'Amakuru', color: 'blue' },
-  { query: 'amafoto', icon: Image, label: 'Amafoto', color: 'purple' },
-  { query: 'ubuyobozi', icon: Shield, label: 'Ubuyobozi', color: 'cyan' },
+  { query: 'sports', icon: Trophy, label: 'Sports', color: 'yellow' },
+  { query: 'trades', icon: Award, label: 'Trades', color: 'indigo' },
+  { query: 'leadership', icon: Shield, label: 'Leadership', color: 'cyan' },
+  { query: 'news', icon: Newspaper, label: 'News', color: 'blue' },
+  { query: 'events', icon: Calendar, label: 'Events', color: 'rose' },
+  { query: 'services', icon: Briefcase, label: 'Services', color: 'teal' },
+  { query: 'contact', icon: Phone, label: 'Contact', color: 'green' },
 ];
 
 export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate }) => {
@@ -196,33 +188,6 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
     const lower = q.toLowerCase();
     const fallback: any = {};
     
-    // Courses
-    if (lower.includes('cours') || lower.includes('class') || lower.includes('amasomo') || 
-        lower.includes('isomo') || lower.includes('somo') || lower.includes('course')) {
-      fallback.courses = [
-        { id: 1, type: 'course', name: 'Browse All Courses', code: 'ALL', description: 'View all available courses' },
-        { id: 2, type: 'course', name: 'Search Courses', code: 'SEARCH', description: 'Find specific courses' }
-      ];
-    }
-    
-    // Exams
-    if (lower.includes('exam') || lower.includes('test') || lower.includes('ibizamini') || 
-        lower.includes('ikizamini') || lower.includes('zamin') || lower.includes('quiz')) {
-      fallback.exams = [
-        { id: 1, type: 'exam', title: 'View All Exams', exam_type: 'All', description: 'Browse all exams and tests' },
-        { id: 2, type: 'exam', title: 'Upcoming Exams', exam_type: 'Upcoming', description: 'View scheduled exams' }
-      ];
-    }
-    
-    // Assignments
-    if (lower.includes('assign') || lower.includes('homework') || lower.includes('ibikorwa') || 
-        lower.includes('akazi') || lower.includes('work') || lower.includes('task')) {
-      fallback.assignments = [
-        { id: 1, type: 'assignment', title: 'View All Assignments', description: 'Browse all assignments' },
-        { id: 2, type: 'assignment', title: 'Pending Assignments', description: 'View pending work' }
-      ];
-    }
-    
     // Sports
     if (lower.includes('sport') || lower.includes('team') || lower.includes('siporo') || 
         lower.includes('imikino') || lower.includes('umukino') || lower.includes('game')) {
@@ -242,6 +207,14 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
+    // Leadership
+    if (lower.includes('leader') || lower.includes('ubuyobozi') || lower.includes('director') || 
+        lower.includes('head') || lower.includes('management')) {
+      fallback.leadership = [
+        { id: 1, type: 'leadership', name: 'School Leadership', position: 'Leadership Team', description: 'View school leadership' }
+      ];
+    }
+    
     // News
     if (lower.includes('news') || lower.includes('article') || lower.includes('amakuru') || 
         lower.includes('inkuru') || lower.includes('announcement')) {
@@ -251,27 +224,38 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
       ];
     }
     
-    // Gallery
-    if (lower.includes('photo') || lower.includes('image') || lower.includes('gallery') || 
-        lower.includes('amafoto') || lower.includes('ifoto') || lower.includes('picture')) {
-      fallback.gallery = [
-        { id: 1, type: 'gallery', title: 'Photo Gallery', description: 'Browse school photos' },
-        { id: 2, type: 'gallery', title: 'Event Photos', description: 'View event galleries' }
+    // Events
+    if (lower.includes('event') || lower.includes('ibirori') || lower.includes('ceremony') || 
+        lower.includes('activity') || lower.includes('program')) {
+      fallback.events = [
+        { id: 1, type: 'event', title: 'Upcoming Events', description: 'View scheduled events' },
+        { id: 2, type: 'event', title: 'Past Events', description: 'Browse event history' }
       ];
     }
     
-    // Notifications
-    if (lower.includes('notif') || lower.includes('alert') || lower.includes('amakuru') || 
-        lower.includes('ubutumwa') || lower.includes('message')) {
-      fallback.notifications = [
-        { id: 1, type: 'notification', title: 'View All Notifications', message: 'See all your notifications', description: 'Browse all notifications' }
+    // Services
+    if (lower.includes('service') || lower.includes('serivisi') || lower.includes('facility') || 
+        lower.includes('amenity')) {
+      fallback.services = [
+        { id: 1, type: 'service', title: 'School Services', description: 'View available services' }
       ];
     }
     
-    // Default suggestions
+    // Contact/FAQ/About
+    if (lower.includes('contact') || lower.includes('phone') || lower.includes('email') || 
+        lower.includes('faq') || lower.includes('help') || lower.includes('about') || 
+        lower.includes('support') || lower.includes('ubufasha')) {
+      fallback.contact = [
+        { id: 1, type: 'contact', title: 'Contact Us', description: 'Get in touch with the school' },
+        { id: 2, type: 'contact', title: 'FAQ', description: 'Frequently asked questions' },
+        { id: 3, type: 'contact', title: 'About Us', description: 'Learn about our school' }
+      ];
+    }
+    
+    // Default suggestions - only public information
     if (Object.keys(fallback).length === 0) {
-      fallback.courses = [{ id: 1, type: 'course', name: 'Browse Courses', code: 'ALL', description: 'View courses' }];
       fallback.trades = [{ id: 1, type: 'trade', name_en: 'View Trades', code: 'ALL', description: 'Browse trade programs' }];
+      fallback.sports = [{ id: 1, type: 'sport', name: 'View Sports', sport_type: 'All', description: 'Browse sports teams' }];
       fallback.news = [{ id: 1, type: 'news', title: 'Latest News', description: 'View recent news' }];
     }
     
@@ -287,16 +271,14 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
   const handleResultClick = (result: SearchResult) => {
     saveRecentSearch(query);
     const typeRoutes: Record<string, string> = {
-      course: 'courses',
-      assignment: 'assignments',
-      exam: 'exams',
       sport: 'sports',
       trade: 'trades',
-      notification: 'notifications',
       news: 'home',
       gallery: 'home',
-      student: 'home',
-      teacher: 'home'
+      leadership: 'leadership',
+      event: 'home',
+      service: 'services',
+      contact: 'contactUs'
     };
 
     if (onNavigate && typeRoutes[result.type]) {
@@ -347,7 +329,7 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                 {language === 'rw' ? 'Shakisha ikintu cyose...' : 'Search anything...'}
               </p>
               <p className="text-xs text-gray-400">
-                {language === 'rw' ? 'Amasomo, ibizamini, siporo...' : 'Courses, exams, sports...'}
+                {language === 'rw' ? 'Siporo, Amahugurwa, Ubuyobozi...' : 'Sports, Trades, Leadership...'}
               </p>
             </div>
           </div>
@@ -525,11 +507,11 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                           <DropdownMenuItem onClick={() => setFilterType('all')}>All Types</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFilterType('courses')}>Courses</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFilterType('trades')}>Trades</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFilterType('exams')}>Exams</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setFilterType('sports')}>Sports</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('trades')}>Trades</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('leadership')}>Leadership</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setFilterType('news')}>News</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterType('events')}>Events</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       
@@ -668,8 +650,8 @@ export const EnhancedGlobalSearch: React.FC<EnhancedSearchProps> = ({ onNavigate
                   </h3>
                   <p className="text-gray-500 mb-6">
                     {language === 'rw' 
-                      ? 'Shakisha abanyeshuri, amasomo, ibizamini, n\'ibindi byinshi...' 
-                      : 'Find students, courses, exams, assignments, and more...'}
+                      ? 'Shakisha siporo, amahugurwa, ubuyobozi, amakuru n\'ibindi...' 
+                      : 'Find sports, trades, leadership, news, events and more...'}
                   </p>
 
                   {recentSearches.length > 0 && (

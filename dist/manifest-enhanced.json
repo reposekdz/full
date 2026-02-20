@@ -1,0 +1,78 @@
+{
+  "name": "Garden TVET School Management System",
+  "short_name": "Garden TVET",
+  "description": "Complete School Management: Students, Staff, Finance, Academics, Sports & More",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#eab308",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "Go to dashboard",
+      "url": "/",
+      "icons": [{ "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Students",
+      "short_name": "Students",
+      "description": "Manage students",
+      "url": "/students",
+      "icons": [{ "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Staff",
+      "short_name": "Staff",
+      "description": "Manage staff",
+      "url": "/staff",
+      "icons": [{ "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Finance",
+      "short_name": "Finance",
+      "description": "Financial management",
+      "url": "/finance",
+      "icons": [{ "src": "/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}

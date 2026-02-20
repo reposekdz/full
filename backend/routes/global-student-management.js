@@ -12,95 +12,142 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 router.get('/students', authenticateToken, async (req, res) => {
   try {
     const {
-      search, class_id, level, trade, status, gender, 
+      search, class_id, level, trade, status = 'active', gender, 
       scholarship_status, academic_year, page = 1, limit = 50,
-      sortBy = 'created_at', sortOrder = 'DESC'
+      sortBy = 'first_name', sortOrder = 'ASC'
     } = req.query;
 
     let query = `
-      SELECT gs.*, 
-             tc.name as class_name,
-             COUNT(DISTINCT sp.id) as parent_count,
-             (SELECT COUNT(*) FROM student_attendance WHERE student_id = gs.id AND status = 'Present') as total_present,
-             (SELECT COUNT(*) FROM student_attendance WHERE student_id = gs.id) as total_attendance_records
-      FROM global_students gs
-      LEFT JOIN trade_classes tc ON gs.current_class_id = tc.id
-      LEFT JOIN student_parents sp ON sp.student_id = gs.id
+      SELECT DISTINCT
+             gs.id,
+             gs.student_id,
+             gs.student_code,
+             gs.first_name,
+             gs.last_name,
+             gs.gender,
+             gs.date_of_birth,
+             gs.email,
+             gs.phone,
+             gs.trade_code,
+             gs.trade_name,
+             gs.level_number,
+             gs.class_name,
+             gs.status,
+             gs.admission_date,
+             gs.parent_name,
+             gs.parent_phone,
+             gs.parent_email,
+             gs.created_at,
+             gs.updated_at
+      FROM global_student_sheets gs
       WHERE 1=1
     `;
 
     const params = [];
+    let countQuery = `SELECT COUNT(DISTINCT gs.id) as total FROM global_student_sheets gs WHERE 1=1`;
+    const countParams = [];
 
     if (search) {
-      query += ` AND (gs.first_name LIKE ? OR gs.last_name LIKE ? OR gs.student_id LIKE ? OR gs.admission_number LIKE ?)`;
+      const searchCondition = ` AND (gs.first_name LIKE ? OR gs.last_name LIKE ? OR gs.student_id LIKE ? OR gs.student_code LIKE ? OR CONCAT(gs.first_name, ' ', gs.last_name) LIKE ?)`;
       const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      query += searchCondition;
+      countQuery += searchCondition;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     if (class_id) {
-      query += ` AND gs.current_class_id = ?`;
+      query += ` AND gs.class_id = ?`;
+      countQuery += ` AND gs.class_id = ?`;
       params.push(class_id);
+      countParams.push(class_id);
     }
 
     if (level) {
-      query += ` AND gs.current_level = ?`;
-      params.push(level);
+      query += ` AND gs.level_number = ?`;
+      countQuery += ` AND gs.level_number = ?`;
+      params.push(parseInt(level));
+      countParams.push(parseInt(level));
     }
 
     if (trade) {
-      query += ` AND gs.current_trade = ?`;
+      query += ` AND gs.trade_code = ?`;
+      countQuery += ` AND gs.trade_code = ?`;
       params.push(trade);
+      countParams.push(trade);
     }
 
     if (status) {
-      query += ` AND gs.academic_status = ?`;
+      query += ` AND gs.status = ?`;
+      countQuery += ` AND gs.status = ?`;
       params.push(status);
+      countParams.push(status);
     }
 
     if (gender) {
       query += ` AND gs.gender = ?`;
+      countQuery += ` AND gs.gender = ?`;
       params.push(gender);
+      countParams.push(gender);
     }
 
     if (scholarship_status) {
       query += ` AND gs.scholarship_status = ?`;
+      countQuery += ` AND gs.scholarship_status = ?`;
       params.push(scholarship_status);
+      countParams.push(scholarship_status);
     }
 
     if (academic_year) {
       query += ` AND gs.academic_year = ?`;
+      countQuery += ` AND gs.academic_year = ?`;
       params.push(academic_year);
+      countParams.push(academic_year);
     }
 
-    query += ` GROUP BY gs.id`;
-    query += ` ORDER BY gs.${sortBy} ${sortOrder}`;
+    // Get total count first
+    const [countResult] = await db.query(countQuery, countParams);
+    const total = countResult[0].total;
+
+    // Add sorting - validate sortBy to prevent SQL injection
+    const validSortFields = ['first_name', 'last_name', 'student_code', 'level_number', 'trade_code', 'created_at', 'updated_at'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'first_name';
+    const sortDirection = sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
     
-    const offset = (page - 1) * limit;
+    query += ` ORDER BY gs.${sortField} ${sortDirection}`;
+    
+    // Add pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     query += ` LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
 
     const [students] = await db.query(query, params);
 
-    // Get total count
-    const [countResult] = await db.query(
-      `SELECT COUNT(DISTINCT gs.id) as total FROM global_students gs WHERE 1=1` + 
-      (search ? ` AND (gs.first_name LIKE ? OR gs.last_name LIKE ? OR gs.student_id LIKE ? OR gs.admission_number LIKE ?)` : ''),
-      search ? [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : []
-    );
-
     res.json({
       success: true,
       students,
       pagination: {
-        total: countResult[0].total,
+        total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(countResult[0].total / limit)
+        totalPages: Math.ceil(total / parseInt(limit))
+      },
+      filters: {
+        search,
+        level,
+        trade,
+        status,
+        gender
       }
     });
   } catch (error) {
     console.error('Error fetching students:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch students', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch students', 
+      error: error.message,
+      error_code: 'STUDENT_FETCH_ERROR'
+    });
   }
 });
 

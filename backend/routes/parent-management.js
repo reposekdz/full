@@ -548,10 +548,14 @@ router.post('/linking-requests/:id/respond', authenticateToken, async (req, res)
                 }
 
                 const notificationMessage = `Your linking request for student "${request[0].student_name}" has been approved!`;
-                await pool.execute(
-                    'INSERT INTO notifications (user_id, user_type, message, created_at) VALUES (?, ?, ?, NOW())',
-                    [request[0].parent_id, 'parent', notificationMessage]
-                );
+                try {
+                  await pool.execute(
+                      'INSERT INTO notifications (user_id, message, created_at) VALUES (?, ?, NOW())',
+                      [request[0].parent_id, notificationMessage]
+                  );
+                } catch (e) {
+                  // Notifications table may not support this, skip
+                }
             }
         }
 

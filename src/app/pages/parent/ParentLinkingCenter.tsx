@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Search, UserPlus, ShieldCheck, AlertCircle, CheckCircle2,
     ArrowRight, ArrowLeft, School, GraduationCap, MessageSquare,
-    HelpCircle, Mail, Phone, MapPin, User
+    HelpCircle, Mail, Phone
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -25,8 +25,7 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
     const [searchForm, setSearchForm] = useState({
         student_name: '',
         trade: '',
-        level_id: '',
-        gender: '', // Added gender field for accurate student matching
+        level_id: ''
     });
     const [linkResult, setLinkResult] = useState<any>(null);
     const [errorType, setErrorType] = useState<'NONE' | 'MULTIPLE' | 'NOT_FOUND'>('NONE');
@@ -38,7 +37,7 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
 
     const handleSearch = async () => {
         if (!searchForm.student_name || !searchForm.trade || !searchForm.level_id) {
-            toast.error('Gusauzuza amakuru yose asabwa');
+            toast.error('Uzuza amakuru yose');
             return;
         }
 
@@ -48,41 +47,40 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
         setLoading(true);
         setErrorType('NONE');
         try {
-            const response = await fetch(`${API_BASE_URL}/parent-linking/auto-connect`, {
+            const nameParts = searchForm.student_name.trim().split(' ');
+            const response = await fetch(`${API_BASE_URL}/parent-links/link-student`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({
-                    student_name: searchForm.student_name,
-                    trade: searchForm.trade,
-                    level: selectedLevel.level_number,
-                    level_suffix: selectedLevel.level_suffix,
-                    student_gender: searchForm.gender || undefined,
-                    relationship_type: 'parent'
+                    student_first_name: nameParts[0],
+                    student_last_name: nameParts.slice(1).join(' ') || nameParts[0],
+                    trade_code: searchForm.trade,
+                    level: selectedLevel.level_number.toString(),
+                    relationship: 'Parent'
                 })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                setLinkResult(data.child);
-                setStep(3); // Direct to success
+                setLinkResult({
+                    name: searchForm.student_name,
+                    trade: searchForm.trade,
+                    level: selectedLevel.level_number
+                });
+                setStep(3);
+                toast.success('Umwana yahuijwe neza!');
                 if (onSuccess) onSuccess();
             } else {
-                if (data.code === 'MULTIPLE_MATCHES') {
-                    setErrorType('MULTIPLE');
-                    setStep(2); // Go to help/contact
-                } else if (data.code === 'NO_MATCHES') {
-                    setErrorType('NOT_FOUND');
-                    setStep(2); // Go to help/contact
-                } else {
-                    toast.error(data.message || 'Guhuza ntibishobotse');
-                }
+                toast.error(data.message || 'Umwana ntagaragara');
+                setErrorType('NOT_FOUND');
+                setStep(2);
             }
         } catch (error) {
-            toast.error('Hari ikibazo cya interineti. Ongera ugerageze.');
+            toast.error('Ikibazo cya interineti');
         } finally {
             setLoading(false);
         }
@@ -195,24 +193,7 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                                             </Select>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <Label className="text-sm font-bold flex items-center gap-2">
-                                                <User className="w-4 h-4 text-blue-500" />
-                                                IGITSINA / GENDER
-                                            </Label>
-                                            <Select
-                                                value={searchForm.gender}
-                                                onValueChange={v => setSearchForm({ ...searchForm, gender: v })}
-                                            >
-                                                <SelectTrigger className="h-12 border-2">
-                                                    <SelectValue placeholder="Hitamo Igitsina (Ntakwisho)" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="male">Gabo (Male)</SelectItem>
-                                                    <SelectItem value="female">Gore (Female)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+
                                     </div>
 
                                     <div className="flex flex-col justify-center items-center bg-blue-50/50 rounded-2xl p-6 border-2 border-dashed border-blue-200">

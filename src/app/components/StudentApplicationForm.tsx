@@ -87,7 +87,6 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
 
   useEffect(() => {
     fetchTrades();
-    fetchLevels();
     fetchValidationRules();
   }, []);
 
@@ -103,13 +102,22 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
 
   const fetchLevels = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trade-levels`);
-      const data = await response.json();
-      if (data.success) setLevels(data.levels);
+      // Fetch levels dynamically based on selected trade
+      if (selectedTrade) {
+        const response = await fetch(`${API_BASE_URL}/student-applications-production/trades/${selectedTrade}/levels`);
+        const data = await response.json();
+        if (data.success) setLevels(data.levels);
+      }
     } catch (error) {
       console.error('Error fetching levels:', error);
     }
   };
+
+  useEffect(() => {
+    if (selectedTrade) {
+      fetchLevels();
+    }
+  }, [selectedTrade]);
 
   const fetchValidationRules = async () => {
     try {
@@ -331,10 +339,7 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
   };
 
   const getAvailableLevels = () => {
-    if (!selectedTrade) return [];
-    return levels.filter(level => 
-      trades.find(trade => trade.trade_code === selectedTrade)?.available_levels?.includes(level.level_number)
-    );
+    return levels; // Return all fetched levels for the selected trade
   };
 
   if (submitted) {
@@ -798,16 +803,16 @@ export const StudentApplicationForm: React.FC<ApplicationFormProps> = ({ onClose
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                     >
                       <option value="">Hitamo umwuga</option>
-                      {trades.map((trade) => (
-                        <option key={trade.code} value={trade.code}>
-                          {trade.name} ({trade.code})
-                        </option>
-                      ))}
+                      <option value="BDC">Building and Construction (BDC)</option>
+                      <option value="SOD">Software Development (SOD)</option>
+                      <option value="AUT">Automobile Technology (AUT)</option>
                     </select>
                     {selectedTrade && (
                       <div className="mt-2 p-3 bg-yellow-100 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                          {trades.find(t => t.code === selectedTrade)?.description}
+                          {selectedTrade === 'BDC' && 'Wiga kubaka, gushushanya, no gukora imirimo y\'ubwubatsi'}
+                          {selectedTrade === 'SOD' && 'Wiga gukora software, website, n\'application'}
+                          {selectedTrade === 'AUT' && 'Wiga gusana no gukora imodoka n\'ibikoresho byazo'}
                         </p>
                       </div>
                     )}

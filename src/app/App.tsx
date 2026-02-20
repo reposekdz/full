@@ -41,11 +41,15 @@ import ModernTeamDetailPage from '@/app/pages/ModernTeamDetailPage';
 import NewsPage from '@/app/pages/NewsPage';
 import NewsDetailPage from '@/app/pages/NewsDetailPage';
 import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
+import ParentDashboard from '@/app/pages/ParentDashboard';
 import AdvancedParentPortal from '@/app/pages/parent/AdvancedParentPortal';
 import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
-import DirectorStudyDashboard from '@/app/pages/dashboards/DirectorStudyDashboard';
+import DOSAdvancedDashboard from '@/app/pages/dashboards/DOSAdvancedDashboard';
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
-import DOSDashboard from '@/app/pages/dashboards/DOSDashboard';
+import AdvancedTeacherDashboard from '@/app/pages/dashboards/AdvancedTeacherDashboard';
+import AdvancedDOSDashboard from '@/app/pages/dashboards/AdvancedDOSDashboard';
+import ParentDashboardInteractive from '@/app/pages/dashboards/ParentDashboardInteractive';
+import ModernTeacherDashboard from '@/app/pages/dashboards/ModernTeacherDashboard';
 import ModernHeadmasterDashboard from '@/app/pages/dashboards/ModernHeadmasterDashboard';
 import ModernStockManagerDashboard from '@/app/pages/dashboards/ModernStockManagerDashboard';
 import DODDisciplinePage from '@/app/pages/dod/DODDisciplinePage';
@@ -60,18 +64,7 @@ import DODStudentSheetsPage from '@/app/pages/dod/DODStudentSheetsPage';
 import DODParentManagementPage from '@/app/pages/dod/DODParentManagementPage';
 import DODLeaveManagementPage from '@/app/pages/dod/DODLeaveManagementPage';
 import UniversalProfilePage from '@/app/pages/common/UniversalProfilePage';
-import TeacherDashboard from '@/app/pages/teacher/TeacherDashboard';
 import TeacherGradingPage from '@/app/pages/teacher/TeacherGradingPage';
-import TeacherCreateAssignmentPage from '@/app/pages/teacher/TeacherCreateAssignmentPage';
-import TeacherAttendancePage from '@/app/pages/teacher/TeacherAttendancePage';
-import TeacherSearchPage from '@/app/pages/teacher/TeacherSearchPage';
-import TeacherNotificationsPage from '@/app/pages/teacher/TeacherNotificationsPage';
-import TeacherClassesPage from '@/app/pages/teacher/TeacherClassesPage';
-import TeacherStudentsPage from '@/app/pages/teacher/TeacherStudentsPage';
-import TeacherGradesPage from '@/app/pages/teacher/TeacherGradesPage';
-import TeacherAssignmentsPage from '@/app/pages/teacher/TeacherAssignmentsPage';
-import TeacherResourcesPage from '@/app/pages/teacher/TeacherResourcesPage';
-import TeacherSchedulePage from '@/app/pages/teacher/TeacherSchedulePage';
 import UltraAdvancedStockDashboard from '@/app/pages/dashboards/UltraAdvancedStockDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
 import ComprehensiveAdminDashboard from '@/app/pages/dashboards/ComprehensiveAdminDashboard';
@@ -104,10 +97,10 @@ import DODManagement from '@/app/pages/dashboards/DODManagement';
 import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
 import StaffManagementPage from '@/app/pages/StaffManagementPage';
 import ApplicationManagementDashboard from '@/app/pages/admin/ApplicationManagementDashboard';
-import ParentRegistrationPage from '@/app/pages/ParentRegistrationPage';
 import ParentLinkingManagement from '@/app/components/ParentLinkingManagement';
-import ParentStudentLinkDashboard from '@/app/pages/dashboards/ParentStudentLinkDashboard';
-import ParentChildLinkingPage from './pages/ParentChildLinkingPage';
+import ParentComprehensiveDashboard from './pages/parent/ParentComprehensiveDashboard';
+import ParentChildDashboard from './pages/parent/ParentChildDashboard';
+import StockManagement from '@/components/StockManagement';
 
 const AppContent: React.FC = () => {
   // Mirror role-based navigation visibility used in Header
@@ -141,7 +134,7 @@ const AppContent: React.FC = () => {
     stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced'],
     teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher'],
     advisor: ['profile', 'student-sheets', 'dashboard-advisor', 'parent-applications'],
-    parent: ['profile', 'dashboard-parent', 'parent-link-child', 'parent-child-linking'],
+    parent: ['profile', 'dashboard-parent', 'parent-child'],
     patron: ['profile'],
     matron: ['profile'],
     support_staff: ['profile'],
@@ -258,22 +251,17 @@ const AppContent: React.FC = () => {
         return <AdminDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'parent':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-parent" />;
-        return <AdvancedParentPortal />;
+        if (currentPage === 'parent-dashboard-interactive') return <ParentDashboardInteractive />;
+        return <ParentDashboard onNavigate={handleNavigate} />;
       case 'advisor':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-advisor" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
         return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'director_study':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-director-study" />;
-        if (currentPage === 'dos-students') return <StudentManagementUltraAdvanced onNavigate={handleNavigate} />;
-        if (currentPage === 'dos-report-cards') return <DOSDashboard onNavigate={handleNavigate} />;
-        if (currentPage === 'dos-teacher-marks') return <DOSDashboard onNavigate={handleNavigate} />;
-        if (currentPage === 'dos-parent-access') return <DOSDashboard onNavigate={handleNavigate} />;
-        if (currentPage === 'dos-sms') return <DOSDashboard onNavigate={handleNavigate} />;
-        if (currentPage === 'dos-comprehensive-management') return <DOSDashboard onNavigate={handleNavigate} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
         if (currentPage === 'application-management') return <ApplicationManagementDashboard onNavigate={handleNavigate} onLogout={logout} />;
-        return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <AdvancedDOSDashboard />;
       case 'dod':
       case 'director_discipline':
       case 'matron':
@@ -302,20 +290,9 @@ const AppContent: React.FC = () => {
         return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'teacher':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-teacher" />;
-        if (currentPage === 'search') return <TeacherSearchPage onNavigate={handleNavigate} />;
-        if (currentPage === 'notifications') return <TeacherNotificationsPage onNavigate={handleNavigate} />;
-        if (currentPage === 'classes') return <TeacherClassesPage onNavigate={handleNavigate} />;
-        if (currentPage === 'students') return <TeacherStudentsPage onNavigate={handleNavigate} />;
-        if (currentPage === 'gradebook') return <TeacherGradesPage onNavigate={handleNavigate} />;
-        if (currentPage === 'attendance') return <TeacherAttendancePage onNavigate={handleNavigate} />;
-        if (currentPage === 'assignments') return <TeacherAssignmentsPage onNavigate={handleNavigate} />;
-        if (currentPage === 'resources') return <TeacherResourcesPage onNavigate={handleNavigate} />;
-        if (currentPage === 'schedule') return <TeacherSchedulePage onNavigate={handleNavigate} />;
         if (currentPage === 'teacher-grading') return <TeacherGradingPage teacherId={user.id} onNavigate={handleNavigate} />;
-        if (currentPage === 'teacher-create-assignment') return <TeacherCreateAssignmentPage teacherId={user.id} onNavigate={handleNavigate} />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
-        if (currentPage === 'ultra-teacher-dashboard') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
-        return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
+        return <AdvancedTeacherDashboard />;
       case 'accountant':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-accountant" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
@@ -328,6 +305,7 @@ const AppContent: React.FC = () => {
       case 'stock_manager':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-stock" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
+        if (currentPage === 'stock-management') return <StockManagement />;
         return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
       default:
         return null;
@@ -360,7 +338,7 @@ const AppContent: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(userObj));
       }
     }
-    
+
     // CRITICAL: Force credential change BEFORE any other page renders
     if (user && (user as any).must_change_password) {
       return <ForceChangeCredentialsPage onSuccess={() => handleNavigate('login')} />;
@@ -384,22 +362,18 @@ const AppContent: React.FC = () => {
       }
       if (user?.role === 'parent') {
         console.log('📊 Rendering Parent Dashboard for user:', user);
-        return <AdvancedParentPortal />;
+        return <ParentComprehensiveDashboard onNavigate={handleNavigate} />;
       }
     }
-    if (currentPage === 'parent-link-child' && user?.role === 'parent') {
-      return <ParentStudentLinkDashboard onNavigate={handleNavigate} />;
+
+    if (currentPage.startsWith('parent-child/') && user?.role === 'parent') {
+      const studentId = currentPage.split('/')[1];
+      return <ParentChildDashboard onNavigate={handleNavigate} />;
     }
-    if (currentPage === 'parent-child-linking' && user?.role === 'parent') {
-      return <ParentChildLinkingPage onNavigate={handleNavigate} onComplete={() => handleNavigate('dashboard-parent')} />;
-    }
-    if (currentPage === 'dashboard-advisor' && user?.role === 'advisor') return <AdvisorDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <DirectorStudyDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-dos' && user?.role === 'director_study') return <DOSDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-dod' && (user?.role === 'director_discipline' || user?.role === 'dod')) return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-director-discipline' && (user?.role === 'director_discipline' || user?.role === 'dod')) return <DODDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <AdvancedDOSDashboard />;
+    if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <AdvancedTeacherDashboard />;
+    if (currentPage === 'parent-dashboard-interactive' && user?.role === 'parent') return <ParentDashboardInteractive />;
     if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
-    if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <TeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <ComprehensiveAccountantDashboard />;
     if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <UltraAdvancedStockDashboard />;
 
@@ -483,8 +457,7 @@ const AppContent: React.FC = () => {
         return <ModernLoginPage onNavigate={handleNavigate} />;
       case 'register':
         return <ModernRegisterPage onNavigate={handleNavigate} />;
-      case 'parent-register':
-        return <ParentRegistrationPage onNavigate={handleNavigate} />;
+
       case 'staff-roles':
         return <StaffRolesPage onNavigate={handleNavigate} />;
       case 'search':
@@ -510,6 +483,7 @@ const AppContent: React.FC = () => {
       if (currentPage === 'exam-management') return <ExamManagementSystem />;
       if (currentPage === 'hostel-management') return <HostelManagementSystem />;
       if (currentPage === 'staff-management-advanced') return <StaffManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'stock-management') return <StockManagement />;
       if (currentPage === 'application-management') return <ApplicationManagementDashboard onNavigate={handleNavigate} onLogout={logout} />;
       if (currentPage === 'parent-applications') return (
         <div className="p-4 md:p-6 max-w-7xl mx-auto">

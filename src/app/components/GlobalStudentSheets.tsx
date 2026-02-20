@@ -130,38 +130,59 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = () => {
 
   const handleSaveCell = async (studentId: number, colId: string, value: string) => {
     try {
-      const res = await apiService.request('/global-student-sheets/save-marks', {
-        method: 'POST',
-        body: JSON.stringify({
-          marks: [{
-            student_id: studentId,
-            column_id: colId,
-            marks: parseFloat(value) || 0,
-            academic_year: activeLevel.academic_year || '2024',
-            term: activeLevel.term || 'Term 1'
-          }]
-        })
-      });
-      if (res.success) {
-        setStudents(prev => prev.map(s => {
-          if (s.id === studentId) {
-            const updatedStudent = { ...s, [colId]: parseFloat(value) || 0 };
-
-            // Recalculate total and average
-            const total = markColumns.reduce((acc, col) => acc + (updatedStudent[col.id] || updatedStudent[`mark_${col.id}`] || 0), 0);
-            const totalMax = markColumns.reduce((acc, col) => acc + (col.max_marks || 0), 0);
-
-            updatedStudent.total_marks = total;
-            updatedStudent.average_marks = totalMax > 0 ? (total / totalMax) * 100 : 0;
-
-            return updatedStudent;
-          }
-          return s;
-        }));
-        toast.success('Agaciro kabitswe neza');
+      // Handle name updates
+      if (colId === 'first_name' || colId === 'last_name') {
+        const res = await apiService.request('/global-student-sheets/update-student', {
+          method: 'PUT',
+          body: JSON.stringify({ student_id: studentId, [colId]: value })
+        });
+        if (res.success) {
+          setStudents(prev => prev.map(s => s.id === studentId ? { ...s, [colId]: value } : s));
+          toast.success('Updated successfully');
+        }
+      }
+      // Handle student code update
+      else if (colId === 'student_code') {
+        const res = await apiService.request('/global-student-sheets/update-student', {
+          method: 'PUT',
+          body: JSON.stringify({ student_id: studentId, student_code: value })
+        });
+        if (res.success) {
+          setStudents(prev => prev.map(s => s.id === studentId ? { ...s, student_code: value } : s));
+          toast.success('Updated successfully');
+        }
+      }
+      // Handle marks update
+      else {
+        const res = await apiService.request('/global-student-sheets/save-marks', {
+          method: 'POST',
+          body: JSON.stringify({
+            marks: [{
+              student_id: studentId,
+              column_id: colId,
+              marks: parseFloat(value) || 0,
+              academic_year: activeLevel.academic_year || '2024',
+              term: activeLevel.term || 'Term 1'
+            }]
+          })
+        });
+        if (res.success) {
+          setStudents(prev => prev.map(s => {
+            if (s.id === studentId) {
+              const updatedStudent = { ...s, [colId]: parseFloat(value) || 0 };
+              const total = markColumns.reduce((acc, col) => acc + (updatedStudent[col.id] || 0), 0);
+              const totalMax = markColumns.reduce((acc, col) => acc + (col.max_marks || 0), 0);
+              updatedStudent.total_marks = total;
+              updatedStudent.average_marks = totalMax > 0 ? (total / totalMax) * 100 : 0;
+              return updatedStudent;
+            }
+            return s;
+          }));
+          toast.success('Updated successfully');
+        }
       }
     } catch (error) {
-      toast.error('Byanze kubika agaciro');
+      toast.error('Failed to update');
     }
     setEditingCell(null);
   };
@@ -183,11 +204,6 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = () => {
 
   // Conditional Formatting Utility
   const getCellStyles = (colId: string, value: any) => {
-    if (colId === 'payment_status') {
-      if (value === 'paid') return 'bg-emerald-100 text-emerald-800 font-bold';
-      if (value === 'unpaid') return 'bg-rose-100 text-rose-800 font-bold';
-      return 'bg-amber-100 text-amber-800 font-bold';
-    }
     if (markColumns.some(c => String(c.id) === colId)) {
       const val = parseFloat(value);
       if (val < 50) return 'text-rose-600 font-medium';
@@ -294,25 +310,25 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = () => {
               ))}
             </tr>
             {/* Header Labels */}
-            <tr className="bg-[#f3f3f3] shadow-sm">
-              <th className="w-10 border-b border-r border-gray-300 bg-gray-100 flex items-center justify-center" rowSpan={2}>
-                <div className="w-2 h-2 rounded-full bg-gray-300" />
+            <tr className="bg-blue-50 shadow-sm">
+              <th className="w-10 border-b border-r border-gray-300 bg-gray-100" rowSpan={2}>
+                <span className="text-xs text-gray-500">#</span>
               </th>
-              <th className="px-4 py-2 text-xs font-bold text-gray-700 border-b border-r border-gray-300 text-left sticky left-0 z-20 bg-gray-50 min-w-[200px]" rowSpan={2}>Student Name</th>
-              <th className="px-4 py-2 text-xs font-bold text-gray-700 border-b border-r border-gray-300 text-left min-w-[120px]" rowSpan={2}>Student Code</th>
+              <th className="px-4 py-2 text-sm font-bold text-gray-800 border-b border-r border-gray-300 text-left min-w-[150px]" rowSpan={2}>First Name</th>
+              <th className="px-4 py-2 text-sm font-bold text-gray-800 border-b border-r border-gray-300 text-left min-w-[150px]" rowSpan={2}>Last Name</th>
+              <th className="px-4 py-2 text-sm font-bold text-gray-800 border-b border-r border-gray-300 text-left min-w-[120px]" rowSpan={2}>Student Code</th>
               {markColumns.map((col: any) => (
-                <th key={col.id} className="px-4 py-1 text-[10px] font-bold text-blue-800 border-b border-r border-gray-300 text-center min-w-[120px] bg-blue-50/50">
-                  {col.course_name || 'General'}
+                <th key={col.id} className="px-4 py-1 text-xs font-bold text-blue-800 border-b border-r border-gray-300 text-center min-w-[100px] bg-blue-50">
+                  {col.course_name || col.column_name}
                 </th>
               ))}
-              <th className="px-4 py-2 text-xs font-bold text-blue-700 border-b border-r border-gray-300 text-center min-w-[100px] bg-blue-50/50" rowSpan={2}>Total</th>
-              <th className="px-4 py-2 text-xs font-bold text-green-700 border-b border-r border-gray-300 text-center min-w-[100px] bg-green-50/30" rowSpan={2}>Average</th>
-              <th className="px-4 py-2 text-xs font-bold text-gray-700 border-b border-r border-gray-300 text-center min-w-[120px]" rowSpan={2}>Status</th>
+              <th className="px-4 py-2 text-sm font-bold text-blue-700 border-b border-r border-gray-300 text-center min-w-[80px] bg-blue-100" rowSpan={2}>Total</th>
+              <th className="px-4 py-2 text-sm font-bold text-green-700 border-b border-r border-gray-300 text-center min-w-[80px] bg-green-100" rowSpan={2}>Average %</th>
             </tr>
-            <tr className="bg-[#f3f3f3]">
+            <tr className="bg-blue-50">
               {markColumns.map((col: any) => (
-                <th key={`label-${col.id}`} className="px-4 py-1 text-[9px] font-medium text-gray-600 border-b border-r border-gray-300 text-center bg-white/50">
-                  {col.column_label} (/{col.max_marks})
+                <th key={`label-${col.id}`} className="px-4 py-1 text-[10px] font-medium text-gray-600 border-b border-r border-gray-300 text-center bg-white">
+                  Max: {col.max_marks}
                 </th>
               ))}
             </tr>
@@ -336,25 +352,69 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = () => {
                 </td>
               </tr>
             ) : filteredStudents.map((student: any, rowIdx: number) => (
-              <tr key={student.id} className="h-9 hover:bg-gray-50/50">
-                {/* Row Number */}
-                <td className="border-b border-r border-gray-200 bg-[#f3f3f3] text-[10px] text-gray-500 text-center font-medium sticky left-0 z-10 min-w-[40px]">
+              <tr key={student.id} className="hover:bg-blue-50/30">
+                <td className="border-b border-r border-gray-200 bg-gray-50 text-xs text-gray-600 text-center font-medium">
                   {rowIdx + 1}
                 </td>
 
-                {/* Student Name */}
+                {/* First Name - Editable */}
                 <td
-                  onClick={() => handleCellClick(rowIdx, 'student_name', `${student.first_name} ${student.last_name}`)}
-                  className={`px-4 py-2 border-b border-r border-gray-200 text-sm whitespace-nowrap cursor-cell transition-all ${selectedCell?.row === rowIdx && selectedCell?.col === 'student_name' ? 'ring-2 ring-blue-500 z-10 shadow-sm outline-none' : ''}`}
+                  onClick={() => handleCellClick(rowIdx, 'first_name', student.first_name)}
+                  onDoubleClick={() => handleCellDoubleClick(rowIdx, 'first_name')}
+                  className={`px-4 py-2 border-b border-r border-gray-200 text-sm cursor-cell ${selectedCell?.row === rowIdx && selectedCell?.col === 'first_name' ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
                 >
-                  {student.first_name} {student.last_name}
+                  {editingCell?.row === rowIdx && editingCell?.col === 'first_name' ? (
+                    <input
+                      ref={inputRef}
+                      className="w-full h-full px-2 outline-none ring-2 ring-blue-500"
+                      defaultValue={student.first_name}
+                      onBlur={(e) => handleSaveCell(student.id, 'first_name', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveCell(student.id, 'first_name', e.currentTarget.value);
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : student.first_name}
                 </td>
 
+                {/* Last Name - Editable */}
+                <td
+                  onClick={() => handleCellClick(rowIdx, 'last_name', student.last_name)}
+                  onDoubleClick={() => handleCellDoubleClick(rowIdx, 'last_name')}
+                  className={`px-4 py-2 border-b border-r border-gray-200 text-sm cursor-cell ${selectedCell?.row === rowIdx && selectedCell?.col === 'last_name' ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
+                >
+                  {editingCell?.row === rowIdx && editingCell?.col === 'last_name' ? (
+                    <input
+                      ref={inputRef}
+                      className="w-full h-full px-2 outline-none ring-2 ring-blue-500"
+                      defaultValue={student.last_name}
+                      onBlur={(e) => handleSaveCell(student.id, 'last_name', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveCell(student.id, 'last_name', e.currentTarget.value);
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : student.last_name}
+                </td>
+
+                {/* Student Code - Editable */}
                 <td
                   onClick={() => handleCellClick(rowIdx, 'student_code', student.student_code)}
-                  className={`px-4 py-2 border-b border-r border-gray-200 text-sm font-mono cursor-cell ${selectedCell?.row === rowIdx && selectedCell?.col === 'student_code' ? 'ring-2 ring-blue-500 z-10' : ''}`}
+                  onDoubleClick={() => handleCellDoubleClick(rowIdx, 'student_code')}
+                  className={`px-4 py-2 border-b border-r border-gray-200 text-sm font-mono cursor-cell ${selectedCell?.row === rowIdx && selectedCell?.col === 'student_code' ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
                 >
-                  {student.student_code}
+                  {editingCell?.row === rowIdx && editingCell?.col === 'student_code' ? (
+                    <input
+                      ref={inputRef}
+                      className="w-full h-full px-2 outline-none ring-2 ring-blue-500"
+                      defaultValue={student.student_code}
+                      onBlur={(e) => handleSaveCell(student.id, 'student_code', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveCell(student.id, 'student_code', e.currentTarget.value);
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : student.student_code}
                 </td>
 
                 {/* Mark Columns */}
@@ -389,16 +449,12 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = () => {
                   );
                 })}
 
-                <td className="px-4 py-2 border-b border-r border-gray-200 text-sm text-center font-bold text-blue-700 bg-blue-50/5 uppercase">
+                <td className="px-4 py-2 border-b border-r border-gray-200 text-sm text-center font-bold text-blue-700 bg-blue-50">
                   {student.total_marks || 0}
                 </td>
 
-                <td className="px-4 py-2 border-b border-r border-gray-200 text-sm text-center font-bold text-green-700 bg-green-50/5">
-                  {(student.average_marks || 0).toFixed(1)}%
-                </td>
-
-                <td className={`px-4 py-2 border-b border-r border-gray-200 text-xs text-center uppercase tracking-wider ${getCellStyles('payment_status', student.payment_status)}`}>
-                  {student.payment_status}
+                <td className="px-4 py-2 border-b border-r border-gray-200 text-sm text-center font-bold text-green-700 bg-green-50">
+                  {Number(student.average_marks || 0).toFixed(1)}%
                 </td>
               </tr>
             ))}

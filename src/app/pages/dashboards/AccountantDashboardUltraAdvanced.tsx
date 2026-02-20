@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 import apiService from '@/app/services/apiService';
+import { ParentManagementWidget } from '@/app/components/shared/ParentManagementWidget';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer

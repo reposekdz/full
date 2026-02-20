@@ -146,20 +146,28 @@ const ParentPortalUltraAdvanced: React.FC = () => {
   // Login
   const [loginPhone, setLoginPhone] = useState('');
   
-  // Fetch trades from database
+  // Fetch real trades from database (BDC, SOD, AUTO only)
   useEffect(() => {
     const fetchTrades = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/trades`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch(`${API_BASE_URL}/parent-linking-advanced/trades`);
         const data = await res.json();
         if (data.success && data.trades) {
           setTrades(data.trades);
+        } else {
+          setTrades([
+            { trade_name: 'BDC', trade_code: 'BDC', full_name: 'Building and Construction' },
+            { trade_name: 'SOD', trade_code: 'SOD', full_name: 'Software Development' },
+            { trade_name: 'AUTO', trade_code: 'AUTO', full_name: 'Automobile Technology' }
+          ]);
         }
       } catch (error) {
         console.error('Error fetching trades:', error);
+        setTrades([
+          { trade_name: 'BDC', trade_code: 'BDC', full_name: 'Building and Construction' },
+          { trade_name: 'SOD', trade_code: 'SOD', full_name: 'Software Development' },
+          { trade_name: 'AUTO', trade_code: 'AUTO', full_name: 'Automobile Technology' }
+        ]);
       } finally {
         setInitialLoading(false);
       }
@@ -180,7 +188,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
   const loadParentData = async (phone: string) => {
     setLoading(true);
     try {
-      const dashboardRes = await fetch(`${API_BASE_URL}/parent-linking/parent-dashboard/${phone}`);
+      const dashboardRes = await fetch(`${API_BASE_URL}/parent-linking-advanced/parent-dashboard/${phone}`);
       const dashboardData = await dashboardRes.json();
 
       if (dashboardData.success) {
@@ -203,11 +211,11 @@ const ParentPortalUltraAdvanced: React.FC = () => {
         });
       }
 
-      const messagesRes = await fetch(`${API_BASE_URL}/parent-linking/messages/${phone}`);
+      const messagesRes = await fetch(`${API_BASE_URL}/parent-linking-advanced/messages/${phone}`);
       const messagesData = await messagesRes.json();
       if (messagesData.success) setMessages(messagesData.messages);
 
-      const notifRes = await fetch(`${API_BASE_URL}/parent-linking/notifications/${phone}`);
+      const notifRes = await fetch(`${API_BASE_URL}/parent-linking-advanced/notifications/${phone}`);
       const notifData = await notifRes.json();
       if (notifData.success) {
         setNotifications(notifData.notifications);
@@ -240,7 +248,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
 
   const submitLinkingRequest = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/parent-linking/request-linking`, {
+      const res = await fetch(`${API_BASE_URL}/parent-linking-advanced/request-linking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -269,7 +277,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
 
   const sendMessage = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/parent-linking/messages`, {
+      const res = await fetch(`${API_BASE_URL}/parent-linking-advanced/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,7 +302,7 @@ const ParentPortalUltraAdvanced: React.FC = () => {
 
   const markNotificationRead = async (id: number) => {
     try {
-      await fetch(`${API_BASE_URL}/parent-linking/notifications/${id}/read`, { method: 'PUT' });
+      await fetch(`${API_BASE_URL}/parent-linking-advanced/notifications/${id}/read`, { method: 'PUT' });
       setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
       setUnreadCount(Math.max(0, unreadCount - 1));
     } catch (error) {
@@ -423,24 +431,11 @@ const ParentPortalUltraAdvanced: React.FC = () => {
                   <Select value={linkingRequest.student_trade} onValueChange={(v) => setLinkingRequest({...linkingRequest, student_trade: v})}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
-                      {trades.length > 0 ? (
-                        trades.map((trade: any) => (
-                          <SelectItem key={trade.trade_id || trade.id} value={trade.trade_name || trade.name}>
-                            {trade.trade_name || trade.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <>
-                          <SelectItem value="General Education">General Education</SelectItem>
-                          <SelectItem value="Agriculture">Agriculture</SelectItem>
-                          <SelectItem value="Carpentry">Carpentry</SelectItem>
-                          <SelectItem value="Masonry">Masonry</SelectItem>
-                          <SelectItem value="Electrical">Electrical</SelectItem>
-                          <SelectItem value="Plumbing">Plumbing</SelectItem>
-                          <SelectItem value="Hotel Management">Hotel Management</SelectItem>
-                          <SelectItem value="Food Production">Food Production</SelectItem>
-                        </>
-                      )}
+                      {trades.map((trade: any) => (
+                      <SelectItem key={trade.trade_code} value={trade.trade_code}>
+                        {trade.trade_name} - {trade.full_name}
+                      </SelectItem>
+                    ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -844,24 +839,11 @@ const ParentPortalUltraAdvanced: React.FC = () => {
                 <Select value={linkingRequest.student_trade} onValueChange={(v) => setLinkingRequest({...linkingRequest, student_trade: v})}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    {trades.length > 0 ? (
-                      trades.map((trade: any) => (
-                        <SelectItem key={trade.trade_id || trade.id} value={trade.trade_name || trade.name}>
-                          {trade.trade_name || trade.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <>
-                        <SelectItem value="General Education">General Education</SelectItem>
-                        <SelectItem value="Agriculture">Agriculture</SelectItem>
-                        <SelectItem value="Carpentry">Carpentry</SelectItem>
-                        <SelectItem value="Masonry">Masonry</SelectItem>
-                        <SelectItem value="Electrical">Electrical</SelectItem>
-                        <SelectItem value="Plumbing">Plumbing</SelectItem>
-                        <SelectItem value="Hotel Management">Hotel Management</SelectItem>
-                        <SelectItem value="Food Production">Food Production</SelectItem>
-                      </>
-                    )}
+                    {trades.map((trade: any) => (
+                      <SelectItem key={trade.trade_code} value={trade.trade_code}>
+                        {trade.trade_name} - {trade.full_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

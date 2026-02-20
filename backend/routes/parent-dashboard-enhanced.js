@@ -4,6 +4,214 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// ==================== AUTO-FETCH STUDENT ====================
+
+router.get('/student/auto-fetch', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    // Get the first linked student with FULL data from global_student_sheets
+    const [[student]] = await pool.execute(`
+      SELECT 
+        u.id,
+        u.first_name, 
+        u.last_name, 
+        u.profile_image,
+        u.email,
+        u.phone,
+        gss.student_code,
+        gss.trade_name, 
+        gss.trade_code,
+        gss.level_number,
+        gss.level_suffix,
+        gss.gpa, 
+        gss.attendance_percentage, 
+        gss.conduct_score,
+        gss.conduct_grade,
+        gss.academic_year,
+        gss.status,
+        gss.gender,
+        gss.date_of_birth,
+        gss.emergency_contact,
+        gss.address,
+        gss.class_name,
+        pc.can_view_marks, 
+        pc.can_view_attendance, 
+        pc.can_view_report_cards,
+        pc.can_view_discipline,
+        pc.linked_at
+      FROM parent_connections pc
+      JOIN users u ON pc.student_id = u.id
+      LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_id OR u.id = gss.id
+      WHERE pc.parent_id = ? AND pc.status = 'active'
+      ORDER BY pc.linked_at DESC
+      LIMIT 1
+    `, [parentId]);
+
+    if (!student) {
+      return res.json({ 
+        success: true, 
+        student: null, 
+        message: 'Nta mwana ufungiriwe' 
+      });
+    }
+
+    // Get recent marks if allowed
+    let recentMarks = [];
+    if (student.can_view_marks) {
+      const [marks] = await pool.execute(`
+        SELECT sm.*, c.course_name, c.subject_code
+        FROM student_marks sm
+        LEFT JOIN courses c ON sm.course_code = c.course_code
+        WHERE sm.student_id = ?
+        ORDER BY sm.created_at DESC
+        LIMIT 10
+      `, [student.student_code || student.id]);
+      recentMarks = marks;
+    }
+
+    // Get recent attendance if allowed
+    let recentAttendance = [];
+    if (student.can_view_attendance) {
+      const [attendance] = await pool.execute(`
+        SELECT * FROM student_attendance
+        WHERE student_id = ?
+        ORDER BY attendance_date DESC
+        LIMIT 10
+      `, [student.student_code || student.id]);
+      recentAttendance = attendance;
+    }
+
+    res.json({
+      success: true,
+      student: {
+        ...student,
+        recentMarks,
+        recentAttendance
+      }
+    });
+  } catch (error) {
+    console.error('Auto-fetch student error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== OVERVIEW ====================
+
+router.get('/overview', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    // Get all connected children with FULL data from global_student_sheets
+    const [children] = await pool.execute(`
+      SELECT 
+        u.id, 
+        u.first_name, 
+        u.last_name, 
+        u.profile_image,
+        u.email,
+        u.phone,
+        gss.student_code,
+        gss.trade_name, 
+        gss.trade_code,
+        gss.level_number, 
+        gss.level_suffix,
+        gss.gpa, 
+        gss.attendance_percentage, 
+        gss.conduct_score,
+        gss.conduct_grade,
+        gss.academic_year,
+        gss.status,
+        gss.gender,
+        gss.date_of_birth,
+        gss.emergency_contact,
+        gss.address,
+        pc.can_view_marks, 
+        pc.can_view_attendance, 
+        pc.can_view_report_cards,
+        pc.can_view_discipline,
+        pc.linked_at
+      FROM parent_connections pc
+      JOIN users u ON pc.student_id = u.id
+      LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_id OR u.id = gss.id
+      WHERE pc.parent_id = ? AND pc.status = 'active'
+    `, [parentId]);
+
+    // Get summary statistics
+    const stats = {
+      total_children: children.length,
+      avg_gpa: children.reduce((sum, c) => sum + (parseFloat(c.gpa) || 0), 0) / (children.length || 1),
+      avg_attendance: children.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / (children.length || 1),
+      avg_conduct: children.reduce((sum, c) => sum + (parseFloat(c.conduct_score) || 40), 0) / (children.length || 1),
+      excellent_conduct: children.filter(c => (parseFloat(c.conduct_score) || 0) >= 30).length,
+      good_attendance: children.filter(c => (parseFloat(c.attendance_percentage) || 0) >= 85).length
+    };
+
+    res.json({
+      success: true,
+      overview: {
+        children,
+        stats
+      }
+    });
+  } catch (error) {
+    console.error('Parent overview error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== NOTIFICATIONS ====================
+
+router.get('/notifications', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    // Get recent notifications from parent_notifications table with student details
+    const [notifications] = await pool.execute(`
+      SELECT 
+        pn.*,
+        gss.first_name as student_first_name,
+        gss.last_name as student_last_name,
+        gss.trade_name,
+        gss.level_number
+      FROM parent_notifications pn
+      LEFT JOIN global_student_sheets gss ON pn.student_id = gss.id
+      WHERE pn.parent_id = ? 
+      ORDER BY pn.created_at DESC
+      LIMIT 30
+    `, [parentId]);
+
+    // Get unread count
+    const [[unreadCount]] = await pool.execute(`
+      SELECT COUNT(*) as count FROM parent_notifications
+      WHERE parent_id = ? AND is_read = 0
+    `, [parentId]);
+
+    // Get notification stats
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread,
+        SUM(CASE WHEN category = 'discipline' THEN 1 ELSE 0 END) as discipline,
+        SUM(CASE WHEN category = 'attendance' THEN 1 ELSE 0 END) as attendance,
+        SUM(CASE WHEN category = 'academic' THEN 1 ELSE 0 END) as academic,
+        SUM(CASE WHEN category = 'payment' THEN 1 ELSE 0 END) as payment
+      FROM parent_notifications
+      WHERE parent_id = ?
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      notifications,
+      unread_count: unreadCount?.count || 0,
+      stats: stats
+    });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ==================== PARENT DASHBOARD OVERVIEW ====================
 
 router.get('/dashboard', authenticateToken, requireRole(['parent']), async (req, res) => {

@@ -1,4 +1,5 @@
-import React, { ReactNode, useState } from 'react';
+import React from 'react';
+import { ReactNode, useState } from 'react';
 import { AlertTriangle, RefreshCw, Home, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Header from './Header';
@@ -47,7 +48,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 }
 
-const ErrorDisplay: React.FC<{ error: Error | null; errorCount: number; timestamp: Date | null; onReload: () => void; onHome: () => void; onCopyError: () => void }> = ({ error, errorCount, timestamp, onReload, onHome, onCopyError }) => {
+// Separate functional component for error display
+function ErrorDisplay({ error, errorCount, timestamp, onReload, onHome, onCopyError }: { 
+  error: Error | null; 
+  errorCount: number; 
+  timestamp: Date | null; 
+  onReload: () => void; 
+  onHome: () => void; 
+  onCopyError: () => void 
+}) {
   const [showDetails, setShowDetails] = useState(false);
   const [showStack, setShowStack] = useState(false);
 
@@ -167,4 +176,4 @@ const ErrorDisplay: React.FC<{ error: Error | null; errorCount: number; timestam
       </div>
     </div>
   );
-};
+}

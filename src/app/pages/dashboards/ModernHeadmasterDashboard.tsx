@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import apiService from '@/app/services/apiService';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { toast } from 'sonner';
+import { ParentManagementWidget } from '@/app/components/shared/ParentManagementWidget';
 
 interface ModernHeadmasterDashboardProps {
   onNavigate?: (page: string) => void;
@@ -712,6 +713,9 @@ export default function ModernHeadmasterDashboard({ onNavigate, onLogout }: Mode
                           <div className="text-right">
                             <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700">Level 4 SOD</Badge>
                             <p className="text-xs font-semibold text-blue-600 mt-1">{student.fees_balance > 0 ? `Unpaid: ${student.fees_balance}` : 'Fees Cleared'}</p>
+                          </div>
+                          <div className="ml-2">
+                            <ParentManagementWidget studentId={student.student_id || student.id} compact={true} />
                           </div>
                         </div>
                       ))}

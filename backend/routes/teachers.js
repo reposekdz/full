@@ -9,7 +9,7 @@ const router = express.Router();
 // ================== ADMIN ENDPOINTS ==================
 
 // Get all teachers (Admin)
-router.get('/list', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+router.get('/list', authenticateToken, requireRole('admin', 'super_admin', 'headmaster', 'director_study'), async (req, res) => {
   try {
     const { search, department, status, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
@@ -128,46 +128,54 @@ router.get('/details/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Create new teacher (Admin)
-router.post('/create', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+// Create new teacher (Admin/DOS)
+router.post('/create', authenticateToken, async (req, res) => {
   try {
-    const { first_name, last_name, email, phone, password, department, qualification, specialization } = req.body;
-
-    if (!first_name || !last_name || !email) {
-      return res.status(400).json({ success: false, message: 'First name, last name, and email are required' });
+    // Check if user has permission (admin, headmaster, or director_study)
+    const allowedRoles = ['admin', 'super_admin', 'headmaster', 'director_study', 'dos'];
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Insufficient permissions. Your role: ' + req.user.role 
+      });
     }
 
+    const { first_name, last_name, email, phone, password } = req.body;
+
+    if (!first_name || !last_name) {
+      return res.status(400).json({ success: false, message: 'First name and last name are required' });
+    }
+
+    // Auto-generate email if not provided
+    const teacherEmail = email || `${first_name.toLowerCase()}.${last_name.toLowerCase()}@garden.rw`;
     const hashedPassword = await bcrypt.hash(password || 'teacher123', 10);
-    const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+    const username = teacherEmail.split('@')[0] + Math.floor(Math.random() * 1000);
 
     // Get the teacher role_id from roles table
     const [teacherRole] = await pool.execute('SELECT id FROM roles WHERE name = "teacher"');
-    if (teacherRole.length === 0) {
-      return res.status(500).json({ success: false, message: 'Teacher role not found in system' });
-    }
-    const teacherRoleId = teacherRole[0].id;
+    const teacherRoleId = teacherRole.length > 0 ? teacherRole[0].id : null;
 
     const [result] = await pool.execute(`
       INSERT INTO users (username, email, password, first_name, last_name, phone, role, role_id, is_active)
       VALUES (?, ?, ?, ?, ?, ?, 'teacher', ?, 1)
-    `, [username, email, hashedPassword, first_name, last_name, phone, teacherRoleId]);
+    `, [username, teacherEmail, hashedPassword, first_name, last_name, phone || null, teacherRoleId]);
 
     res.json({
       success: true,
       message: 'Teacher created successfully',
-      teacher: { id: result.insertId, username, email, first_name, last_name }
+      teacher: { id: result.insertId, username, email: teacherEmail, first_name, last_name }
     });
   } catch (error) {
     console.error('Create teacher error:', error);
     res.status(500).json({
       success: false,
-      message: error.code === 'ER_DUP_ENTRY' ? 'Email already exists' : 'Failed to create teacher'
+      message: error.code === 'ER_DUP_ENTRY' ? 'Email already exists' : error.message || 'Failed to create teacher'
     });
   }
 });
 
 // Update teacher (Admin)
-router.put('/update/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+router.put('/update/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster', 'director_study'), async (req, res) => {
   try {
     const { id } = req.params;
     const { first_name, last_name, email, phone, is_active } = req.body;
@@ -194,7 +202,7 @@ router.put('/update/:id', authenticateToken, requireRole('admin', 'super_admin',
 });
 
 // Delete teacher (Admin)
-router.delete('/delete/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster'), async (req, res) => {
+router.delete('/delete/:id', authenticateToken, requireRole('admin', 'super_admin', 'headmaster', 'director_study'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -247,6 +255,223 @@ router.get('/admin/statistics', authenticateToken, requireRole('admin', 'super_a
 });
 
 // ================== TEACHER-SPECIFIC ENDPOINTS ==================
+
+// Get all trades with levels (for teacher dashboard)
+router.get('/trades-levels', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const [trades] = await pool.execute(`
+      SELECT DISTINCT trade_code, trade_name, level_number
+      FROM global_student_sheets
+      WHERE status = 'active'
+      ORDER BY trade_code, level_number
+    `);
+
+    const tradesMap = {};
+    trades.forEach(t => {
+      if (!tradesMap[t.trade_code]) {
+        tradesMap[t.trade_code] = { trade_code: t.trade_code, trade_name: t.trade_name, levels: [] };
+      }
+      if (!tradesMap[t.trade_code].levels.includes(t.level_number)) {
+        tradesMap[t.trade_code].levels.push(t.level_number);
+      }
+    });
+
+    res.json({ success: true, trades: Object.values(tradesMap) });
+  } catch (error) {
+    console.error('Get trades-levels error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get students by trade and level
+router.get('/students-by-trade-level', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const { trade_code, level_number } = req.query;
+
+    if (!trade_code || !level_number) {
+      return res.status(400).json({ success: false, message: 'Trade code and level number required' });
+    }
+
+    const [students] = await pool.execute(`
+      SELECT 
+        gss.id, gss.student_id, gss.student_code, gss.first_name, gss.last_name,
+        gss.trade_code, gss.trade_name, gss.level_number, gss.gpa, gss.attendance_percentage,
+        gss.gender, gss.email, gss.phone
+      FROM global_student_sheets gss
+      WHERE gss.trade_code = ? AND gss.level_number = ? AND gss.status = 'active'
+      ORDER BY gss.first_name, gss.last_name
+    `, [trade_code, level_number]);
+
+    res.json({ success: true, students, count: students.length });
+  } catch (error) {
+    console.error('Get students by trade-level error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Save marks with dynamic columns
+router.post('/marks/save', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const { trade_code, level_number, marks_data, columns_data } = req.body;
+    const teacher_id = req.user.userId || req.user.id;
+
+    if (!trade_code || !level_number || !marks_data || !columns_data) {
+      return res.status(400).json({ success: false, message: 'Invalid data provided' });
+    }
+
+    // Create table if not exists
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS student_marks (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        student_id INT NOT NULL,
+        teacher_id INT NOT NULL,
+        trade_code VARCHAR(10) NOT NULL,
+        level_number INT NOT NULL,
+        assessment_name VARCHAR(100) NOT NULL,
+        marks DECIMAL(5,2) NOT NULL DEFAULT 0,
+        max_marks DECIMAL(5,2) NOT NULL DEFAULT 100,
+        weight DECIMAL(5,2) NOT NULL DEFAULT 100,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_student (student_id),
+        INDEX idx_teacher (teacher_id),
+        INDEX idx_trade_level (trade_code, level_number),
+        UNIQUE KEY unique_mark (student_id, teacher_id, trade_code, level_number, assessment_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    let savedCount = 0;
+    for (const mark of marks_data) {
+      const { student_id, assessment_name, marks, max_marks, weight } = mark;
+      
+      const [existing] = await pool.execute(`
+        SELECT id FROM student_marks 
+        WHERE student_id = ? AND assessment_name = ? AND trade_code = ? AND level_number = ? AND teacher_id = ?
+      `, [student_id, assessment_name, trade_code, level_number, teacher_id]);
+
+      if (existing.length > 0) {
+        await pool.execute(`
+          UPDATE student_marks 
+          SET marks = ?, max_marks = ?, weight = ?, updated_at = NOW()
+          WHERE id = ?
+        `, [marks, max_marks, weight, existing[0].id]);
+      } else {
+        await pool.execute(`
+          INSERT INTO student_marks (student_id, teacher_id, trade_code, level_number, assessment_name, marks, max_marks, weight, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `, [student_id, teacher_id, trade_code, level_number, assessment_name, marks, max_marks, weight]);
+      }
+      savedCount++;
+    }
+
+    res.json({ success: true, message: `Saved ${savedCount} marks successfully` });
+  } catch (error) {
+    console.error('Save marks error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Load saved marks
+router.get('/marks/load', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const { trade_code, level_number } = req.query;
+    const teacher_id = req.user.userId || req.user.id;
+
+    if (!trade_code || !level_number) {
+      return res.status(400).json({ success: false, message: 'Trade code and level number required' });
+    }
+
+    const [marks] = await pool.execute(`
+      SELECT sm.*, gss.first_name, gss.last_name
+      FROM student_marks sm
+      JOIN global_student_sheets gss ON sm.student_id = gss.student_id
+      WHERE sm.trade_code = ? AND sm.level_number = ? AND sm.teacher_id = ?
+      ORDER BY gss.first_name, gss.last_name, sm.assessment_name
+    `, [trade_code, level_number, teacher_id]);
+
+    res.json({ success: true, marks });
+  } catch (error) {
+    console.error('Load marks error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get all students (global sheets)
+router.get('/global-students', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const { search, trade_code, level_number, page = 1, limit = 100 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT gss.*, 
+        (SELECT AVG(marks) FROM student_marks WHERE student_id = gss.student_id) as avg_marks
+      FROM global_student_sheets gss
+      WHERE gss.status = 'active'
+    `;
+    const params = [];
+
+    if (search) {
+      query += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR gss.student_code LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (trade_code) {
+      query += ` AND gss.trade_code = ?`;
+      params.push(trade_code);
+    }
+    if (level_number) {
+      query += ` AND gss.level_number = ?`;
+      params.push(level_number);
+    }
+
+    query += ` ORDER BY gss.first_name, gss.last_name LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), offset);
+
+    const [students] = await pool.execute(query, params);
+
+    res.json({ success: true, students, count: students.length });
+  } catch (error) {
+    console.error('Get global students error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Delete marks column
+router.delete('/marks/column', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const { trade_code, level_number, assessment_name } = req.body;
+    const teacher_id = req.user.userId || req.user.id;
+
+    await pool.execute(`
+      DELETE FROM student_marks 
+      WHERE teacher_id = ? AND trade_code = ? AND level_number = ? AND assessment_name = ?
+    `, [teacher_id, trade_code, level_number, assessment_name]);
+
+    res.json({ success: true, message: 'Column deleted successfully' });
+  } catch (error) {
+    console.error('Delete column error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get teacher statistics
+router.get('/statistics', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const teacher_id = req.user.userId || req.user.id;
+
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        (SELECT COUNT(DISTINCT trade_code) FROM student_marks WHERE teacher_id = ?) as trades_taught,
+        (SELECT COUNT(DISTINCT student_id) FROM student_marks WHERE teacher_id = ?) as students_graded,
+        (SELECT COUNT(*) FROM student_marks WHERE teacher_id = ?) as total_marks_entered,
+        (SELECT AVG(marks) FROM student_marks WHERE teacher_id = ?) as avg_marks_given
+    `, [teacher_id, teacher_id, teacher_id, teacher_id]);
+
+    res.json({ success: true, statistics: stats });
+  } catch (error) {
+    console.error('Get teacher statistics error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 // Get teacher's classes
 router.get('/classes', authenticateToken, requireRole('teacher'), async (req, res) => {

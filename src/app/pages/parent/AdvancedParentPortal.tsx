@@ -43,7 +43,10 @@ import {
   Video,
   Calculator,
   MapPin,
-  Plus
+  Plus,
+  UserPlus,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -51,13 +54,9 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { toast } from 'sonner';
-import { useOfflineStatus } from '@/hooks/useOfflineStatus';
-import { OfflineBanner } from '@/components/OfflineBanner';
-import { offlineFetch, syncPendingRequests } from '@/utils/offlineApi';
-import { initDB } from '@/utils/offlineStorage';
 
 // Language context
 const useLanguage = () => {
@@ -174,7 +173,6 @@ const API_BASE = 'http://localhost:5000/api';
 
 export default function AdvancedParentPortal() {
   const { language, setLanguage } = useLanguage();
-  const { isOnline, showOfflineBanner } = useOfflineStatus();
   const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<LinkedStudent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,10 +201,27 @@ export default function AdvancedParentPortal() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Student linking state
+  const [selectedTrade, setSelectedTrade] = useState('SOD');
+  const [selectedLevel, setSelectedLevel] = useState('4');
+  const [selectedGender, setSelectedGender] = useState('');
+  const [linkSelectedStudent, setLinkSelectedStudent] = useState('');
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkStatus, setLinkStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [linkMessage, setLinkMessage] = useState('');
+  const [studentsCache, setStudentsCache] = useState<Map<string, any[]>>(new Map());
+
   useEffect(() => {
-    initDB();
-    if (isOnline) syncPendingRequests();
-  }, [isOnline]);
+    loadLinkedStudents();
+  }, []);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      loadStudentData(selectedStudent.id);
+    }
+  }, [selectedStudent]);
 
   // Translations
   const t = {
@@ -357,28 +372,24 @@ export default function AdvancedParentPortal() {
   };
 
   useEffect(() => {
-    loadParentData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedStudent) {
-      loadStudentDetails(selectedStudent.id);
+    if (showLinkRequestModal && selectedTrade && selectedLevel) {
+      loadStudents();
     }
-  }, [selectedStudent]);
+  }, [showLinkRequestModal, selectedTrade, selectedLevel]);
 
   const loadParentData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      
+
       // First try to get linked children
       let response = await fetch(`${API_BASE}/parent-dashboard/children`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       let result = await response.json();
-      
+
       // If no linked children, try to get student directly
       if (!result.success || !result.children || result.children.length === 0) {
         // Try alternative endpoints
@@ -386,7 +397,7 @@ export default function AdvancedParentPortal() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         result = await response.json();
-        
+
         if (!result.success || !result.students) {
           // Try the enhanced parent dashboard endpoint
           response = await fetch(`${API_BASE}/parent-dashboard-enhanced/children`, {
@@ -397,7 +408,7 @@ export default function AdvancedParentPortal() {
       }
 
       const children = result.children || result.students || [];
-      
+
       if (children.length > 0) {
         setLinkedStudents(children);
         setSelectedStudent(children[0]);
@@ -421,17 +432,17 @@ export default function AdvancedParentPortal() {
     try {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      
+
       // Try to auto-fetch student from Level 4 SOD
       const response = await fetch(`${API_BASE}/parent-dashboard/student/auto-fetch`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ parent_id: user.id, phone: user.phone })
       });
-      
+
       const data = await response.json();
       if (data.success && data.student) {
         setLinkedStudents([data.student]);
@@ -526,7 +537,7 @@ export default function AdvancedParentPortal() {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success(language === 'rw' ? 'Ibyifuzo byatangiye! Reba telephone yawe' : 'Payment initiated! Check your phone');
         setShowPaymentModal(false);
@@ -565,7 +576,7 @@ export default function AdvancedParentPortal() {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success(language === 'rw' ? 'Message yatangiwe!' : 'Message sent!');
         setShowMessageModal(false);
@@ -581,46 +592,123 @@ export default function AdvancedParentPortal() {
     }
   };
 
-  const handleLinkRequest = async () => {
-    if (!studentCode) {
-      toast.error(language === 'rw' ? 'Andika kode y\'umwana' : 'Please enter student code');
+  const loadStudents = async () => {
+    const cacheKey = `${selectedTrade}-${selectedLevel}`;
+
+    if (studentsCache.has(cacheKey)) {
+      setStudentsData(studentsCache.get(cacheKey) || []);
       return;
     }
 
-    setProcessing(true);
     try {
+      setLoadingStudents(true);
       const token = localStorage.getItem('token');
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      const response = await fetch(`${API_BASE}/parent-linking/links`, {
+
+      const response = await fetch(
+        `http://localhost:3000/api/global-student-management/students?trade=${selectedTrade}&level=${selectedLevel}&limit=500&sortBy=first_name&sortOrder=ASC&status=active`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.students && result.students.length > 0) {
+        const students = result.students.map((s: any) => ({
+          ...s,
+          full_name: `${s.first_name} ${s.last_name}`.trim()
+        }));
+        setStudentsData(students);
+        setStudentsCache(new Map(studentsCache.set(cacheKey, students)));
+      } else {
+        setStudentsData([]);
+      }
+    } catch (error) {
+      console.error('Ikosa ryo gushakisha abanyeshuri:', error);
+      setStudentsData([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleLinkStudent = async () => {
+    if (!linkSelectedStudent) {
+      setLinkStatus('error');
+      setLinkMessage('Nyamuneka hitamo umunyeshuri!');
+      return;
+    }
+
+    const student = studentsData[parseInt(linkSelectedStudent)];
+    if (!student) {
+      setLinkStatus('error');
+      setLinkMessage('Ikosa: Amakuru y\'umunyeshuri ntabonetse');
+      return;
+    }
+
+    try {
+      setLinking(true);
+      setLinkStatus('idle');
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('http://localhost:3000/api/parent-linking/link-student', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          parent_id: user.id,
-          student_code: studentCode,
-          phone: phoneNumber
+          student_name: student.full_name,
+          student_first_name: student.first_name,
+          student_last_name: student.last_name,
+          student_trade: selectedTrade,
+          student_level: selectedLevel,
+          student_gender: selectedGender || student.gender,
+          relationship_type: 'Parent',
+          student_code: student.student_code
         })
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
-        toast.success(language === 'rw' ? 'Ibyifuzo byatangiwe! Utegereze ubutumwa bwo kwemera' : 'Request submitted! Wait for approval');
-        setShowLinkRequestModal(false);
-        setStudentCode('');
-        loadParentData();
+        setLinkStatus('success');
+        setLinkMessage(result.message || 'Icyifuzo cyoherejwe neza!');
+        toast.success(result.message || 'Icyifuzo cyoherejwe neza!');
+        setTimeout(() => {
+          setShowLinkRequestModal(false);
+          resetLinkForm();
+          loadParentData();
+        }, 2000);
       } else {
-        toast.error(result.message || (language === 'rw' ? 'Ibyifuzo byanze' : 'Request failed'));
+        setLinkStatus('error');
+        setLinkMessage(result.message || 'Ntibyakunze kohereza icyifuzo');
+        toast.error(result.message || 'Ntibyakunze kohereza icyifuzo');
       }
     } catch (error) {
-      console.error('Link request error:', error);
-      toast.error(language === 'rw' ? 'Ibyifuzo byanze' : 'Request failed');
+      console.error('Ikosa:', error);
+      setLinkStatus('error');
+      setLinkMessage('Habaye ikosa. Nyamuneka ongera ugerageze.');
+      toast.error('Habaye ikosa. Nyamuneka ongera ugerageze.');
     } finally {
-      setProcessing(false);
+      setLinking(false);
     }
+  };
+
+  const resetLinkForm = () => {
+    setSelectedTrade('SOD');
+    setSelectedLevel('4');
+    setSelectedGender('');
+    setLinkSelectedStudent('');
+    setStudentsData([]);
+    setLinkStatus('idle');
+    setLinkMessage('');
   };
 
   const markMessageAsRead = async (messageId: number) => {
@@ -655,6 +743,51 @@ export default function AdvancedParentPortal() {
     return 'text-red-600';
   };
 
+  const handleLinkRequest = async () => {
+    if (!studentCode) {
+      toast.error(language === 'rw' ? 'Injiza kode y\'umwana' : 'Please enter student code');
+      return;
+    }
+    setProcessing(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/parent-linking/auto-connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          student_code: studentCode,
+          phone: phoneNumber,
+          relationship_type: 'Parent'
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message || (language === 'rw' ? 'Icyifuzo cyoherejwe neza!' : 'Link request submitted!'));
+        setShowLinkRequestModal(false);
+        setStudentCode('');
+        loadParentData();
+      } else {
+        toast.error(result.message || (language === 'rw' ? 'Ntibyakunze' : 'Request failed'));
+      }
+    } catch (error) {
+      console.error('Link request error:', error);
+      toast.error(language === 'rw' ? 'Habaye ikosa' : 'An error occurred');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const loadLinkedStudents = async () => {
+    await loadParentData();
+  };
+
+  const loadStudentData = async (studentId: number) => {
+    await loadStudentDetails(studentId);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-400 via-yellow-400 to-green-500 flex items-center justify-center">
@@ -668,7 +801,6 @@ export default function AdvancedParentPortal() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-yellow-50 to-green-100">
-      <OfflineBanner isOnline={isOnline} showBanner={showOfflineBanner} />
       {/* Header */}
       <header className="bg-gradient-to-r from-green-600 via-yellow-500 to-green-600 text-white shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -688,15 +820,15 @@ export default function AdvancedParentPortal() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setLanguage(language === 'en' ? 'rw' : 'en')}
                 className="bg-white/20 border-white/30 text-white hover:bg-white/30"
               >
                 {language === 'en' ? 'Kinyarwanda' : 'English'}
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowLinkRequestModal(true)}
                 className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
               >
@@ -726,16 +858,14 @@ export default function AdvancedParentPortal() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedStudent(student)}
-                    className={`p-4 rounded-xl cursor-pointer transition-all shadow-lg ${
-                      selectedStudent?.id === student.id
-                        ? 'bg-gradient-to-r from-green-500 to-yellow-500 text-white'
-                        : 'bg-white hover:bg-green-50 border-2 border-transparent hover:border-green-300'
-                    }`}
+                    className={`p-4 rounded-xl cursor-pointer transition-all shadow-lg ${selectedStudent?.id === student.id
+                      ? 'bg-gradient-to-r from-green-500 to-yellow-500 text-white'
+                      : 'bg-white hover:bg-green-50 border-2 border-transparent hover:border-green-300'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        selectedStudent?.id === student.id ? 'bg-white/30' : 'bg-gradient-to-r from-green-400 to-yellow-400'
-                      }`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedStudent?.id === student.id ? 'bg-white/30' : 'bg-gradient-to-r from-green-400 to-yellow-400'
+                        }`}>
                         <span className="text-2xl font-black text-white">{student.first_name?.charAt(0)}</span>
                       </div>
                       <div>
@@ -755,12 +885,12 @@ export default function AdvancedParentPortal() {
               <div className="text-center py-8">
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 mb-4">{t[language].noStudents}</p>
-                <Button 
-                  onClick={tryAutoFetchStudent}
+                <Button
+                  onClick={() => setShowLinkRequestModal(true)}
                   className="bg-gradient-to-r from-green-500 to-yellow-500"
                 >
-                  <Search className="w-4 h-4 mr-2" />
-                  {t[language].autoFetch}
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {t[language].requestLink}
                 </Button>
               </div>
             )}
@@ -785,7 +915,7 @@ export default function AdvancedParentPortal() {
                   </CardContent>
                 </Card>
               </motion.div>
-              
+
               <motion.div whileHover={{ scale: 1.05 }}>
                 <Card className="shadow-xl border-0 overflow-hidden">
                   <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 text-white">
@@ -800,7 +930,7 @@ export default function AdvancedParentPortal() {
                   </CardContent>
                 </Card>
               </motion.div>
-              
+
               <motion.div whileHover={{ scale: 1.05 }}>
                 <Card className="shadow-xl border-0 overflow-hidden">
                   <div className="bg-gradient-to-br from-red-400 to-red-600 p-4 text-white">
@@ -815,7 +945,7 @@ export default function AdvancedParentPortal() {
                   </CardContent>
                 </Card>
               </motion.div>
-              
+
               <motion.div whileHover={{ scale: 1.05 }}>
                 <Card className="shadow-xl border-0 overflow-hidden">
                   <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-4 text-white">
@@ -834,21 +964,21 @@ export default function AdvancedParentPortal() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Button 
+              <Button
                 onClick={() => setShowPaymentModal(true)}
                 className="bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600 h-14 text-lg font-bold shadow-lg"
               >
                 <CreditCard className="w-5 h-5 mr-2" />
                 {t[language].payFees}
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowMessageModal(true)}
                 className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 h-14 text-lg font-bold shadow-lg"
               >
                 <MessageSquare className="w-5 h-5 mr-2" />
                 {t[language].sendMessage}
               </Button>
-              <Button 
+              <Button
                 onClick={loadParentData}
                 variant="outline"
                 className="h-14 text-lg font-bold shadow-lg border-2 border-green-500 text-green-600 hover:bg-green-50"
@@ -856,7 +986,7 @@ export default function AdvancedParentPortal() {
                 <RefreshCw className="w-5 h-5 mr-2" />
                 Refresh
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowLinkRequestModal(true)}
                 variant="outline"
                 className="h-14 text-lg font-bold shadow-lg border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
@@ -932,8 +1062,8 @@ export default function AdvancedParentPortal() {
                         {dodMessages.length > 0 ? (
                           <div className="space-y-3">
                             {dodMessages.slice(0, 5).map((msg) => (
-                              <div 
-                                key={msg.id} 
+                              <div
+                                key={msg.id}
                                 onClick={() => markMessageAsRead(msg.id)}
                                 className={`p-3 rounded-lg cursor-pointer ${msg.is_read ? 'bg-gray-50' : 'bg-yellow-50 border-l-4 border-yellow-500'}`}
                               >
@@ -1015,11 +1145,10 @@ export default function AdvancedParentPortal() {
                           {attendance.slice(0, 20).map((record) => (
                             <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                  record.status === 'present' ? 'bg-green-100' :
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${record.status === 'present' ? 'bg-green-100' :
                                   record.status === 'absent' ? 'bg-red-100' :
-                                  record.status === 'late' ? 'bg-yellow-100' : 'bg-blue-100'
-                                }`}>
+                                    record.status === 'late' ? 'bg-yellow-100' : 'bg-blue-100'
+                                  }`}>
                                   {record.status === 'present' && <CheckCircle className="w-5 h-5 text-green-600" />}
                                   {record.status === 'absent' && <X className="w-5 h-5 text-red-600" />}
                                   {record.status === 'late' && <Clock className="w-5 h-5 text-yellow-600" />}
@@ -1106,7 +1235,7 @@ export default function AdvancedParentPortal() {
                           <p className="text-2xl font-black">{(selectedStudent.balance || 0).toLocaleString()} RWF</p>
                         </div>
                       </div>
-                      
+
                       <h3 className="font-bold text-lg mb-4">Payment History</h3>
                       {feePayments.length > 0 ? (
                         <div className="space-y-3">
@@ -1208,7 +1337,7 @@ export default function AdvancedParentPortal() {
                                   <span className="truncate">{teacher.email}</span>
                                 </div>
                               </div>
-                              <Button 
+                              <Button
                                 onClick={() => { setSelectedTeacher(teacher); setShowMessageModal(true); }}
                                 className="w-full mt-3 bg-gradient-to-r from-green-500 to-yellow-500"
                                 size="sm"
@@ -1277,16 +1406,15 @@ export default function AdvancedParentPortal() {
                       {dodMessages.length > 0 ? (
                         <div className="space-y-3">
                           {dodMessages.map((msg) => (
-                            <div 
+                            <div
                               key={msg.id}
                               onClick={() => markMessageAsRead(msg.id)}
                               className={`p-4 rounded-lg cursor-pointer transition ${msg.is_read ? 'bg-gray-50' : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500'}`}
                             >
                               <div className="flex items-start gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                  msg.type === 'achievement' ? 'bg-yellow-100' :
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${msg.type === 'achievement' ? 'bg-yellow-100' :
                                   msg.type === 'warning' ? 'bg-red-100' : 'bg-blue-100'
-                                }`}>
+                                  }`}>
                                   {msg.type === 'achievement' && <Trophy className="w-5 h-5 text-yellow-600" />}
                                   {msg.type === 'warning' && <AlertTriangle className="w-5 h-5 text-red-600" />}
                                   {msg.type === 'leave' && <Calendar className="w-5 h-5 text-blue-600" />}
@@ -1336,24 +1464,24 @@ export default function AdvancedParentPortal() {
             </div>
             <div>
               <Label>{language === 'rw' ? 'Nimero ya telephone' : 'Phone Number'}</Label>
-              <Input 
-                value={phoneNumber} 
+              <Input
+                value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder={t[language].enterPhone}
               />
             </div>
             <div>
               <Label>{language === 'rw' ? 'Amafaranga' : 'Amount'}</Label>
-              <Input 
+              <Input
                 type="number"
                 value={paymentData.amount || ''}
-                onChange={(e) => setPaymentData({...paymentData, amount: parseInt(e.target.value) || 0})}
+                onChange={(e) => setPaymentData({ ...paymentData, amount: parseInt(e.target.value) || 0 })}
                 placeholder={t[language].enterAmount}
               />
             </div>
             <div>
               <Label>{language === 'rw' ? 'Ubwikode' : 'Payment Method'}</Label>
-              <Select value={paymentData.payment_method} onValueChange={(v) => setPaymentData({...paymentData, payment_method: v})}>
+              <Select value={paymentData.payment_method} onValueChange={(v) => setPaymentData({ ...paymentData, payment_method: v })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1369,8 +1497,8 @@ export default function AdvancedParentPortal() {
             <Button variant="outline" onClick={() => setShowPaymentModal(false)}>
               {t[language].cancel}
             </Button>
-            <Button 
-              onClick={handlePayment} 
+            <Button
+              onClick={handlePayment}
               disabled={processing}
               className="bg-gradient-to-r from-green-500 to-yellow-500"
             >
@@ -1393,8 +1521,8 @@ export default function AdvancedParentPortal() {
           <div className="space-y-4">
             <div>
               <Label>{language === 'rw' ? 'Umwarimu' : 'Teacher'}</Label>
-              <Select 
-                value={selectedTeacher?.id?.toString() || ''} 
+              <Select
+                value={selectedTeacher?.id?.toString() || ''}
                 onValueChange={(v) => {
                   const teacher = teachers.find(t => t.id.toString() === v);
                   setSelectedTeacher(teacher || null);
@@ -1414,7 +1542,7 @@ export default function AdvancedParentPortal() {
             </div>
             <div>
               <Label>{language === 'rw' ? 'Message' : 'Message'}</Label>
-              <textarea 
+              <textarea
                 className="w-full p-3 border rounded-lg min-h-[100px]"
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
@@ -1426,8 +1554,8 @@ export default function AdvancedParentPortal() {
             <Button variant="outline" onClick={() => setShowMessageModal(false)}>
               {t[language].cancel}
             </Button>
-            <Button 
-              onClick={handleSendMessage} 
+            <Button
+              onClick={handleSendMessage}
               disabled={processing}
               className="bg-gradient-to-r from-blue-500 to-purple-500"
             >
@@ -1451,8 +1579,8 @@ export default function AdvancedParentPortal() {
           <div className="space-y-4">
             <div>
               <Label>{language === 'rw' ? 'Kode y\'umwana' : 'Student Code'}</Label>
-              <Input 
-                value={studentCode} 
+              <Input
+                value={studentCode}
                 onChange={(e) => setStudentCode(e.target.value)}
                 placeholder={t[language].enterStudentCode}
               />
@@ -1462,8 +1590,8 @@ export default function AdvancedParentPortal() {
             </div>
             <div>
               <Label>{language === 'rw' ? 'Nimero ya telephone' : 'Phone Number'}</Label>
-              <Input 
-                value={phoneNumber} 
+              <Input
+                value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder={t[language].enterPhone}
               />
@@ -1473,8 +1601,8 @@ export default function AdvancedParentPortal() {
             <Button variant="outline" onClick={() => setShowLinkRequestModal(false)}>
               {t[language].cancel}
             </Button>
-            <Button 
-              onClick={handleLinkRequest} 
+            <Button
+              onClick={handleLinkRequest}
               disabled={processing}
               className="bg-gradient-to-r from-yellow-500 to-orange-500"
             >

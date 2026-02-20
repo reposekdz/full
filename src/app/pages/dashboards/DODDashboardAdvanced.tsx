@@ -2,7 +2,7 @@
 // Discipline Management System - Modern UI with shadcn + Tailwind + Motion
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, AlertTriangle, UserCheck, Star, Settings,
   Bell, Search, RefreshCw, Plus, CheckCircle, Eye, Phone, UserPlus,
@@ -13,11 +13,12 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { LogOut, Grid } from 'lucide-react';
+import { ParentManagementWidget } from '@/app/components/shared/ParentManagementWidget';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -34,16 +35,14 @@ import {
 } from '@/app/components/ui/select';
 import { Progress } from '@/app/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
-import { ScrollArea } from '@/app/components/ui/scroll-area';
-import { Separator } from '@/app/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { toast } from 'sonner';
-import { UnifiedMessaging } from '@/app/components/messaging/UnifiedMessaging';
 import { BottomNav } from '@/app/components/BottomNav';
 import { API_BASE_URL } from '@/app/config/apiBase';
 import apiService from '@/app/services/apiService';
+import { CONDUCT_MAX_SCORE, getConductColor, getConductBgColor, getConductPercentage, formatConductScore } from '@/app/utils/conductScoreUtils';
 
 const API_BASE = API_BASE_URL;
 
@@ -127,6 +126,11 @@ const SIDEBAR_ITEMS = [
   { icon: BookOpen, label: 'Give Lessons', value: 'give-lessons' },
   { icon: Phone, label: 'Parent SMS', value: 'parent-sms' },
   { icon: UserPlus, label: 'Link Parents', value: 'link-parents' },
+  { icon: BarChart3, label: 'Analytics', value: 'analytics' },
+  { icon: Calendar, label: 'Attendance', value: 'attendance' },
+  { icon: FileText, label: 'Reports', value: 'reports' },
+  { icon: Activity, label: 'Monitoring', value: 'monitoring' },
+  { icon: Flame, label: 'Hot Issues', value: 'hot-issues' },
   { icon: Settings, label: 'Settings', value: 'settings' },
 ];
 
@@ -142,6 +146,11 @@ const TAB_TITLES: Record<string, string> = {
   'give-lessons': 'Give Lessons',
   'parent-sms': 'Parent SMS',
   'link-parents': 'Link Parents',
+  analytics: 'Analytics & Reports',
+  attendance: 'Attendance Tracking',
+  reports: 'Generate Reports',
+  monitoring: 'Real-time Monitoring',
+  'hot-issues': 'Hot Issues Dashboard',
   settings: 'Settings',
 };
 
@@ -786,18 +795,12 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   ];
 
   const conductDistribution = [
-    { name: 'Excellent (90+)', value: students.filter(s => s.conduct_score >= 90).length, color: '#22C55E' },
-    { name: 'Good (75-89)', value: students.filter(s => s.conduct_score >= 75 && s.conduct_score < 90).length, color: '#3B82F6' },
-    { name: 'Fair (60-74)', value: students.filter(s => s.conduct_score >= 60 && s.conduct_score < 75).length, color: '#F97316' },
-    { name: 'Poor (<60)', value: students.filter(s => s.conduct_score < 60).length, color: '#EF4444' },
+    { name: 'A (36-40)', value: students.filter(s => s.conduct_score >= 36).length, color: '#22C55E' },
+    { name: 'B (32-35)', value: students.filter(s => s.conduct_score >= 32 && s.conduct_score < 36).length, color: '#3B82F6' },
+    { name: 'C (28-31)', value: students.filter(s => s.conduct_score >= 28 && s.conduct_score < 32).length, color: '#F59E0B' },
+    { name: 'D (24-27)', value: students.filter(s => s.conduct_score >= 24 && s.conduct_score < 28).length, color: '#F97316' },
+    { name: 'F (<24)', value: students.filter(s => s.conduct_score < 24).length, color: '#EF4444' },
   ];
-
-  const getConductColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 75) return 'text-blue-600';
-    if (score >= 60) return 'text-orange-500';
-    return 'text-red-500';
-  };
 
   const getConductBadge = (status: string) => {
     switch (status) {
@@ -826,127 +829,63 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
 
   return (
     <>
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-
-        {/* ─── Sidebar ─────────────────────────────────────────────────────── */}
-        <aside className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-gradient-to-b from-[#1565C0] via-[#1256A8] to-[#0D47A1] text-white shadow-2xl transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}>
-          {/* Brand */}
-          <div className="px-5 py-6 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                <Shield className="size-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold tracking-tight">Garden TVET</h2>
-                <p className="text-xs text-white/60">Discipline Office</p>
-              </div>
-            </div>
-          </div>
-
-          {/* User */}
-          <div className="px-5 py-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 border-2 border-white/20">
-                <AvatarFallback className="bg-white/15 text-white text-sm font-bold">
-                  D
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-semibold">DOD</p>
-                <p className="text-xs text-white/50">Director of Discipline</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
-              {SIDEBAR_ITEMS.map((item) => {
-                const isActive = activeTab === item.value;
-                return (
-                  <motion.button
-                    key={item.value}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setActiveTab(item.value);
-                      setSidebarOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-                    ${isActive
-                        ? 'bg-white/20 text-white shadow-lg shadow-black/10 backdrop-blur-sm'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white'
-                      }`}
-                  >
-                    <item.icon className={`size-[18px] ${isActive ? 'text-white' : 'text-white/60'}`} />
-                    <span>{item.label}</span>
-                    {isActive && (
-                      <motion.div layoutId="sidebar-indicator" className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />
-                    )}
-                  </motion.button>
-                );
-              })}
-            </nav>
-          </ScrollArea>
-
-          {/* Footer */}
-          <div className="border-t border-white/10 px-5 py-4">
-            <div className="flex items-center gap-2 text-xs text-white/40">
-              <Activity className="size-3" />
-              <span>System Active</span>
-              <span className="ml-auto inline-block h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-            </div>
-          </div>
-        </aside>
-
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
         {/* ─── Main Content ────────────────────────────────────────────────── */}
-        <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'
-          }`}>
+        <main className="flex-1 flex flex-col min-h-screen">
           {/* Top Bar */}
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/80 backdrop-blur-md px-6">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="hover:bg-muted"
-              >
-                <Menu className="size-5" />
-              </Button>
-              <h1 className="text-lg font-semibold text-foreground">{TAB_TITLES[activeTab]}</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="size-[18px] text-muted-foreground" />
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                      {stats.pendingActions}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Notifications</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => setActiveTab('settings')}>
-                    <Settings className="size-[18px] text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Settings</TooltipContent>
-              </Tooltip>
-              {onLogout && (
+          <header className="sticky top-0 z-30 border-b bg-white/80 backdrop-blur-md">
+            <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600">
+                  <Shield className="size-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-slate-800">Garden TVET</h1>
+                  <p className="text-xs text-slate-500">Discipline Office</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={onLogout} className="text-red-600 border-red-200 hover:bg-red-50">
-                      <LogOut className="size-[18px] mr-1" />
-                      Logout
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Bell className="size-[18px] text-muted-foreground" />
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                        {stats.pendingActions}
+                      </span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Logout</TooltipContent>
+                  <TooltipContent>Notifications</TooltipContent>
                 </Tooltip>
-              )}
+                {onLogout && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={onLogout} className="text-red-600 border-red-200 hover:bg-red-50">
+                        <LogOut className="size-[18px] mr-1" />
+                        Logout
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Logout</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+            {/* Category Navigation */}
+            <div className="flex flex-wrap gap-1 px-4 py-2 bg-slate-50">
+              {SIDEBAR_ITEMS.slice(0, 10).map((item) => {
+                const isActive = activeTab === item.value;
+                return (
+                  <Button
+                    key={item.value}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActiveTab(item.value)}
+                    className={`text-xs ${isActive ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-blue-100'}`}
+                  >
+                    <item.icon className="size-3.5 mr-1" />
+                    {item.label}
+                  </Button>
+                );
+              })}
             </div>
           </header>
 
@@ -1250,9 +1189,9 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-lg font-bold ${getConductColor(s.conduct_score)}`}>
-                                    {s.conduct_score}
+                                    {s.conduct_score}/40
                                   </span>
-                                  <Progress value={s.conduct_score} className="w-16 h-1.5" />
+                                  <Progress value={(s.conduct_score / 40) * 100} className="w-16 h-1.5" />
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -1261,10 +1200,17 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge variant={s.linked_parents > 0 ? 'default' : 'outline'} className="gap-1">
-                                  <Phone className="size-3" />
-                                  {s.linked_parents || 0}
-                                </Badge>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant={s.linked_parents > 0 ? 'default' : 'outline'} className="gap-1 cursor-pointer">
+                                      <Phone className="size-3" />
+                                      {s.linked_parents || 0}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <ParentManagementWidget studentId={s.id} compact={true} />
+                                  </TooltipContent>
+                                </Tooltip>
                               </TableCell>
                               <TableCell>{getConductBadge(s.conduct_status)}</TableCell>
                               <TableCell>
@@ -1472,7 +1418,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                                 <span className="ml-1 text-sm text-muted-foreground">L{s.level_number}</span>
                               </TableCell>
                               <TableCell>
-                                <span className="text-lg font-bold text-red-500">{s.conduct_score}</span>
+                                <span className={`text-lg font-bold ${getConductColor(s.conduct_score)}`}>{s.conduct_score}/40</span>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="destructive">{s.total_incidents}</Badge>
@@ -1539,9 +1485,9 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-lg font-bold ${getConductColor(s.conduct_score)}`}>
-                                    {s.conduct_score}
+                                    {s.conduct_score}/40
                                   </span>
-                                  <Progress value={s.conduct_score} className="w-20 h-1.5" />
+                                  <Progress value={(s.conduct_score / 40) * 100} className="w-20 h-1.5" />
                                 </div>
                               </TableCell>
                               <TableCell>{getConductBadge(s.conduct_status)}</TableCell>
@@ -2571,7 +2517,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                 Remove Conduct - {selectedStudent?.first_name} {selectedStudent?.last_name}
               </DialogTitle>
               <DialogDescription>
-                Current Score: <strong>{selectedStudent?.conduct_score}/40</strong> | Parent will be notified via SMS automatically
+                Current Score: <strong>{formatConductScore(selectedStudent?.conduct_score || 0)}</strong> | Parent will be notified via SMS automatically
               </DialogDescription>
             </DialogHeader>
 
@@ -2639,7 +2585,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                   max={selectedStudent?.conduct_score || 40}
                 />
                 <p className="text-xs text-muted-foreground">
-                  New score will be: {(selectedStudent?.conduct_score || 0) - conductForm.conduct_points_deducted}/40
+                  New score will be: {formatConductScore((selectedStudent?.conduct_score || 0) - conductForm.conduct_points_deducted)}
                 </p>
               </div>
 

@@ -81,59 +81,8 @@ router.get('/', async (req, res) => {
     const results = {};
     let totalResults = 0;
 
-    // Search Students - using basic columns
-    if (type === 'all' || type === 'students') {
-      try {
-        const [students] = await pool.execute(
-          `SELECT id, student_id, first_name, last_name, gender, level_number, trade_code, trade_name, status, email, phone
-           FROM global_student_sheets 
-           WHERE first_name LIKE ? OR last_name LIKE ? OR student_id LIKE ? OR email LIKE ?
-           LIMIT ?`,
-          [searchTerm, searchTerm, searchTerm, searchTerm, parseInt(limit)]
-        );
-        results.students = students.map(s => ({ ...s, type: 'student' }));
-        totalResults += students.length;
-      } catch (e) {
-        console.error('Student search error:', e);
-        results.students = [];
-      }
-    }
-
-    // Search Parents - using parent_connections table
-    if (type === 'all' || type === 'parents') {
-      try {
-        const [parents] = await pool.execute(
-          `SELECT id, student_id, parent_name, parent_phone, phone, relationship, status
-           FROM parent_connections 
-           WHERE parent_name LIKE ? OR parent_phone LIKE ? OR phone LIKE ?
-           LIMIT ?`,
-          [searchTerm, searchTerm, searchTerm, parseInt(limit)]
-        );
-        results.parents = parents.map(p => ({ ...p, type: 'parent' }));
-        totalResults += parents.length;
-      } catch (e) {
-        console.error('Parent search error:', e);
-        results.parents = [];
-      }
-    }
-
-    // Search Staff/Teachers - using users table
-    if (type === 'all' || type === 'staff') {
-      try {
-        const [staff] = await pool.execute(
-          `SELECT id, username, first_name, last_name, email, phone, role, status
-           FROM users 
-           WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR username LIKE ?
-           LIMIT ?`,
-          [searchTerm, searchTerm, searchTerm, searchTerm, parseInt(limit)]
-        );
-        results.staff = staff.map(s => ({ ...s, type: 'staff' }));
-        totalResults += staff.length;
-      } catch (e) {
-        console.error('Staff search error:', e);
-        results.staff = [];
-      }
-    }
+    // CRITICAL DATA EXCLUDED: Students, Parents, Staff are NOT searchable from header
+    // These contain sensitive personal information and should only be accessed through authenticated dashboards
 
     // Search Trades
     if (type === 'all' || type === 'trades') {
@@ -157,9 +106,9 @@ router.get('/', async (req, res) => {
     if (type === 'all' || type === 'news') {
       try {
         const [news] = await pool.execute(
-          `SELECT id, title, summary, category, status, created_at
-           FROM news 
-           WHERE title LIKE ? OR summary LIKE ?
+          `SELECT id, title, description, category, is_active as status, created_at
+           FROM news_articles 
+           WHERE title LIKE ? OR description LIKE ?
            LIMIT ?`,
           [searchTerm, searchTerm, parseInt(limit)]
         );
@@ -193,9 +142,9 @@ router.get('/', async (req, res) => {
     if (type === 'all' || type === 'leadership') {
       try {
         const [leadership] = await pool.execute(
-          `SELECT id, name, title as position, title_rw, phone, email, is_active
+          `SELECT id, name, position, position_rw, phone, email, is_active
            FROM leadership 
-           WHERE name LIKE ? OR title LIKE ? OR title_rw LIKE ?
+           WHERE name LIKE ? OR position LIKE ? OR position_rw LIKE ?
            LIMIT ?`,
           [searchTerm, searchTerm, searchTerm, parseInt(limit)]
         );
@@ -207,31 +156,15 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Search Payments (using student_fees or other payment tables)
-    if (type === 'all' || type === 'payments') {
-      try {
-        const [payments] = await pool.execute(
-          `SELECT id, reference_no as reference_number, student_name, amount, payment_method, status, payment_date
-           FROM student_fees 
-           WHERE reference_no LIKE ? OR student_name LIKE ?
-           LIMIT ?`,
-          [searchTerm, searchTerm, parseInt(limit)]
-        );
-        results.payments = payments.map(p => ({ ...p, type: 'payment' }));
-        totalResults += payments.length;
-      } catch (e) {
-        console.error('Payment search error:', e);
-        results.payments = [];
-      }
-    }
+    // CRITICAL DATA EXCLUDED: Payments contain sensitive financial information
 
     // Search Sports
     if (type === 'all' || type === 'sports') {
       try {
         const [sports] = await pool.execute(
-          `SELECT id, sport_name, category, season, status
+          `SELECT id, name as sport_name, category, season, status
            FROM sports 
-           WHERE sport_name LIKE ? OR category LIKE ?
+           WHERE name LIKE ? OR category LIKE ?
            LIMIT ?`,
           [searchTerm, searchTerm, parseInt(limit)]
         );
@@ -243,23 +176,7 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Search Applications
-    if (type === 'all' || type === 'applications') {
-      try {
-        const [applications] = await pool.execute(
-          `SELECT id, application_no as application_number, first_name, last_name, trade_applied as desired_trade, status, application_date
-           FROM student_applications 
-           WHERE first_name LIKE ? OR last_name LIKE ? OR application_no LIKE ?
-           LIMIT ?`,
-          [searchTerm, searchTerm, searchTerm, parseInt(limit)]
-        );
-        results.applications = applications.map(a => ({ ...a, type: 'application' }));
-        totalResults += applications.length;
-      } catch (e) {
-        console.error('Application search error:', e);
-        results.applications = [];
-      }
-    }
+    // CRITICAL DATA EXCLUDED: Applications contain personal student information
 
     res.json({
       success: true,
@@ -285,29 +202,7 @@ router.get('/suggestions', async (req, res) => {
     const searchTerm = `%${q}%`;
     const suggestions = [];
 
-    // Get student suggestions
-    try {
-      const [students] = await pool.execute(
-        `SELECT CONCAT(first_name, ' ', last_name, ' - ', student_id) as label, 'student' as type
-         FROM global_student_sheets 
-         WHERE first_name LIKE ? OR last_name LIKE ? OR student_id LIKE ?
-         LIMIT 5`,
-        [searchTerm, searchTerm, searchTerm]
-      );
-      suggestions.push(...students);
-    } catch (e) {}
-
-    // Get staff suggestions
-    try {
-      const [staff] = await pool.execute(
-        `SELECT CONCAT(first_name, ' ', last_name, ' - ', role) as label, 'staff' as type
-         FROM users 
-         WHERE first_name LIKE ? OR last_name LIKE ?
-         LIMIT 5`,
-        [searchTerm, searchTerm]
-      );
-      suggestions.push(...staff);
-    } catch (e) {}
+    // CRITICAL DATA EXCLUDED: No student or staff suggestions in public search
 
     // Get trade suggestions
     try {
@@ -331,13 +226,13 @@ router.get('/suggestions', async (req, res) => {
 // Get popular searches
 router.get('/popular', async (req, res) => {
   try {
-    // Return some default popular searches
+    // Return safe popular searches - no critical data
     const popular = [
-      { search_query: 'student', count: 100 },
-      { search_query: 'payment', count: 80 },
-      { search_query: 'grade', count: 60 },
-      { search_query: 'attendance', count: 50 },
-      { search_query: 'exam', count: 40 }
+      { search_query: 'sports', count: 100 },
+      { search_query: 'trades', count: 90 },
+      { search_query: 'leadership', count: 70 },
+      { search_query: 'news', count: 60 },
+      { search_query: 'events', count: 50 }
     ];
     
     res.json({ success: true, popular });

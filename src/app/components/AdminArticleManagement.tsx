@@ -18,6 +18,14 @@ interface Article {
   is_active: boolean;
 }
 
+/** Encode a /uploads/... path so browsers handle spaces in filenames. */
+const getImageUrl = (imagePath: string): string => {
+  if (!imagePath) return '';
+  if (imagePath.startsWith('http')) return imagePath;
+  const encoded = imagePath.split('/').map(s => encodeURIComponent(s)).join('/');
+  return `${API_BASE_URL}${encoded}`;
+};
+
 const AdminArticleManagement: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -89,7 +97,7 @@ const AdminArticleManagement: React.FC = () => {
       is_featured: article.is_featured,
       image: null
     });
-    setImagePreview(article.image_url ? `${API_BASE_URL}${article.image_url}` : '');
+    setImagePreview(article.image_url ? getImageUrl(article.image_url) : '');
     setEditingId(article.id);
     setShowForm(true);
   };
@@ -185,7 +193,7 @@ const AdminArticleManagement: React.FC = () => {
               <div className="flex">
                 <div className="w-64 h-48 bg-gray-200 flex-shrink-0">
                   {article.image_url ? (
-                    <img src={`${API_BASE_URL}${article.image_url}`} alt={article.title} className="w-full h-full object-cover" />
+                    <img src={getImageUrl(article.image_url)} alt={article.title} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center"><ImageIcon size={48} className="text-gray-400" /></div>
                   )}

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React from 'react';
+import { createContext, useContext, useState } from 'react';
 
 export type Language = 'en' | 'fr' | 'rw' | 'sw';
 
@@ -470,11 +471,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguage] = useState<Language>('rw'); // Kinyarwanda as default
 
   const t = (key: string): string => {
-    return translations[language][key] || key;
+    return translations[language]?.[key] || key;
+  };
+
+  const contextValue = {
+    language,
+    setLanguage,
+    t
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

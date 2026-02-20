@@ -12,23 +12,24 @@ router.get('/students/all', authenticateToken, async (req, res) => {
     
     let query = `
       SELECT DISTINCT
-        gss.id, gss.student_code, gss.first_name, gss.last_name,
+        gss.id, gss.first_name, gss.last_name,
         gss.trade_code, gss.trade_name, gss.level_number,
         gss.conduct_score, gss.conduct_grade,
         CASE 
-          WHEN gss.conduct_score >= 32 THEN 'Excellent'
-          WHEN gss.conduct_score >= 24 THEN 'Good' 
-          WHEN gss.conduct_score >= 16 THEN 'Warning'
+          WHEN gss.conduct_score >= 36 THEN 'Excellent'
+          WHEN gss.conduct_score >= 32 THEN 'Good' 
+          WHEN gss.conduct_score >= 28 THEN 'Fair'
+          WHEN gss.conduct_score >= 24 THEN 'Warning'
           ELSE 'Critical'
         END as conduct_status,
         gss.overall_attendance_percentage, gss.gender,
         gss.phone,
-        COUNT(DISTINCT dr.id) as total_incidents,
+        COUNT(DISTINCT scr.id) as total_incidents,
         COUNT(DISTINCT pc.id) as linked_parents,
         GROUP_CONCAT(DISTINCT COALESCE(pc.parent_phone, pc.phone)) as parent_phones,
         GROUP_CONCAT(DISTINCT pc.parent_name) as parent_names
       FROM global_student_sheets gss
-      LEFT JOIN discipline_records dr ON gss.id = dr.student_id
+      LEFT JOIN student_conduct_records scr ON gss.id = scr.student_id
       LEFT JOIN parent_connections pc ON gss.id = pc.student_id AND COALESCE(pc.status, 'active') = 'active'
       WHERE gss.status = 'active'
     `;
@@ -36,8 +37,8 @@ router.get('/students/all', authenticateToken, async (req, res) => {
     const params = [];
     
     if (search) {
-      query += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ? OR gss.student_code LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      query += ` AND (gss.first_name LIKE ? OR gss.last_name LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
     }
     
     if (trade_code) {
@@ -75,7 +76,6 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
       action_taken, conduct_points_deducted, new_conduct_score, removed_by_name 
     } = req.body;
     
-    // Get student
     const [students] = await pool.execute(
       'SELECT * FROM global_student_sheets WHERE id = ?',
       [student_id]
@@ -86,91 +86,157 @@ router.post('/conduct/remove', authenticateToken, async (req, res) => {
     }
     
     const student = students[0];
+    const currentScore = student.conduct_score || 40;
+    const pointsToDeduct = parseInt(conduct_points_deducted) || 0;
+    const calculatedNewScore = Math.max(0, currentScore - pointsToDeduct);
     
-    // Insert discipline record
+    // Insert conduct record
     const [result] = await pool.execute(`
-      INSERT INTO discipline_records 
-      (student_id, student_code, student_name, trade, class_level, conduct_type, 
-       severity, description, action_taken, conduct_points_deducted, new_conduct_score, 
-       removed_by_name, parent_notified, sms_sent, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, false, false, NOW())
+      INSERT INTO student_conduct_records 
+      (student_id, incident_type, severity, description, action_taken, incident_date)
+      VALUES (?, ?, ?, ?, ?, NOW())
     `, [
-      student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.code, student.level_number, conduct_type, severity,
-      description, action_taken || '', conduct_points_deducted, new_conduct_score,
-      removed_by_name
+      student_id, conduct_type || 'Disrespect', severity || 'moderate',
+      description, action_taken || ''
     ]);
     
-    // Update conduct score
+    // Update conduct score with calculated value
     await pool.execute(
       'UPDATE global_student_sheets SET conduct_score = ? WHERE id = ?',
-      [new_conduct_score, student_id]
+      [calculatedNewScore, student_id]
     );
     
-    // Get all linked parents
-    const [connections] = await pool.execute(
-      `SELECT DISTINCT parent_phone, parent_name 
-       FROM parent_connections 
-       WHERE student_id = ? AND status = 'active' AND can_receive_notifications = 1 AND parent_phone IS NOT NULL`,
-      [student_id]
-    );
-    
-    let notifiedCount = 0;
-    const smsResults = [];
-    
-    for (const conn of connections) {
-      try {
-        const smsResult = await sendConductRemovalSMS(
-          conn.parent_phone,
-          {
-            name: `${student.first_name} ${student.last_name}`,
-            code: student.student_code,
-            trade: student.code,
-            level: student.level_number,
-            parentName: conn.parent_name || 'Mubyeyi'
-          },
-          {
-            type: conduct_type,
-            severity: severity,
-            description: description,
-            action: action_taken || 'Igihano cyatanzwe',
-            pointsDeducted: conduct_points_deducted,
-            newScore: new_conduct_score
-          },
-          {
-            name: removed_by_name,
-            role: removed_by_name.includes('Patron') ? 'Patron' : 
-                  removed_by_name.includes('Matron') ? 'Matron' : 'DOD',
-            phone: '+250783407691'
-          }
-        );
-        
-        if (smsResult.success) {
-          notifiedCount++;
-          smsResults.push({ phone: conn.parent_phone, status: 'sent', messageId: smsResult.messageId });
-        }
-      } catch (err) {
-        console.error('SMS Error:', err);
-        smsResults.push({ phone: conn.parent_phone, status: 'failed', error: err.message });
-      }
-    }
-    
-    if (notifiedCount > 0) {
-      await pool.execute(
-        'UPDATE discipline_records SET parent_notified = true, sms_sent = true WHERE id = ?',
-        [result.insertId]
+    // Send SMS to linked parents
+    let parentsNotified = 0;
+    try {
+      const [connections] = await pool.execute(
+        `SELECT DISTINCT parent_phone, parent_name 
+         FROM parent_connections 
+         WHERE student_id = ? AND status = 'active' AND can_receive_notifications = 1 AND parent_phone IS NOT NULL`,
+        [student_id]
       );
+      
+      for (const conn of connections) {
+        try {
+          const message = `Garden TVET: Umwana ${student.first_name} ${student.last_name} yakiriye igihano cya ${conduct_type}. Amanota ${pointsToDeduct} yakuweho. Amanota ashya: ${calculatedNewScore}/40. ${description}`;
+          
+          await pool.execute(
+            `INSERT INTO sms_queue (phone_number, message, status, priority, created_at) VALUES (?, ?, 'pending', 'high', NOW())`,
+            [conn.parent_phone, message]
+          );
+          parentsNotified++;
+        } catch (smsError) {
+          console.log('SMS queue error:', smsError.message);
+        }
+      }
+    } catch (linkError) {
+      console.log('Parent linking not available:', linkError.message);
     }
     
     res.json({ 
       success: true, 
       message: 'Conduct removed successfully', 
       recordId: result.insertId,
-      parentsNotified: notifiedCount,
-      smsResults
+      pointsDeducted: pointsToDeduct,
+      oldScore: currentScore,
+      newScore: calculatedNewScore,
+      parentsNotified
     });
   } catch (error) {
     console.error('Remove Conduct Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== RESTORE CONDUCT (DELETE RECORD) ====================
+router.delete('/conduct/:recordId', authenticateToken, async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    
+    // Get the conduct record
+    const [records] = await pool.execute(
+      'SELECT student_id, incident_type, severity FROM student_conduct_records WHERE id = ?',
+      [recordId]
+    );
+    
+    if (records.length === 0) {
+      return res.status(404).json({ success: false, message: 'Conduct record not found' });
+    }
+    
+    const { student_id, incident_type, severity } = records[0];
+    
+    // Calculate points to restore based on severity
+    const pointsToRestore = {
+      'minor': 1,
+      'moderate': 2,
+      'major': 3,
+      'severe': 4
+    }[severity] || 2;
+    
+    // Get student info
+    const [students] = await pool.execute(
+      'SELECT first_name, last_name, conduct_score FROM global_student_sheets WHERE id = ?',
+      [student_id]
+    );
+    
+    if (students.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const student = students[0];
+    const currentScore = student.conduct_score || 0;
+    const restoredScore = Math.min(40, currentScore + pointsToRestore);
+    
+    // Delete the conduct record
+    await pool.execute(
+      'DELETE FROM student_conduct_records WHERE id = ?',
+      [recordId]
+    );
+    
+    // Restore the points
+    await pool.execute(
+      'UPDATE global_student_sheets SET conduct_score = ? WHERE id = ?',
+      [restoredScore, student_id]
+    );
+    
+    // Try to notify linked parents (optional)
+    let parentsNotified = 0;
+    try {
+      const [linkedParents] = await pool.execute(
+        `SELECT DISTINCT parent_id FROM parent_student_links WHERE student_id = ? AND status = 'approved'`,
+        [student_id]
+      );
+      
+      for (const link of linkedParents) {
+        try {
+          await pool.execute(`
+            INSERT INTO parent_notifications 
+            (parent_id, student_id, type, title, message, severity, is_read, created_at)
+            VALUES (?, ?, 'conduct_restored', ?, ?, 'info', 0, NOW())
+          `, [
+            link.parent_id,
+            student_id,
+            'Conduct Record Removed',
+            `Good news! A conduct incident (${incident_type}) for ${student.first_name} ${student.last_name} has been removed. ${pointsToRestore} points restored. New score: ${restoredScore}/40.`
+          ]);
+          parentsNotified++;
+        } catch (notifError) {
+          console.log('Parent notification skipped:', notifError.message);
+        }
+      }
+    } catch (linkError) {
+      console.log('Parent linking not available:', linkError.message);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Conduct record removed and points restored',
+      pointsRestored: pointsToRestore,
+      newScore: restoredScore,
+      parentsNotified
+    });
+  } catch (error) {
+    console.error('Restore Conduct Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -193,12 +259,12 @@ router.post('/leave/grant', authenticateToken, async (req, res) => {
     
     const [result] = await pool.execute(`
       INSERT INTO student_leaves 
-      (student_id, student_code, student_name, trade, class_level, leave_type, 
+      (student_id, student_code, trade, class_level, leave_type, 
        reason, start_time, end_time, approved_by_name, status, parent_notified, sms_sent, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false, false, NOW())
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', false, false, NOW())
     `, [
-      student_id, student.student_code, `${student.first_name} ${student.last_name}`,
-      student.code, student.level_number, leave_type, reason,
+      student_id, student.student_code || student.id,
+      student.trade_code, student.level_number, leave_type, reason,
       start_time, end_time || start_time, approved_by_name
     ]);
     
@@ -218,8 +284,8 @@ router.post('/leave/grant', authenticateToken, async (req, res) => {
           conn.parent_phone,
           {
             name: `${student.first_name} ${student.last_name}`,
-            code: student.student_code,
-            trade: student.code,
+            code: student.id,
+            trade: student.trade_code,
             level: student.level_number,
             parentName: conn.parent_name || 'Mubyeyi'
           },
@@ -303,8 +369,8 @@ router.post('/message-parents', authenticateToken, async (req, res) => {
             conn.parent_phone,
             {
               name: `${student.first_name} ${student.last_name}`,
-              code: student.student_code,
-              trade: student.code,
+              code: student.id,
+              trade: student.trade_code,
               level: student.level_number,
               parentName: conn.parent_name || 'Mubyeyi'
             },
@@ -370,7 +436,7 @@ router.post('/message-all-parents', authenticateToken, async (req, res) => {
       SELECT DISTINCT 
         pc.parent_phone, pc.parent_name,
         gss.id as student_id, gss.first_name, gss.last_name, 
-        gss.student_code, gss.trade_code, gss.level_number
+        gss.trade_code, gss.level_number
       FROM parent_connections pc
       JOIN global_student_sheets gss ON pc.student_id = gss.id
       WHERE pc.status = 'active' 
@@ -402,8 +468,8 @@ router.post('/message-all-parents', authenticateToken, async (req, res) => {
           parent.parent_phone,
           {
             name: `${parent.first_name} ${parent.last_name}`,
-            code: parent.student_code,
-            trade: parent.code,
+            code: parent.student_id,
+            trade: parent.trade_code,
             level: parent.level_number,
             parentName: parent.parent_name || 'Mubyeyi'
           },
@@ -460,15 +526,15 @@ router.get('/statistics', authenticateToken, async (req, res) => {
     );
     
     const [[totalIncidents]] = await pool.execute(
-      'SELECT COUNT(*) as count FROM discipline_records WHERE MONTH(created_at) = MONTH(CURRENT_DATE())'
+      'SELECT COUNT(*) as count FROM student_conduct_records WHERE MONTH(created_at) = MONTH(CURRENT_DATE())'
     );
     
     const [[criticalIncidents]] = await pool.execute(
-      'SELECT COUNT(*) as count FROM discipline_records WHERE severity = "Bikomeye" AND MONTH(created_at) = MONTH(CURRENT_DATE())'
+      'SELECT COUNT(*) as count FROM student_conduct_records WHERE severity = "severe" AND MONTH(created_at) = MONTH(CURRENT_DATE())'
     );
     
     const [[highIncidents]] = await pool.execute(
-      'SELECT COUNT(*) as count FROM discipline_records WHERE severity = "Byagutse" AND MONTH(created_at) = MONTH(CURRENT_DATE())'
+      'SELECT COUNT(*) as count FROM student_conduct_records WHERE severity = "major" AND MONTH(created_at) = MONTH(CURRENT_DATE())'
     );
     
     const [[pendingActions]] = await pool.execute(
@@ -503,7 +569,7 @@ router.get('/student/:id/history', authenticateToken, async (req, res) => {
     const { id } = req.params;
     
     const [conduct] = await pool.execute(
-      'SELECT * FROM discipline_records WHERE student_id = ? ORDER BY created_at DESC LIMIT 20',
+      'SELECT * FROM student_conduct_records WHERE student_id = ? ORDER BY created_at DESC LIMIT 20',
       [id]
     );
     

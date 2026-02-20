@@ -21,7 +21,17 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) => {
   const { language, setLanguage, t } = useLanguage();
-  const { user, logout, getRoleDashboard } = useAuth();
+  
+  // Safely get auth context - handle case where it's not ready
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn('AuthContext not ready yet');
+    auth = null;
+  }
+  
+  const { user, logout, getRoleDashboard } = auth || {};
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [expandedNavItems, setExpandedNavItems] = useState<string[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -256,8 +266,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                         <p className="text-xs text-gray-500">{displayUser.role}</p>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
-                        const dashboard = getRoleDashboard(displayUser.role);
-                        window.location.href = `/${dashboard}`;
+                        if (getRoleDashboard) {
+                          const dashboard = getRoleDashboard(displayUser.role);
+                          window.location.href = `/${dashboard}`;
+                        }
                       }}>Dashboard</DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600" onClick={() => {
                         localStorage.removeItem('user');
@@ -265,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('token');
                         setCurrentUser(null);
-                        logout();
+                        if (logout) logout();
                         onNavigate('home');
                       }}>Logout</DropdownMenuItem>
                     </DropdownMenuContent>
@@ -505,9 +517,11 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         onClick={() => {
-                          const dashboard = getRoleDashboard(displayUser.role);
-                          window.location.href = `/${dashboard}`;
-                          setIsSidebarOpen(false);
+                          if (getRoleDashboard) {
+                            const dashboard = getRoleDashboard(displayUser.role);
+                            window.location.href = `/${dashboard}`;
+                            setIsSidebarOpen(false);
+                          }
                         }}
                         variant="outline"
                         className="w-full rounded-xl border-2 border-green-400 hover:bg-green-50 font-semibold shadow-md"
@@ -524,7 +538,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
                           sessionStorage.removeItem('user');
                           sessionStorage.removeItem('token');
                           setCurrentUser(null);
-                          logout();
+                          if (logout) logout();
                           onNavigate('home');
                           setIsSidebarOpen(false);
                         }}

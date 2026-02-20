@@ -49,6 +49,7 @@
     "cmdk": "1.1.1",
     "date-fns": "3.6.0",
     "embla-carousel-react": "8.6.0",
+    "file-saver": "^2.0.5",
     "framer-motion": "^12.29.0",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
@@ -66,10 +67,12 @@
     "react-dnd-html5-backend": "16.0.1",
     "react-dom": "18.3.1",
     "react-hook-form": "7.55.0",
+    "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
     "react-popper": "2.3.0",
     "react-resizable-panels": "2.1.7",
     "react-responsive-masonry": "2.7.1",
+    "react-router-dom": "^6.28.0",
     "react-slick": "0.31.0",
     "react-to-print": "^3.2.0",
     "recharts": "2.15.2",
@@ -98,7 +101,10 @@
       "**/react-dom": "18.3.1"
     },
     "peerDependencyRules": {
-      "ignoreMissing": ["react", "react-dom"]
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ]
     }
   },
   "resolutions": {

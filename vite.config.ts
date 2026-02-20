@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico'],
-      devOptions: { enabled: true },
+      devOptions: { enabled: false },
       manifest: {
         name: 'Garden TVET School Management System',
         short_name: 'Garden TVET',
@@ -47,13 +47,15 @@ export default defineConfig({
         runtimeCaching: [
           { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0, 200] } } },
           { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'gstatic-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0, 200] } } },
-          { urlPattern: /\/api\/.*\/*.json/, handler: 'NetworkFirst', options: { cacheName: 'api-cache', expiration: { maxEntries: 50, maxAgeSeconds: 300 }, networkTimeoutSeconds: 10 } },
+          { urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'unsplash-images', expiration: { maxEntries: 50, maxAgeSeconds: 2592000 }, cacheableResponse: { statuses: [0, 200] } } },
+          { urlPattern: /\/api\/.*/i, handler: 'NetworkOnly', options: { cacheName: 'api-cache' } },
+          { urlPattern: /\/api\/.*\/*.json/, handler: 'NetworkOnly', options: { cacheName: 'api-json-cache' } },
           { urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/, handler: 'CacheFirst', options: { cacheName: 'images', expiration: { maxEntries: 100, maxAgeSeconds: 2592000 } } },
           { urlPattern: /\.(?:js|css)$/, handler: 'StaleWhileRevalidate', options: { cacheName: 'static-resources' } }
         ],
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true
+        skipWaiting: false,
+        clientsClaim: false
       }
     })
   ],
@@ -90,27 +92,25 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          ui: ['lucide-react', 'motion/react']
+          ui: ['lucide-react']
         }
       }
     }
   },
   server: {
-    // Development server configuration
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 5173,
     strictPort: false,
     hmr: {
-      // Explicit WebSocket configuration for HMR
-      clientPort: 5173,
-      port: 5173,
       protocol: 'ws',
       host: 'localhost',
+      port: 5173,
+      clientPort: 5173,
+      overlay: false
     },
-    // Allow external access if needed
-    allowedHosts: ['localhost', 'all'],
-    headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob:;",
-    },
+    watch: {
+      usePolling: false,
+      interval: 100
+    }
   },
 })

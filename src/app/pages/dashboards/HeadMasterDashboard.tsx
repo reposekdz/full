@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import apiService from '@/app/services/apiService';
 import {
-  School,
   Users,
   TrendingUp,
   DollarSign,
@@ -13,14 +12,10 @@ import {
   BarChart3,
   Calendar,
   Clock,
-  Search,
-  Filter,
   Download,
   Plus,
   Eye,
   Edit,
-  CheckCircle2,
-  AlertCircle,
   Target,
   Activity,
   FileText,
@@ -31,16 +26,15 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Briefcase,
-  GraduationCap
+  GraduationCap,
+  Package,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import LeftSidebar from '@/app/components/LeftSidebar';
-import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
 import UniversalMessagingWidget from '@/app/components/UniversalMessagingWidget';
 import ComprehensiveAnalyticsDashboard from '@/app/components/analytics/ComprehensiveAnalyticsDashboard';
 import HRManagementDashboard from '@/app/components/hr/HRManagementDashboard';
@@ -63,6 +57,7 @@ interface HeadMasterDashboardProps {
 const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, onLogout }) => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
 
@@ -120,6 +115,42 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
       icon: TrendingUp,
       color: 'from-orange-500 to-red-500',
       bgColor: 'bg-orange-50'
+    },
+    {
+      title: 'Ibitekerezo',
+      value: dashboardData?.stats?.total_applications?.toLocaleString() || '342',
+      change: '+8.5%',
+      trend: 'up',
+      icon: FileText,
+      color: 'from-purple-500 to-pink-500',
+      bgColor: 'bg-purple-50'
+    },
+    {
+      title: 'Imyidugudu',
+      value: dashboardData?.stats?.total_events?.toLocaleString() || '28',
+      change: '+15.2%',
+      trend: 'up',
+      icon: Calendar,
+      color: 'from-cyan-500 to-blue-500',
+      bgColor: 'bg-cyan-50'
+    },
+    {
+      title: 'Abakozi',
+      value: dashboardData?.stats?.total_staff?.toLocaleString() || '156',
+      change: '+2.3%',
+      trend: 'up',
+      icon: Briefcase,
+      color: 'from-indigo-500 to-purple-500',
+      bgColor: 'bg-indigo-50'
+    },
+    {
+      title: 'Ibikoresho',
+      value: dashboardData?.stats?.total_assets?.toLocaleString() || '1,842',
+      change: '+5.7%',
+      trend: 'up',
+      icon: Shield,
+      color: 'from-rose-500 to-red-500',
+      bgColor: 'bg-rose-50'
     },
   ];
 
@@ -353,9 +384,8 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-yellow-100">
       <UniversalMessagingWidget />
-      <LeftSidebar currentPage="dashboard" onNavigate={onNavigate} />
 
       <div className="flex-1 overflow-auto">
         <div className="p-8">
@@ -364,26 +394,24 @@ const HeadMasterDashboard: React.FC<HeadMasterDashboardProps> = ({ onNavigate, o
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-4xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-                  Ikibanza cy'Umuyobozi Mukuru
-                </h1>
-                <p className="text-gray-600 mt-2">Gucunga ishuri muri rusange n\'ibyerekeye byose</p>
+            <div className="flex flex-col mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">Ikibanza cy'Umuyobozi Mukuru</h1>
+                  <p className="text-gray-600 mt-1">Gucunga ishuri muri rusange</p>
+                </div>
               </div>
-              <div className="flex space-x-3">
-                <Button className="bg-gradient-to-r from-yellow-500 to-green-500 hover:from-yellow-600 hover:to-green-600 text-white">
-                  <Download className="h-4 w-4 mr-2" />
-                  Raporo Rusange
-                </Button>
-                <Button className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ibirori Bishya
-                </Button>
+              {/* Category Navigation */}
+              <div className="flex flex-wrap gap-2 p-2 bg-white rounded-xl shadow-sm border border-yellow-200">
+                {[{ id: 'overview', label: 'Incamake', icon: Grid }, { id: 'global-sheets', label: 'Abanyeshuri', icon: Users }, { id: 'applications', label: 'Amasaba', icon: FileText }, { id: 'departments', label: 'Ibice', icon: Briefcase }, { id: 'performance', label: 'Imikorere', icon: TrendingUp }, { id: 'goals', label: 'Intego', icon: Target }, { id: 'events', label: 'Ibirori', icon: Calendar }, { id: 'reports', label: 'Raporo', icon: ClipboardList }, { id: 'analytics', label: 'Analytics', icon: BarChart3 }, { id: 'hr', label: 'Abarimu', icon: Award }, { id: 'inventory', label: 'Ibikoresho', icon: Package }, { id: 'communication', label: 'Message', icon: Bell }].map((cat) => {
+                  const Icon = cat.icon;
+                  return <Button key={cat.id} variant={activeCategory === cat.id ? 'default' : 'ghost'} size="sm" onClick={() => setActiveCategory(cat.id)} className={activeCategory === cat.id ? 'bg-gradient-to-r from-yellow-500 to-green-500 text-white' : 'text-gray-600 hover:text-yellow-600'}><Icon className="h-4 w-4 mr-1" />{cat.label}</Button>;
+                })}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (

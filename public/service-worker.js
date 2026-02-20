@@ -1,14 +1,13 @@
-// Garden TVET PWA Service Worker - Advanced Offline Support
-const CACHE_VERSION = 'v1.0.0';
+// Garden TVET PWA Service Worker - Advanced Offline Support (Silent Error Handling)
+const CACHE_VERSION = 'v1.0.2';
 const CACHE_NAME = `garden-tvet-${CACHE_VERSION}`;
-const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately
 const PRECACHE_ASSETS = [
   '/',
-  '/offline.html',
   '/src/assets/logo/Gemini_Generated_Image_6gbu966gbu966gbu.ico',
-  '/manifest.json'
+  '/manifest.json',
+  '/index.html'
 ];
 
 // Cache strategies
@@ -52,13 +51,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip external domains (like Unsplash) to avoid CSP issues
+  if (url.origin !== self.location.origin && !url.origin.includes('localhost')) {
+    return;
+  }
+
+  // Skip WebSocket connections
+  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
+    return;
+  }
+
+  // Skip hot module replacement
+  if (url.searchParams.has('t=') || url.searchParams.has('hot=')) {
+    return;
+  }
+
   // API requests - Network first, cache fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirstStrategy(request));
     return;
   }
 
-  // Images - Cache first
+  // Images - Cache first (only for same origin)
   if (request.destination === 'image') {
     event.respondWith(cacheFirstStrategy(request));
     return;
@@ -74,61 +88,97 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(staleWhileRevalidateStrategy(request));
 });
 
-// Cache First Strategy
+// Cache First Strategy - Silent error handling
 async function cacheFirstStrategy(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  
-  if (cached) {
-    return cached;
-  }
-
   try {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    
+    if (cached) {
+      return cached;
+    }
+
     const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
+    if (response.ok && response.status < 400) {
+      cache.put(request, response.clone()).catch(() => {});
     }
     return response;
   } catch (error) {
-    return new Response('Offline', { status: 503 });
-  }
-}
-
-// Network First Strategy
-async function networkFirstStrategy(request) {
-  const cache = await caches.open(CACHE_NAME);
-  
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
+    // Silent fallback - no console output
+    const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);
     if (cached) {
       return cached;
     }
-    return new Response(JSON.stringify({ offline: true, error: 'No network' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 503
+    return new Response('', { 
+      status: 408,
+      statusText: 'Request Timeout'
     });
   }
 }
 
-// Stale While Revalidate Strategy
-async function staleWhileRevalidateStrategy(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-
-  const fetchPromise = fetch(request).then((response) => {
-    if (response.ok) {
-      cache.put(request, response.clone());
+// Network First Strategy - Silent error handling
+async function networkFirstStrategy(request) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    
+    const response = await fetch(request);
+    if (response.ok && response.status < 400) {
+      cache.put(request, response.clone()).catch(() => {});
     }
     return response;
-  }).catch(() => cached || caches.match(OFFLINE_URL));
+  } catch (error) {
+    // Silent fallback - try cache
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+      if (cached) {
+        return cached;
+      }
+    } catch (cacheError) {
+      // Silent fail
+    }
+    
+    return new Response(JSON.stringify({ offline: true }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200
+    });
+  }
+}
 
-  return cached || fetchPromise;
+// Stale While Revalidate Strategy - Silent error handling
+async function staleWhileRevalidateStrategy(request) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+
+    // Always return cached if available, then fetch in background
+    if (cached) {
+      fetch(request).then((response) => {
+        if (response.ok && response.status < 400) {
+          cache.put(request, response.clone()).catch(() => {});
+        }
+      }).catch(() => {});
+      return cached;
+    }
+
+    // No cache, try network
+    const response = await fetch(request);
+    if (response.ok && response.status < 400) {
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    // Silent fallback
+    try {
+      return await fetch(request);
+    } catch (fetchError) {
+      return new Response('', { 
+        status: 408,
+        statusText: 'Request Timeout'
+      });
+    }
+  }
 }
 
 // Background sync for offline actions
@@ -139,20 +189,24 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncOfflineData() {
-  const db = await openDB();
-  const pendingActions = await db.getAll('pending-actions');
-  
-  for (const action of pendingActions) {
-    try {
-      await fetch(action.url, {
-        method: action.method,
-        headers: action.headers,
-        body: action.body
-      });
-      await db.delete('pending-actions', action.id);
-    } catch (error) {
-      console.error('Sync failed:', error);
+  try {
+    const db = await openDB();
+    const pendingActions = await db.getAll('pending-actions');
+    
+    for (const action of pendingActions) {
+      try {
+        await fetch(action.url, {
+          method: action.method,
+          headers: action.headers,
+          body: action.body
+        });
+        await db.delete('pending-actions', action.id);
+      } catch (error) {
+        // Silent fail
+      }
     }
+  } catch (error) {
+    // Silent fail
   }
 }
 
@@ -186,7 +240,7 @@ function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('garden-tvet-db', 1);
     
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {};
     request.onsuccess = () => resolve(request.result);
     
     request.onupgradeneeded = (event) => {

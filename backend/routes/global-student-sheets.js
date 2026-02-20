@@ -127,6 +127,29 @@ router.post('/save-marks', authenticateToken, async (req, res) => {
 // GLOBAL SHEETS VIEW ENDPOINTS (Existing)
 // ==========================================
 
+// GET /levels/:tradeCode - Get real levels for a trade from global_student_sheets
+router.get('/levels/:tradeCode', authenticateToken, async (req, res) => {
+  try {
+    const { tradeCode } = req.params;
+    
+    const [levels] = await pool.execute(`
+      SELECT DISTINCT level_number
+      FROM global_student_sheets
+      WHERE trade_code = ? AND status = 'active'
+      ORDER BY level_number ASC
+    `, [tradeCode]);
+
+    const levelNumbers = levels.map(l => l.level_number);
+    
+    res.json({
+      success: true,
+      levels: levelNumbers.length > 0 ? levelNumbers : [3, 4, 5]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message, levels: [3, 4, 5] });
+  }
+});
+
 // Get all students - accessible to all staff roles
 router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (req, res) => {
   try {
@@ -138,16 +161,16 @@ router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (r
 
     let query = `
       SELECT
-        u.id,
+        u.id as student_id,
         u.first_name,
         u.last_name,
-        u.student_id,
+        u.serial_code as student_code,
         u.level_suffix,
         COALESCE(u.gender, 'M') as gender,
         COALESCE(u.phone, '') as phone,
         u.trade_code,
-        u.level,
-        u.status
+        u.level as level_number,
+        COALESCE(u.status, 'active') as status
       FROM users u
       WHERE u.role = 'student'
     `;
@@ -168,17 +191,17 @@ router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (r
     }
 
     if (status) {
-      query += ' AND status = ?';
+      query += ' AND u.status = ?';
       params.push(status);
     }
 
     if (search) {
-      query += ' AND (first_name LIKE ? OR last_name LIKE ? OR student_code LIKE ? OR email LIKE ?)';
+      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.serial_code LIKE ? OR u.email LIKE ?)';
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    query += ' ORDER BY last_name, first_name';
+    query += ' ORDER BY u.last_name, u.first_name';
 
     const [students] = await pool.execute(query, params);
 
@@ -188,6 +211,24 @@ router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (r
       userRole: req.user.role
     });
   } catch (error) {
+    console.error('Get students error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /students/create - Create new student
+router.post('/students/create', authenticateToken, checkGlobalSheetsPermission, async (req, res) => {
+  try {
+    const { first_name, last_name, student_code, trade_code, level_number, gender, phone } = req.body;
+
+    const [result] = await pool.execute(`
+      INSERT INTO global_student_sheets (first_name, last_name, student_code, trade_code, level_number, gender, phone, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+    `, [first_name, last_name, student_code, trade_code, level_number, gender || 'M', phone || '']);
+
+    res.json({ success: true, message: 'Student created successfully', studentId: result.insertId });
+  } catch (error) {
+    console.error('Create student error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

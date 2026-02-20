@@ -321,23 +321,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
-    // Return a default context instead of throwing error
-    return {
-      user: null,
-      token: null,
-      login: async () => ({ success: false }),
-      loginWithRole: async () => ({ success: false }),
-      updateProfile: async () => false,
-      register: async () => false,
-      registerRole: async () => ({ success: false }),
-      setAuthFromRegistration: () => 'home',
-      logout: () => { },
-      loading: false,
-      getRoleDashboard: () => 'home'
-    };
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
