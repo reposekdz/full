@@ -1,5 +1,5 @@
 [build]
-  command = "npx vite build"
+  command = "npm run build"
   publish = "dist"
 
 [build.environment]
@@ -17,6 +17,6 @@
   to = "/index.html"
   status = 200
 
-# Ignore Next.js directories if they exist
+# Ignore patterns for build
 [context.production]
-  ignore = "*.js,*.ts"
+  ignore = ""

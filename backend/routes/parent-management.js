@@ -858,4 +858,230 @@ router.get('/export', authenticateToken, async (req, res) => {
     }
 });
 
+// ============================================
+// GLOBAL SHEETS AUTO-FETCH FOR PARENT LINKING
+// ============================================
+
+// Search students from global sheets (for parent linking)
+router.get('/global-students/search', authenticateToken, async (req, res) => {
+    try {
+        const { search = '', trade_code = '', level = '', limit = 20 } = req.query;
+        
+        let sql = `
+            SELECT 
+                id,
+                student_id,
+                student_code,
+                first_name,
+                last_name,
+                CONCAT(first_name, ' ', last_name) as full_name,
+                trade_code,
+                trade_name,
+                level_number,
+                class_name,
+                gender,
+                phone,
+                email,
+                status,
+                COALESCE(attendance_percentage, 0) as attendance,
+                COALESCE(conduct_score, 40) as conduct,
+                conduct_grade
+            FROM global_student_sheets 
+            WHERE status = 'active'
+        `;
+        
+        const params = [];
+        
+        if (search) {
+            sql += ` AND (
+                LOWER(CONCAT(first_name, ' ', last_name)) LIKE LOWER(?)
+                OR LOWER(first_name) LIKE LOWER(?)
+                OR LOWER(last_name) LIKE LOWER(?)
+                OR student_code LIKE ?
+                OR phone LIKE ?
+            )`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+        
+        if (trade_code) {
+            sql += ` AND trade_code = ?`;
+            params.push(trade_code);
+        }
+        
+        if (level) {
+            sql += ` AND level_number = ?`;
+            params.push(parseInt(level));
+        }
+        
+        sql += ` ORDER BY first_name, last_name LIMIT ?`;
+        params.push(parseInt(limit));
+        
+        const [students] = await pool.execute(sql, params);
+        
+        // Group by trade for easier UI
+        const groupedByTrade = students.reduce((acc, student) => {
+            const trade = student.trade_name || 'Other';
+            if (!acc[trade]) {
+                acc[trade] = [];
+            }
+            acc[trade].push({
+                id: student.id,
+                student_id: student.student_id,
+                student_code: student.student_code,
+                first_name: student.first_name,
+                last_name: student.last_name,
+                full_name: student.full_name,
+                trade_code: student.trade_code,
+                trade_name: student.trade_name,
+                level_number: student.level_number,
+                class_name: student.class_name,
+                gender: student.gender,
+                phone: student.phone,
+                email: student.email,
+                attendance: student.attendance,
+                conduct: student.conduct,
+                conduct_grade: student.conduct_grade
+            });
+            return acc;
+        }, {});
+        
+        res.json({
+            success: true,
+            students,
+            groupedByTrade,
+            count: students.length
+        });
+    } catch (error) {
+        console.error('Error searching global students:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Auto-link to student from global sheets
+router.post('/global-students/link', authenticateToken, async (req, res) => {
+    try {
+        const parentId = req.user.userId || req.user.id;
+        const { student_id, student_code, relationship = 'Parent' } = req.body;
+        
+        if (!student_id && !student_code) {
+            return res.status(400).json({ success: false, message: 'Student ID or code required' });
+        }
+        
+        // Get student from global sheets
+        let studentQuery = 'SELECT * FROM global_student_sheets WHERE ';
+        let studentParams = [];
+        
+        if (student_id) {
+            studentQuery += 'id = ?';
+            studentParams.push(student_id);
+        } else {
+            studentQuery += 'student_code = ?';
+            studentParams.push(student_code);
+        }
+        
+        const [students] = await pool.execute(studentQuery, studentParams);
+        
+        if (students.length === 0) {
+            return res.status(404).json({ success: false, message: 'Student not found' });
+        }
+        
+        const student = students[0];
+        
+        // Check if already linked
+        const [existing] = await pool.execute(
+            'SELECT id, status FROM parent_student_links WHERE parent_id = ? AND student_id = ?',
+            [parentId, student.id]
+        );
+        
+        if (existing.length > 0) {
+            return res.json({
+                success: false,
+                message: `Already linked with ${student.first_name} ${student.last_name}`,
+                already_linked: true,
+                link_status: existing[0].status
+            });
+        }
+        
+        // Create the link
+        const [result] = await pool.execute(`
+            INSERT INTO parent_student_links 
+            (parent_id, student_id, relationship_type, status, match_confidence, linked_at)
+            VALUES (?, ?, ?, 'active', 100, NOW())
+        `, [parentId, student.id, relationship]);
+        
+        // Log activity
+        await pool.execute(`
+            INSERT INTO parent_student_link_activity (link_id, action, details, created_at)
+            VALUES (?, 'linked', 'Auto-linked from global sheets', NOW())
+        `, [result.insertId]);
+        
+        res.json({
+            success: true,
+            message: `Successfully linked with ${student.first_name} ${student.last_name}`,
+            student: {
+                id: student.id,
+                name: `${student.first_name} ${student.last_name}`,
+                student_code: student.student_code,
+                trade: student.trade_name,
+                level: student.level_number
+            }
+        });
+    } catch (error) {
+        console.error('Error linking to global student:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get all trades from global sheets for parent linking
+router.get('/global-students/trades', authenticateToken, async (req, res) => {
+    try {
+        const [trades] = await pool.execute(`
+            SELECT DISTINCT trade_code, trade_name 
+            FROM global_student_sheets 
+            WHERE status = 'active' AND trade_code IS NOT NULL
+            ORDER BY trade_name
+        `);
+        
+        res.json({
+            success: true,
+            trades
+        });
+    } catch (error) {
+        console.error('Error fetching trades:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get levels for a specific trade from global sheets
+router.get('/global-students/levels', authenticateToken, async (req, res) => {
+    try {
+        const { trade_code } = req.query;
+        
+        let sql = `
+            SELECT DISTINCT level_number 
+            FROM global_student_sheets 
+            WHERE status = 'active' AND level_number IS NOT NULL
+        `;
+        const params = [];
+        
+        if (trade_code) {
+            sql += ` AND trade_code = ?`;
+            params.push(trade_code);
+        }
+        
+        sql += ` ORDER BY level_number`;
+        
+        const [levels] = await pool.execute(sql, params);
+        
+        res.json({
+            success: true,
+            levels: levels.map(l => l.level_number)
+        });
+    } catch (error) {
+        console.error('Error fetching levels:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

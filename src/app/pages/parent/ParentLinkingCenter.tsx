@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Search, UserPlus, ShieldCheck, AlertCircle, CheckCircle2,
     ArrowRight, ArrowLeft, School, GraduationCap, MessageSquare,
-    HelpCircle, Mail, Phone
+    HelpCircle, Mail, Phone, Loader2, Users, RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -14,6 +14,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { toast } from 'sonner';
 import { GLOBAL_TRADES, getLevelsForTrade, formatLevelDisplay } from '@/app/constants/tradesAndLevels';
 import { API_BASE_URL } from '@/app/config/apiBase';
+import apiService from '@/app/services/apiService';
 
 interface ParentLinkingCenterProps {
     onSuccess?: () => void;
@@ -22,6 +23,7 @@ interface ParentLinkingCenterProps {
 export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterProps) {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [searchMode, setSearchMode] = useState<'smart' | 'browse'>('smart');
     const [searchForm, setSearchForm] = useState({
         student_name: '',
         trade: '',
@@ -33,7 +35,84 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
         message: '',
     });
 
+    // Global Sheets Auto-Fetch State
+    const [globalStudents, setGlobalStudents] = useState<any[]>([]);
+    const [globalLoading, setGlobalLoading] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
     const activeTradeLevels = searchForm.trade ? getLevelsForTrade(searchForm.trade) : [];
+
+    // Auto-fetch from global sheets as user types
+    const searchGlobalStudents = useCallback(async (query: string, trade?: string, level?: string) => {
+        if (query.length < 2 && !trade && !level) {
+            setGlobalStudents([]);
+            setShowResults(false);
+            return;
+        }
+
+        setGlobalLoading(true);
+        try {
+            const response = await apiService.searchGlobalStudents({
+                search: query,
+                trade_code: trade,
+                level: level,
+                limit: 15
+            });
+
+            if (response.success) {
+                setGlobalStudents(response.students || []);
+                setShowResults(true);
+            }
+        } catch (error) {
+            console.error('Error searching global students:', error);
+        } finally {
+            setGlobalLoading(false);
+        }
+    }, []);
+
+    // Debounced search effect
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchMode === 'browse') {
+                searchGlobalStudents(searchForm.student_name, searchForm.trade, searchForm.level_id);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchForm.student_name, searchForm.trade, searchForm.level_id, searchMode, searchGlobalStudents]);
+
+    // Handle selecting a student from auto-complete
+    const handleSelectStudent = async (student: any) => {
+        setSelectedStudent(student);
+        setShowResults(false);
+        setLoading(true);
+
+        try {
+            const response = await apiService.linkToGlobalStudent(student.id, 'Parent');
+
+            if (response.success) {
+                setLinkResult({
+                    name: student.full_name,
+                    trade: student.trade_name,
+                    level: student.level_number
+                });
+                setStep(3);
+                toast.success('Umwana yahuijwe neza!');
+                if (onSuccess) onSuccess();
+            } else {
+                if (response.already_linked) {
+                    toast.info(response.message || 'Umwana arezwe');
+                } else {
+                    toast.error(response.message || 'Ikibazo');
+                }
+            }
+        } catch (error) {
+            toast.error('Ikibazo cya interineti');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSearch = async () => {
         if (!searchForm.student_name || !searchForm.trade || !searchForm.level_id) {
@@ -137,6 +216,28 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                         <Card className="border-2 border-blue-100 shadow-2xl overflow-hidden">
                             <div className="h-2 bg-gradient-to-r from-blue-500 to-indigo-600" />
                             <CardContent className="p-8 space-y-6">
+                                {/* Search Mode Toggle */}
+                                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
+                                    <Button
+                                        variant={searchMode === 'smart' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => { setSearchMode('smart'); setShowResults(false); setGlobalStudents([]); }}
+                                        className={searchMode === 'smart' ? 'bg-blue-600' : ''}
+                                    >
+                                        <Search className="w-4 h-4 mr-1" />
+                                        Smart Search
+                                    </Button>
+                                    <Button
+                                        variant={searchMode === 'browse' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => { setSearchMode('browse'); }}
+                                        className={searchMode === 'browse' ? 'bg-blue-600' : ''}
+                                    >
+                                        <Users className="w-4 h-4 mr-1" />
+                                        Browse All
+                                    </Button>
+                                </div>
+
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
@@ -144,12 +245,60 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                                                 <GraduationCap className="w-4 h-4 text-blue-500" />
                                                 AMAZINA Y'UMWANA
                                             </Label>
-                                            <Input
-                                                placeholder="Urugero: Jean Claude Munyaneza"
-                                                value={searchForm.student_name}
-                                                onChange={e => setSearchForm({ ...searchForm, student_name: e.target.value })}
-                                                className="h-12 border-2 focus:border-blue-500 transition-all font-medium"
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    placeholder={searchMode === 'browse' ? 'Shakira umwana...' : "Urugero: Jean Claude Munyaneza"}
+                                                    value={searchForm.student_name}
+                                                    onChange={e => setSearchForm({ ...searchForm, student_name: e.target.value })}
+                                                    onFocus={() => searchMode === 'browse' && setShowResults(true)}
+                                                    className="h-12 border-2 focus:border-blue-500 transition-all font-medium"
+                                                />
+                                                {globalLoading && (
+                                                    <Loader2 className="absolute right-3 top-3.5 w-5 h-5 animate-spin text-blue-500" />
+                                                )}
+                                                
+                                                {/* Auto-complete Results Dropdown */}
+                                                {showResults && globalStudents.length > 0 && (
+                                                    <div className="absolute z-50 w-full mt-1 bg-white border-2 border-blue-200 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+                                                        {globalStudents.slice(0, 10).map((student: any) => (
+                                                            <div
+                                                                key={student.id}
+                                                                onClick={() => handleSelectStudent(student)}
+                                                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors"
+                                                            >
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <p className="font-medium text-gray-900">
+                                                                            {student.first_name} {student.last_name}
+                                                                        </p>
+                                                                        <p className="text-sm text-gray-500">
+                                                                            {student.student_code}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {student.trade_name}
+                                                                        </Badge>
+                                                                        <p className="text-xs text-gray-500 mt-1">
+                                                                            Level {student.level_number}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {globalStudents.length > 10 && (
+                                                            <div className="p-2 text-center text-sm text-gray-500 bg-gray-50">
+                                                                + {globalStudents.length - 10} more results
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {searchMode === 'browse' && (
+                                                <p className="text-xs text-gray-500">
+                                                    Andika izina cg hitamo umwana uri munyuguti
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="space-y-2">
@@ -202,10 +351,44 @@ export default function ParentLinkingCenter({ onSuccess }: ParentLinkingCenterPr
                                         </div>
                                         <h3 className="text-lg font-bold text-blue-900 mb-2">Guhuza ako kanya</h3>
                                         <p className="text-center text-sm text-blue-700 leading-relaxed">
-                                            Iyo amakuru ahuye n'ayo dufite, urahita ubona raporo z'amanota, imitsindire, n'amafaranga y'ishuri.
+                                            {searchMode === 'browse' 
+                                                ? 'Hitamo trade, level wandike izina ryumwana.'
+                                                : 'Iyo amakuru ahuye nayo dufite, urahita ubona raporo zamanota, imitsindire, namafaranga yishuri.'}
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Browse Mode: Show students when filters selected */}
+                                {searchMode === 'browse' && searchForm.trade && searchForm.level_id && globalStudents.length > 0 && (
+                                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-medium text-gray-700">Abanyeshuri bagenzweho:</h4>
+                                            <Badge variant="secondary">{globalStudents.length} found</Badge>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                                            {globalStudents.slice(0, 20).map((student: any) => (
+                                                <div
+                                                    key={student.id}
+                                                    onClick={() => handleSelectStudent(student)}
+                                                    className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all"
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className="font-medium text-sm">
+                                                                {student.first_name} {student.last_name}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">{student.student_code}</p>
+                                                        </div>
+                                                        <Button size="sm" variant="outline" className="text-xs">
+                                                            <UserPlus className="w-3 h-3 mr-1" />
+                                                            Huza
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <Button
                                     onClick={handleSearch}
