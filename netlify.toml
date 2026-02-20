@@ -1,13 +1,22 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npx vite build"
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   CI = "false"
+
+# Disable automatic Next.js detection
+# Use Vite instead of Next.js
+[functions]
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Ignore Next.js directories if they exist
+[context.production]
+  ignore = "*.js,*.ts"

@@ -591,12 +591,18 @@ router.get('/sms-history', authenticateToken, requireRole(['parent']), async (re
   try {
     const parentId = req.user.userId;
 
+    // Get parent phone
+    const [[parent]] = await pool.execute(`
+      SELECT phone FROM users WHERE id = ?
+    `, [parentId]);
+
+    // Get SMS notifications for this parent
     const [messages] = await pool.execute(`
       SELECT * FROM sms_notifications
-      WHERE recipient_id = ? OR recipient_type = 'parent'
+      WHERE recipient_phone = ? OR recipient_id = ?
       ORDER BY sent_at DESC
       LIMIT 50
-    `, [parentId]);
+    `, [parent?.phone, parentId]);
 
     res.json({
       success: true,
@@ -604,6 +610,77 @@ router.get('/sms-history', authenticateToken, requireRole(['parent']), async (re
     });
   } catch (error) {
     console.error('Get SMS history error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== REQUEST SMS NOTIFICATION ====================
+
+router.post('/request-notification', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { notification_type, phone } = req.body;
+
+    // Get parent info
+    const [[parent]] = await pool.execute(`
+      SELECT * FROM users WHERE id = ?
+    `, [parentId]);
+
+    if (!parent) {
+      return res.status(404).json({ success: false, message: 'Parent not found' });
+    }
+
+    // Create notification request
+    const requestId = `SMSREQ-${Date.now()}`;
+    await pool.execute(`
+      INSERT INTO sms_notifications (notification_id, recipient_id, recipient_phone, message, type, status, sent_at)
+      VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+    `, [requestId, parentId, phone || parent.phone, `SMS notification request: ${notification_type}`, notification_type || 'general']);
+
+    // Try to send SMS immediately (demo mode)
+    try {
+      const { sendSMS } = require('../services/africanTalkingService');
+      const targetPhone = phone || parent.phone;
+      const message = `Hello ${parent.first_name}, you have requested ${notification_type} notifications. You will receive SMS updates about your child's progress.`;
+      await sendSMS(targetPhone, message);
+    } catch (smsError) {
+      console.log('SMS send failed (demo mode):', smsError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'SMS notification request submitted',
+      request_id: requestId
+    });
+  } catch (error) {
+    console.error('Request notification error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== SMS BALANCE CHECK ====================
+
+router.get('/sms-status', authenticateToken, requireRole(['parent', 'admin']), async (req, res) => {
+  try {
+    // Check SMS service status
+    const { getBalance, isReady } = require('../services/africanTalkingService');
+    
+    const ready = isReady();
+    let balance = null;
+    
+    if (ready) {
+      const balanceResult = await getBalance();
+      balance = balanceResult.balance;
+    }
+
+    res.json({
+      success: true,
+      sms_ready: ready,
+      balance: balance,
+      mode: ready ? 'production' : 'demo'
+    });
+  } catch (error) {
+    console.error('Get SMS status error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -636,6 +713,185 @@ router.post('/contact-school', authenticateToken, requireRole(['parent']), async
     });
   } catch (error) {
     console.error('Contact school error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== FULL CHILD CREDENTIALS ====================
+
+router.get('/children/:childId/full-credentials', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { childId } = req.params;
+
+    // Verify access
+    const [[connection]] = await pool.execute(`
+      SELECT * FROM parent_connections
+      WHERE parent_id = ? AND student_id = ? AND status = 'active'
+    `, [parentId, childId]);
+
+    if (!connection) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get full student data
+    const [[student]] = await pool.execute(`
+      SELECT 
+        u.id, u.username, u.first_name, u.last_name, u.email, u.phone,
+        u.gender, u.date_of_birth, u.address, u.profile_image,
+        u.created_at as user_created_at,
+        gss.*
+      FROM users u
+      LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_id OR u.id = gss.id
+      WHERE u.id = ?
+    `, [childId]);
+
+    // Get recent marks
+    let marks = [];
+    if (connection.can_view_marks) {
+      const [recentMarks] = await pool.execute(`
+        SELECT sm.*, c.course_name, c.subject_code
+        FROM student_marks sm
+        LEFT JOIN courses c ON sm.course_code = c.course_code
+        WHERE sm.student_id = ?
+        ORDER BY sm.created_at DESC
+        LIMIT 20
+      `, [childId]);
+      marks = recentMarks;
+    }
+
+    // Get recent attendance
+    let attendance = [];
+    if (connection.can_view_attendance) {
+      const [recentAttendance] = await pool.execute(`
+        SELECT * FROM student_attendance
+        WHERE student_id = ?
+        ORDER BY attendance_date DESC
+        LIMIT 30
+      `, [childId]);
+      attendance = recentAttendance;
+    }
+
+    // Get payments
+    const [payments] = await pool.execute(`
+      SELECT * FROM student_payments
+      WHERE student_id = ?
+      ORDER BY payment_date DESC
+      LIMIT 10
+    `, [childId]);
+
+    // Get conduct records
+    let conduct = [];
+    if (connection.can_view_discipline) {
+      const [conductRecords] = await pool.execute(`
+        SELECT * FROM student_conduct_records
+        WHERE student_id = ?
+        ORDER BY created_at DESC
+        LIMIT 10
+      `, [childId]);
+      conduct = conductRecords;
+    }
+
+    // Get notifications for this child
+    const [notifications] = await pool.execute(`
+      SELECT * FROM parent_notifications
+      WHERE parent_id = ? AND student_id = ?
+      ORDER BY created_at DESC
+      LIMIT 20
+    `, [parentId, childId]);
+
+    // Calculate statistics
+    const stats = {
+      academic: {
+        total_marks: marks.length,
+        average_marks: marks.length > 0 ? (marks.reduce((sum, m) => sum + (parseFloat(m.final_marks) || 0), 0) / marks.length).toFixed(2) : 0,
+        highest_marks: marks.length > 0 ? Math.max(...marks.map(m => parseFloat(m.final_marks) || 0)) : 0,
+        lowest_marks: marks.length > 0 ? Math.min(...marks.map(m => parseFloat(m.final_marks) || 0)) : 0
+      },
+      attendance: {
+        total_days: attendance.length,
+        present: attendance.filter(a => a.status === 'present').length,
+        absent: attendance.filter(a => a.status === 'absent').length,
+        late: attendance.filter(a => a.status === 'late').length,
+        rate: attendance.length > 0 ? ((attendance.filter(a => a.status === 'present').length / attendance.length) * 100).toFixed(2) : 0
+      },
+      payments: {
+        total: payments.length,
+        total_paid: payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+        pending: payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+      },
+      conduct: {
+        total_incidents: conduct.length,
+        major: conduct.filter(c => c.severity === 'major').length,
+        minor: conduct.filter(c => c.severity === 'minor').length,
+        resolved: conduct.filter(c => c.status === 'resolved').length
+      }
+    };
+
+    res.json({
+      success: true,
+      credentials: {
+        // Basic Info
+        basic: {
+          id: student?.id,
+          student_code: student?.student_code,
+          username: student?.username,
+          first_name: student?.first_name,
+          last_name: student?.last_name,
+          full_name: `${student?.first_name || ''} ${student?.last_name || ''}`.trim(),
+          email: student?.email,
+          phone: student?.phone,
+          gender: student?.gender,
+          date_of_birth: student?.date_of_birth,
+          address: student?.address,
+          profile_image: student?.profile_image,
+          emergency_contact: student?.emergency_contact,
+          registered_at: student?.user_created_at
+        },
+        // Academic Info
+        academic: {
+          trade_name: student?.trade_name,
+          trade_code: student?.trade_code,
+          level_number: student?.level_number,
+          level_suffix: student?.level_suffix,
+          class_name: student?.class_name,
+          academic_year: student?.academic_year,
+          status: student?.status,
+          gpa: student?.gpa,
+          attendance_percentage: student?.attendance_percentage,
+          conduct_score: student?.conduct_score,
+          conduct_grade: student?.conduct_grade
+        },
+        // Permissions
+        permissions: {
+          can_view_marks: connection.can_view_marks,
+          can_view_attendance: connection.can_view_attendance,
+          can_view_report_cards: connection.can_view_report_cards,
+          can_view_discipline: connection.can_view_discipline,
+          linked_at: connection.linked_at
+        },
+        // Data
+        recent_marks: marks,
+        recent_attendance: attendance,
+        recent_payments: payments,
+        recent_conduct: conduct,
+        recent_notifications: notifications,
+        // Statistics
+        stats,
+        // Quick links
+        links: {
+          marks: connection.can_view_marks ? `/api/parent-dashboard/children/${childId}/marks` : null,
+          attendance: connection.can_view_attendance ? `/api/parent-dashboard/children/${childId}/attendance` : null,
+          payments: `/api/parent-dashboard/children/${childId}/payments`,
+          conduct: connection.can_view_discipline ? `/api/parent-dashboard/children/${childId}/conduct` : null,
+          timetable: `/api/parent-dashboard/children/${childId}/timetable`,
+          exams: connection.can_view_marks ? `/api/parent-dashboard/children/${childId}/exams` : null,
+          report_cards: connection.can_view_report_cards ? `/api/parent-dashboard/children/${childId}/report-cards` : null
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get full credentials error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

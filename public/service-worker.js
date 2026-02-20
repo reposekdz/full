@@ -61,8 +61,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip hot module replacement
-  if (url.searchParams.has('t=') || url.searchParams.has('hot=')) {
+  // Skip hot module replacement, timestamped requests, and source maps
+  if (url.searchParams.has('t=') || url.searchParams.has('hot=') || url.searchParams.has('token=')) {
+    return;
+  }
+
+  // Skip .ts, .tsx, .map files (development HMR and source maps)
+  if (url.pathname.endsWith('.ts') || url.pathname.endsWith('.tsx') || url.pathname.endsWith('.map')) {
+    return;
+  }
+
+  // Skip JS files with timestamps
+  if (url.pathname.endsWith('.js') && url.search) {
     return;
   }
 

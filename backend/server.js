@@ -634,7 +634,8 @@ if (routes.reporting) { app.use('/api/reporting', routes.reporting); mountedRout
 if (routes.cms) { app.use('/api/cms', routes.cms); mountedRoutes++; }
 if (routes.sms) { app.use('/api/sms', routes.sms); mountedRoutes++; }
 if (routes.parentMessages) { app.use('/api/parents', routes.parentMessages); mountedRoutes++; }
-if (routes.parentPortal) { app.use('/api/parent-dashboard', routes.parentPortal); mountedRoutes++; }
+// NOTE: /api/parent-dashboard is already mounted above (line ~433)
+// if (routes.parentPortal) { app.use('/api/parent-dashboard', routes.parentPortal); mountedRoutes++; }
 
 // Admin Management
 if (routes.adminComprehensive) { app.use('/api/admin', routes.adminComprehensive); mountedRoutes++; }

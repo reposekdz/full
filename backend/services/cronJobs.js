@@ -151,22 +151,22 @@ cron.schedule('0 10 * * *', async () => {
         gss.student_code,
         gss.first_name as student_first_name,
         gss.last_name as student_last_name,
-        gss.guardian_name,
-        gss.guardian_phone,
-        gss.guardian_email,
+        gss.phone,
+        gss.email,
         gss.total_fees,
         gss.paid_amount,
         gss.balance,
-        gss.payment_deadline,
         gss.trade_name,
         gss.level_number,
         gss.level_suffix,
-        DATEDIFF(NOW(), gss.payment_deadline) as days_overdue
+        pc.parent_name as guardian_name,
+        pc.parent_phone as guardian_phone,
+        pc.email as guardian_email
       FROM global_student_sheets gss
+      LEFT JOIN parent_connections pc ON gss.id = pc.student_id AND pc.status = 'active'
       WHERE gss.status = 'active' 
         AND gss.balance > 0
-        AND gss.payment_deadline < NOW()
-      ORDER BY days_overdue DESC
+      ORDER BY gss.balance DESC
     `);
 
     console.log(`Found ${overdueStudents.length} students with overdue payments`);
@@ -177,23 +177,22 @@ cron.schedule('0 10 * * *', async () => {
     for (const student of overdueStudents) {
       const studentName = `${student.student_first_name} ${student.student_last_name}`;
       const level = `${student.level_number}${student.level_suffix || ''}`;
-      const balance = parseFloat(student.balance).toLocaleString();
-      const daysOverdue = student.days_overdue;
+      const balance = parseFloat(student.balance || 0).toLocaleString();
+      const guardianName = student.guardian_name || 'Parent/Guardian';
 
-      const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, your child ${studentName} (${student.trade_name} L${level}) has an outstanding balance of ${balance} RWF. Payment is ${daysOverdue} days overdue. Please settle to avoid service interruption. Thank you.`;
+      const smsMessage = `GARDEN TVET: Dear ${guardianName}, your child ${studentName} (${student.trade_name} L${level}) has an outstanding balance of ${balance} RWF. Please settle to avoid service interruption. Thank you.`;
 
       const emailMessage = `
         <h2>Payment Reminder - Garden TVET School</h2>
-        <p>Dear ${student.guardian_name},</p>
+        <p>Dear ${guardianName},</p>
         <p>This is a reminder that your child <strong>${studentName}</strong> has an outstanding balance.</p>
         <h3>Payment Details:</h3>
         <ul>
           <li><strong>Student:</strong> ${studentName} (${student.student_code})</li>
           <li><strong>Program:</strong> ${student.trade_name} - Level ${level}</li>
-          <li><strong>Total Fees:</strong> ${parseFloat(student.total_fees).toLocaleString()} RWF</li>
-          <li><strong>Amount Paid:</strong> ${parseFloat(student.paid_amount).toLocaleString()} RWF</li>
+          <li><strong>Total Fees:</strong> ${parseFloat(student.total_fees || 0).toLocaleString()} RWF</li>
+          <li><strong>Amount Paid:</strong> ${parseFloat(student.paid_amount || 0).toLocaleString()} RWF</li>
           <li><strong>Balance Due:</strong> ${balance} RWF</li>
-          <li><strong>Days Overdue:</strong> ${daysOverdue} days</li>
         </ul>
         <p><strong>Important:</strong> Please settle this amount as soon as possible to avoid service interruption.</p>
         <p>For payment options or inquiries, please contact the school accountant.</p>
@@ -211,17 +210,16 @@ cron.schedule('0 10 * * *', async () => {
               type: 'payment_reminder',
               student_id: student.student_id,
               student_code: student.student_code,
-              balance: student.balance,
-              days_overdue: daysOverdue
+              balance: student.balance
             }
           );
 
           if (smsResult.success) {
             smsCount++;
-            console.log(`✓ SMS sent to ${student.guardian_name} (${student.guardian_phone})`);
+            console.log(`✓ SMS sent to ${guardianName} (${student.guardian_phone})`);
           }
         } catch (err) {
-          console.log(`✗ SMS failed for ${student.guardian_name}: ${err.message}`);
+          console.log(`✗ SMS failed for ${guardianName}: ${err.message}`);
         }
       }
 
@@ -250,7 +248,7 @@ cron.schedule('0 10 * * *', async () => {
         await createNotification(
           parentId,
           'Payment Reminder',
-          `Outstanding balance of ${balance} RWF for ${studentName}. Payment is ${daysOverdue} days overdue.`,
+          `Outstanding balance of ${balance} RWF for ${studentName}. Please settle soon.`,
           'payment',
           'urgent',
           false,
@@ -278,16 +276,16 @@ cron.schedule('0 9 * * 1', async () => {
         gss.phone,
         gss.email,
         gss.balance,
-        gss.payment_deadline,
         gss.trade_name,
         gss.trade_code,
         gss.level_number,
         gss.level_suffix,
-        DATEDIFF(gss.payment_deadline, NOW()) as days_remaining
+        pc.parent_name as guardian_name,
+        pc.parent_phone as guardian_phone
       FROM global_student_sheets gss
+      LEFT JOIN parent_connections pc ON gss.id = pc.student_id AND pc.status = 'active'
       WHERE gss.status = 'active' 
         AND gss.balance > 0
-        AND gss.payment_deadline BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
     `);
 
     console.log(`Found ${upcomingDue.length} students with payments due this week`);
@@ -295,20 +293,19 @@ cron.schedule('0 9 * * 1', async () => {
     for (const student of upcomingDue) {
       const studentName = `${student.student_first_name} ${student.student_last_name}`;
       const level = `${student.level_number}${student.level_suffix || ''}`;
-      const balance = parseFloat(student.balance).toLocaleString();
-      const daysRemaining = student.days_remaining;
+      const balance = parseFloat(student.balance || 0).toLocaleString();
+      const guardianName = student.guardian_name || 'Parent/Guardian';
 
-      const smsMessage = `GARDEN TVET: Dear ${student.guardian_name}, payment of ${balance} RWF for ${studentName} (${student.trade_name} L${level}) is due in ${daysRemaining} day(s). Please make payment to avoid penalties.`;
+      const smsMessage = `GARDEN TVET: Dear ${guardianName}, payment of ${balance} RWF for ${studentName} (${student.trade_name} L${level}) is pending. Please make payment to avoid penalties.`;
 
       if (student.guardian_phone && sendSMSFunc) {
         try {
           await sendSMSFunc(student.guardian_phone, smsMessage, 1, {
             type: 'upcoming_payment',
-            student_id: student.student_id,
-            days_remaining: daysRemaining
+            student_id: student.student_id
           });
         } catch (err) {
-          console.log(`SMS failed for ${student.guardian_name}: ${err.message}`);
+          console.log(`SMS failed for ${guardianName}: ${err.message}`);
         }
       }
     }
