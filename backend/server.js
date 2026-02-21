@@ -694,6 +694,9 @@ app.use('/api/parent-linking-advanced', require('./routes/parent-linking-advance
 // DOD Parent Management - Advanced System with Auto-Linking
 app.use('/api/dod-parent-management', require('./routes/dod-parent-management')); mountedRoutes++;
 
+// DOD Comprehensive Messaging - ALL Students (Not just Level 4 SOD)
+app.use('/api/dod-messaging', require('./routes/dod-messaging-comprehensive')); mountedRoutes++;
+
 // SMS Routes (African Talking)
 app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
 
