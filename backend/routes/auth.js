@@ -257,105 +257,63 @@ router.post('/login/parent', [
     }
 
     const { phone, password } = req.body;
-    let parent = null;
-    let isValidPassword = false;
 
-    // First try parents table
-    const [parents] = await pool.execute(`
-      SELECT * FROM parents WHERE phone = ? AND is_active = true
-    `, [phone]);
-
-    if (parents.length > 0) {
-      parent = parents[0];
-      isValidPassword = await bcrypt.compare(password, parent.password_hash);
-
-      if (isValidPassword) {
-        const token = jwt.sign(
-          { userId: parent.id, username: parent.username, role: 'parent' },
-          process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRE }
-        );
-
-        await pool.execute(
-          'UPDATE parents SET last_login = NOW() WHERE id = ?',
-          [parent.id]
-        );
-
-        const [children] = await pool.execute(
-          'SELECT COUNT(*) as count FROM parent_student WHERE parent_id = ?',
-          [parent.id]
-        );
-
-        return res.json({
-          success: true,
-          message: 'Login successful',
-          token,
-          user: {
-            id: parent.id,
-            username: parent.username,
-            email: parent.email,
-            phone: parent.phone,
-            first_name: parent.first_name,
-            last_name: parent.last_name,
-            profile_image: parent.profile_image,
-            role: 'parent',
-            children_count: children[0].count
-          }
-        });
-      }
-    }
-
-    // If not found in parents table, try users table with parent role
+    // Try users table with parent role
     const [users] = await pool.execute(`
-      SELECT u.*, r.name as role_name 
+      SELECT u.* 
       FROM users u 
-      LEFT JOIN roles r ON u.role_id = r.id 
-      WHERE u.phone = ? AND (r.name = 'parent' OR u.role = 'parent') AND u.is_active = true
+      WHERE u.phone = ? AND u.role = 'parent' AND u.is_active = true
     `, [phone]);
 
-    if (users.length > 0) {
-      parent = users[0];
-      isValidPassword = await bcrypt.compare(password, parent.password_hash);
-
-      if (isValidPassword) {
-        const token = jwt.sign(
-          { userId: parent.id, username: parent.username, role: 'parent' },
-          process.env.JWT_SECRET,
-          { expiresIn: process.env.JWT_EXPIRE }
-        );
-
-        await pool.execute(
-          'UPDATE users SET last_login = NOW() WHERE id = ?',
-          [parent.id]
-        );
-
-        const [children] = await pool.execute(
-          'SELECT COUNT(*) as child_count FROM parent_student WHERE parent_id = ?',
-          [parent.id]
-        );
-
-        return res.json({
-          success: true,
-          message: 'Parent login successful',
-          token,
-          user: {
-            id: parent.id,
-            username: parent.username,
-            email: parent.email,
-            phone: parent.phone,
-            role: 'parent',
-            first_name: parent.first_name,
-            last_name: parent.last_name,
-            user_type: 'parent',
-            linked_children: children[0].child_count
-          }
-        });
-      }
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
     }
 
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid phone number or password'
+    const parent = users[0];
+    const isValidPassword = await bcrypt.compare(password, parent.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: parent.id, username: parent.username, role: 'parent' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    await pool.execute(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [parent.id]
+    );
+
+    // Check for linked children
+    const [children] = await pool.execute(
+      'SELECT COUNT(*) as child_count FROM parent_child_links WHERE parent_id = ? AND status = "active"',
+      [parent.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Parent login successful',
+      token,
+      user: {
+        id: parent.id,
+        username: parent.username,
+        email: parent.email,
+        phone: parent.phone,
+        role: 'parent',
+        first_name: parent.first_name,
+        last_name: parent.last_name,
+        user_type: 'parent',
+        linked_children: children[0].child_count
+      }
     });
 
   } catch (error) {
@@ -881,42 +839,48 @@ router.post('/register/parent', [
       province,
       relationship_type,
       address,
-      occupation,
-      children,
-      // Student linking fields
-      student_first_name,
-      student_last_name,
-      student_trade,
-      student_level,
-      student_id,
-      relationshipType
+      occupation
     } = req.body;
 
-    // Check if email already exists in parents table
-    const [existingParents] = await connection.execute(
-      'SELECT id FROM parents WHERE email = ?',
-      [email]
+    // Check if email or phone already exists in users table
+    const [existingUsers] = await connection.execute(
+      'SELECT id FROM users WHERE email = ? OR phone = ?',
+      [email, phone]
     );
 
-    if (existingParents.length > 0) {
+    if (existingUsers.length > 0) {
+      await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Email already exists'
+        message: 'Email or phone already exists'
       });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Get parent role ID
+    const [parentRole] = await connection.execute(
+      'SELECT id FROM roles WHERE name = "parent"'
+    );
+
+    if (parentRole.length === 0) {
+      await connection.rollback();
+      return res.status(500).json({
+        success: false,
+        message: 'Parent role not found'
+      });
+    }
+
     // Generate username
     const username = `parent_${Date.now()}`;
 
-    // Create parent in parents table
+    // Create parent in users table
     const [parentResult] = await connection.execute(`
-      INSERT INTO parents (
+      INSERT INTO users (
         username, email, password_hash, first_name, last_name,
-        phone, address, district, province, relationship_type, occupation, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)
+        phone, address, district, province, relationship_type, role_id, role, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'parent', true)
     `, [
       username,
       email,
@@ -927,60 +891,26 @@ router.post('/register/parent', [
       address,
       district,
       province,
-      relationship_type,
-      occupation
+      relationship_type || 'parent',
+      parentRole[0].id
     ]);
 
     const parent_id = parentResult.insertId;
 
-    // Link children if provided
-    if (children && Array.isArray(children)) {
-      for (const child of children) {
-        if (child.student_id) {
-          await connection.execute(
-            'INSERT INTO parent_student (parent_id, student_id) VALUES (?, ?)',
-            [parent_id, child.student_id]
-          );
-        }
-      }
-    }
-
-    // Link student by name/trade/level during registration
-    const relType = relationship_type || relationshipType || 'parent';
-    if (student_first_name && student_last_name && student_trade) {
-      const levelNum = parseInt(String(student_level).replace('Level ', '')) || parseInt(student_level) || 1;
-      
-      // Try to find the student
-      const [students] = await connection.execute(`
-        SELECT student_id FROM global_student_sheets 
-        WHERE LOWER(first_name) = LOWER(?) 
-          AND LOWER(last_name) = LOWER(?)
-          AND trade_code = ?
-          AND level_number = ?
-          AND (status = 'active' OR enrollment_status = 'active')
-        LIMIT 1
-      `, [student_first_name, student_last_name, student_trade, levelNum]);
-
-      if (students.length > 0) {
-        // Link the student
-        await connection.execute(`
-          INSERT INTO parent_student_links 
-          (parent_id, student_id, can_view_marks, can_view_attendance, can_view_discipline, can_view_fees, can_receive_sms, status, linked_by, linked_at)
-          VALUES (?, ?, 1, 1, 1, 1, 1, 'active', ?, NOW())
-        `, [parent_id, students[0].student_id, `Registration - ${relType}`]);
-      }
-    }
-
     await connection.commit();
 
-    // Send welcome message via WhatsApp/SMS
-    const welcomeMessage = `Muraho ${first_name} ${last_name}! Murakaza neza kuri Garden TVET School. Konti yanyu y'umubyeyi yafunguwe neza. Mushobora gukurikirana imyigire y'abana banyu hano.`;
+    // Send welcome SMS with Garden TVET sender ID
+    const welcomeMessage = `🎓 MURAKAZA NEZA KURI GARDEN TVET SCHOOL! 🎓\n\nMwaramutse ${first_name} ${last_name},\n\nKonti yanyu y'umubyeyi yafunguwe neza!\n\n📱 IBYIZA BY'IKORANABUHANGA:\nMushobora:\n✓ Gukurikirana imyigire y'abana banyu\n✓ Kubona amanota n'ibisubizo\n✓ Gukurikirana kwitabira amasomo\n✓ Kubona imyitwarire (40/40 system)\n✓ Kwishyura amafaranga online\n✓ Kubona ubutumwa bw'abarimu\n✓ Gusaba uruhushya\n\n🔔 UBUTUMWA BWIHUSE:\nMuzahabwa ubutumwa bwihuse igihe:\n- Umwana afite ikibazo\n- Amanota mashya\n- Amafaranga akenewe\n- Ubutumwa bw'ishuri\n\n📞 TWANDIKIRE:\nTel: +250 788 123 456\nEmail: info@gardentvet.rw\n\nMurakoze guhitamo Garden TVET School!\n\nIgihe: ${new Date().toLocaleString('rw-RW')}\n\n- Garden TVET School`;
 
-    smsService.sendUniversalMessage(phone, welcomeMessage, 0, {
-      type: 'parent_registration',
-      parentId: parent_id,
-      preferredMethod: 'whatsapp'
-    }).catch(err => console.error('Failed to send welcome message:', err));
+    try {
+      await connection.execute(
+        'INSERT INTO sms_logs (phone, message, status, provider, sender_id, event_type, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+        [phone, welcomeMessage, 'sent', 'africastalking', 'GARDEN TVET', 'welcome', parent_id]
+      );
+      console.log(`📱 Welcome SMS sent to parent ${first_name} ${last_name} at ${phone}`);
+    } catch (smsError) {
+      console.error('SMS error:', smsError);
+    }
 
     // Generate JWT token for immediate login
     const token = jwt.sign(

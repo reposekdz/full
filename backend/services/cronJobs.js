@@ -84,6 +84,13 @@ cron.schedule('0 18 * * *', async () => {
 cron.schedule('0 7 * * *', async () => {
   console.log('Running exam preparation reminder...');
   try {
+    // Check if student_exams table exists, if not skip
+    const [tables] = await pool.query("SHOW TABLES LIKE 'student_exams'");
+    if (tables.length === 0) {
+      console.log('⚠️  student_exams table not found, skipping exam reminders');
+      return;
+    }
+
     const [exams] = await pool.query(`
       SELECT e.*, u.id as student_id, u.first_name, u.last_name, u.phone, u.email
       FROM exams e

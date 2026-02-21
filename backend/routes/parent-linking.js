@@ -1839,4 +1839,51 @@ router.post('/bulk-approve', authenticateToken, requireRole(['admin', 'headmaste
   }
 });
 
+// GET /api/parent-child-linking/my-children - Get logged-in parent's children
+router.get('/my-children', authenticateToken, async (req, res) => {
+  try {
+    const parentId = req.user.userId || req.user.id;
+
+    const [children] = await pool.execute(`
+      SELECT 
+        gss.id,
+        gss.student_id,
+        gss.student_code,
+        gss.first_name,
+        gss.last_name,
+        gss.email,
+        gss.phone,
+        gss.gender,
+        gss.trade_code,
+        gss.trade_name,
+        gss.level_number,
+        gss.level_suffix,
+        gss.class_name,
+        gss.conduct_score,
+        gss.attendance_percentage,
+        gss.enrollment_status,
+        pcl.relationship_type,
+        pcl.linked_at,
+        pcl.status as link_status
+      FROM parent_child_links pcl
+      INNER JOIN global_student_sheets gss ON pcl.student_id = gss.id
+      WHERE pcl.parent_id = ? AND pcl.status = 'active'
+      ORDER BY gss.first_name, gss.last_name
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      children,
+      count: children.length
+    });
+  } catch (error) {
+    console.error('Get my children error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch children',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

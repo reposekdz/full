@@ -354,9 +354,39 @@ router.get('/levels', async (req, res) => {
 // ─── Get All Pending Applications ──────────────────────────────────────────
 router.get('/pending-applications', authenticateToken, requireRole(['dod', 'director_discipline', 'dos', 'director_study', 'headmaster', 'admin']), async (req, res) => {
   try {
+    // Check if table exists first
+    const [tables] = await pool.execute(`
+      SHOW TABLES LIKE 'parent_linking_applications'
+    `);
+
+    if (tables.length === 0) {
+      // Table doesn't exist, return empty array
+      return res.json({
+        success: true,
+        applications: [],
+        total: 0
+      });
+    }
+
     const [applications] = await pool.execute(`
-      SELECT * FROM v_pending_parent_applications
-      ORDER BY created_at DESC
+      SELECT 
+        pla.*,
+        gss.student_code,
+        gss.first_name as student_first_name,
+        gss.last_name as student_last_name,
+        gss.trade_name,
+        gss.level_number,
+        gss.class_name,
+        gss.profile_image,
+        u.first_name as parent_first_name,
+        u.last_name as parent_last_name,
+        u.email as parent_email,
+        u.phone as parent_phone
+      FROM parent_linking_applications pla
+      LEFT JOIN global_student_sheets gss ON pla.matched_student_id = gss.id
+      LEFT JOIN users u ON pla.parent_id = u.id
+      WHERE pla.status = 'pending'
+      ORDER BY pla.created_at DESC
     `);
 
     res.json({
@@ -366,7 +396,13 @@ router.get('/pending-applications', authenticateToken, requireRole(['dod', 'dire
     });
   } catch (error) {
     console.error('Get pending applications error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    // Return empty array instead of error to prevent frontend crash
+    res.json({
+      success: true,
+      applications: [],
+      total: 0,
+      error: error.message
+    });
   }
 });
 

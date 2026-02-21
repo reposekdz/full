@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/app/components/ui/textarea';
 import { Badge } from '@/app/components/ui/badge';
 import { toast } from 'sonner';
+import ParentWaitingDashboard from './ParentWaitingDashboard';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -30,31 +31,53 @@ const ParentDashboardWithLinking = () => {
   });
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        toast.error('Ikosa: Backend server ntiyakora. Reba niba server iratangiye.');
+      }
+    }, 10000); // 10 second timeout
+
     fetchData();
+
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setLoading(false);
+        toast.error('Ntabwo uri kwinjira. Injira mbere.');
+        return;
+      }
+
       const headers = { 'Authorization': `Bearer ${token}` };
 
       const [childrenRes, applicationsRes, tradesRes] = await Promise.all([
-        fetch(`${API_BASE}/parent-child-linking/my-children`, { headers }),
-        fetch(`${API_BASE}/parent-child-linking/my-applications`, { headers }),
-        fetch(`${API_BASE}/parent-child-linking/trades`, { headers })
+        fetch(`${API_BASE}/parent-child-linking/my-children`, { headers }).catch(() => ({ ok: false, json: async () => ({ success: false, children: [] }) })),
+        fetch(`${API_BASE}/parent-child-linking/my-applications`, { headers }).catch(() => ({ ok: false, json: async () => ({ success: false, applications: [] }) })),
+        fetch(`${API_BASE}/parent-child-linking/trades`, { headers }).catch(() => ({ ok: false, json: async () => ({ success: false, trades: [] }) }))
       ]);
 
       const childrenData = await childrenRes.json();
       const applicationsData = await applicationsRes.json();
       const tradesData = await tradesRes.json();
 
-      if (childrenData.success) setChildren(childrenData.children || []);
-      if (applicationsData.success) setApplications(applicationsData.applications || []);
-      if (tradesData.success) setTrades(tradesData.trades || []);
+      setChildren(childrenData.children || []);
+      setApplications(applicationsData.applications || []);
+      setTrades(tradesData.trades || []);
+      
+      if (!childrenRes.ok || !applicationsRes.ok || !tradesRes.ok) {
+        console.warn('Some API calls failed');
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Ikosa mu gukurura amakuru');
+      setChildren([]);
+      setApplications([]);
+      setTrades([]);
     } finally {
       setLoading(false);
     }
@@ -99,18 +122,8 @@ const ParentDashboardWithLinking = () => {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Icyifuzo cyoherejwe neza! Tegereza inyemezwa.');
-        setShowLinkingForm(false);
-        setLinkingForm({
-          child_first_name: '',
-          child_last_name: '',
-          child_gender: '',
-          child_trade_code: '',
-          child_level_number: '',
-          relationship: 'parent',
-          notes: ''
-        });
-        fetchData();
+        toast.success('Icyifuzo cyoherejwe neza! Urakurikiranwa ku rutonde rw\'abahagaritse...');
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         toast.error(data.message || 'Ikosa mu kohereza icyifuzo');
       }
@@ -132,6 +145,11 @@ const ParentDashboardWithLinking = () => {
         return <Badge>{status}</Badge>;
     }
   };
+
+  // Show waiting list if has pending applications and no approved children
+  if (applications.some(a => a.status === 'pending') && children.length === 0) {
+    return <ParentWaitingDashboard />;
+  }
 
   if (loading) {
     return (

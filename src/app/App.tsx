@@ -103,8 +103,9 @@ import ParentLinkingManagement from '@/app/components/ParentLinkingManagement';
 import ParentComprehensiveDashboard from './pages/parent/ParentComprehensiveDashboard';
 import ParentChildDashboard from './pages/parent/ParentChildDashboard';
 import ContactStaff from './pages/parent/ContactStaff';
-import ModernParentDashboard from './pages/parent/ModernParentDashboard';
+import ParentDashboardWithLinking from '@/app/pages/parent/ParentDashboardWithLinking';
 import ParentWaitingListDashboard from './pages/dashboards/ParentWaitingListDashboard';
+import DODManualParentLinking from '@/app/pages/dod/DODManualParentLinking';
 // @ts-ignore
 import StockManagement from '@/components/StockManagement';
 
@@ -367,12 +368,8 @@ const AppContent: React.FC = () => {
         }
       }
       if (user?.role === 'parent') {
-        console.log('📊 Rendering Modern Parent Dashboard for user:', user);
-        // Check for specific parent routes
-        if (currentPage === 'parent-waiting-list') {
-          return <ParentWaitingListDashboard />;
-        }
-        return <ModernParentDashboard />;
+        console.log('📊 Rendering Parent Dashboard With Linking for user:', user);
+        return <ParentDashboardWithLinking />;
       }
     }
 
@@ -498,15 +495,8 @@ const AppContent: React.FC = () => {
       if (currentPage === 'staff-management-advanced') return <StaffManagementPage onNavigate={handleNavigate} />;
       if (currentPage === 'stock-management') return <StockManagement />;
       if (currentPage === 'application-management') return <ApplicationManagementDashboard onNavigate={handleNavigate} onLogout={logout} />;
-      if (currentPage === 'parent-applications') return (
-        <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          <ParentLinkingManagement
-            userRole={user.role || ''}
-            userId={typeof (user as any).id === 'number' ? (user as any).id : parseInt(String((user as any).id), 10) || 0}
-            userName={(user as any).name || `${(user as any).first_name || ''} ${(user as any).last_name || ''}`.trim() || 'Staff'}
-          />
-        </div>
-      );
+      if (currentPage === 'dod-manual-parent-linking') return <DODManualParentLinking onNavigate={handleNavigate} />;
+      if (currentPage === 'parent-applications') return <DODManualParentLinking onNavigate={handleNavigate} />;
 
       // Role selection pages
       if (currentPage === 'role-selection') {

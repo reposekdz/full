@@ -431,6 +431,7 @@ if (routes.dosManagement) { app.use('/api/dos-management', routes.dosManagement)
 // Parent Features - Only load enhanced version to avoid conflicts
 // Note: parent-dashboard-enhanced.js has all the features
 app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced')); mountedRoutes++;
+app.use('/api/parent-full-dashboard', require('./routes/parentDashboard')); mountedRoutes++;
 
 // Parent Linking API
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
@@ -702,6 +703,12 @@ app.use('/api/dos-reports', require('./routes/dos-reports')); mountedRoutes++;
 // Parent Linking & Access Control
 app.use('/api/parent-linking', require('./routes/parent-linking')); mountedRoutes++;
 app.use('/api/parent-linking-advanced', require('./routes/parent-linking-advanced')); mountedRoutes++;
+
+// Student Events & Parent Notifications
+app.use('/api/student-events', require('./routes/studentEvents')); mountedRoutes++;
+
+// Fee Payment System
+app.use('/api/fee-payment', require('./routes/feePayment')); mountedRoutes++;
 
 // DOD Parent Management - Advanced System with Auto-Linking
 app.use('/api/dod-parent-management', require('./routes/dod-parent-management')); mountedRoutes++;

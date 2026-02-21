@@ -243,8 +243,25 @@ const UltraModernLoginPage: React.FC<UltraModernLoginPageProps> = ({ onNavigate 
             }
           }
           
-          setTimeout(() => {
-            window.location.href = '/dashboard-parent';
+          // Check if parent has linked children
+          setTimeout(async () => {
+            try {
+              const checkResponse = await fetch('http://localhost:5000/api/parent-child-linking-advanced/parent-details/' + result.user.id, {
+                headers: { Authorization: `Bearer ${result.token}` }
+              });
+              const checkData = await checkResponse.json();
+              
+              if (checkData.success && checkData.children && checkData.children.length > 0) {
+                // Has linked children - go to dashboard
+                window.location.href = '/dashboard-parent';
+              } else {
+                // No linked children - go to application form
+                window.location.href = '/parent-application-form';
+              }
+            } catch (err) {
+              // On error, default to application form
+              window.location.href = '/parent-application-form';
+            }
           }, 500);
         } else {
           setError(result.message || 'Invalid phone or password');

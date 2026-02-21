@@ -54,11 +54,20 @@
   - ✅ **Advanced Search** - Find students by name, trade, level from global sheets
   - ✅ **Staff Approval** - DOD/DOS/Headmaster approve linking requests
   - ✅ **Complete Integration** - Fully integrated with school management system
+  - ✅ **DOD Send Message** - Send custom SMS to any parent with professional formatting
+  - ✅ **Bulk Messaging** - Send messages to multiple parents at once
+  - ✅ **Delete Links** - DOD can remove parent-child links with automatic SMS notification
+  - ✅ **Delete Parents** - Admin can delete parent accounts with cascade deletion
+  - ✅ **Message History** - Track all communications with parents
+  - ✅ **Welcome SMS** - Automatic SMS when parent registers with full system overview
 
   ### Quick Setup
   ```bash
   # One-click setup
   setup-parent-linking-advanced.bat
+  
+  # Run database migration
+  mysql -u root -p school_management < backend/migrations/add_parent_message_tables.sql
   
   # Then restart backend
   cd backend
@@ -67,7 +76,10 @@
 
   📖 **Documentation:**
   - [Complete Guide](PARENT_LINKING_ADVANCED_GUIDE.md) - Full system documentation
+  - [Advanced Features](PARENT_LINKING_ADVANCED_COMPLETE.md) - Send messages, delete links, message history
   - [Quick Reference](PARENT_LINKING_QUICK_REF.md) - 30-second guide
+  - [Quick Card](PARENT_LINKING_QUICK_CARD.md) - Quick reference card
+  - [Implementation Summary](PARENT_LINKING_IMPLEMENTATION_SUMMARY.md) - What was built
   - [SMS Notifications](PARENT_SMS_NOTIFICATIONS_COMPLETE.md) - All automatic SMS messages
   - [Verified Complete](PARENT_SYSTEM_VERIFIED_COMPLETE.md) - System verification checklist
 
