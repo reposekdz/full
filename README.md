@@ -34,7 +34,17 @@
 
   ## 👨👩👧 NEW: Advanced Parent Linking - Real School Data!
 
-  Parents can now link with their children using **REAL school data**:
+  Parents can now link with their children using **REAL school data** with **automatic SMS notifications**:
+  - ✅ **NO Student Code Required** - Parents only enter name, gender, trade, level
+  - ✅ **Auto-Matching** - System automatically finds student from database
+  - ✅ **Real SMS via Africa's Talking** - Automatic notifications for ALL events
+  - ✅ **Application Submitted SMS** - Parent notified immediately in Kinyarwanda
+  - ✅ **Approval/Rejection SMS** - Parent notified of decision with reasons
+  - ✅ **Conduct Removal SMS** - ALL parents notified with full details
+  - ✅ **Leave Approval SMS** - ALL parents notified automatically
+  - ✅ **Sick/Absent SMS** - Parents notified of health/attendance issues
+  - ✅ **DOD Dashboard Integration** - 3 ways to approve (header badge, global sheets, dedicated tab)
+  - ✅ **Real-time Badge** - Pending application count in header navigation
   - ✅ **Only 3 Real Trades** - BDC (Building & Construction), SOD (Software Development), AUTO (Automobile Technology)
   - ✅ **Real Levels from Database** - Fetches actual levels (1, 2, 3) from `global_student_sheets`
   - ✅ **Real Students** - Searches and links with actual enrolled students
@@ -58,6 +68,8 @@
   📖 **Documentation:**
   - [Complete Guide](PARENT_LINKING_ADVANCED_GUIDE.md) - Full system documentation
   - [Quick Reference](PARENT_LINKING_QUICK_REF.md) - 30-second guide
+  - [SMS Notifications](PARENT_SMS_NOTIFICATIONS_COMPLETE.md) - All automatic SMS messages
+  - [Verified Complete](PARENT_SYSTEM_VERIFIED_COMPLETE.md) - System verification checklist
 
   ## 👨👩👧 NEW: Parent Portal Interactive - Full Child Monitoring!
 

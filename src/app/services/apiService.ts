@@ -319,60 +319,408 @@ class ApiService {
     return this.request('/parent-dashboard/profile');
   }
 
-  async getParentOverview() {
-    return this.request('/parent-dashboard/overview');
+  /**
+   * Get comprehensive parent overview with all children information from database/global student sheets.
+   * Includes real-time stats, activity summaries, and notification counts.
+   */
+  async getParentOverview(params?: {
+    includeStats?: boolean;
+    includeNotifications?: boolean;
+    includeMessages?: boolean;
+    dateRange?: 'today' | 'week' | 'month' | 'semester' | 'year';
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.includeStats !== false) queryParams.append('include_stats', 'true');
+      if (params.includeNotifications) queryParams.append('include_notifications', 'true');
+      if (params.includeMessages) queryParams.append('include_messages', 'true');
+      if (params.dateRange) queryParams.append('date_range', params.dateRange);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/overview${query ? `?${query}` : ''}`);
   }
 
-  async getParentChildren() {
-    return this.request('/parent-dashboard/children');
+  /**
+   * Get all children linked to a parent with comprehensive student information.
+   * Fetches real data from global student sheets including grades, attendance, fees, and more.
+   */
+  async getParentChildren(params?: {
+    includeGrades?: boolean;
+    includeAttendance?: boolean;
+    includeFees?: boolean;
+    includeBehavior?: boolean;
+    includeTeachers?: boolean;
+    includeTimetable?: boolean;
+    includeExams?: boolean;
+    includeAssignments?: boolean;
+    tradeCode?: string;
+    levelNumber?: number;
+    status?: 'active' | 'inactive' | 'graduated' | 'suspended';
+    sortBy?: 'name' | 'grade' | 'attendance' | 'fees_due' | 'last_activity';
+    sortOrder?: 'asc' | 'desc';
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.includeGrades) queryParams.append('include_grades', 'true');
+      if (params.includeAttendance) queryParams.append('include_attendance', 'true');
+      if (params.includeFees) queryParams.append('include_fees', 'true');
+      if (params.includeBehavior) queryParams.append('include_behavior', 'true');
+      if (params.includeTeachers) queryParams.append('include_teachers', 'true');
+      if (params.includeTimetable) queryParams.append('include_timetable', 'true');
+      if (params.includeExams) queryParams.append('include_exams', 'true');
+      if (params.includeAssignments) queryParams.append('include_assignments', 'true');
+      if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+      if (params.levelNumber) queryParams.append('level_number', params.levelNumber.toString());
+      if (params.status) queryParams.append('status', params.status);
+      if (params.sortBy) queryParams.append('sort_by', params.sortBy);
+      if (params.sortOrder) queryParams.append('sort_order', params.sortOrder);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/children${query ? `?${query}` : ''}`);
   }
 
-  async getParentQuickStats() {
-    return this.request('/parent-dashboard/quick-stats');
+  /**
+   * Get detailed information about a specific child with all academic data.
+   */
+  async getParentChildDetails(studentId: number, options?: {
+    includeGrades?: boolean;
+    includeAttendance?: boolean;
+    includeFees?: boolean;
+    includeBehavior?: boolean;
+    includeTeachers?: boolean;
+    includeTimetable?: boolean;
+    includeExams?: boolean;
+    includeAssignments?: boolean;
+    includeReportCard?: boolean;
+    includeProgress?: boolean;
+    academicYear?: string;
+    semester?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (options) {
+      if (options.includeGrades !== false) queryParams.append('include_grades', 'true');
+      if (options.includeAttendance) queryParams.append('include_attendance', 'true');
+      if (options.includeFees) queryParams.append('include_fees', 'true');
+      if (options.includeBehavior) queryParams.append('include_behavior', 'true');
+      if (options.includeTeachers) queryParams.append('include_teachers', 'true');
+      if (options.includeTimetable) queryParams.append('include_timetable', 'true');
+      if (options.includeExams) queryParams.append('include_exams', 'true');
+      if (options.includeAssignments) queryParams.append('include_assignments', 'true');
+      if (options.includeReportCard) queryParams.append('include_report_card', 'true');
+      if (options.includeProgress) queryParams.append('include_progress', 'true');
+      if (options.academicYear) queryParams.append('academic_year', options.academicYear);
+      if (options.semester) queryParams.append('semester', options.semester);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/children/${studentId}${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentGrades(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/grades`);
+  /**
+   * Get quick stats for all children including summaries.
+   */
+  async getParentQuickStats(params?: {
+    dateRange?: 'today' | 'week' | 'month' | 'semester' | 'year';
+    compareWithPrevious?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.dateRange) queryParams.append('date_range', params.dateRange);
+      if (params.compareWithPrevious) queryParams.append('compare', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/quick-stats${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentAttendance(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/attendance`);
+  /**
+   * Get comprehensive grades for a specific student with detailed breakdown.
+   */
+  async getParentStudentGrades(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    subjectId?: number;
+    examType?: 'classwork' | 'midterm' | 'final' | 'assignment' | 'project';
+    includeRank?: boolean;
+    includeComparison?: boolean;
+    includeSubjectAvg?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.subjectId) queryParams.append('subject_id', params.subjectId.toString());
+      if (params.examType) queryParams.append('exam_type', params.examType);
+      if (params.includeRank) queryParams.append('include_rank', 'true');
+      if (params.includeComparison) queryParams.append('include_comparison', 'true');
+      if (params.includeSubjectAvg) queryParams.append('include_subject_avg', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/grades${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentAttendanceDetails(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/attendance-details`);
+  /**
+   * Get comprehensive attendance records with detailed breakdown.
+   */
+  async getParentStudentAttendance(studentId: number, params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    month?: number;
+    year?: number;
+    includeDetails?: boolean;
+    includeReasons?: boolean;
+    includeTrends?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.month) queryParams.append('month', params.month.toString());
+      if (params.year) queryParams.append('year', params.year.toString());
+      if (params.includeDetails) queryParams.append('include_details', 'true');
+      if (params.includeReasons) queryParams.append('include_reasons', 'true');
+      if (params.includeTrends) queryParams.append('include_trends', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/attendance${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentFees(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/fees`);
+  /**
+   * Get detailed attendance analysis with trends and patterns.
+   */
+  async getParentStudentAttendanceDetails(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    includeCharts?: boolean;
+    includePredictions?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.includeCharts) queryParams.append('include_charts', 'true');
+      if (params.includePredictions) queryParams.append('include_predictions', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/attendance-details${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentAssignments(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/assignments`);
+  /**
+   * Get comprehensive fee information including payment history and breakdowns.
+   */
+  async getParentStudentFees(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    includeHistory?: boolean;
+    includePaymentPlans?: boolean;
+    includeDiscounts?: boolean;
+    status?: 'paid' | 'unpaid' | 'partial' | 'overdue';
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.includeHistory) queryParams.append('include_history', 'true');
+      if (params.includePaymentPlans) queryParams.append('include_payment_plans', 'true');
+      if (params.includeDiscounts) queryParams.append('include_discounts', 'true');
+      if (params.status) queryParams.append('status', params.status);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/fees${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentTimetable(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/timetable`);
+  /**
+   * Get assignments with submission status and grades.
+   */
+  async getParentStudentAssignments(studentId: number, params?: {
+    subjectId?: number;
+    status?: 'pending' | 'submitted' | 'graded' | 'late';
+    dateFrom?: string;
+    dateTo?: string;
+    includeSubmissions?: boolean;
+    includeRubrics?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.subjectId) queryParams.append('subject_id', params.subjectId.toString());
+      if (params.status) queryParams.append('status', params.status);
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.includeSubmissions) queryParams.append('include_submissions', 'true');
+      if (params.includeRubrics) queryParams.append('include_rubrics', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/assignments${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentBehavior(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/behavior`);
+  /**
+   * Get comprehensive timetable with room and teacher information.
+   */
+  async getParentStudentTimetable(studentId: number, params?: {
+    dayOfWeek?: number;
+    weekStart?: string;
+    includeSubstitutes?: boolean;
+    includeCancellations?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.dayOfWeek !== undefined) queryParams.append('day', params.dayOfWeek.toString());
+      if (params.weekStart) queryParams.append('week_start', params.weekStart);
+      if (params.includeSubstitutes) queryParams.append('include_substitutes', 'true');
+      if (params.includeCancellations) queryParams.append('include_cancellations', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/timetable${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentExams(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/exams`);
+  /**
+   * Get behavior records including incidents and achievements.
+   */
+  async getParentStudentBehavior(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    type?: 'positive' | 'negative' | 'neutral';
+    dateFrom?: string;
+    dateTo?: string;
+    includeTrends?: boolean;
+    includeDetails?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.type) queryParams.append('type', params.type);
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.includeTrends) queryParams.append('include_trends', 'true');
+      if (params.includeDetails) queryParams.append('include_details', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/behavior${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentTeachers(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/teachers`);
+  /**
+   * Get exam schedules, results, and analysis.
+   */
+  async getParentStudentExams(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    status?: 'upcoming' | 'completed' | 'results_released';
+    includeResults?: boolean;
+    includeSeating?: boolean;
+    includeAnalysis?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.includeResults) queryParams.append('include_results', 'true');
+      if (params.includeSeating) queryParams.append('include_seating', 'true');
+      if (params.includeAnalysis) queryParams.append('include_analysis', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/exams${query ? `?${query}` : ''}`);
   }
 
-  async getParentStudentReportCard(studentId: number) {
-    return this.request(`/parent-dashboard/student/${studentId}/report-card`);
+  /**
+   * Get teachers with contact information and subjects taught.
+   */
+  async getParentStudentTeachers(studentId: number, params?: {
+    includeContact?: boolean;
+    includeSubjects?: boolean;
+    includeOfficeHours?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.includeContact) queryParams.append('include_contact', 'true');
+      if (params.includeSubjects) queryParams.append('include_subjects', 'true');
+      if (params.includeOfficeHours) queryParams.append('include_office_hours', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/teachers${query ? `?${query}` : ''}`);
   }
 
-  async getParentMessages() {
-    return this.request('/parent-dashboard/messages/all');
+  /**
+   * Get comprehensive report card with grades, attendance, and comments.
+   */
+  async getParentStudentReportCard(studentId: number, params?: {
+    academicYear?: string;
+    semester?: string;
+    includeGrades?: boolean;
+    includeAttendance?: boolean;
+    includeComments?: boolean;
+    includeRanking?: boolean;
+    includeComparison?: boolean;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.academicYear) queryParams.append('academic_year', params.academicYear);
+      if (params.semester) queryParams.append('semester', params.semester);
+      if (params.includeGrades !== false) queryParams.append('include_grades', 'true');
+      if (params.includeAttendance) queryParams.append('include_attendance', 'true');
+      if (params.includeComments) queryParams.append('include_comments', 'true');
+      if (params.includeRanking) queryParams.append('include_ranking', 'true');
+      if (params.includeComparison) queryParams.append('include_comparison', 'true');
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/student/${studentId}/report-card${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Get all parent messages with filtering and sorting.
+   */
+  async getParentMessages(params?: {
+    folder?: 'inbox' | 'sent' | 'archived' | 'trash';
+    isRead?: boolean;
+    priority?: 'normal' | 'high' | 'urgent';
+    dateFrom?: string;
+    dateTo?: string;
+    searchTerm?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.folder) queryParams.append('folder', params.folder);
+      if (params.isRead !== undefined) queryParams.append('is_read', params.isRead.toString());
+      if (params.priority) queryParams.append('priority', params.priority);
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.searchTerm) queryParams.append('search', params.searchTerm);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-dashboard/messages/all${query ? `?${query}` : ''}`);
   }
 
   async markNotificationRead(notificationId: number) {
@@ -736,10 +1084,6 @@ class ApiService {
     return this.request('/parent-management/analytics');
   }
 
-  async getParentLinkingConflicts() {
-    return this.request('/management/parents/conflicts');
-  }
-
   async resolveParentLinkingConflict(studentId: number, data: { keep_parent_id: number; remove_other_links: boolean }) {
     return this.request(`/management/parents/conflicts/${studentId}/resolve`, {
       method: 'POST',
@@ -835,10 +1179,6 @@ class ApiService {
       body: JSON.stringify({ query, trade, level })
     });
     return response.json();
-  }
-
-  async getParentChildren() {
-    return this.request('/parents/children');
   }
 
   async linkChild(studentCode: string, relationship: string) {
@@ -2779,19 +3119,92 @@ class ApiService {
     return this.request('/parent-portal-comprehensive/link-requests/my');
   }
 
-  /** Staff: list pending parent link requests for approval. */
-  async getPendingParentLinkRequests() {
-    return this.request('/parent-portal-comprehensive/link-requests/pending');
+  /** Staff: list pending parent link requests for approval with comprehensive filtering. */
+  async getPendingParentLinkRequests(params?: {
+    tradeCode?: string;
+    levelNumber?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    priority?: 'normal' | 'high' | 'urgent';
+    searchTerm?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+      if (params.levelNumber) queryParams.append('level_number', params.levelNumber.toString());
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.priority) queryParams.append('priority', params.priority);
+      if (params.searchTerm) queryParams.append('search', params.searchTerm);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-portal-comprehensive/link-requests/pending${query ? `?${query}` : ''}`);
   }
 
-  /** Staff: approve a parent link request (grants access). */
-  async approveParentLinkRequest(requestId: number) {
-    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/approve`, { method: 'PUT' });
+  /**
+   * Staff: approve a parent link request (grants access) with comprehensive options.
+   * Includes notification sending, access level configuration, and global student sheet sync.
+   */
+  async approveParentLinkRequest(requestId: number, options?: {
+    sendNotification?: boolean;
+    notifyBy?: 'sms' | 'email' | 'both';
+    notes?: string;
+    accessLevel?: 'full' | 'limited' | 'read-only';
+    validUntil?: string;
+    autoConnectStudents?: boolean;
+    grantPaymentAccess?: boolean;
+    grantAttendanceView?: boolean;
+    grantGradeView?: boolean;
+  }) {
+    const params = {
+      send_notification: options?.sendNotification !== false,
+      notify_by: options?.notifyBy || 'sms',
+      notes: options?.notes,
+      access_level: options?.accessLevel || 'full',
+      valid_until: options?.validUntil,
+      auto_connect_students: options?.autoConnectStudents !== false,
+      grant_payment_access: options?.grantPaymentAccess !== false,
+      grant_attendance_view: options?.grantAttendanceView !== false,
+      grant_grade_view: options?.grantGradeView !== false
+    };
+    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify(params)
+    });
   }
 
-  /** Staff: reject a parent link request. */
-  async rejectParentLinkRequest(requestId: number) {
-    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/reject`, { method: 'PUT' });
+  /**
+   * Staff: reject a parent link request with detailed reason and options.
+   * Includes notification, reason categorization, and reapplication settings.
+   */
+  async rejectParentLinkRequest(requestId: number, options?: {
+    reason: string;
+    reasonCategory?: 'invalid_info' | 'duplicate' | 'unverified' | 'parent_request' | 'student_request' | 'policy_violation' | 'other';
+    notifyParent?: boolean;
+    allowReapply?: boolean;
+    reapplyAfterDays?: number;
+    internalNotes?: string;
+    provideAlternative?: boolean;
+  }) {
+    const params = {
+      reason: options?.reason || 'Request rejected by administrator',
+      reason_category: options?.reasonCategory || 'other',
+      notify_parent: options?.notifyParent !== false,
+      allow_reapply: options?.allowReapply !== false,
+      reapply_after_days: options?.reapplyAfterDays || 30,
+      internal_notes: options?.internalNotes,
+      provide_alternative: options?.provideAlternative
+    };
+    return this.request(`/parent-portal-comprehensive/link-requests/${requestId}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify(params)
+    });
   }
 
   /** Parent: payment history for a linked student (real API). */
@@ -3052,8 +3465,219 @@ class ApiService {
     return this.request('/parent-linking/admin/overview');
   }
 
-  async getParentLinkingConflicts() {
-    return this.request('/parent-linking/admin/conflicts');
+  /**
+   * Staff: get parent linking conflicts with detailed information from database and global student sheets.
+   * Fetches real data including student details, parent information, and conflict types.
+   */
+  async getParentLinkingConflicts(params?: {
+    conflictType?: 'multiple_parents' | 'expired_links' | 'pending_requests' | 'unverified';
+    status?: 'active' | 'resolved' | 'pending';
+    tradeCode?: string;
+    levelNumber?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+    searchTerm?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.conflictType) queryParams.append('conflict_type', params.conflictType);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+      if (params.levelNumber) queryParams.append('level_number', params.levelNumber.toString());
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.searchTerm) queryParams.append('search', params.searchTerm);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-linking/admin/conflicts${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Staff: get detailed conflict analysis with student and parent information from global sheets.
+   * Provides comprehensive conflict data including all related entities.
+   */
+  async getDetailedConflictAnalysis(conflictId: number) {
+    return this.request(`/parent-linking/admin/conflicts/${conflictId}/details`);
+  }
+
+  /**
+   * Staff: resolve a parent linking conflict with various resolution strategies.
+   */
+  async resolveConflict(conflictId: number, resolution: {
+    action: 'keep_primary' | 'keep_secondary' | 'merge' | 'remove_both' | 'manual';
+    primaryParentId?: number;
+    secondaryParentId?: number;
+    notes?: string;
+  }) {
+    return this.request(`/parent-linking/admin/conflicts/${conflictId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify(resolution)
+    });
+  }
+
+  /**
+   * Staff: approve a parent link request (grants access) with comprehensive validation.
+   * Includes notification sending, audit logging, and global student sheet updates.
+   */
+  async approveParentLinkRequestAdmin(requestId: number, options?: {
+    sendNotification?: boolean;
+    notifyBy?: 'sms' | 'email' | 'both';
+    notes?: string;
+    accessLevel?: 'full' | 'limited' | 'read-only';
+    validUntil?: string;
+    autoConnectStudents?: boolean;
+  }) {
+    const params = options || {};
+    return this.request(`/parent-linking/approve/${requestId}`, {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  /**
+   * Staff: reject a parent link request with reason and optional student reassignment.
+   * Includes notification, audit logging, and cleanup of pending operations.
+   */
+  async rejectParentLinkRequestAdmin(requestId: number, options?: {
+    reason: string;
+    reasonCategory?: 'invalid_info' | 'duplicate' | 'unverified' | 'parent_request' | 'student_request' | 'policy_violation' | 'other';
+    notifyParent?: boolean;
+    allowReapply?: boolean;
+    reapplyAfterDays?: number;
+    internalNotes?: string;
+    alternativeParentId?: number;
+  }) {
+    const params = {
+      reason: options?.reason || 'Request rejected by administrator',
+      reason_category: options?.reasonCategory || 'other',
+      notify_parent: options?.notifyParent !== false,
+      allow_reapply: options?.allowReapply !== false,
+      reapply_after_days: options?.reapplyAfterDays || 30,
+      internal_notes: options?.internalNotes,
+      alternative_parent_id: options?.alternativeParentId
+    };
+    return this.request(`/parent-linking/reject/${requestId}`, {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  /**
+   * Staff: bulk approve multiple parent link requests with batch processing.
+   */
+  async bulkApproveLinkRequests(requestIds: number[], options?: {
+    sendNotifications?: boolean;
+    notifyBy?: 'sms' | 'email' | 'both';
+    notes?: string;
+  }) {
+    const params = {
+      request_ids: requestIds,
+      send_notifications: options?.sendNotifications !== false,
+      notify_by: options?.notifyBy || 'sms',
+      notes: options?.notes
+    };
+    return this.request('/parent-linking/bulk-approve', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  /**
+   * Staff: bulk reject multiple parent link requests.
+   */
+  async bulkRejectLinkRequests(requestIds: number[], options?: {
+    reason: string;
+    reasonCategory?: string;
+    notifyParents?: boolean;
+  }) {
+    const params = {
+      request_ids: requestIds,
+      reason: options?.reason || 'Bulk rejection by administrator',
+      reason_category: options?.reasonCategory || 'other',
+      notify_parents: options?.notifyParents !== false
+    };
+    return this.request('/parent-linking/bulk-reject', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  /**
+   * Get comprehensive linking request details with student and parent information.
+   */
+  async getLinkingRequestDetails(requestId: number) {
+    return this.request(`/parent-linking/linking-requests/${requestId}`);
+  }
+
+  /**
+   * Update a linking request with new information.
+   */
+  async updateLinkingRequest(requestId: number, data: {
+    relationshipType?: string;
+    priority?: 'normal' | 'high' | 'urgent';
+    notes?: string;
+    documents?: any[];
+  }) {
+    return this.request(`/parent-linking/linking-requests/${requestId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Get all active parent-student connections with filtering.
+   */
+  async getActiveConnections(params?: {
+    parentId?: number;
+    studentId?: number;
+    tradeCode?: string;
+    levelNumber?: number;
+    status?: 'active' | 'expired' | 'pending';
+    page?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.parentId) queryParams.append('parent_id', params.parentId.toString());
+      if (params.studentId) queryParams.append('student_id', params.studentId.toString());
+      if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+      if (params.levelNumber) queryParams.append('level_number', params.levelNumber.toString());
+      if (params.status) queryParams.append('status', params.status);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-linking/connections${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Get parent linking analytics and statistics.
+   */
+  async getLinkingAnalytics(params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    tradeCode?: string;
+    groupBy?: 'day' | 'week' | 'month' | 'trade' | 'level';
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+      if (params.dateTo) queryParams.append('date_to', params.dateTo);
+      if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+      if (params.groupBy) queryParams.append('group_by', params.groupBy);
+    }
+
+    const query = queryParams.toString();
+    return this.request(`/parent-linking/analytics${query ? `?${query}` : ''}`);
   }
 
   async forceCreateLink(data: {

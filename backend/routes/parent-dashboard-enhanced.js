@@ -4,6 +4,141 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+// ==================== PROFILE ====================
+
+router.get('/profile', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [[parent]] = await pool.execute(`
+      SELECT id, username, first_name, last_name, email, phone, gender,
+             province, district, sector, address, profile_image, created_at
+      FROM users WHERE id = ? AND role = 'parent'
+    `, [parentId]);
+
+    if (!parent) {
+      return res.status(404).json({ success: false, message: 'Parent not found' });
+    }
+
+    const [[stats]] = await pool.execute(`
+      SELECT COUNT(*) as total_children
+      FROM parent_connections WHERE parent_id = ? AND status = 'active'
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      profile: {
+        ...parent,
+        total_children: stats?.total_children || 0
+      }
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== CHILDREN LIST ====================
+
+router.get('/children', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [children] = await pool.execute(`
+      SELECT 
+        gss.id, gss.first_name, gss.last_name, gss.student_code, 
+        gss.trade_name, gss.trade_code, gss.level_number, gss.gender,
+        gss.gpa, gss.attendance_percentage, gss.conduct_score, gss.status,
+        pc.can_view_marks, pc.can_view_attendance, pc.linked_at
+      FROM parent_connections pc
+      JOIN global_student_sheets gss ON pc.student_id = gss.id
+      WHERE pc.parent_id = ? AND pc.status = 'active'
+      ORDER BY pc.linked_at DESC
+    `, [parentId]);
+
+    res.json({ success: true, children });
+  } catch (error) {
+    console.error('Get children error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== MESSAGES ====================
+
+router.get('/messages', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [messages] = await pool.execute(`
+      SELECT pm.*, gss.first_name as student_first_name, gss.last_name as student_last_name
+      FROM parent_messages pm
+      LEFT JOIN global_student_sheets gss ON pm.student_id = gss.id
+      WHERE pm.parent_id = ?
+      ORDER BY pm.created_at DESC
+      LIMIT 50
+    `, [parentId]);
+
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== ACTIVITY FEED ====================
+
+router.get('/activity/feed', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { limit = 10 } = req.query;
+
+    const [activities] = await pool.execute(`
+      SELECT pa.*, gss.first_name, gss.last_name, gss.student_code
+      FROM parent_activities pa
+      LEFT JOIN global_student_sheets gss ON pa.student_id = gss.id
+      WHERE pa.parent_id = ?
+      ORDER BY pa.created_at DESC
+      LIMIT ?
+    `, [parentId, parseInt(limit)]);
+
+    res.json({ success: true, activities });
+  } catch (error) {
+    console.error('Get activity feed error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== ACTIVITY NOTIFICATIONS ====================
+
+router.get('/activity/notifications', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [notifications] = await pool.execute(`
+      SELECT pn.*, gss.first_name, gss.last_name
+      FROM parent_notifications pn
+      LEFT JOIN global_student_sheets gss ON pn.student_id = gss.id
+      WHERE pn.parent_id = ?
+      ORDER BY pn.created_at DESC
+      LIMIT 30
+    `, [parentId]);
+
+    const [[unreadCount]] = await pool.execute(`
+      SELECT COUNT(*) as count FROM parent_notifications
+      WHERE parent_id = ? AND is_read = 0
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      notifications,
+      unread_count: unreadCount?.count || 0
+    });
+  } catch (error) {
+    console.error('Get activity notifications error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ==================== AUTO-FETCH STUDENT ====================
 
 router.get('/student/auto-fetch', authenticateToken, requireRole(['parent']), async (req, res) => {
@@ -102,58 +237,27 @@ router.get('/overview', authenticateToken, requireRole(['parent']), async (req, 
   try {
     const parentId = req.user.userId;
 
-    // Get all connected children with FULL data from global_student_sheets
     const [children] = await pool.execute(`
       SELECT 
-        u.id, 
-        u.first_name, 
-        u.last_name, 
-        u.profile_image,
-        u.email,
-        u.phone,
-        gss.student_code,
-        gss.trade_name, 
-        gss.trade_code,
-        gss.level_number, 
-        gss.level_suffix,
-        gss.gpa, 
-        gss.attendance_percentage, 
-        gss.conduct_score,
-        gss.conduct_grade,
-        gss.academic_year,
-        gss.status,
-        gss.gender,
-        gss.date_of_birth,
-        gss.emergency_contact,
-        gss.address,
-        pc.can_view_marks, 
-        pc.can_view_attendance, 
-        pc.can_view_report_cards,
-        pc.can_view_discipline,
-        pc.linked_at
+        gss.id, gss.first_name, gss.last_name, gss.student_code,
+        gss.trade_name, gss.trade_code, gss.level_number, gss.gender,
+        gss.gpa, gss.attendance_percentage, gss.conduct_score, gss.status,
+        pc.can_view_marks, pc.can_view_attendance, pc.linked_at
       FROM parent_connections pc
-      JOIN users u ON pc.student_id = u.id
-      LEFT JOIN global_student_sheets gss ON u.student_id = gss.student_id OR u.id = gss.id
+      JOIN global_student_sheets gss ON pc.student_id = gss.id
       WHERE pc.parent_id = ? AND pc.status = 'active'
     `, [parentId]);
 
-    // Get summary statistics
     const stats = {
       total_children: children.length,
-      avg_gpa: children.reduce((sum, c) => sum + (parseFloat(c.gpa) || 0), 0) / (children.length || 1),
-      avg_attendance: children.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / (children.length || 1),
-      avg_conduct: children.reduce((sum, c) => sum + (parseFloat(c.conduct_score) || 40), 0) / (children.length || 1),
+      avg_gpa: children.length > 0 ? children.reduce((sum, c) => sum + (parseFloat(c.gpa) || 0), 0) / children.length : 0,
+      avg_attendance: children.length > 0 ? children.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / children.length : 0,
+      avg_conduct: children.length > 0 ? children.reduce((sum, c) => sum + (parseFloat(c.conduct_score) || 40), 0) / children.length : 40,
       excellent_conduct: children.filter(c => (parseFloat(c.conduct_score) || 0) >= 30).length,
       good_attendance: children.filter(c => (parseFloat(c.attendance_percentage) || 0) >= 85).length
     };
 
-    res.json({
-      success: true,
-      overview: {
-        children,
-        stats
-      }
-    });
+    res.json({ success: true, overview: { children, stats } });
   } catch (error) {
     console.error('Parent overview error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -713,6 +817,160 @@ router.post('/contact-school', authenticateToken, requireRole(['parent']), async
     });
   } catch (error) {
     console.error('Contact school error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== SEND MESSAGE ====================
+
+router.post('/send-message', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { student_id, recipient_role, subject, message } = req.body;
+
+    await pool.execute(`
+      INSERT INTO parent_messages (parent_id, student_id, recipient_role, subject, message, status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'sent', NOW())
+    `, [parentId, student_id, recipient_role, subject, message]);
+
+    res.json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== STUDENT CONDUCT ====================
+
+router.get('/student/:studentId/conduct', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { studentId } = req.params;
+
+    // Verify access
+    const [[connection]] = await pool.execute(`
+      SELECT * FROM parent_connections
+      WHERE parent_id = ? AND student_id = ? AND status = 'active'
+    `, [parentId, studentId]);
+
+    if (!connection) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get conduct score
+    const [[student]] = await pool.execute(`
+      SELECT conduct_score, conduct_grade FROM global_student_sheets WHERE id = ?
+    `, [studentId]);
+
+    // Get conduct records
+    const [records] = await pool.execute(`
+      SELECT * FROM student_conduct_records
+      WHERE student_id = ?
+      ORDER BY incident_date DESC
+      LIMIT 20
+    `, [studentId]);
+
+    const conductScore = parseFloat(student?.conduct_score || 40);
+    const percentage = ((conductScore / 40) * 100).toFixed(1);
+
+    res.json({
+      success: true,
+      conduct: {
+        score: conductScore,
+        grade: student?.conduct_grade || 'A',
+        percentage: percentage
+      },
+      records: records.map(r => ({
+        ...r,
+        removed_by: 'DOD/Patron'
+      }))
+    });
+  } catch (error) {
+    console.error('Get student conduct error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== STUDENT FEES ====================
+
+router.get('/student/:studentId/fees', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { studentId } = req.params;
+
+    // Verify access
+    const [[connection]] = await pool.execute(`
+      SELECT * FROM parent_connections
+      WHERE parent_id = ? AND student_id = ? AND status = 'active'
+    `, [parentId, studentId]);
+
+    if (!connection) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get fee information
+    const [[fees]] = await pool.execute(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending
+      FROM parent_fee_payments
+      WHERE student_id = ?
+    `, [studentId]);
+
+    const totalFees = 500000; // Default annual fee
+    const paid = parseFloat(fees?.paid || 0);
+    const balance = totalFees - paid;
+    const paymentStatus = balance === 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+
+    res.json({
+      success: true,
+      fees: {
+        total_fees: totalFees,
+        paid: paid,
+        balance: balance,
+        payment_status: paymentStatus
+      }
+    });
+  } catch (error) {
+    console.error('Get student fees error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== INITIATE PAYMENT ====================
+
+router.post('/payments/initiate', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const { student_id, amount, payment_method, phone_number } = req.body;
+
+    // Verify access
+    const [[connection]] = await pool.execute(`
+      SELECT * FROM parent_connections
+      WHERE parent_id = ? AND student_id = ? AND status = 'active'
+    `, [parentId, student_id]);
+
+    if (!connection) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const paymentId = `PAY-${Date.now()}`;
+    await pool.execute(`
+      INSERT INTO parent_fee_payments 
+      (payment_id, parent_id, student_id, amount, payment_method, phone_number, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+    `, [paymentId, parentId, student_id, amount, payment_method, phone_number]);
+
+    res.json({
+      success: true,
+      message: 'Payment initiated',
+      payment_id: paymentId,
+      instructions: payment_method === 'momo' 
+        ? `Dial *182*8*1# and enter ${amount} RWF to complete payment`
+        : 'Visit your bank to complete the payment'
+    });
+  } catch (error) {
+    console.error('Initiate payment error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

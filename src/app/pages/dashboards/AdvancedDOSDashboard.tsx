@@ -6,7 +6,7 @@ import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
-import GlobalStudentSheetsSimple from '@/app/components/GlobalStudentSheetsSimple';
+import GlobalStudentSheetsWithParents from '@/app/components/GlobalStudentSheetsWithParents';
 import TimetableGenerator from '@/app/components/TimetableGenerator';
 
 const API_BASE = 'http://localhost:5000/api';
@@ -259,13 +259,13 @@ const AdvancedDOSDashboard = () => {
 
             <TabsContent value="students" className="p-6">
               <div className="mb-4 flex justify-between">
-                <h3 className="text-xl font-bold">Abanyeshuri</h3>
+                <h3 className="text-xl font-bold">Abanyeshuri n'Ababyeyi</h3>
                 <Button onClick={() => setShowAddStudent(true)} className="bg-blue-600 hover:bg-blue-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Ongeraho Umunyeshuri
                 </Button>
               </div>
-              <GlobalStudentSheetsSimple />
+              <GlobalStudentSheetsWithParents />
             </TabsContent>
 
             <TabsContent value="teachers" className="p-6">

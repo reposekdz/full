@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../config/apiBase';
 
 function getAuthHeaders(): HeadersInit {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  return token ? { 
+  return token ? {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
   } : { 'Content-Type': 'application/json' };
@@ -39,7 +39,7 @@ export async function fetchStudents(params?: { class_id?: number; search?: strin
   if (params?.level) queryParams.append('level_number', params.level);
   // Limit to 29 students if specified
   if (params?.limit) queryParams.append('limit', params.limit);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/students?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -130,7 +130,7 @@ export async function getSMSHistory(params?: { limit?: number; offset?: number }
   const queryParams = new URLSearchParams();
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
-  
+
   const response = await fetch(`${API_BASE}/dod/sms/history?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -150,9 +150,9 @@ export async function sendFeeReminderSMS(studentId: number, amount: number, dueD
   const response = await fetch(`${API_BASE}/accountant/sms-remind-unpaid`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       message_template: `Reminder: Fee payment of ${amount} is due on ${dueDate}`,
-      student_ids: [studentId] 
+      student_ids: [studentId]
     })
   });
   return response.json();
@@ -167,7 +167,7 @@ export async function getAllParentLinks(params?: { status?: string; search?: str
   const queryParams = new URLSearchParams();
   if (params?.status) queryParams.append('status', params.status);
   if (params?.search) queryParams.append('search', params.search);
-  
+
   const response = await fetch(`${API_BASE}/parent-linking/links?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -182,22 +182,199 @@ export async function getPendingParentLinkRequests() {
   return response.json();
 }
 
-// Approve parent link request
-export async function approveParentLinkRequest(linkId: number, notes?: string) {
+// Approve parent link request with comprehensive options
+export async function approveParentLinkRequest(
+  linkId: number,
+  options?: {
+    notes?: string;
+    sendNotification?: boolean;
+    notifyBy?: 'sms' | 'email' | 'both';
+    accessLevel?: 'full' | 'limited' | 'read-only';
+    validUntil?: string;
+    autoConnectStudents?: boolean;
+    grantPaymentAccess?: boolean;
+    grantAttendanceView?: boolean;
+    grantGradeView?: boolean;
+  }
+) {
+  const params = {
+    notes: options?.notes,
+    send_notification: options?.sendNotification !== false,
+    notify_by: options?.notifyBy || 'sms',
+    access_level: options?.accessLevel || 'full',
+    valid_until: options?.validUntil,
+    auto_connect_students: options?.autoConnectStudents !== false,
+    grant_payment_access: options?.grantPaymentAccess !== false,
+    grant_attendance_view: options?.grantAttendanceView !== false,
+    grant_grade_view: options?.grantGradeView !== false
+  };
+
   const response = await fetch(`${API_BASE}/parent-linking/approve/${linkId}`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ notes })
+    body: JSON.stringify(params)
   });
   return response.json();
 }
 
-// Reject parent link request
-export async function rejectParentLinkRequest(linkId: number, reason: string) {
+// Reject parent link request with detailed reason
+export async function rejectParentLinkRequest(
+  linkId: number,
+  options?: {
+    reason: string;
+    reasonCategory?: 'invalid_info' | 'duplicate' | 'unverified' | 'parent_request' | 'student_request' | 'policy_violation' | 'other';
+    notifyParent?: boolean;
+    allowReapply?: boolean;
+    reapplyAfterDays?: number;
+    internalNotes?: string;
+  }
+) {
+  const params = {
+    reason: options?.reason || 'Request rejected by administrator',
+    reason_category: options?.reasonCategory || 'other',
+    notify_parent: options?.notifyParent !== false,
+    allow_reapply: options?.allowReapply !== false,
+    reapply_after_days: options?.reapplyAfterDays || 30,
+    internal_notes: options?.internalNotes
+  };
+
   const response = await fetch(`${API_BASE}/parent-linking/reject/${linkId}`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ reason })
+    body: JSON.stringify(params)
+  });
+  return response.json();
+}
+
+// Bulk approve multiple parent link requests
+export async function bulkApproveLinkRequests(
+  linkIds: number[],
+  options?: {
+    sendNotifications?: boolean;
+    notifyBy?: 'sms' | 'email' | 'both';
+    notes?: string;
+  }
+) {
+  const params = {
+    request_ids: linkIds,
+    send_notifications: options?.sendNotifications !== false,
+    notify_by: options?.notifyBy || 'sms',
+    notes: options?.notes
+  };
+
+  const response = await fetch(`${API_BASE}/parent-linking/bulk-approve`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  return response.json();
+}
+
+// Bulk reject multiple parent link requests
+export async function bulkRejectLinkRequests(
+  linkIds: number[],
+  options?: {
+    reason: string;
+    reasonCategory?: string;
+    notifyParents?: boolean;
+  }
+) {
+  const params = {
+    request_ids: linkIds,
+    reason: options?.reason || 'Bulk rejection by administrator',
+    reason_category: options?.reasonCategory || 'other',
+    notify_parents: options?.notifyParents !== false
+  };
+
+  const response = await fetch(`${API_BASE}/parent-linking/bulk-reject`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params)
+  });
+  return response.json();
+}
+
+// Get parent linking conflicts with detailed filtering
+export async function getParentLinkingConflicts(params?: {
+  conflictType?: 'multiple_parents' | 'expired_links' | 'pending_requests' | 'unverified';
+  status?: 'active' | 'resolved' | 'pending';
+  tradeCode?: string;
+  levelNumber?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+  searchTerm?: string;
+}) {
+  const queryParams = new URLSearchParams();
+
+  if (params) {
+    if (params.conflictType) queryParams.append('conflict_type', params.conflictType);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+    if (params.levelNumber) queryParams.append('level_number', params.levelNumber.toString());
+    if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+    if (params.dateTo) queryParams.append('date_to', params.dateTo);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.searchTerm) queryParams.append('search', params.searchTerm);
+  }
+
+  const query = queryParams.toString();
+  const response = await fetch(`${API_BASE}/parent-linking/admin/conflicts${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  return response.json();
+}
+
+// Get detailed conflict analysis
+export async function getDetailedConflictAnalysis(conflictId: number) {
+  const response = await fetch(`${API_BASE}/parent-linking/admin/conflicts/${conflictId}/details`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  return response.json();
+}
+
+// Resolve a conflict
+export async function resolveConflict(
+  conflictId: number,
+  resolution: {
+    action: 'keep_primary' | 'keep_secondary' | 'merge' | 'remove_both' | 'manual';
+    primaryParentId?: number;
+    secondaryParentId?: number;
+    notes?: string;
+  }
+) {
+  const response = await fetch(`${API_BASE}/parent-linking/admin/conflicts/${conflictId}/resolve`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(resolution)
+  });
+  return response.json();
+}
+
+// Get linking analytics
+export async function getLinkingAnalytics(params?: {
+  dateFrom?: string;
+  dateTo?: string;
+  tradeCode?: string;
+  groupBy?: 'day' | 'week' | 'month' | 'trade' | 'level';
+}) {
+  const queryParams = new URLSearchParams();
+
+  if (params) {
+    if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+    if (params.dateTo) queryParams.append('date_to', params.dateTo);
+    if (params.tradeCode) queryParams.append('trade_code', params.tradeCode);
+    if (params.groupBy) queryParams.append('group_by', params.groupBy);
+  }
+
+  const query = queryParams.toString();
+  const response = await fetch(`${API_BASE}/parent-linking/analytics${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
   });
   return response.json();
 }
@@ -300,7 +477,7 @@ export async function getTeacherQuizzes(params?: { status?: string; class_id?: n
   if (params?.status) queryParams.append('status', params.status);
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.subject) queryParams.append('subject', params.subject);
-  
+
   const response = await fetch(`${API_BASE}/teacher-portal-ultra/quizzes?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -423,7 +600,7 @@ export async function getTeacherAssignments(params?: { status?: string; class_id
   if (params?.status) queryParams.append('status', params.status);
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.assignment_type) queryParams.append('assignment_type', params.assignment_type);
-  
+
   const response = await fetch(`${API_BASE}/teacher-portal-ultra/assignments?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -540,7 +717,7 @@ export async function getHolidayPackages(params?: { status?: string; trade_code?
   if (params?.status) queryParams.append('status', params.status);
   if (params?.trade_code) queryParams.append('trade_code', params.trade_code);
   if (params?.level_number) queryParams.append('level_number', params.level_number.toString());
-  
+
   const response = await fetch(`${API_BASE}/teacher-content/holiday?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -576,7 +753,7 @@ export async function getMessages(params?: { folder?: string; limit?: number; of
   if (params?.folder) queryParams.append('folder', params.folder);
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/messages?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -652,7 +829,7 @@ export async function getAttendanceAnalytics(params?: { start_date?: string; end
   const queryParams = new URLSearchParams();
   if (params?.start_date) queryParams.append('start_date', params.start_date);
   if (params?.end_date) queryParams.append('end_date', params.end_date);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/attendance/analytics?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -776,7 +953,7 @@ export async function fetchQuizzes(params?: { class_id?: number; status?: string
   const queryParams = new URLSearchParams();
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.status) queryParams.append('status', params.status);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/quizzes?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -869,7 +1046,7 @@ export async function fetchAssignments(params?: { class_id?: number; status?: st
   const queryParams = new URLSearchParams();
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.status) queryParams.append('status', params.status);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/assignments?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -931,7 +1108,7 @@ export async function fetchConductRecords(params?: { class_id?: number; severity
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.severity) queryParams.append('severity', params.severity);
   if (params?.status) queryParams.append('status', params.status);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/conduct?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -969,7 +1146,7 @@ export async function fetchAttendance(params?: { class_id?: number; date?: strin
   const queryParams = new URLSearchParams();
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.date) queryParams.append('date', params.date);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/attendance?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -1015,7 +1192,7 @@ export async function fetchGrades(params?: { class_id?: number; subject?: string
   const queryParams = new URLSearchParams();
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.subject) queryParams.append('subject', params.subject);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/grades?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -1067,7 +1244,7 @@ export async function fetchLessonPlans(params?: { class_id?: number; week?: stri
   const queryParams = new URLSearchParams();
   if (params?.class_id) queryParams.append('class_id', params.class_id.toString());
   if (params?.week) queryParams.append('week', params.week);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/lesson-plans?${queryParams}`, {
     headers: getAuthHeaders()
   });
@@ -1105,7 +1282,7 @@ export async function fetchTeacherMessages(params?: { folder?: string; type?: st
   const queryParams = new URLSearchParams();
   if (params?.folder) queryParams.append('folder', params.folder);
   if (params?.type) queryParams.append('type', params.type);
-  
+
   const response = await fetch(`${API_BASE}/teacher-comprehensive/messages?${queryParams}`, {
     headers: getAuthHeaders()
   });

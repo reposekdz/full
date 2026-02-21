@@ -16,6 +16,8 @@ import {
   Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
+import GlobalStudentSheetsWithParents from '@/app/components/GlobalStudentSheetsWithParents';
+import DODParentApplicationLinking from '@/app/pages/dod/DODParentApplicationLinking';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { LogOut, Grid } from 'lucide-react';
 import { ParentManagementWidget } from '@/app/components/shared/ParentManagementWidget';
@@ -126,6 +128,7 @@ const SIDEBAR_ITEMS = [
   { icon: BookOpen, label: 'Give Lessons', value: 'give-lessons' },
   { icon: Phone, label: 'Parent SMS', value: 'parent-sms' },
   { icon: UserPlus, label: 'Link Parents', value: 'link-parents' },
+  { icon: UserPlus, label: 'Parent Applications', value: 'parent-applications' },
   { icon: BarChart3, label: 'Analytics', value: 'analytics' },
   { icon: Calendar, label: 'Attendance', value: 'attendance' },
   { icon: FileText, label: 'Reports', value: 'reports' },
@@ -146,6 +149,7 @@ const TAB_TITLES: Record<string, string> = {
   'give-lessons': 'Give Lessons',
   'parent-sms': 'Parent SMS',
   'link-parents': 'Link Parents',
+  'parent-applications': 'Parent Application Linking',
   analytics: 'Analytics & Reports',
   attendance: 'Attendance Tracking',
   reports: 'Generate Reports',
@@ -212,6 +216,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
     totalStudents: 0, totalIncidents: 0, criticalIncidents: 0, highIncidents: 0,
     pendingActions: 0, avgConductScore: 0
   });
+  const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
 
   const [students, setStudents] = useState<Student[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -243,7 +248,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
   // Parent Linking State
   const [parentLinks, setParentLinks] = useState<any[]>([]);
   const [openLinkParentModal, setOpenLinkParentModal] = useState(false);
-  
+
   // Lessons State
   const [lessons, setLessons] = useState<any[]>([]);
   const [openGiveLessonModal, setOpenGiveLessonModal] = useState(false);
@@ -300,9 +305,10 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
     setLoading(true);
     try {
       // Use apiService for comprehensive stats
-      const [statsRes, activitiesRes] = await Promise.all([
+      const [statsRes, activitiesRes, pendingAppsRes] = await Promise.all([
         apiService.getDODStats(),
-        apiService.getDODRecentActivities()
+        apiService.getDODRecentActivities(),
+        fetch(`${API_BASE}/parent-child-linking/pending-applications`, { headers: authHeaders() })
       ]);
 
       // Fetch Level 4 SOD students specifically using comprehensive-roles API
@@ -328,6 +334,12 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
           pendingActions: statsRes.data.pending_actions || 0,
           avgConductScore: statsRes.data.avg_conduct_score || 0
         });
+      }
+      
+      // Set pending applications count
+      const pendingAppsData = await pendingAppsRes.json();
+      if (pendingAppsData.success) {
+        setPendingApplicationsCount(pendingAppsData.applications?.length || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -871,7 +883,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
             </div>
             {/* Category Navigation */}
             <div className="flex flex-wrap gap-1 px-4 py-2 bg-slate-50">
-              {SIDEBAR_ITEMS.slice(0, 10).map((item) => {
+              {SIDEBAR_ITEMS.slice(0, 12).map((item) => {
                 const isActive = activeTab === item.value;
                 return (
                   <Button
@@ -883,6 +895,11 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                   >
                     <item.icon className="size-3.5 mr-1" />
                     {item.label}
+                    {item.value === 'parent-applications' && pendingApplicationsCount > 0 && (
+                      <span className="ml-1 bg-red-500 text-white text-[10px] rounded-full px-1.5 py-0.5 font-bold">
+                        {pendingApplicationsCount}
+                      </span>
+                    )}
                   </Button>
                 );
               })}
@@ -926,13 +943,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
 
             {/* ─── Tab Content ─────────────────────────────────────────────── */}
             <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.3 }}
-              >
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
 
                 {/* ═══ DASHBOARD OVERVIEW ═══ */}
                 {activeTab === 'dashboard' && (
@@ -1091,8 +1102,8 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                   <div className="space-y-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-xl font-semibold">Student Conduct Management</h2>
-                        <p className="text-sm text-muted-foreground mt-0.5">Monitor and manage student behavior records</p>
+                        <h2 className="text-xl font-semibold">Student Conduct Management with Parent Info</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">Monitor students, view linked parents, remove conduct & message parents</p>
                       </div>
                       <div className="flex gap-2">
                         {selectedStudents.length > 0 && (
@@ -1128,7 +1139,12 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                       </CardContent>
                     </Card>
 
-                    {/* Student Table */}
+                    {/* Student Table with Parent Info */}
+                    <GlobalStudentSheetsWithParents />
+                  </div>
+                )}
+
+                {/* Old Table - Keeping for reference
                     <Card className="shadow-sm overflow-hidden">
                       <Table>
                         <TableHeader>
@@ -1514,7 +1530,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         </h2>
                         <p className="text-muted-foreground">Students of Discipline - Special Monitoring Program</p>
                       </div>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                         onClick={() => setOpenSODModal(true)}
                       >
@@ -1613,7 +1629,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               <TableCell>
                                 <Badge className={
                                   student.status === 'active' ? 'bg-red-500' :
-                                  student.status === 'monitoring' ? 'bg-orange-500' : 'bg-green-500'
+                                    student.status === 'monitoring' ? 'bg-orange-500' : 'bg-green-500'
                                 }>
                                   {student.status}
                                 </Badge>
@@ -1623,8 +1639,8 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     variant="outline"
                                     onClick={() => {
                                       setSelectedStudent(student);
@@ -1633,8 +1649,8 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                                   >
                                     <Trash2 className="size-3" />
                                   </Button>
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     variant="outline"
                                     onClick={() => {
                                       setSODForm({ ...sodForm, student_id: student.student_id.toString() });
@@ -1663,7 +1679,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         <div className="space-y-4">
                           <div>
                             <Label>Student ID</Label>
-                            <Input 
+                            <Input
                               value={sodForm.student_id}
                               onChange={(e) => setSODForm({ ...sodForm, student_id: e.target.value })}
                               placeholder="Enter student ID"
@@ -1671,7 +1687,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Status</Label>
-                            <Select 
+                            <Select
                               value={sodForm.status}
                               onValueChange={(v) => setSODForm({ ...sodForm, status: v })}
                             >
@@ -1686,13 +1702,13 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Notes</Label>
-                            <Textarea 
+                            <Textarea
                               value={sodForm.notes}
                               onChange={(e) => setSODForm({ ...sodForm, notes: e.target.value })}
                               placeholder="Add notes about this student..."
                             />
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-red-500 hover:bg-red-600"
                             onClick={handleAddSOD}
                           >
@@ -1732,7 +1748,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         { type: 'time_expired', label: 'Time Expired', icon: Clock, color: 'bg-purple-500' },
                         { type: 'administrative', label: 'Administrative', icon: Settings, color: 'bg-teal-500' },
                       ].map((item) => (
-                        <Card 
+                        <Card
                           key={item.type}
                           className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
                         >
@@ -1773,8 +1789,8 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               </TableCell>
                               <TableCell>{record.incident_date}</TableCell>
                               <TableCell>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="destructive"
                                   onClick={() => {
                                     setSelectedConductRecord(record);
@@ -1803,7 +1819,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         <div className="space-y-4">
                           <div>
                             <Label>Removal Type *</Label>
-                            <Select 
+                            <Select
                               value={removeConductForm.removal_type}
                               onValueChange={(v) => setRemoveConductForm({ ...removeConductForm, removal_type: v })}
                             >
@@ -1823,7 +1839,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Reason</Label>
-                            <Textarea 
+                            <Textarea
                               value={removeConductForm.removal_reason}
                               onChange={(e) => setRemoveConductForm({ ...removeConductForm, removal_reason: e.target.value })}
                               placeholder="Explain why this record is being removed..."
@@ -1831,13 +1847,13 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Notes</Label>
-                            <Textarea 
+                            <Textarea
                               value={removeConductForm.notes}
                               onChange={(e) => setRemoveConductForm({ ...removeConductForm, notes: e.target.value })}
                               placeholder="Additional notes..."
                             />
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-orange-500 hover:bg-orange-600"
                             onClick={handleRemoveConductRecord}
                           >
@@ -1865,7 +1881,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         </h2>
                         <p className="text-muted-foreground">Record lessons given to students who were absent</p>
                       </div>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                         onClick={() => setOpenGiveLessonModal(true)}
                       >
@@ -1960,7 +1976,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         <div className="space-y-4">
                           <div>
                             <Label>Student ID *</Label>
-                            <Input 
+                            <Input
                               value={giveLessonForm.student_id}
                               onChange={(e) => setGiveLessonForm({ ...giveLessonForm, student_id: e.target.value })}
                               placeholder="Enter student ID"
@@ -1968,7 +1984,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Subject *</Label>
-                            <Input 
+                            <Input
                               value={giveLessonForm.subject}
                               onChange={(e) => setGiveLessonForm({ ...giveLessonForm, subject: e.target.value })}
                               placeholder="e.g., Mathematics, Physics"
@@ -1976,7 +1992,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Date *</Label>
-                            <Input 
+                            <Input
                               type="date"
                               value={giveLessonForm.lesson_date}
                               onChange={(e) => setGiveLessonForm({ ...giveLessonForm, lesson_date: e.target.value })}
@@ -1984,7 +2000,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Topics Covered</Label>
-                            <Textarea 
+                            <Textarea
                               value={giveLessonForm.lesson_topics}
                               onChange={(e) => setGiveLessonForm({ ...giveLessonForm, lesson_topics: e.target.value })}
                               placeholder="What topics were covered..."
@@ -1992,7 +2008,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Duration (hours)</Label>
-                            <Input 
+                            <Input
                               type="number"
                               min="0.5"
                               step="0.5"
@@ -2002,14 +2018,14 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Notes</Label>
-                            <Textarea 
+                            <Textarea
                               value={giveLessonForm.notes}
                               onChange={(e) => setGiveLessonForm({ ...giveLessonForm, notes: e.target.value })}
                               placeholder="Additional notes..."
                             />
                           </div>
                           <div className="flex items-center gap-2">
-                            <input 
+                            <input
                               type="checkbox"
                               id="send_notification"
                               checked={giveLessonForm.send_notification}
@@ -2020,7 +2036,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               Send SMS notification to parent
                             </Label>
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-blue-500 hover:bg-blue-600"
                             onClick={handleGiveLesson}
                           >
@@ -2048,7 +2064,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         </h2>
                         <p className="text-muted-foreground">Send SMS notifications to parents via African Talking</p>
                       </div>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
                         onClick={() => setOpenSMSModal(true)}
                       >
@@ -2122,7 +2138,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               <TableCell>
                                 <Badge className={
                                   sms.status === 'sent' ? 'bg-green-500' :
-                                  sms.status === 'delivered' ? 'bg-blue-500' : 'bg-red-500'
+                                    sms.status === 'delivered' ? 'bg-blue-500' : 'bg-red-500'
                                 }>
                                   {sms.status}
                                 </Badge>
@@ -2146,7 +2162,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         <div className="space-y-4">
                           <div>
                             <Label>Parent ID</Label>
-                            <Input 
+                            <Input
                               value={smsForm.parent_id}
                               onChange={(e) => setSMSForm({ ...smsForm, parent_id: e.target.value })}
                               placeholder="Enter parent ID"
@@ -2154,7 +2170,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Or Student ID</Label>
-                            <Input 
+                            <Input
                               value={smsForm.student_id}
                               onChange={(e) => setSMSForm({ ...smsForm, student_id: e.target.value })}
                               placeholder="Enter student ID to find parent"
@@ -2162,7 +2178,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Message *</Label>
-                            <Textarea 
+                            <Textarea
                               value={smsForm.message}
                               onChange={(e) => setSMSForm({ ...smsForm, message: e.target.value })}
                               placeholder="Type your message here..."
@@ -2174,7 +2190,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Priority</Label>
-                            <Select 
+                            <Select
                               value={smsForm.priority}
                               onValueChange={(v) => setSMSForm({ ...smsForm, priority: v })}
                             >
@@ -2189,7 +2205,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               </SelectContent>
                             </Select>
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-green-500 hover:bg-green-600"
                             onClick={handleSendSMS}
                           >
@@ -2217,7 +2233,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         </h2>
                         <p className="text-muted-foreground">Link parents/guardians to students</p>
                       </div>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
                         onClick={() => setOpenLinkParentModal(true)}
                       >
@@ -2281,8 +2297,8 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               </TableCell>
                               <TableCell className="font-mono">{link.parent_phone}</TableCell>
                               <TableCell>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="destructive"
                                   onClick={() => toast.success('Parent unlinked')}
                                 >
@@ -2307,7 +2323,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                         <div className="space-y-4">
                           <div>
                             <Label>Student ID *</Label>
-                            <Input 
+                            <Input
                               value={linkParentForm.student_id}
                               onChange={(e) => setLinkParentForm({ ...linkParentForm, student_id: e.target.value })}
                               placeholder="Enter student ID"
@@ -2315,7 +2331,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Parent ID *</Label>
-                            <Input 
+                            <Input
                               value={linkParentForm.parent_id}
                               onChange={(e) => setLinkParentForm({ ...linkParentForm, parent_id: e.target.value })}
                               placeholder="Enter parent ID"
@@ -2323,7 +2339,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                           </div>
                           <div>
                             <Label>Relationship</Label>
-                            <Select 
+                            <Select
                               value={linkParentForm.relationship}
                               onValueChange={(v) => setLinkParentForm({ ...linkParentForm, relationship: v })}
                             >
@@ -2339,7 +2355,7 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                               </SelectContent>
                             </Select>
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-purple-500 hover:bg-purple-600"
                             onClick={handleLinkParent}
                           >
@@ -2350,6 +2366,13 @@ const DODDashboardAdvanced: React.FC<DODDashboardAdvancedProps> = ({ onNavigate,
                       </DialogContent>
                     </Dialog>
                   </motion.div>
+                )}
+
+                {/* ═══ PARENT APPLICATIONS ═══ */}
+                {activeTab === 'parent-applications' && (
+                  <div className="h-[calc(100vh-180px)]">
+                    <DODParentApplicationLinking />
+                  </div>
                 )}
 
                 {/* ═══ SETTINGS ═══ */}

@@ -82,7 +82,7 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
             localStorage.setItem('user', JSON.stringify(result.user));
           }
           setTimeout(() => {
-            window.location.href = '/dashboard-parent';
+            onNavigate('dashboard-parent');
           }, 500);
         } else {
           setError(result.message || 'Invalid phone or password');

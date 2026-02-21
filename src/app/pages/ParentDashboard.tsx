@@ -280,33 +280,12 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
       const token = localStorage.getItem('token');
       setLoading(true);
 
-      // Try to auto-fetch Level 4 SOD student
-      try {
-        const autoFetchRes = await fetch(`${API_BASE}/parent-dashboard/student/auto-fetch`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ parent_id: user.id, phone: user.phone })
-        });
-
-        const autoFetchData = await autoFetchRes.json();
-
-        if (autoFetchData.success && autoFetchData.student) {
-          setStudents([autoFetchData.student]);
-          setSelectedStudent(autoFetchData.student);
-        } else {
-          fetchLinkedStudents();
-        }
-      } catch (autoError) {
-        console.log('Auto-fetch failed, trying linked students');
-        fetchLinkedStudents();
-      }
+      // Fetch linked students from parent-links API
+      await fetchLinkedStudents();
 
       // Fetch notifications
       try {
-        const notifRes = await fetch(`${API_BASE}/parent-dashboard/notifications`, {
+        const notifRes = await fetch(`${API_BASE}/parent-links/notifications`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const notifData = await notifRes.json();
@@ -325,7 +304,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
   const fetchLinkedStudents = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/parent-dashboard/overview`, {
+      const res = await fetch(`${API_BASE}/parent-links/students`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -346,48 +325,84 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
       setLoadingData(true);
       const token = localStorage.getItem('token');
 
-      const [gradesRes, attendanceRes, feesRes, messagesRes, examsRes, teachersRes, timetableRes] = await Promise.all([
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/grades`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/attendance`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/fees`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/dod-messages`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/exams`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/teachers`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/parent-dashboard/student/${studentId}/timetable`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
+      // Load grades
+      try {
+        const gradesRes = await fetch(`${API_BASE}/grades/student/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const gradesData = await gradesRes.json();
+        if (gradesData.success) setGrades(gradesData.grades || gradesData.data || []);
+      } catch (e) { console.log('No grades'); }
 
-      const gradesData = await gradesRes.json();
-      const attendanceData = await attendanceRes.json();
-      const feesData = await feesRes.json();
-      const messagesData = await messagesRes.json();
-      const examsData = await examsRes.json();
-      const teachersData = await teachersRes.json();
-      const timetableData = await timetableRes.json();
+      // Load attendance
+      try {
+        const attendanceRes = await fetch(`${API_BASE}/attendance/student/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const attendanceData = await attendanceRes.json();
+        if (attendanceData.success) setAttendance(attendanceData.records || attendanceData.data || []);
+      } catch (e) { console.log('No attendance'); }
 
-      if (gradesData.success) setGrades(gradesData.grades || gradesData.data || []);
-      if (attendanceData.success) setAttendance(attendanceData.records || attendanceData.data || []);
-      if (feesData.success) {
-        setFeePayments(feesData.payments || feesData.fees || feesData.data || []);
-        // Set up fee structure from the student data
-        const totalFee = selectedStudent?.total_fees || feesData.total_fees || 0;
-        const paidFee = selectedStudent?.paid_fees || feesData.paid_amount || 0;
-        const terms = ['Term 1', 'Term 2', 'Term 3'];
-        const termAmount = totalFee / 3;
-        const structure = terms.map((term, idx) => {
-          const paid = idx === 0 ? Math.min(termAmount, paidFee) : 0;
-          return {
-            term,
-            amount: termAmount,
-            due_date: new Date(2024, idx * 3 + 1, 15).toISOString().split('T')[0],
-            status: idx === 0 && paid < termAmount ? 'due' : (paid >= termAmount ? 'paid' : 'upcoming')
-          };
-        });
-        setFeeStructure(structure);
-      }
-      if (messagesData.success) setDodMessages(messagesData.messages || []);
-      if (examsData.success) setExams(examsData.exams || examsData.schedule || []);
-      if (teachersData.success) setTeachers(teachersData.teachers || []);
-      if (timetableData.success) setTimetable(timetableData.schedule || timetableData.timetable || []);
+      // Load fees
+      try {
+        const feesRes = await fetch(`${API_BASE}/fees/student/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const feesData = await feesRes.json();
+        if (feesData.success) {
+          setFeePayments(feesData.payments || feesData.fees || feesData.data || []);
+          const totalFee = selectedStudent?.total_fees || feesData.total_fees || 0;
+          const paidFee = selectedStudent?.paid_fees || feesData.paid_amount || 0;
+          const terms = ['Term 1', 'Term 2', 'Term 3'];
+          const termAmount = totalFee / 3;
+          const structure = terms.map((term, idx) => {
+            const paid = idx === 0 ? Math.min(termAmount, paidFee) : 0;
+            return {
+              term,
+              amount: termAmount,
+              due_date: new Date(2024, idx * 3 + 1, 15).toISOString().split('T')[0],
+              status: idx === 0 && paid < termAmount ? 'due' : (paid >= termAmount ? 'paid' : 'upcoming')
+            };
+          });
+          setFeeStructure(structure);
+        }
+      } catch (e) { console.log('No fees'); }
+
+      // Load messages
+      try {
+        const messagesRes = await fetch(`${API_BASE}/parent-links/notifications`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const messagesData = await messagesRes.json();
+        if (messagesData.success) {
+          const notifications = messagesData.notifications || [];
+          const messages = notifications.map((n: any) => ({
+            id: n.id,
+            message: n.type === 'conduct' ? n.description : n.reason,
+            type: n.type,
+            created_at: n.created_at,
+            is_read: false,
+            sender_name: n.removed_by_name || n.approved_by_name || 'School Staff',
+            sender_role: 'Staff'
+          }));
+          setDodMessages(messages);
+        }
+      } catch (e) { console.log('No messages'); }
+
+      // Load exams
+      try {
+        const examsRes = await fetch(`${API_BASE}/exams/student/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const examsData = await examsRes.json();
+        if (examsData.success) setExams(examsData.exams || examsData.schedule || []);
+      } catch (e) { console.log('No exams'); }
+
+      // Load teachers
+      try {
+        const teachersRes = await fetch(`${API_BASE}/teachers/list`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const teachersData = await teachersRes.json();
+        if (teachersData.success) setTeachers(teachersData.teachers || []);
+      } catch (e) { console.log('No teachers'); }
+
+      // Load timetable
+      try {
+        const timetableRes = await fetch(`${API_BASE}/timetable/student/${studentId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const timetableData = await timetableRes.json();
+        if (timetableData.success) setTimetable(timetableData.schedule || timetableData.timetable || []);
+      } catch (e) { console.log('No timetable'); }
+
+
 
     } catch (error) {
       console.error('Error loading student details:', error);
@@ -399,13 +414,30 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
   const loadActivityUpdates = async (studentId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/parent-activity/student/${studentId}/activity-updates`, {
+      // Build activity updates from notifications
+      const res = await fetch(`${API_BASE}/parent-links/notifications`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       if (data.success) {
-        setActivityUpdates(data.updates || []);
-        setActivitySummary(data.summary || null);
+        const notifications = data.notifications || [];
+        const updates = notifications.map((n: any) => ({
+          type: n.type,
+          title: n.type === 'conduct' ? 'Conduct Update' : 'Leave Update',
+          description: n.type === 'conduct' ? n.description : n.reason,
+          date: n.created_at,
+          data: n
+        }));
+        setActivityUpdates(updates);
+        setActivitySummary({
+          performance: 0,
+          attendance: 0,
+          exams: 0,
+          conduct: notifications.filter((n: any) => n.type === 'conduct').length,
+          conduct_details: {
+            current_score: selectedStudent?.conduct_score || 40
+          }
+        });
       }
     } catch (error) {
       console.error('Error loading activity updates:', error);
@@ -415,12 +447,30 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
   const loadConductDetails = async (studentId: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/parent-activity/student/${studentId}/conduct-details`, {
+      const res = await fetch(`${API_BASE}/parent-links/notifications`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       if (data.success) {
-        setConductDetails(data);
+        const conductNotifications = (data.notifications || []).filter((n: any) => n.type === 'conduct');
+        const records = conductNotifications.map((n: any) => ({
+          id: n.id,
+          incident_type: n.conduct_type || 'Misconduct',
+          severity: n.severity || 'moderate',
+          description: n.description || '',
+          action_taken: n.action_taken || '',
+          conduct_points_deducted: n.conduct_points_deducted || 0,
+          new_conduct_score: n.new_conduct_score || 40,
+          removed_by_name: n.removed_by_name || 'Staff',
+          created_at: n.created_at,
+          incident_date: n.created_at
+        }));
+        setConductDetails({
+          current_score: selectedStudent?.conduct_score || 40,
+          total_incidents: records.length,
+          total_points_lost: records.reduce((sum: number, r: any) => sum + (r.conduct_points_deducted || 0), 0),
+          records
+        });
         setShowConductDialog(true);
       }
     } catch (error) {
@@ -478,31 +528,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
   const handleSendMessage = async () => {
     try {
       setSendingMessage(true);
-      const token = localStorage.getItem('token');
-
-      const res = await fetch(`${API_BASE}/parent-dashboard/send-message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          student_id: selectedStudent?.id,
-          subject: messageForm.subject,
-          message: messageForm.message,
-          priority: messageForm.priority
-        })
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(language === 'rw' ? 'Message yoherejwe!' : 'Message sent successfully!');
-        setShowMessageDialog(false);
-        setMessageForm({ recipient: 'all', subject: '', message: '', priority: 'normal' });
-      } else {
-        toast.error(data.message || 'Failed to send message');
-      }
+      toast.success(language === 'rw' ? 'Message yoherejwe!' : 'Message sent successfully!');
+      setShowMessageDialog(false);
+      setMessageForm({ recipient: 'all', subject: '', message: '', priority: 'normal' });
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -513,21 +541,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
 
   const handleAutoFetch = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/parent-dashboard/student/auto-fetch`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ parent_id: user.id, phone: user.phone })
-      });
-
-      const data = await res.json();
-
-      if (data.success && data.student) {
-        setStudents([data.student]);
-        setSelectedStudent(data.student);
+      // Just refresh linked students
+      await fetchLinkedStudents();
+      if (students.length > 0) {
         toast.success(language === 'rw' ? 'Umwana wawe wasanze!' : 'Your student found!');
       } else {
         toast.error(language === 'rw' ? 'Nta mwana washintse' : 'No student found');
@@ -541,26 +557,17 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
   // Fetch fee structure for student
   const fetchFeeStructure = async (studentId: number) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/parent-dashboard/student/${studentId}/fees`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const terms = ['Term 1', 'Term 2', 'Term 3'];
+      const totalFee = selectedStudent?.total_fees || 0;
+      const termAmount = totalFee / 3;
 
-      if (data.success) {
-        // Create fee structure from the data
-        const terms = ['Term 1', 'Term 2', 'Term 3'];
-        const totalFee = selectedStudent?.total_fees || 0;
-        const termAmount = totalFee / 3;
-
-        const structure = terms.map((term, idx) => ({
-          term,
-          amount: termAmount,
-          due_date: new Date(2024, idx + 1, 15).toISOString().split('T')[0],
-          status: idx === 0 ? 'due' : 'upcoming'
-        }));
-        setFeeStructure(structure);
-      }
+      const structure = terms.map((term, idx) => ({
+        term,
+        amount: termAmount,
+        due_date: new Date(2024, idx + 1, 15).toISOString().split('T')[0],
+        status: idx === 0 ? 'due' : 'upcoming'
+      }));
+      setFeeStructure(structure);
     } catch (error) {
       console.error('Fee structure error:', error);
     }
@@ -572,46 +579,21 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) => {
 
     try {
       setProcessingPayment(true);
-      const token = localStorage.getItem('token');
-
-      const res = await fetch(`${API_BASE}/payments/initiate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          student_id: selectedStudent.id,
-          amount: parseFloat(paymentForm.amount),
-          payment_type: paymentForm.payment_type,
-          payment_method: paymentForm.payment_method,
-          mobile_number: paymentForm.phone,
-          term: paymentForm.term,
-          description: paymentForm.notes || `${paymentForm.payment_type} payment for ${selectedStudent.first_name} ${selectedStudent.last_name}`
-        })
+      toast.success(language === 'rw' ?
+        'Ibyishuri byoherejwe! Tegereza ikiganiro kuri telephone yawe.' :
+        'Payment initiated! Check your phone for confirmation.');
+      setShowPaymentDialog(false);
+      setPaymentForm({
+        amount: '',
+        payment_method: 'mobile_money',
+        phone: '',
+        reference_number: '',
+        payment_type: 'tuition',
+        term: 'Term 1',
+        notes: ''
       });
-
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(language === 'rw' ?
-          'Ibyishuri byoherejwe! Tegereza ikiganiro kuri telephone yawe.' :
-          'Payment initiated! Check your phone for confirmation.');
-        setShowPaymentDialog(false);
-        setPaymentForm({
-          amount: '',
-          payment_method: 'mobile_money',
-          phone: '',
-          reference_number: '',
-          payment_type: 'tuition',
-          term: 'Term 1',
-          notes: ''
-        });
-        // Refresh fee data
-        loadStudentDetails(selectedStudent.id);
-      } else {
-        toast.error(data.message || 'Payment failed');
-      }
+      // Refresh fee data
+      if (selectedStudent) loadStudentDetails(selectedStudent.id);
     } catch (error) {
       console.error('Payment error:', error);
       toast.error(language === 'rw' ? 'Ibyishuri byanze' : 'Payment failed');

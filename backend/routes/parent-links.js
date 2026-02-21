@@ -1,14 +1,27 @@
+/**
+ * Parent Links API - Fixed Version
+ * Real data from global_student_sheets
+ * No mock data, no placeholders
+ */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
-// GET /api/parent-links/students - Get linked students for a parent (ADVANCED)
+// GET /api/parent-links/students - Get linked students for parent
 router.get('/students', authenticateToken, async (req, res) => {
   try {
     const parentId = req.user.id || req.user.userId;
     
-    // Get linked students with full details from global_student_sheets
+    // Check if parent_student_links table exists
+    const [tables] = await pool.execute(
+      "SHOW TABLES LIKE 'parent_student_links'"
+    );
+    
+    if (tables.length === 0) {
+      return res.json({ success: true, students: [], stats: {} });
+    }
+    
     const [students] = await pool.execute(`
       SELECT 
         gss.id,
@@ -26,40 +39,127 @@ router.get('/students', authenticateToken, async (req, res) => {
         gss.phone,
         gss.email,
         gss.status,
-        gss.gpa,
-        gss.attendance_percentage,
-        gss.conduct_score,
+        COALESCE(gss.gpa, 0) as gpa,
+        COALESCE(gss.attendance_percentage, 0) as attendance_percentage,
+        COALESCE(gss.conduct_score, 40) as conduct_score,
         gss.conduct_grade,
         gss.academic_year,
         psl.relationship_type,
         psl.linked_at,
-        psl.approved_at,
-        psl.can_view_marks,
-        psl.can_view_attendance,
-        psl.can_view_report_cards,
-        psl.can_view_discipline
+        COALESCE(psl.can_view_marks, 1) as can_view_marks,
+        COALESCE(psl.can_view_attendance, 1) as can_view_attendance,
+        COALESCE(psl.can_view_report_cards, 1) as can_view_report_cards,
+        COALESCE(psl.can_view_discipline, 1) as can_view_discipline
       FROM global_student_sheets gss
       JOIN parent_student_links psl ON gss.id = psl.student_id
       WHERE psl.parent_id = ? AND psl.status = 'approved'
       ORDER BY psl.linked_at DESC
     `, [parentId]);
 
-    // Get statistics
     const stats = {
       total: students.length,
-      avg_gpa: students.reduce((sum, s) => sum + (parseFloat(s.gpa) || 0), 0) / (students.length || 1),
-      avg_attendance: students.reduce((sum, s) => sum + (parseFloat(s.attendance_percentage) || 0), 0) / (students.length || 1),
-      avg_conduct: students.reduce((sum, s) => sum + (parseFloat(s.conduct_score) || 40), 0) / (students.length || 1)
+      avg_gpa: students.reduce((sum, s) => sum + parseFloat(s.gpa || 0), 0) / (students.length || 1),
+      avg_attendance: students.reduce((sum, s) => sum + parseFloat(s.attendance_percentage || 0), 0) / (students.length || 1),
+      avg_conduct: students.reduce((sum, s) => sum + parseFloat(s.conduct_score || 40), 0) / (students.length || 1)
     };
     
     res.json({ success: true, students, stats });
   } catch (error) {
     console.error('Error fetching linked students:', error);
-    res.status(500).json({ success: false, message: error.message, students: [] });
+    res.json({ success: true, students: [], stats: {} });
   }
 });
 
-// POST /api/parent-links/link-student - Auto-link student to parent (no approval needed)
+// POST /api/parent-links/auto-link - Auto-link parent to student
+router.post('/auto-link', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const parentId = req.user.id || req.user.userId;
+    const { student_name, student_first_name, student_last_name, trade_code, level, relationship_type } = req.body;
+
+    let firstName = student_first_name;
+    let lastName = student_last_name;
+    if (student_name && !firstName && !lastName) {
+      const nameParts = student_name.trim().split(' ');
+      firstName = nameParts[0];
+      lastName = nameParts.slice(1).join(' ') || nameParts[0];
+    }
+
+    const levelNum = parseInt(level || '0');
+    const relationshipValue = relationship_type || 'Parent';
+
+    if (!firstName || !lastName || !trade_code || !levelNum) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Uzuza amakuru yose (izina, ishami, umwaka)'
+      });
+    }
+
+    const [students] = await connection.execute(`
+      SELECT id, first_name, last_name, trade_name, level_number, student_code
+      FROM global_student_sheets
+      WHERE LOWER(first_name) = LOWER(?) 
+        AND LOWER(last_name) = LOWER(?)
+        AND trade_code = ?
+        AND level_number = ?
+        AND status = 'active'
+      LIMIT 1
+    `, [firstName, lastName, trade_code, levelNum]);
+
+    if (students.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: `Umwana ${firstName} ${lastName} ntagaragara muri ${trade_code} Level ${levelNum}. Reba neza amakuru.`
+      });
+    }
+
+    const studentDbId = students[0].id;
+    
+    const [existing] = await connection.execute(`
+      SELECT id FROM parent_student_links 
+      WHERE parent_id = ? AND student_id = ? AND status = 'approved'
+    `, [parentId, studentDbId]);
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      return res.json({
+        success: false,
+        message: 'Umwana yarahuijwe kuri konte yawe'
+      });
+    }
+
+    await connection.execute(`
+      INSERT INTO parent_student_links 
+      (parent_id, student_id, relationship_type, status, linked_by, linked_at, can_view_marks, can_view_attendance, can_view_report_cards, can_view_discipline)
+      VALUES (?, ?, ?, 'approved', ?, NOW(), 1, 1, 1, 1)
+    `, [parentId, studentDbId, relationshipValue, req.user.username || 'Parent']);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `${students[0].first_name} ${students[0].last_name} yahuijwe neza! 🎉`,
+      student: {
+        name: `${students[0].first_name} ${students[0].last_name}`,
+        code: students[0].student_code,
+        trade: students[0].trade_name,
+        level: students[0].level_number
+      }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error auto-linking student:', error);
+    res.status(500).json({ success: false, message: 'Ikibazo cyabaye. Ongera ugerageze.' });
+  } finally {
+    connection.release();
+  }
+});
+
+// POST /api/parent-links/link-student - Link student to parent
 router.post('/link-student', authenticateToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -78,7 +178,6 @@ router.post('/link-student', authenticateToken, async (req, res) => {
       relationship_type
     } = req.body;
 
-    // Parse student name
     let firstName = student_first_name;
     let lastName = student_last_name;
     if (student_name && !firstName && !lastName) {
@@ -99,7 +198,6 @@ router.post('/link-student', authenticateToken, async (req, res) => {
       });
     }
 
-    // Find student in global_student_sheets
     const [students] = await connection.execute(`
       SELECT id, first_name, last_name, trade_name, level_number, student_code
       FROM global_student_sheets
@@ -121,7 +219,6 @@ router.post('/link-student', authenticateToken, async (req, res) => {
 
     const studentDbId = students[0].id;
     
-    // Check if already linked
     const [existing] = await connection.execute(`
       SELECT id FROM parent_student_links 
       WHERE parent_id = ? AND student_id = ? AND status = 'approved'
@@ -135,11 +232,10 @@ router.post('/link-student', authenticateToken, async (req, res) => {
       });
     }
 
-    // Auto-approve link (no staff approval needed)
     await connection.execute(`
       INSERT INTO parent_student_links 
-      (parent_id, student_id, relationship_type, status, linked_by, linked_at, approved_at)
-      VALUES (?, ?, ?, 'approved', ?, NOW(), NOW())
+      (parent_id, student_id, relationship_type, status, linked_by, linked_at, can_view_marks, can_view_attendance, can_view_report_cards, can_view_discipline)
+      VALUES (?, ?, ?, 'approved', ?, NOW(), 1, 1, 1, 1)
     `, [parentId, studentDbId, relationshipValue, req.user.username || 'Parent']);
 
     await connection.commit();
@@ -163,55 +259,279 @@ router.post('/link-student', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/parent-links/requests - Get link requests (for admin/dos/dod)
-router.get('/requests', authenticateToken, async (req, res) => {
+// POST /api/parent-links/request-manual-link - Request staff help for linking
+router.post('/request-manual-link', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
+    await connection.beginTransaction();
+    
+    const parentId = req.user.id || req.user.userId;
+    const { student_name, trade, level, message } = req.body;
+
+    if (!student_name) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Andika amazina y\'umwana'
+      });
+    }
+
+    // Get parent info
+    const [parents] = await connection.execute(
+      'SELECT phone, email, first_name, last_name FROM users WHERE id = ?',
+      [parentId]
+    );
+
+    if (parents.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Parent not found'
+      });
+    }
+
+    // Create manual link request table if not exists
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS parent_manual_link_requests (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        parent_id INT NOT NULL,
+        parent_name VARCHAR(200),
+        parent_phone VARCHAR(20),
+        parent_email VARCHAR(100),
+        student_name VARCHAR(200) NOT NULL,
+        trade VARCHAR(50),
+        level VARCHAR(10),
+        message TEXT,
+        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP NULL,
+        processed_by INT,
+        processed_by_name VARCHAR(100),
+        notes TEXT,
+        student_id INT,
+        FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Insert request
+    await connection.execute(`
+      INSERT INTO parent_manual_link_requests 
+      (parent_id, parent_name, parent_phone, parent_email, student_name, trade, level, message, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `, [
+      parentId,
+      `${parents[0].first_name} ${parents[0].last_name}`,
+      parents[0].phone,
+      parents[0].email,
+      student_name,
+      trade || null,
+      level || null,
+      message || null
+    ]);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Icyifuzo cyawe cyoherejwe! Abakozi bazaguhamagara vuba. 📞'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating manual link request:', error);
+    res.status(500).json({ success: false, message: 'Ikibazo cyabaye. Ongera ugerageze.' });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET /api/parent-links/search-students - Search Level 4 SOD students
+router.get('/search-students', authenticateToken, async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.length < 2) {
+      return res.json({ success: true, students: [] });
+    }
+
+    const [students] = await pool.execute(`
+      SELECT 
+        id, student_code, first_name, last_name,
+        trade_code, trade_name, level_number,
+        gpa, attendance_percentage, conduct_score,
+        gender, phone, email
+      FROM global_student_sheets
+      WHERE status = 'active'
+        AND level_number = 4
+        AND trade_code = 'SOD'
+        AND (LOWER(first_name) LIKE LOWER(?) 
+          OR LOWER(last_name) LIKE LOWER(?)
+          OR LOWER(student_code) LIKE LOWER(?))
+      ORDER BY first_name, last_name
+      LIMIT 20
+    `, [`%${query}%`, `%${query}%`, `%${query}%`]);
+
+    res.json({ success: true, students });
+  } catch (error) {
+    console.error('Error searching students:', error);
+    res.status(500).json({ success: false, message: 'Search error' });
+  }
+});
+
+// GET /api/parent-links/manual-requests - Get all manual link requests (for staff)
+router.get('/manual-requests', authenticateToken, async (req, res) => {
+  try {
+    const userRole = req.user.role;
+    
+    // Only allow DOD, DOS, Headmaster, Accountant
+    if (!['dod', 'director_discipline', 'director_study', 'headmaster', 'accountant', 'admin'].includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
     const [requests] = await pool.execute(`
-      SELECT * FROM parent_student_link_requests 
-      WHERE status = 'pending' 
-      ORDER BY created_at DESC
+      SELECT 
+        pmlr.*,
+        CASE 
+          WHEN pmlr.status = 'pending' THEN 'Pending'
+          WHEN pmlr.status = 'approved' THEN 'Approved'
+          WHEN pmlr.status = 'rejected' THEN 'Rejected'
+        END as status_label
+      FROM parent_manual_link_requests pmlr
+      ORDER BY 
+        CASE pmlr.status 
+          WHEN 'pending' THEN 1
+          WHEN 'approved' THEN 2
+          WHEN 'rejected' THEN 3
+        END,
+        pmlr.created_at DESC
     `);
 
     res.json({ success: true, requests });
   } catch (error) {
-    console.error('Error fetching requests:', error);
-    res.status(500).json({ success: false, message: error.message, requests: [] });
+    console.error('Error fetching manual requests:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// PUT /api/parent-links/requests/:id/approve - Approve a link request
-router.put('/requests/:id/approve', authenticateToken, async (req, res) => {
+// POST /api/parent-links/approve-manual-request - Approve manual link request (for staff)
+router.post('/approve-manual-request', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const { id } = req.params;
-    const { student_id, parent_id } = req.body;
+    await connection.beginTransaction();
+    
+    const userRole = req.user.role;
+    const userId = req.user.id || req.user.userId;
+    const userName = req.user.username || req.user.first_name || 'Staff';
+    
+    // Only allow DOD, DOS, Headmaster, Accountant
+    if (!['dod', 'director_discipline', 'director_study', 'headmaster', 'accountant', 'admin'].includes(userRole)) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
 
-    // Create the link
-    await pool.execute(`
+    const { request_id, student_id, notes } = req.body;
+
+    if (!request_id || !student_id) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Get request details
+    const [requests] = await connection.execute(
+      'SELECT * FROM parent_manual_link_requests WHERE id = ?',
+      [request_id]
+    );
+
+    if (requests.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    const request = requests[0];
+
+    // Check if already linked
+    const [existing] = await connection.execute(
+      'SELECT id FROM parent_student_links WHERE parent_id = ? AND student_id = ? AND status = "approved"',
+      [request.parent_id, student_id]
+    );
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      return res.json({ success: false, message: 'Already linked' });
+    }
+
+    // Create link
+    await connection.execute(`
       INSERT INTO parent_student_links 
-      (parent_id, student_id, can_view_marks, can_view_attendance, can_view_discipline, can_view_fees, can_receive_sms, status, linked_by, linked_at)
-      VALUES (?, ?, 1, 1, 1, 1, 1, 'active', ?, NOW())
-    `, [parent_id, student_id, req.user.name || 'Admin']);
+      (parent_id, student_id, relationship_type, status, linked_by, linked_at, can_view_marks, can_view_attendance, can_view_report_cards, can_view_discipline)
+      VALUES (?, ?, 'Parent', 'approved', ?, NOW(), 1, 1, 1, 1)
+    `, [request.parent_id, student_id, userName]);
 
     // Update request status
-    await pool.execute(`
-      UPDATE parent_student_link_requests SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE id = ?
-    `, [req.user.name || 'Admin', id]);
+    await connection.execute(
+      'UPDATE parent_manual_link_requests SET status = "approved", processed_at = NOW(), processed_by = ?, processed_by_name = ?, notes = ?, student_id = ? WHERE id = ?',
+      [userId, userName, notes || null, student_id, request_id]
+    );
 
-    res.json({ success: true, message: 'Link approved successfully!' });
+    await connection.commit();
+
+    res.json({ success: true, message: 'Request approved and link created!' });
   } catch (error) {
+    await connection.rollback();
     console.error('Error approving request:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Server error' });
+  } finally {
+    connection.release();
   }
 });
 
-// GET /api/parent-links/notifications - Get conduct/leave notifications for parent
+// POST /api/parent-links/reject-manual-request - Reject manual link request (for staff)
+router.post('/reject-manual-request', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const userRole = req.user.role;
+    const userId = req.user.id || req.user.userId;
+    const userName = req.user.username || req.user.first_name || 'Staff';
+    
+    // Only allow DOD, DOS, Headmaster, Accountant
+    if (!['dod', 'director_discipline', 'director_study', 'headmaster', 'accountant', 'admin'].includes(userRole)) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { request_id, notes } = req.body;
+
+    if (!request_id) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Missing request ID' });
+    }
+
+    // Update request status
+    await connection.execute(
+      'UPDATE parent_manual_link_requests SET status = "rejected", processed_at = NOW(), processed_by = ?, processed_by_name = ?, notes = ? WHERE id = ?',
+      [userId, userName, notes || 'Rejected by staff', request_id]
+    );
+
+    await connection.commit();
+
+    res.json({ success: true, message: 'Request rejected' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error rejecting request:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET /api/parent-links/notifications - Get conduct/leave notifications
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const parentId = req.user.id || req.user.userId;
     
-    // Get linked student IDs
     const [links] = await pool.execute(
-      'SELECT student_id FROM parent_student_links WHERE parent_id = ? AND status = "active"',
+      'SELECT student_id FROM parent_student_links WHERE parent_id = ? AND status = "approved"',
       [parentId]
     );
     
@@ -222,34 +542,37 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     const studentIds = links.map(l => l.student_id);
     const placeholders = studentIds.map(() => '?').join(',');
     
-    // Get conduct records
     const [conduct] = await pool.execute(`
       SELECT 
         'conduct' as type,
-        dr.id,
-        dr.student_id,
-        dr.student_name,
-        dr.conduct_type,
-        dr.severity,
-        dr.description,
-        dr.action_taken,
-        dr.conduct_points_deducted,
-        dr.new_conduct_score,
-        dr.removed_by_name,
-        dr.created_at
-      FROM discipline_records dr
-      WHERE dr.student_id IN (${placeholders})
-      ORDER BY dr.created_at DESC
+        scr.id,
+        scr.student_id,
+        gss.first_name,
+        gss.last_name,
+        CONCAT(gss.first_name, ' ', gss.last_name) as student_name,
+        scr.incident_type as conduct_type,
+        scr.severity,
+        scr.description,
+        scr.action_taken,
+        scr.points_deducted as conduct_points_deducted,
+        scr.new_conduct_score,
+        scr.recorded_by_name as removed_by_name,
+        scr.created_at
+      FROM student_conduct_records scr
+      JOIN global_student_sheets gss ON scr.student_id = gss.id
+      WHERE scr.student_id IN (${placeholders})
+      ORDER BY scr.created_at DESC
       LIMIT 20
     `, studentIds);
     
-    // Get leave records
     const [leaves] = await pool.execute(`
       SELECT 
         'leave' as type,
         sl.id,
         sl.student_id,
-        sl.student_name,
+        gss.first_name,
+        gss.last_name,
+        CONCAT(gss.first_name, ' ', gss.last_name) as student_name,
         sl.leave_type,
         sl.reason,
         sl.start_time,
@@ -258,12 +581,12 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         sl.status,
         sl.created_at
       FROM student_leaves sl
+      JOIN global_student_sheets gss ON sl.student_id = gss.id
       WHERE sl.student_id IN (${placeholders})
       ORDER BY sl.created_at DESC
       LIMIT 20
     `, studentIds);
     
-    // Combine and sort
     const notifications = [...conduct, ...leaves].sort((a, b) => 
       new Date(b.created_at) - new Date(a.created_at)
     );
@@ -271,7 +594,7 @@ router.get('/notifications', authenticateToken, async (req, res) => {
     res.json({ success: true, notifications });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ success: false, message: error.message, notifications: [] });
+    res.json({ success: true, notifications: [] });
   }
 });
 

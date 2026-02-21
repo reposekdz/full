@@ -435,6 +435,15 @@ app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced'));
 // Parent Linking API
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
 
+// Parent Linking Requests System (No Student Code Required)
+app.use('/api/parent-linking-requests', require('./routes/parent-linking-requests')); mountedRoutes++;
+
+// Parent-Child Linking System (Complete Workflow)
+app.use('/api/parent-child-linking', require('./routes/parent-child-linking')); mountedRoutes++;
+
+// Parent-Child Linking Advanced (Global Sheets Integration with DOD Approval)
+app.use('/api/parent-child-linking-advanced', require('./routes/parent-child-linking-advanced')); mountedRoutes++;
+
 // Parent Monitoring API
 if (routes.parentMonitoring) { app.use('/api/parent-monitoring', routes.parentMonitoring); mountedRoutes++; }
 
@@ -452,6 +461,9 @@ app.use('/api/parent-management', require('./routes/parent-management')); mounte
 
 // Parent Links API for Parent
 app.use('/api/parent-links', require('./routes/parent-links')); mountedRoutes++;
+
+// Enhanced Global Sheets with Parent Info
+app.use('/api/global-sheets-enhanced', require('./routes/global-sheets-enhanced')); mountedRoutes++;
 
 // Parent Student Dashboard - Real Data
 app.use('/api/parent-student-dashboard', require('./routes/parent-student-dashboard')); mountedRoutes++;
@@ -697,6 +709,10 @@ app.use('/api/dod-parent-management', require('./routes/dod-parent-management'))
 // DOD Comprehensive Messaging - ALL Students (Not just Level 4 SOD)
 app.use('/api/dod-messaging', require('./routes/dod-messaging-comprehensive')); mountedRoutes++;
 
+// Global Conduct Management - ULTIMATE with Real SMS & Parent Info in Sheets
+app.use('/api/global-conduct', require('./routes/global-conduct-ultimate')); mountedRoutes++;
+app.use('/api/global-conduct', require('./routes/global-conduct-messaging')); mountedRoutes++;
+
 // SMS Routes (African Talking)
 app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
 
@@ -789,6 +805,9 @@ app.use('/api/staff-access-codes', require('./routes/staff-access-codes')); moun
 // Admin Content Management
 if (routes.adminContent) { app.use('/api/admin-content', routes.adminContent); mountedRoutes++; }
 else { app.use('/api/admin-content', require('./routes/admin-content')); mountedRoutes++; }
+
+// Comprehensive Unified API - All Roles (Parent Linking, DOD, Conduct, Messaging)
+app.use('/api/unified', require('./routes/comprehensive-unified')); mountedRoutes++;
 
 // Health check
 app.get('/api/health', (req, res) => {
