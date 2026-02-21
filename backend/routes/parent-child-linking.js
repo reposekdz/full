@@ -50,10 +50,18 @@ router.post('/submit-application', authenticateToken, requireRole(['parent']), a
     const [[output]] = await pool.execute('SELECT @app_id as application_id, @student_id as matched_student_id, @status as status');
 
     if (output.status === 'no_match') {
-      return res.status(404).json({
-        success: false,
-        message: 'No student found matching the provided information. Please verify the details and try again.',
-        application_id: output.application_id
+      // Add to waiting list instead of showing error
+      await pool.execute(`
+        INSERT INTO parent_waiting_list (parent_id, child_first_name, child_last_name, child_gender, child_trade_code, child_level_number, relationship, notes, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'waiting', NOW())
+      `, [parentId, child_first_name, child_last_name, child_gender, child_trade_code, child_level_number, relationship, notes]);
+
+      return res.json({
+        success: true,
+        status: 'waiting',
+        message: 'Student not found in current records. Your request has been added to the waiting list. You will be notified when the student is enrolled.',
+        application_id: output.application_id,
+        waiting_list: true
       });
     }
 
@@ -89,7 +97,159 @@ router.post('/submit-application', authenticateToken, requireRole(['parent']), a
   }
 });
 
-// ─── Get My Applications ───────────────────────────────────────────────────
+// ─── Get My Waiting List Applications ──────────────────────────────────────
+router.get('/my-waiting-list', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+
+    const [waitingList] = await pool.execute(`
+      SELECT 
+        pwl.*,
+        CASE 
+          WHEN pwl.status = 'waiting' THEN 'Tegereza'
+          WHEN pwl.status = 'matched' THEN 'Hasanze'
+          WHEN pwl.status = 'expired' THEN 'Byarangiye'
+          ELSE pwl.status
+        END as status_kinyarwanda
+      FROM parent_waiting_list pwl
+      WHERE pwl.parent_id = ?
+      ORDER BY pwl.created_at DESC
+    `, [parentId]);
+
+    res.json({
+      success: true,
+      waiting_list: waitingList,
+      total: waitingList.length,
+      waiting: waitingList.filter(w => w.status === 'waiting').length,
+      matched: waitingList.filter(w => w.status === 'matched').length
+    });
+  } catch (error) {
+    console.error('Get waiting list error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─── Advanced Student Search for Waiting List ─────────────────────────────
+router.post('/search-students-advanced', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const { search_term, trade_code, level_number, gender } = req.body;
+
+    let query = `
+      SELECT 
+        id, student_code, first_name, last_name, 
+        CONCAT(first_name, ' ', last_name) as full_name,
+        trade_name, trade_code, level_number, gender,
+        profile_image, class_name
+      FROM global_student_sheets
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (search_term) {
+      query += ` AND (first_name LIKE ? OR last_name LIKE ? OR student_code LIKE ?)`;
+      params.push(`%${search_term}%`, `%${search_term}%`, `%${search_term}%`);
+    }
+    if (trade_code) {
+      query += ` AND trade_code = ?`;
+      params.push(trade_code);
+    }
+    if (level_number) {
+      query += ` AND level_number = ?`;
+      params.push(level_number);
+    }
+    if (gender) {
+      query += ` AND gender = ?`;
+      params.push(gender);
+    }
+
+    query += ` ORDER BY first_name, last_name LIMIT 50`;
+
+    const [students] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      students,
+      total: students.length
+    });
+  } catch (error) {
+    console.error('Advanced search error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─── Submit Direct Linking Request (from search) ──────────────────────────
+router.post('/submit-direct-linking', authenticateToken, requireRole(['parent']), async (req, res) => {
+  try {
+    const parentId = req.user.userId;
+    const {
+      student_id,
+      relationship = 'parent',
+      notes = ''
+    } = req.body;
+
+    // Get student details
+    const [[student]] = await pool.execute(`
+      SELECT * FROM global_student_sheets WHERE id = ?
+    `, [student_id]);
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    // Check if already linked or requested
+    const [[existing]] = await pool.execute(`
+      SELECT * FROM parent_linking_applications 
+      WHERE parent_id = ? AND matched_student_id = ? AND status IN ('pending', 'approved')
+    `, [parentId, student_id]);
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a request for this student'
+      });
+    }
+
+    // Create application
+    const [result] = await pool.execute(`
+      INSERT INTO parent_linking_applications 
+      (parent_id, child_first_name, child_last_name, child_gender, child_trade_code, child_level_number, 
+       relationship, notes, matched_student_id, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+    `, [parentId, student.first_name, student.last_name, student.gender, student.trade_code, student.level_number, relationship, notes, student_id]);
+
+    // Notify staff
+    await pool.execute(`
+      INSERT INTO notifications (user_id, title, message, type, created_at)
+      SELECT id, 'New Parent Linking Request', 
+             CONCAT('Parent requests to link with student: ', ?, ' ', ?, ' (', ?, ')')  , 
+             'parent_link_request', NOW()
+      FROM users
+      WHERE role IN ('dod', 'dos', 'headmaster', 'admin') AND status = 'active'
+    `, [student.first_name, student.last_name, student.student_code]);
+
+    // Send SMS to parent
+    const [[parentUser]] = await pool.execute('SELECT phone FROM users WHERE id = ?', [parentId]);
+    if (parentUser && parentUser.phone) {
+      await sendSMS(
+        parentUser.phone,
+        `Garden TVET: Icyifuzo cyo guhuza umwana ${student.first_name} ${student.last_name} (${student.student_code}) cyoherejwe neza. Tegereza inyemezwa y'abakozi b'ishuri.`
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Linking request submitted successfully!',
+      application_id: result.insertId,
+      student: student
+    });
+  } catch (error) {
+    console.error('Direct linking error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 router.get('/my-applications', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
     const parentId = req.user.userId;
@@ -135,6 +295,35 @@ router.get('/my-children', authenticateToken, requireRole(['parent']), async (re
   try {
     const parentId = req.user.userId;
 
+    // Check if tables exist first
+    const [tables] = await pool.execute(`
+      SHOW TABLES LIKE 'parent_child_links'
+    `);
+
+    if (tables.length === 0) {
+      // Table doesn't exist, return empty array
+      return res.json({
+        success: true,
+        children: [],
+        total: 0,
+        message: 'No linked children found. Please submit a linking request first.'
+      });
+    }
+
+    // Check if global_student_sheets exists
+    const [studentTables] = await pool.execute(`
+      SHOW TABLES LIKE 'global_student_sheets'
+    `);
+
+    if (studentTables.length === 0) {
+      return res.json({
+        success: true,
+        children: [],
+        total: 0,
+        message: 'Student database not available. Please contact administrator.'
+      });
+    }
+
     const [children] = await pool.execute(`
       SELECT 
         pcl.*,
@@ -166,7 +355,14 @@ router.get('/my-children', authenticateToken, requireRole(['parent']), async (re
     });
   } catch (error) {
     console.error('Get my children error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    // Return empty array instead of error to prevent frontend crash
+    res.json({
+      success: true,
+      children: [],
+      total: 0,
+      message: 'No linked children found. Please submit a linking request first.',
+      error: error.message
+    });
   }
 });
 

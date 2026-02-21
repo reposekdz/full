@@ -44,6 +44,8 @@ import AdminDashboard from '@/app/pages/dashboards/AdminDashboard';
 import ParentDashboard from '@/app/pages/ParentDashboard';
 import AdvancedParentPortal from '@/app/pages/parent/AdvancedParentPortal';
 import AdvisorDashboard from '@/app/pages/dashboards/AdvisorDashboard';
+import TeacherPortalUltraAdvanced from '@/app/pages/dashboards/TeacherPortalUltraAdvanced';
+import UltraAdvancedStockDashboard from '@/app/pages/dashboards/UltraAdvancedStockDashboard';
 
 import DODDashboard from '@/app/pages/dashboards/DODDashboard';
 import AdvancedTeacherDashboard from '@/app/pages/dashboards/AdvancedTeacherDashboard';
@@ -65,7 +67,6 @@ import DODParentManagementPage from '@/app/pages/dod/DODParentManagementPage';
 import DODLeaveManagementPage from '@/app/pages/dod/DODLeaveManagementPage';
 import UniversalProfilePage from '@/app/pages/common/UniversalProfilePage';
 import TeacherGradingPage from '@/app/pages/teacher/TeacherGradingPage';
-import UltraAdvancedStockDashboard from '@/app/pages/dashboards/UltraAdvancedStockDashboard';
 import AccountantDashboard from '@/app/pages/dashboards/AccountantDashboard';
 import ComprehensiveAdminDashboard from '@/app/pages/dashboards/ComprehensiveAdminDashboard';
 import ComprehensiveAccountantDashboard from '@/app/pages/dashboards/ComprehensiveAccountantDashboard';
@@ -120,8 +121,8 @@ const AppContent: React.FC = () => {
     director_discipline: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
     dod: ['home', 'academics', 'leadership', 'staff-management-advanced', 'contactUs', 'supports'],
     accountant: ['home', 'services', 'staff-management-advanced', 'leadership', 'supports', 'contactUs', 'comprehensive-accountant'],
-    stock_manager: ['home', 'trades', 'services', 'staff-management-advanced', 'supports', 'contactUs'],
-    teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    stock_manager: ['home', 'trades', 'services', 'staff-management-advanced', 'supports', 'contactUs', 'stock-ultra-advanced'],
+    teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports', 'teacher-portal-advanced'],
     advisor: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
     patron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
     matron: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
@@ -138,8 +139,8 @@ const AppContent: React.FC = () => {
     director_discipline: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
     dod: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
     accountant: ['profile', 'student-sheets', 'dashboard-accountant', 'comprehensive-accountant', 'payments-management', 'accountant-payments', 'expenses-management', 'invoices-management', 'budgets-management', 'salaries-management', 'transactions-management', 'financial-reports', 'timetable-view', 'students-management', 'student-payments-management', 'parent-applications'],
-    stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced'],
-    teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher'],
+    stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced', 'stock-ultra-advanced'],
+    teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher', 'teacher-portal-advanced'],
     advisor: ['profile', 'student-sheets', 'dashboard-advisor', 'parent-applications'],
     parent: ['profile', 'dashboard-parent', 'parent-child'],
     patron: ['profile'],
@@ -298,6 +299,7 @@ const AppContent: React.FC = () => {
       case 'teacher':
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-teacher" />;
         if (currentPage === 'teacher-grading') return <TeacherGradingPage teacherId={user.id} onNavigate={handleNavigate} />;
+        if (currentPage === 'teacher-portal-advanced') return <TeacherPortalUltraAdvanced />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
         return <ModernTeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
       case 'accountant':
@@ -313,6 +315,7 @@ const AppContent: React.FC = () => {
         if (currentPage === 'profile') return <UniversalProfilePage onNavigate={handleNavigate} dashboardRoute="dashboard-stock" />;
         if (currentPage === 'student-sheets') return <GlobalStudentSheets userRole={user.role} />;
         if (currentPage === 'stock-management') return <StockManagement />;
+        if (currentPage === 'stock-ultra-advanced') return <UltraAdvancedStockDashboard />;
         return <ModernStockManagerDashboard onNavigate={handleNavigate} onLogout={logout} />;
       default:
         return null;
@@ -372,6 +375,12 @@ const AppContent: React.FC = () => {
         return <ParentDashboardWithLinking />;
       }
     }
+    if (currentPage === 'teacher-portal-advanced' && user?.role === 'teacher') {
+      return <TeacherPortalUltraAdvanced />;
+    }
+    if (currentPage === 'stock-ultra-advanced' && user?.role === 'stock_manager') {
+      return <UltraAdvancedStockDashboard />;
+    }
 
     if (currentPage.startsWith('parent-child/') && user?.role === 'parent') {
       const studentId = currentPage.split('/')[1];
@@ -379,10 +388,12 @@ const AppContent: React.FC = () => {
     }
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <AdvancedDOSDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <ModernTeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
+    if (currentPage === 'teacher-portal-advanced' && user?.role === 'teacher') return <TeacherPortalUltraAdvanced />;
     if (currentPage === 'parent-dashboard-interactive' && user?.role === 'parent') return <ParentDashboardInteractive />;
     if (currentPage === 'dashboard-headmaster' && user?.role === 'headmaster') return <ModernHeadmasterDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-accountant' && user?.role === 'accountant') return <ComprehensiveAccountantDashboard />;
     if (currentPage === 'dashboard-stock' && user?.role === 'stock_manager') return <UltraAdvancedStockDashboard />;
+    if (currentPage === 'stock-ultra-advanced' && user?.role === 'stock_manager') return <UltraAdvancedStockDashboard />;
 
     // Check for dynamic routes first (works for all users)
     if (currentPage.startsWith('article/')) {

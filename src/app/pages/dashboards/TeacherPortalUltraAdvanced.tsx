@@ -94,8 +94,6 @@ import {
   Radar
 } from 'recharts';
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 interface TeacherProfile {
@@ -733,27 +731,6 @@ const TeacherPortalUltraAdvanced: React.FC = () => {
       }
     } catch (error: any) {
       showAlert('error', error.response?.data?.message || 'Failed to create quiz');
-    }
-  };
-
-  const handleGradeSubmission = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/teacher-content/works/submissions/${selectedSubmission.id}/grade`,
-        gradeForm,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (response.data.success) {
-        showAlert('success', 'Submission graded successfully');
-        setOpenGradeSubmission(false);
-        setSelectedSubmission(null);
-        resetGradeForm();
-        fetchWorks();
-      }
-    } catch (error: any) {
-      showAlert('error', error.response?.data?.message || 'Failed to grade submission');
     }
   };
 

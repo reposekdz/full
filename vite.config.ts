@@ -104,8 +104,8 @@ export default defineConfig({
     hmr: {
       protocol: 'ws',
       host: 'localhost',
-      port: 5173,
-      clientPort: 5173,
+      port: 5174,
+      clientPort: 5174,
       overlay: false
     },
     watch: {

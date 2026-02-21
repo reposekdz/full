@@ -1,6 +1,7 @@
 @echo off
+echo.
 echo ========================================
-echo Restarting Backend Server
+echo   RESTARTING BACKEND SERVER
 echo ========================================
 echo.
 
@@ -11,16 +12,16 @@ taskkill /F /IM node.exe 2>nul
 
 echo.
 echo Starting backend server...
+echo.
+
 start cmd /k "npm start"
 
 echo.
 echo ========================================
-echo Backend server is starting...
-echo Wait 5 seconds then test the API
+echo   BACKEND SERVER RESTARTED!
 echo ========================================
-timeout /t 5
-
 echo.
-echo Opening test script...
-cd ..
-call test-trades-api.bat
+echo Backend is now running on http://localhost:5000
+echo.
+echo Press any key to close this window...
+pause >nul

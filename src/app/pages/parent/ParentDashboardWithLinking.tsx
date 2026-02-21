@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -148,7 +148,102 @@ const ParentDashboardWithLinking = () => {
 
   // Show waiting list if has pending applications and no approved children
   if (applications.some(a => a.status === 'pending') && children.length === 0) {
-    return <ParentWaitingDashboard />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Ikibanza cy'Umubyeyi - Rutonde rw'Abahagaritse
+            </h1>
+            <p className="text-gray-600 mt-1">Gukurikirana ibyifuzo byawe</p>
+          </div>
+          
+          <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50">
+            <CardHeader className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-6 h-6" />
+                Ibyifuzo Byawe biri ku Rutonde rw'Abahagaritse
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {applications.filter(a => a.status === 'pending').map(app => (
+                  <div key={app.id} className="bg-white p-4 rounded-lg border border-yellow-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="font-bold text-lg">{app.child_first_name} {app.child_last_name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {app.child_trade_code} - Level {app.child_level_number} - {app.child_gender === 'Male' ? 'Gabo' : 'Gore'}
+                        </p>
+                      </div>
+                      <Badge className="bg-yellow-500">
+                        <Clock className="w-3 h-3 mr-1" />
+                        Tegereza
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-blue-50 p-3 rounded">
+                        <p className="text-xs text-blue-600">Isano</p>
+                        <p className="font-medium capitalize">{app.relationship}</p>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded">
+                        <p className="text-xs text-green-600">Yoherejwe</p>
+                        <p className="font-medium">{new Date(app.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded">
+                        <p className="text-xs text-purple-600">Uko bigenda</p>
+                        <p className="font-medium">Gukurikirana...</p>
+                      </div>
+                    </div>
+                    
+                    {app.notes && (
+                      <div className="bg-gray-50 p-3 rounded-lg mb-3">
+                        <p className="text-sm text-gray-700">
+                          <strong>Inyongera:</strong> {app.notes}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Icyifuzo cyawe kiri ku rutonde rw'abahagaritse. Uzabwirwa iyo umwana asanzwe mu ishuri.</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-bold text-blue-800 mb-2">Icyo ukwiye kumenya:</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Icyifuzo cyawe cyoherejwe neza kandi kiri ku rutonde rw'abahagaritse</li>
+                  <li>• Uzabwirwa na SMS iyo umwana asanzwe mu ishuri</li>
+                  <li>• Ushobora gukora ikindi cyifuzo niba ufite abandi bana</li>
+                  <li>• Hamagara ishuri niba ufite ibibazo: +250 788 000 000</li>
+                </ul>
+              </div>
+              
+              <div className="mt-6 flex gap-3">
+                <Button 
+                  onClick={() => setShowLinkingForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Ongeraho Ikindi Cyifuzo
+                </Button>
+                <Button 
+                  onClick={fetchData}
+                  variant="outline"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Kugenzura Amakuru
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {

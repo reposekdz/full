@@ -381,6 +381,8 @@ if (routes.serialCodes) { app.use('/api/serial-codes', routes.serialCodes); moun
 if (routes.teachers) { app.use('/api/teachers', routes.teachers); mountedRoutes++; }
 if (routes.teacherAdvanced) { app.use('/api/teacher-advanced', routes.teacherAdvanced); mountedRoutes++; }
 if (routes.parents) { app.use('/api/parents', routes.parents); mountedRoutes++; }
+// Parents Missing Endpoint (GET /api/parents)
+app.use('/api/parents', require('./routes/parents-missing')); mountedRoutes++;
 if (routes.staff) { app.use('/api/staff', routes.staff); mountedRoutes++; }
 if (routes.staffAdvanced) { app.use('/api/staff-advanced', routes.staffAdvanced); mountedRoutes++; }
 if (routes.staffProfile) { app.use('/api/staff-profile', routes.staffProfile); mountedRoutes++; }
@@ -428,10 +430,11 @@ if (routes.dos) { app.use('/api/dos', routes.dos); mountedRoutes++; }
 if (routes.dosAdvanced) { app.use('/api/dos-advanced', routes.dosAdvanced); mountedRoutes++; }
 if (routes.dosManagement) { app.use('/api/dos-management', routes.dosManagement); mountedRoutes++; }
 
-// Parent Features - Only load enhanced version to avoid conflicts
-// Note: parent-dashboard-enhanced.js has all the features
+// Parent Features - Enhanced with SMS notifications
 app.use('/api/parent-dashboard', require('./routes/parent-dashboard-enhanced')); mountedRoutes++;
 app.use('/api/parent-full-dashboard', require('./routes/parentDashboard')); mountedRoutes++;
+app.use('/api/enhanced-parent-sms', require('./routes/enhanced-parent-sms')); mountedRoutes++;
+app.use('/api/enhanced-parent-auth', require('./routes/enhanced-parent-auth')); mountedRoutes++;
 
 // Parent Linking API
 if (routes.parentLinking) { app.use('/api/parent-linking', routes.parentLinking); mountedRoutes++; }
@@ -687,6 +690,9 @@ if (routes.dodUltraAdvanced) {
 }
 // Keep legacy endpoints for compatibility
 app.use('/api/dod-legacy', require('./routes/dod')); mountedRoutes++;
+
+// DOD Missing Endpoints (conduct, sod-students, lessons, sms/history)
+app.use('/api/dod', require('./routes/dod-missing-endpoints')); mountedRoutes++;
 if (routes.staffManagement) { app.use('/api/staff-management', routes.staffManagement); mountedRoutes++; }
 
 // DOS Comprehensive Management
@@ -777,6 +783,9 @@ app.use('/api/teacher-comprehensive', require('./routes/teacher-comprehensive'))
 
 // Global Sheets API - Teacher Access to All Students
 app.use('/api/global-sheets', require('./routes/global-sheets')); mountedRoutes++;
+
+// Global Student Sheets Missing Endpoints (columns, update-student)
+app.use('/api/global-student-sheets', require('./routes/global-student-sheets-missing')); mountedRoutes++;
 
 // Teacher Marks API - Save/Load Marks for Global Sheets
 app.use('/api/teacher-marks', require('./routes/teacher-marks')); mountedRoutes++;
