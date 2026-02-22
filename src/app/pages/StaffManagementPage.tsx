@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiService from '@/app/services/apiService';
-import * as XLSX from 'xlsx';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -307,10 +306,11 @@ const StaffManagementPage: React.FC = () => {
       switch (action) {
         case 'export':
           const selectedData = staff.filter(s => selectedStaff.includes(s.id));
-          const worksheet = XLSX.utils.json_to_sheet(selectedData);
-          const workbook = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(workbook, worksheet, 'Staff');
-          XLSX.writeFile(workbook, `Staff_${new Date().toISOString().split('T')[0]}.xlsx`);
+          const XLSXModule = await import('xlsx');
+          const worksheet = XLSXModule.utils.json_to_sheet(selectedData);
+          const workbook = XLSXModule.utils.book_new();
+          XLSXModule.utils.book_append_sheet(workbook, worksheet, 'Staff');
+          XLSXModule.writeFile(workbook, `Staff_${new Date().toISOString().split('T')[0]}.xlsx`);
           toast.success(`Exported ${selectedStaff.length} staff members`);
           break;
 

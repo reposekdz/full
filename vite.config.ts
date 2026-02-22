@@ -43,7 +43,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,ttf,eot}'],
-        maximumFileSizeToCacheInBytes: 5000000,
+        maximumFileSizeToCacheInBytes: 10000000, // Increased to 10MB
         runtimeCaching: [
           { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0, 200] } } },
           { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'gstatic-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 31536000 }, cacheableResponse: { statuses: [0, 200] } } },
@@ -82,17 +82,33 @@ export default defineConfig({
   },
   build: {
     minify: 'terser',
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit
     terserOptions: {
       compress: {
-        drop_console: false,
+        drop_console: true, // Remove console logs in production
         drop_debugger: true,
       },
     },
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['lucide-react']
+          // Split vendor libraries
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-select'],
+          'chart-vendor': ['recharts'],
+          'utils-vendor': ['date-fns', 'clsx', 'tailwind-merge'],
+          'xlsx-vendor': ['xlsx'],
+          'pdf-vendor': ['jspdf', 'jspdf-autotable'],
+          // Split large components
+          'dashboard-components': [
+            './src/app/pages/dashboards/ComprehensiveAdminDashboard',
+            './src/app/pages/dashboards/ComprehensiveAccountantDashboard',
+            './src/app/pages/dashboards/ModernTeacherDashboard'
+          ],
+          'student-components': [
+            './src/app/components/GlobalStudentSheets',
+            './src/app/components/AdminAccountantGlobalSheets'
+          ]
         }
       }
     }

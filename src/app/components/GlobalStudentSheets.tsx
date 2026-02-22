@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import {
   Users, FileText, RefreshCw, Search, Download as DownloadIcon, 
   Table as TableIcon, Settings, Link, MessageSquare, Phone, Mail,
   Eye, Edit, Trash2, UserPlus, Calendar, Award, DollarSign,
   AlertTriangle, CheckCircle, Clock, Filter, SortAsc, SortDesc,
-  UserMinus, UserCheck, Ban, CheckSquare, XCircle, Send, FileDown
+  UserMinus, UserCheck, Ban, CheckSquare, XCircle, Send, FileDown,
+  ArrowUpDown, Plus, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import productionAPIService from '@/app/services/productionAPIService';
 import { GLOBAL_TRADES, getLevelsForTrade } from '@/app/constants/tradesAndLevels';
-import * as XLSX from 'xlsx';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+
+// Dynamic imports for better code splitting
+const XLSX = lazy(() => import('xlsx'));
 
 
 interface GlobalStudentSheetsProps {
@@ -409,10 +412,11 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = ({ userRole }) =
           window.open(response.data.downloadUrl, '_blank');
         } else {
           // Client-side export fallback
-          const worksheet = XLSX.utils.json_to_sheet(exportData.students);
-          const workbook = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
-          XLSX.writeFile(workbook, `Students_${activeTrade}_${new Date().toISOString().split('T')[0]}.${format}`);
+          const XLSXModule = await import('xlsx');
+          const worksheet = XLSXModule.utils.json_to_sheet(exportData.students);
+          const workbook = XLSXModule.utils.book_new();
+          XLSXModule.utils.book_append_sheet(workbook, worksheet, 'Students');
+          XLSXModule.writeFile(workbook, `Students_${activeTrade}_${new Date().toISOString().split('T')[0]}.${format}`);
         }
         toast.success('Export completed successfully');
       }
@@ -858,10 +862,11 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = ({ userRole }) =
           if (exportResponse.success) {
             // Fallback to client-side export if server doesn't provide file
             const selectedData = students.filter(s => selectedStudents.includes(s.id));
-            const worksheet = XLSX.utils.json_to_sheet(selectedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Selected_Students');
-            XLSX.writeFile(workbook, 'Selected_Students.xlsx');
+            const XLSXModule = await import('xlsx');
+            const worksheet = XLSXModule.utils.json_to_sheet(selectedData);
+            const workbook = XLSXModule.utils.book_new();
+            XLSXModule.utils.book_append_sheet(workbook, worksheet, 'Selected_Students');
+            XLSXModule.writeFile(workbook, 'Selected_Students.xlsx');
             toast.success('Selected students exported');
           } else {
             toast.error(exportResponse.error || 'Failed to export students');
@@ -983,8 +988,9 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = ({ userRole }) =
         window.open(response.data.downloadUrl, '_blank');
         toast.success('Excel exported successfully');
       } else {
-        // Fallback to client-side export
-        const worksheet = XLSX.utils.json_to_sheet(students.map(s => ({
+        // Fallback to client-side export with dynamic import
+        const XLSXModule = await import('xlsx');
+        const worksheet = XLSXModule.utils.json_to_sheet(students.map(s => ({
           'Student Name': `${s.first_name} ${s.last_name}`,
           'Code': s.student_code,
           'Trade': s.trade_code,
@@ -995,9 +1001,9 @@ const GlobalStudentSheets: React.FC<GlobalStudentSheetsProps> = ({ userRole }) =
           'Email': s.email || '',
           'Phone': s.phone || ''
         })));
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, `${activeTrade}_Level_${activeLevel.level_number}`);
-        XLSX.writeFile(workbook, `Student_Sheet_${activeTrade}_L${activeLevel.level_number}.xlsx`);
+        const workbook = XLSXModule.utils.book_new();
+        XLSXModule.utils.book_append_sheet(workbook, worksheet, `${activeTrade}_Level_${activeLevel.level_number}`);
+        XLSXModule.writeFile(workbook, `Student_Sheet_${activeTrade}_L${activeLevel.level_number}.xlsx`);
         toast.success('Excel exported successfully');
       }
     } catch (error) {
