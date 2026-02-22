@@ -1,0 +1,54 @@
+services:
+  # Frontend Service
+  - type: web
+    name: garden-tvet-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Backend Service  
+  - type: web
+    name: garden-tvet-backend
+    env: node
+    region: frankfurt
+    plan: starter
+    buildCommand: cd backend && npm install --production
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DB_HOST
+        fromDatabase:
+          name: garden-tvet-db
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: garden-tvet-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: garden-tvet-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: garden-tvet-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AFRICATALKING_API_KEY
+        sync: false
+      - key: AFRICATALKING_USERNAME
+        sync: false
+
+databases:
+  - name: garden-tvet-db
+    databaseName: school_management
+    user: school_user
+    region: frankfurt
+    plan: starter
