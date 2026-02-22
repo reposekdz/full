@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2, Code, Shield } from 'lucide-react';
+import { Search, Menu, X, Globe, Bell, User, Home, Trophy, Briefcase, Wrench, Phone, HelpCircle, Users, ChevronDown, ChevronRight, LogIn, UserPlus, BookOpen, Calendar, FileText, Award, GraduationCap, ClipboardList, TrendingUp, CheckCircle2, Code, Shield, MessageSquare } from 'lucide-react';
 import { useLanguage, Language } from '@/app/contexts/LanguageContext';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -53,6 +53,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     { key: 'services', icon: Briefcase, label: language === 'rw' ? 'Serivisi' : 'Services', subItems: [] },
     { key: 'trades', icon: Wrench, label: language === 'rw' ? 'Imyuga' : 'Trades', subItems: [] },
     { key: 'leadership', icon: Shield, label: language === 'rw' ? 'Ubuyobozi' : 'Leadership', subItems: [] },
+    { key: 'sms-services', icon: MessageSquare, label: language === 'rw' ? 'SMS Serivisi' : 'SMS Services', subItems: [] },
     { key: 'contactUs', icon: Phone, label: language === 'rw' ? 'Twandikire' : 'Contact', subItems: [] },
     { key: 'supports', icon: HelpCircle, label: language === 'rw' ? 'Ubufasha' : 'Support', subItems: [] },
     { key: 'developers', icon: Code, label: language === 'rw' ? 'Abatunganyije' : 'Developers', subItems: [] },
@@ -63,8 +64,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate, onSearch }) =>
     school_owner: navItems.map(n => n.key),
     admin: navItems.map(n => n.key),
     headmaster: navItems.map(n => n.key),
-    director_study: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
-    director_discipline: ['home', 'academics', 'leadership', 'contactUs', 'supports'],
+    director_study: ['home', 'academics', 'leadership', 'sms-services', 'contactUs', 'supports'],
+    director_discipline: ['home', 'academics', 'leadership', 'sms-services', 'contactUs', 'supports'],
     accountant: ['home', 'services', 'leadership', 'supports', 'contactUs'],
     stock_manager: ['home', 'trades', 'services', 'supports', 'contactUs'],
     teacher: ['home', 'academics', 'leadership', 'contactUs', 'supports'],

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { sendSMS } = require('../utils/smsService');
+const { sendManualLinkSMS, sendAutoLinkNotificationSMS } = require('../services/parentNotificationService');
 
 // ==================== LEVEL 4 SOD STUDENTS WITH LINKED PARENTS ====================
 
@@ -272,13 +274,27 @@ router.post('/link-parent-student', authenticateToken, requireRole('director_dis
         'UPDATE parent_student_links SET status = ?, updated_at = NOW() WHERE id = ?',
         ['active', existing.id]
       );
+      
+      // Send SMS notification for reactivated link
+      try {
+        await sendManualLinkSMS(parent_id, student_id, false);
+        console.log('✅ Reactivation SMS sent to parent');
+      } catch (smsError) {
+        console.error('❌ SMS notification error:', smsError);
+      }
+      
       return res.json({ success: true, message: 'Parent link reactivated successfully' });
     }
 
-    // Get student code
+    // Get student and parent info for SMS
     const [[student]] = await pool.execute(
-      'SELECT sp.admission_number FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id WHERE u.id = ?',
+      'SELECT u.first_name, u.last_name, sp.admission_number FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id WHERE u.id = ?',
       [student_id]
+    );
+    
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name, last_name FROM users WHERE id = ?',
+      [parent_id]
     );
 
     // Create new link
@@ -298,7 +314,19 @@ router.post('/link-parent-student', authenticateToken, requireRole('director_dis
       auto_linked ? 1 : 0
     ]);
 
-    res.json({ success: true, message: 'Parent linked to student successfully' });
+    // Send SMS notification to parent
+    try {
+      await sendManualLinkSMS(parent_id, student_id, false);
+      console.log('✅ Manual link SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS notification error:', smsError);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Parent linked to student successfully! SMS notification sent.',
+      sms_sent: parent && parent.phone ? true : false
+    });
   } catch (error) {
     console.error('Error linking parent to student:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -314,12 +342,19 @@ router.post('/auto-link-parent', authenticateToken, requireRole('director_discip
       return res.status(400).json({ success: false, message: 'student_id and parent_phone are required' });
     }
 
+    // Get student info for SMS
+    const [[studentInfo]] = await pool.execute(
+      'SELECT first_name, last_name FROM users WHERE id = ?',
+      [student_id]
+    );
+
     // Find or create parent
     let [[parent]] = await pool.execute(
-      'SELECT id FROM users WHERE phone = ? AND role = ?',
+      'SELECT id, first_name, last_name FROM users WHERE phone = ? AND role = ?',
       [parent_phone, 'parent']
     );
 
+    let isNewParent = false;
     if (!parent) {
       // Create parent account
       const names = (parent_name || 'Parent').split(' ');
@@ -347,7 +382,8 @@ router.post('/auto-link-parent', authenticateToken, requireRole('director_discip
         VALUES (?, 1, NOW())
       `, [parentId]);
 
-      parent = { id: parentId };
+      parent = { id: parentId, first_name: firstName, last_name: lastName };
+      isNewParent = true;
     }
 
     // Link parent to student
@@ -359,7 +395,21 @@ router.post('/auto-link-parent', authenticateToken, requireRole('director_discip
       ON DUPLICATE KEY UPDATE status = 'active', is_primary_contact = 1, updated_at = NOW()
     `, [parent.id, student_id, relationship_type, req.user?.name || 'System', req.user?.role || 'admin']);
 
-    res.json({ success: true, message: 'Parent auto-linked successfully', parent_id: parent.id });
+    // Send SMS notification automatically
+    try {
+      await sendAutoLinkNotificationSMS(parent.id, student_id);
+      console.log('✅ Auto-link SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS notification error:', smsError);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Parent auto-linked successfully! SMS notification sent.',
+      parent_id: parent.id,
+      sms_sent: true,
+      is_new_parent: isNewParent
+    });
   } catch (error) {
     console.error('Error auto-linking parent:', error);
     res.status(500).json({ success: false, message: error.message });

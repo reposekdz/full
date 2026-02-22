@@ -96,7 +96,7 @@ import GlobalStudentSheets from '@/app/components/GlobalStudentSheets';
 import AdminAccountantGlobalSheets from '@/app/components/AdminAccountantGlobalSheets';
 import DODManagement from '@/app/pages/dashboards/DODManagement';
 import StudentManagementUltraAdvanced from '@/app/pages/StudentManagementUltraAdvanced';
-import StaffManagementPage from '@/app/pages/StaffManagementPage';
+import AdvancedSMSSystem from './pages/AdvancedSMSSystem';
 import ApplicationManagementDashboard from '@/app/pages/admin/ApplicationManagementDashboard';
 import ParentDashboardSimple from '@/app/pages/ParentDashboardSimple';
 import ParentRegisterPage from '@/app/pages/ParentRegisterPage';
@@ -105,10 +105,16 @@ import ParentComprehensiveDashboard from './pages/parent/ParentComprehensiveDash
 import ParentChildDashboard from './pages/parent/ParentChildDashboard';
 import ContactStaff from './pages/parent/ContactStaff';
 import ParentDashboardWithLinking from '@/app/pages/parent/ParentDashboardWithLinking';
+import EnhancedParentDashboard from '@/app/pages/parent/EnhancedParentDashboard';
+import ParentChildDetailView from '@/app/pages/parent/ParentChildDetailView';
 import ParentWaitingListDashboard from './pages/dashboards/ParentWaitingListDashboard';
+import StaffManagementPage from '@/app/pages/StaffManagementPage';
 import DODManualParentLinking from '@/app/pages/dod/DODManualParentLinking';
+import RealPaymentManagement from '@/components/RealPaymentManagement';
 // @ts-ignore
 import StockManagement from '@/components/StockManagement';
+// @ts-ignore
+import SMSManagementPanel from '@/components/SMSManagementPanel';
 
 const AppContent: React.FC = () => {
   // Mirror role-based navigation visibility used in Header
@@ -132,12 +138,12 @@ const AppContent: React.FC = () => {
 
   const roleExtraAllowed: Record<string, string[]> = {
     school_owner: ['profile', 'student-sheets', 'global-student-sheets', 'comprehensive-admin', 'comprehensive-accountant'],
-    admin: ['profile', 'student-sheets', 'global-student-sheets', 'comprehensive-admin', 'comprehensive-accountant', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
+    admin: ['profile', 'student-sheets', 'global-student-sheets', 'comprehensive-admin', 'comprehensive-accountant', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles', 'sms-management'],
     super_admin: ['profile', 'student-sheets', 'admin', 'admin-panel', 'admin/team-overview', 'admin-developers', 'admin-articles'],
     headmaster: ['profile', 'headmaster-students', 'student-sheets', 'dashboard-headmaster', 'application-management', 'parent-applications'],
-    director_study: ['profile', 'dos-students', 'dos-report-cards', 'dos-teacher-marks', 'dos-parent-access', 'dos-sms', 'dos-comprehensive-management', 'student-sheets', 'dashboard-director-study', 'dashboard-dos', 'application-management', 'parent-applications'],
-    director_discipline: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
-    dod: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
+    director_study: ['profile', 'dos-students', 'dos-report-cards', 'dos-teacher-marks', 'dos-parent-access', 'dos-sms', 'dos-comprehensive-management', 'student-sheets', 'dashboard-director-study', 'dashboard-dos', 'application-management', 'parent-applications', 'sms-management'],
+    director_discipline: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'sms-management', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
+    dod: ['profile', 'dod-profile', 'dod-discipline', 'dod-leave', 'dod-leave-management', 'dod-parent-management', 'dod-exams', 'dod-students', 'dod-reports', 'dod-punishments', 'dod-parent-notifications', 'dod-student-sheets', 'dod-management', 'dod-notifications', 'sms-management', 'student-sheets', 'dashboard-director-discipline', 'parent-applications'],
     accountant: ['profile', 'student-sheets', 'dashboard-accountant', 'comprehensive-accountant', 'payments-management', 'accountant-payments', 'expenses-management', 'invoices-management', 'budgets-management', 'salaries-management', 'transactions-management', 'financial-reports', 'timetable-view', 'students-management', 'student-payments-management', 'parent-applications'],
     stock_manager: ['profile', 'dashboard-stock', 'student-sheets', 'staff-management-advanced', 'stock-ultra-advanced'],
     teacher: ['profile', 'search', 'notifications', 'classes', 'students', 'gradebook', 'attendance', 'assignments', 'resources', 'schedule', 'teacher-grading', 'teacher-create-assignment', 'student-sheets', 'dashboard-teacher', 'teacher-portal-advanced'],
@@ -337,43 +343,15 @@ const AppContent: React.FC = () => {
   };
 
   const renderPage = () => {
-    // Check localStorage for password change requirement
-    const needsPasswordChange = localStorage.getItem('needsPasswordChange');
-    if (needsPasswordChange && JSON.parse(needsPasswordChange) === true) {
-      // Get user from localStorage and update must_change_password flag
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const userObj = JSON.parse(storedUser);
-        userObj.must_change_password = true;
-        localStorage.setItem('user', JSON.stringify(userObj));
-      }
-    }
-
-    // CRITICAL: Force credential change BEFORE any other page renders
-    if (user && (user as any).must_change_password) {
+    // CRITICAL: Force credential change BEFORE any other page renders (SKIP FOR PARENTS)
+    if (user && user.role !== 'parent' && (user as any).must_change_password) {
       return <ForceChangeCredentialsPage onSuccess={() => handleNavigate('login')} />;
     }
 
     // Check for dashboard routes first
     if (currentPage === 'admin' && user?.role === 'admin') return <ComprehensiveAdminDashboard />;
-    if (currentPage === 'dashboard-parent') {
-      if (!user) {
-        console.log('⏳ User not loaded yet, checking localStorage...');
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          console.log('📦 Found user in localStorage, waiting for context...');
-          return <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Tegereza...</p>
-            </div>
-          </div>;
-        }
-      }
-      if (user?.role === 'parent') {
-        console.log('📊 Rendering Parent Dashboard With Linking for user:', user);
-        return <ParentDashboardWithLinking />;
-      }
+    if (currentPage === 'dashboard-parent' && user?.role === 'parent') {
+      return <EnhancedParentDashboard onNavigate={handleNavigate} />;
     }
     if (currentPage === 'teacher-portal-advanced' && user?.role === 'teacher') {
       return <TeacherPortalUltraAdvanced />;
@@ -384,7 +362,7 @@ const AppContent: React.FC = () => {
 
     if (currentPage.startsWith('parent-child/') && user?.role === 'parent') {
       const studentId = currentPage.split('/')[1];
-      return <ParentChildDashboard onNavigate={handleNavigate} />;
+      return <ParentChildDetailView childId={studentId} onNavigate={handleNavigate} />;
     }
     if (currentPage === 'dashboard-director-study' && user?.role === 'director_study') return <AdvancedDOSDashboard onNavigate={handleNavigate} onLogout={logout} />;
     if (currentPage === 'dashboard-teacher' && user?.role === 'teacher') return <ModernTeacherDashboard onNavigate={handleNavigate} onLogout={logout} />;
@@ -491,7 +469,9 @@ const AppContent: React.FC = () => {
       if (currentPage === 'students-management') return <StudentsManagementPage onNavigate={handleNavigate} />;
       if (currentPage === 'student-payments-management') return <EnhancedStudentPayments onNavigate={handleNavigate} />;
       if (currentPage === 'admin-articles') return <AdminArticleManagementPage onNavigate={handleNavigate} />;
-      if (currentPage === 'payments-management') return <PaymentsManagement onNavigate={handleNavigate} />;
+      if (currentPage === 'payments-management') return <RealPaymentManagement />;
+      if (currentPage === 'payments-advanced') return <RealPaymentManagement />;
+      if (currentPage === 'payments') return <RealPaymentManagement />;
       if (currentPage === 'expenses-management') return <ExpensesManagement onNavigate={handleNavigate} />;
       if (currentPage === 'invoices-management') return <InvoicesManagement onNavigate={handleNavigate} />;
       if (currentPage === 'budgets-management') return <BudgetsManagement onNavigate={handleNavigate} />;
@@ -503,7 +483,9 @@ const AppContent: React.FC = () => {
       if (currentPage === 'library-system') return <LibraryManagementSystem />;
       if (currentPage === 'exam-management') return <ExamManagementSystem />;
       if (currentPage === 'hostel-management') return <HostelManagementSystem />;
-      if (currentPage === 'staff-management-advanced') return <StaffManagementPage onNavigate={handleNavigate} />;
+      if (currentPage === 'sms-services') return <AdvancedSMSSystem />;
+      if (currentPage === 'sms-management') return <SMSManagementPanel />;
+      if (currentPage === 'sms-advanced') return <AdvancedSMSSystem />;
       if (currentPage === 'stock-management') return <StockManagement />;
       if (currentPage === 'application-management') return <ApplicationManagementDashboard onNavigate={handleNavigate} onLogout={logout} />;
       if (currentPage === 'dod-manual-parent-linking') return <DODManualParentLinking onNavigate={handleNavigate} />;
@@ -539,7 +521,11 @@ const AppContent: React.FC = () => {
       case 'student-payments-management':
         return <EnhancedStudentPayments onNavigate={handleNavigate} />;
       case 'payments-management':
-        return <PaymentsManagement onNavigate={handleNavigate} />;
+        return <RealPaymentManagement />;
+      case 'payments-advanced':
+        return <RealPaymentManagement />;
+      case 'payments':
+        return <RealPaymentManagement />;
       case 'accountant-payments':
         return <AccountantPaymentsPage />;
       case 'expenses-management':
@@ -560,6 +546,12 @@ const AppContent: React.FC = () => {
         return <TeamOverviewManagement />;
       case 'admin-articles':
         return <AdminArticleManagementPage onNavigate={handleNavigate} />;
+      case 'sms-services':
+        return <AdvancedSMSSystem />;
+      case 'sms-management':
+        return <SMSManagementPanel />;
+      case 'sms-advanced':
+        return <AdvancedSMSSystem />;
       case 'staff-management-advanced':
         return <StaffManagementPage onNavigate={handleNavigate} />;
       default:

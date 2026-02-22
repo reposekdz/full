@@ -1,164 +1,294 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// SMS API ROUTES - FRONTEND INTEGRATION
+// ═══════════════════════════════════════════════════════════════════════════
+// All SMS notification endpoints for frontend calls
+// ═══════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
-const axios = require('axios');
+const { authenticateToken, requireRole } = require('../middleware/auth');
+const { 
+  sendParentRegistrationSMS,
+  sendLinkApprovalSMS,
+  sendManualLinkSMS,
+  sendConductRemovalSMS,
+  sendLeaveApprovalSMS,
+  getSMSStats,
+  retryFailedSMS
+} = require('../services/parentNotificationService');
+const {
+  sendAttendanceAlertSMS,
+  sendGradeUpdateSMS,
+  sendFeeReminderSMS,
+  sendSchoolAnnouncementSMS
+} = require('../services/studentActivityNotifications');
 
-// Africa's Talking SMS Configuration
-const AT_API_KEY = process.env.AFRICAS_TALKING_API_KEY || 'test_api_key';
-const AT_USERNAME = process.env.AFRICAS_TALKING_USERNAME || 'sandbox';
-const AT_SENDER_ID = process.env.SMS_SENDER_ID || 'GARDEN_TVET';
-const AT_SMS_URL = 'https://api.africastalking.com/version1/messaging';
+// ═══════════════════════════════════════════════════════════════════════════
+// PARENT REGISTRATION & LINKING SMS
+// ═══════════════════════════════════════════════════════════════════════════
 
-// Send payment confirmation SMS
-router.post('/send-payment-confirmation', authenticateToken, async (req, res) => {
+// Send welcome SMS to new parent
+router.post('/welcome', authenticateToken, async (req, res) => {
   try {
-    const { phone, amount, student_name } = req.body;
-
-    if (!phone || !amount) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone and amount required'
-      });
-    }
-
-    const message = `Dear Parent,\n\nYour payment of ${amount} RWF for ${student_name} has been received. Thank you!\n\nGarden TVET School`;
-
-    const smsResponse = await sendSMS(phone, message);
-
-    // Log SMS
-    await pool.execute(`
-      INSERT INTO sms_logs (
-        phone, message, type, status, created_at
-      ) VALUES (?, ?, 'payment', ?, NOW())
-    `, [phone, message, smsResponse.success ? 'sent' : 'failed']);
-
-    res.json({
-      success: smsResponse.success,
-      message: smsResponse.success ? 'SMS sent successfully' : 'SMS sending failed'
-    });
-
+    const { parentId } = req.body;
+    const result = await sendParentRegistrationSMS(parentId);
+    res.json(result);
   } catch (error) {
-    console.error('SMS sending error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'SMS sending failed'
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Send DOD notification SMS
-router.post('/send-dod-notification', authenticateToken, async (req, res) => {
+// Send link approval SMS
+router.post('/link-approval', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin']), async (req, res) => {
   try {
-    const { phone, student_name, notification_type, details } = req.body;
-
-    let message = '';
-    switch (notification_type) {
-      case 'leave':
-        message = `Dear Parent,\n\n${student_name} has requested leave. Details: ${details}\n\nPlease contact DOD if needed.\n\nGarden TVET School`;
-        break;
-      case 'conduct':
-        message = `Dear Parent,\n\nDiscipline notice for ${student_name}: ${details}\n\nPlease contact the school.\n\nGarden TVET School`;
-        break;
-      case 'sick':
-        message = `Dear Parent,\n\n${student_name} is unwell. ${details}\n\nPlease contact the school health center.\n\nGarden TVET School`;
-        break;
-      default:
-        message = `Dear Parent,\n\nNotification regarding ${student_name}: ${details}\n\nGarden TVET School`;
-    }
-
-    const smsResponse = await sendSMS(phone, message);
-
-    // Log SMS
-    await pool.execute(`
-      INSERT INTO sms_logs (
-        phone, message, type, status, created_at
-      ) VALUES (?, ?, ?, ?, NOW())
-    `, [phone, message, notification_type, smsResponse.success ? 'sent' : 'failed']);
-
-    res.json({
-      success: smsResponse.success,
-      message: smsResponse.success ? 'SMS sent successfully' : 'SMS sending failed'
-    });
-
+    const { parentId, studentId, applicationId } = req.body;
+    const result = await sendLinkApprovalSMS(parentId, studentId, applicationId);
+    res.json(result);
   } catch (error) {
-    console.error('SMS sending error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'SMS sending failed'
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Send grade notification SMS
-router.post('/send-grade-notification', authenticateToken, async (req, res) => {
+// Send manual link SMS
+router.post('/manual-link', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin']), async (req, res) => {
   try {
-    const { phone, student_name, subject, grade, score } = req.body;
-
-    const message = `Dear Parent,\n\n${student_name} received ${grade} (${score}%) in ${subject}.\n\nGarden TVET School`;
-
-    const smsResponse = await sendSMS(phone, message);
-
-    await pool.execute(`
-      INSERT INTO sms_logs (
-        phone, message, type, status, created_at
-      ) VALUES (?, ?, 'grade', ?, NOW())
-    `, [phone, message, smsResponse.success ? 'sent' : 'failed']);
-
-    res.json({
-      success: smsResponse.success,
-      message: smsResponse.success ? 'SMS sent successfully' : 'SMS sending failed'
-    });
-
+    const { parentId, studentId, isNewParent } = req.body;
+    const result = await sendManualLinkSMS(parentId, studentId, isNewParent);
+    res.json(result);
   } catch (error) {
-    console.error('SMS sending error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'SMS sending failed'
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Helper function to send SMS via Africa's Talking
-async function sendSMS(phone, message) {
+// ═══════════════════════════════════════════════════════════════════════════
+// STUDENT ACTIVITY SMS NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Send conduct removal SMS
+router.post('/conduct-removal', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin', 'matron', 'patron']), async (req, res) => {
   try {
-    // Format phone number for Rwanda (+250)
-    let formattedPhone = phone.replace(/\s/g, '');
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '+250' + formattedPhone.substring(1);
-    } else if (!formattedPhone.startsWith('+')) {
-      formattedPhone = '+250' + formattedPhone;
+    const { studentId, conductType, pointsDeducted, newScore, description, removedBy } = req.body;
+    const result = await sendConductRemovalSMS(studentId, conductType, pointsDeducted, newScore, description, removedBy || req.user.first_name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send leave approval SMS
+router.post('/leave-approval', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin', 'matron', 'patron']), async (req, res) => {
+  try {
+    const { studentId, leaveType, reason, startTime, endTime, approvedBy } = req.body;
+    const result = await sendLeaveApprovalSMS(studentId, leaveType, reason, startTime, endTime, approvedBy || req.user.first_name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send attendance alert SMS
+router.post('/attendance-alert', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin', 'teacher']), async (req, res) => {
+  try {
+    const { studentId, attendanceType, date, reason } = req.body;
+    const result = await sendAttendanceAlertSMS(studentId, attendanceType, date, reason);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send grade update SMS
+router.post('/grade-update', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin', 'teacher']), async (req, res) => {
+  try {
+    const { studentId, examType, subject, score, grade, totalMarks } = req.body;
+    const result = await sendGradeUpdateSMS(studentId, examType, subject, score, grade, totalMarks);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send fee reminder SMS
+router.post('/fee-reminder', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin', 'accountant']), async (req, res) => {
+  try {
+    const { studentId, amountDue, dueDate, feeType } = req.body;
+    const result = await sendFeeReminderSMS(studentId, amountDue, dueDate, feeType);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Send school announcement SMS
+router.post('/school-announcement', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin']), async (req, res) => {
+  try {
+    const { studentIds, title, message, priority } = req.body;
+    
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Student IDs array is required' });
     }
 
-    const response = await axios.post(AT_SMS_URL, {
-      username: AT_USERNAME,
-      to: formattedPhone,
-      message: message,
-      from: AT_SENDER_ID
-    }, {
-      headers: {
-        'apiKey': AT_API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      timeout: 10000
-    });
+    const results = [];
+    let totalParentsNotified = 0;
 
-    console.log('SMS API Response:', response.data);
+    for (const studentId of studentIds) {
+      const result = await sendSchoolAnnouncementSMS(studentId, title, message, priority);
+      if (result.success) {
+        results.push(result);
+        totalParentsNotified += result.parentsNotified || 0;
+      }
+    }
 
-    return {
-      success: response.data.SMSMessageData?.Recipients?.length > 0,
-      data: response.data
-    };
-
-  } catch (error) {
-    console.error('SMS API Error:', error.message);
-    // For testing purposes, return success even if API fails
-    return {
+    res.json({
       success: true,
-      data: { message: 'SMS sent (testing mode)' }
-    };
+      message: `Announcement sent to ${totalParentsNotified} parents`,
+      parentsNotified: totalParentsNotified,
+      studentsProcessed: studentIds.length,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
-}
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BULK SMS OPERATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Send bulk SMS to multiple students
+router.post('/bulk', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin']), async (req, res) => {
+  try {
+    const { studentIds, title, message, priority = 'normal' } = req.body;
+    
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Student IDs array is required' });
+    }
+
+    const results = [];
+    let totalParentsNotified = 0;
+
+    for (const studentId of studentIds) {
+      const result = await sendSchoolAnnouncementSMS(studentId, title, message, priority);
+      if (result.success) {
+        results.push(result);
+        totalParentsNotified += result.parentsNotified || 0;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Bulk SMS sent to ${totalParentsNotified} parents`,
+      parentsNotified: totalParentsNotified,
+      studentsProcessed: studentIds.length,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SMS STATISTICS & MONITORING
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get SMS statistics
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const result = await getSMSStats();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get SMS history
+router.get('/history', authenticateToken, async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const { limit = 50, offset = 0, type, status } = req.query;
+    
+    let query = `
+      SELECT pnl.*, u.first_name as parent_name, gss.first_name as student_name, gss.last_name as student_lastname
+      FROM parent_notifications_log pnl
+      LEFT JOIN users u ON pnl.parent_id = u.id
+      LEFT JOIN global_student_sheets gss ON pnl.student_id = gss.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (type) {
+      query += ` AND pnl.notification_type = ?`;
+      params.push(type);
+    }
+
+    if (status) {
+      query += ` AND pnl.delivery_status = ?`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY pnl.created_at DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [history] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      history,
+      total: history.length
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Retry failed SMS
+router.post('/retry-failed', authenticateToken, requireRole(['dod', 'dos', 'headmaster', 'admin']), async (req, res) => {
+  try {
+    const { limit = 10 } = req.body;
+    const result = await retryFailedSMS(limit);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REAL-TIME SMS STATUS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get real-time SMS queue status
+router.get('/queue-status', authenticateToken, async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_queued,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+      FROM sms_queue
+      WHERE DATE(created_at) = CURDATE()
+    `);
+
+    const [[notificationStats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_notifications,
+        SUM(CASE WHEN delivery_status = 'sent' THEN 1 ELSE 0 END) as delivered,
+        SUM(CASE WHEN delivery_status = 'failed' THEN 1 ELSE 0 END) as failed_notifications
+      FROM parent_notifications_log
+      WHERE DATE(created_at) = CURDATE()
+    `);
+
+    res.json({
+      success: true,
+      queue: stats,
+      notifications: notificationStats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 module.exports = router;

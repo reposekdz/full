@@ -77,12 +77,15 @@ const ModernLoginPage: React.FC<ModernLoginPageProps> = ({ onNavigate }) => {
         
         if (result.success) {
           setSuccess(language === 'rw' ? 'Kwinjira byagenze neza!' : 'Login successful!');
-          if (result.token) {
+          if (result.token && result.user) {
+            // Ensure parent doesn't have must_change_password flag
+            const parentUser = { ...result.user, must_change_password: false, role: 'parent' };
             localStorage.setItem('token', result.token);
-            localStorage.setItem('user', JSON.stringify(result.user));
+            localStorage.setItem('user', JSON.stringify(parentUser));
+            localStorage.removeItem('needsPasswordChange');
           }
           setTimeout(() => {
-            onNavigate('dashboard-parent');
+            window.location.href = '/dashboard-parent';
           }, 500);
         } else {
           setError(result.message || 'Invalid phone or password');

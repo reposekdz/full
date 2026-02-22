@@ -553,6 +553,56 @@
   - **Frontend**: `/dashboards/ModernTeacherDashboard`
   - **Access**: Teacher role only
 
+  ## 📊 NEW: Global Student Sheets - Ultra Advanced System!
+
+  **Status:** ✅ FULLY OPERATIONAL - Production Ready
+
+  An **ultra-advanced student management system** with role-based permissions and 8 fully functional actions:
+  - 🔗 **Link Parent** - Link parent with phone number + Auto SMS
+  - 💬 **Send SMS** - Send custom SMS to parents
+  - 🚫 **Remove Conduct** - Remove conduct points (1-40) + Auto SMS
+  - ✅ **Grant Leave** - Approve leave with days/reason + Auto SMS
+  - 📞 **Call Parent** - Fetch parent phone & open dialer
+  - 📧 **Email Parent** - Fetch parent email & open client
+  - 👁️ **View Details** - Show complete student profile
+  - ✏️ **Edit Student** - Update student information
+  - 🗑️ **Delete Student** - Delete student (DOS/Headmaster only)
+
+  ### Role-Based Permissions
+  - ✅ **All Staff** - View, search, filter, export, send SMS, link parents
+  - ✅ **DOS/Headmaster** - All Staff + Add new students, delete students
+  - ✅ **Director Discipline** - All Staff + Remove conduct, grant leave
+
+  ### Bulk Actions (Multi-Select)
+  - 📤 **Send SMS** - Custom message to all selected students' parents
+  - 🚫 **Remove Conduct** - Bulk conduct removal with reason
+  - ✅ **Grant Leave** - Bulk leave approval
+  - 📥 **Export Excel** - Export selected students to Excel
+
+  ### Advanced Features
+  - 🔍 **Real-time Search** - Search by name, student code
+  - 🎯 **Advanced Filtering** - Conduct score, payment status, gender, attendance
+  - 🔄 **Sorting** - Sort by name, code, conduct, attendance
+  - 🎨 **Modern UI** - Gradient design, hover tooltips, scale animations
+  - 🌈 **Color-Coded Badges** - Green (good), Yellow (warning), Red (critical)
+  - ➕ **Add New Student** - Beautiful modal for DOS/Headmaster
+  - 📊 **Real-time Stats** - Live student count, selection count
+
+  ### Quick Access
+  ```bash
+  # Login as DOS/Headmaster
+  # Navigate to Dashboard
+  # Click "Abanyeshuri" (Students) tab
+  # Select Trade and Level
+  # Start managing students!
+  ```
+
+  📖 **Documentation:**
+  - [Ultra Advanced Guide](GLOBAL_STUDENT_SHEETS_ULTRA_ADVANCED.md) - Complete documentation
+  - [Quick Reference](GLOBAL_SHEETS_QUICK_CARD.md) - 30-second guide
+  - **Frontend**: `/components/GlobalStudentSheets`
+  - **API**: `/api/global-student-sheets/*`
+
   ## Running the code
 
   Run `npm i` to install the dependencies.

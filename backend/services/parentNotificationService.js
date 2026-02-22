@@ -1,241 +1,559 @@
-const db = require('../config/database');
+// ═══════════════════════════════════════════════════════════════════════════
+// PARENT NOTIFICATION SERVICE - COMPREHENSIVE SMS SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+// Features:
+// 1. Rich SMS notifications for all parent-child interactions
+// 2. Multiple SMS providers (Twilio, Africa's Talking, HTTP Gateway)
+// 3. Automatic fallback and retry mechanisms
+// 4. Complete audit trail and logging
+// 5. Kinyarwanda language support
+// ═══════════════════════════════════════════════════════════════════════════
 
-const SENDER_ID = 'GARDEN TVET';
+const { pool } = require('../config/database');
+const { sendSMS, sendParentWelcomeSMS, sendAutoLinkSuccessSMS } = require('../utils/smsService');
 
-// Send SMS to all linked parents of a student
-async function notifyParentsOfStudent(studentId, message, eventType = 'general') {
+/**
+ * Send SMS when parent registers/creates account
+ */
+const sendParentRegistrationSMS = async (parentId) => {
   try {
-    // Get all parents linked to this student
-    const [parents] = await db.execute(`
-      SELECT DISTINCT
-        u.id,
-        u.phone,
-        CONCAT(u.first_name, ' ', u.last_name) as parent_name,
-        gss.first_name as student_first_name,
-        gss.last_name as student_last_name,
-        gss.student_code,
-        gss.trade_code,
-        gss.level_number
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name, last_name FROM users WHERE id = ?',
+      [parentId]
+    );
+
+    if (!parent || !parent.phone) {
+      return { success: false, error: 'Missing parent phone' };
+    }
+
+    // Send welcome SMS
+    const smsResult = await sendParentWelcomeSMS(parent.phone, parent.first_name);
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, created_at)
+      VALUES (?, 'registration_welcome', ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, 
+      `Welcome message sent to ${parent.first_name}`,
+      parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Parent registration SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send SMS when parent gets automatically linked to student
+ */
+const sendAutoLinkNotificationSMS = async (parentId, studentId) => {
+  try {
+    // Get parent and student info
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name, last_name FROM users WHERE id = ?',
+      [parentId]
+    );
+    
+    const [[student]] = await pool.execute(
+      'SELECT first_name, last_name, student_code, trade_name, level_number FROM global_student_sheets WHERE id = ?',
+      [studentId]
+    );
+
+    if (!parent || !parent.phone || !student) {
+      return { success: false, error: 'Missing contact information' };
+    }
+
+    // Send auto-link success SMS
+    const smsResult = await sendAutoLinkSuccessSMS(
+      parent.phone, 
+      parent.first_name, 
+      `${student.first_name} ${student.last_name}`,
+      student.student_code,
+      student.trade_name,
+      student.level_number
+    );
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, student_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, created_at)
+      VALUES (?, ?, 'auto_link_success', ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, studentId,
+      `Auto-link success: ${student.first_name} ${student.last_name}`,
+      parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Auto link notification SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send SMS when parent-child link is approved
+ */
+const sendLinkApprovalSMS = async (parentId, studentId, applicationId) => {
+  try {
+    // Get parent and student info
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name, last_name FROM users WHERE id = ?',
+      [parentId]
+    );
+    
+    const [[student]] = await pool.execute(
+      'SELECT first_name, last_name, student_code, trade_name, level_number FROM global_student_sheets WHERE id = ?',
+      [studentId]
+    );
+
+    if (!parent || !parent.phone || !student) {
+      console.log('⚠️ Missing parent phone or student info for SMS');
+      return { success: false, error: 'Missing contact information' };
+    }
+
+    // Create rich SMS message
+    const message = `🎓 Garden TVET: Murakaza neza ${parent.first_name}!
+
+✅ BYEMEJWE: Icyifuzo cyo guhuza umwana ${student.first_name} ${student.last_name} cyemejwe!
+
+📋 Amakuru y'umwana:
+• Amazina: ${student.first_name} ${student.last_name}
+• Kode: ${student.student_code || 'ID-' + studentId}
+• Umwuga: ${student.trade_name || 'N/A'}
+• Urwego: ${student.level_number || 'N/A'}
+
+🔍 Ubu mwashobora kureba:
+• Amanota n'ibizamini
+• Kwiga no kutabara
+• Imyitwarire (conduct)
+• Amafaranga (fees)
+• Ubutumwa bw'ishuri
+
+📱 Mwinjire muri sisitemu yacu kugira ngo mubone amakuru yose!
+
+Murakoze kubana natwe! 🙏`;
+
+    // Send SMS
+    const smsResult = await sendSMS(parent.phone, message);
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, student_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, application_id, created_at)
+      VALUES (?, ?, 'link_approved', ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, studentId, message, parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null,
+      applicationId
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Link approval SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send SMS when parent manually linked to student
+ */
+const sendManualLinkSMS = async (parentId, studentId, isNewParent = false) => {
+  try {
+    // Get parent and student info
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name, last_name FROM users WHERE id = ?',
+      [parentId]
+    );
+    
+    const [[student]] = await pool.execute(
+      'SELECT first_name, last_name, student_code, trade_name, level_number FROM global_student_sheets WHERE id = ?',
+      [studentId]
+    );
+
+    if (!parent || !parent.phone || !student) {
+      return { success: false, error: 'Missing contact information' };
+    }
+
+    // Create message based on whether parent is new or existing
+    const message = isNewParent 
+      ? `🎓 Garden TVET: Murakaza neza ${parent.first_name}!
+
+🆕 KONTI NSHYA: Konti yanyu yashyizweho neza!
+
+👨‍👩‍👧‍👦 MWAHUYE N'UMWANA:
+• Amazina: ${student.first_name} ${student.last_name}
+• Kode: ${student.student_code || 'ID-' + studentId}
+• Umwuga: ${student.trade_name || 'N/A'}
+• Urwego: ${student.level_number || 'N/A'}
+
+🔍 Mwashobora kureba:
+• Amanota n'ibizamini
+• Kwiga no kutabara  
+• Imyitwarire (conduct)
+• Amafaranga (fees)
+• Ubutumwa bw'ishuri
+
+📱 Mwinjire muri sisitemu yacu kugira ngo mubone amakuru yose!
+
+Murakoze kubana natwe! 🙏`
+      : `🎓 Garden TVET: Murakaza neza ${parent.first_name}!
+
+✅ MWAHUYE N'UMWANA MUSHYA:
+• Amazina: ${student.first_name} ${student.last_name}
+• Kode: ${student.student_code || 'ID-' + studentId}
+• Umwuga: ${student.trade_name || 'N/A'}
+• Urwego: ${student.level_number || 'N/A'}
+
+🔍 Ubu mwashobora kureba amakuru yabo yose: amanota, kwiga, imyitwarire, amafaranga n'ibindi.
+
+📱 Mwinjire muri sisitemu yacu!
+
+Murakoze! 🙏`;
+
+    // Send SMS
+    const smsResult = await sendSMS(parent.phone, message);
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, student_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, created_at)
+      VALUES (?, ?, 'manual_link', ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, studentId, message, parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Manual link SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send SMS when application is submitted
+ */
+const sendApplicationSubmittedSMS = async (parentId, childName, applicationId) => {
+  try {
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name FROM users WHERE id = ?',
+      [parentId]
+    );
+
+    if (!parent || !parent.phone) {
+      return { success: false, error: 'Missing parent phone' };
+    }
+
+    const message = `🎓 Garden TVET: Murakoze ${parent.first_name}!
+
+📝 ICYIFUZO CYOHEREJWE: Icyifuzo cyo guhuza umwana ${childName} cyoherejwe neza.
+
+⏳ TEGEREZA: Abakozi b'ishuri bazasuzuma icyifuzo cyanyu hanyuma bakabamenyesha.
+
+📱 Muzabona ubutumwa bw'inyemezwa vuba.
+
+Murakoze guhitamo Garden TVET! 🙏`;
+
+    const smsResult = await sendSMS(parent.phone, message);
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, application_id, created_at)
+      VALUES (?, 'application_submitted', ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, message, parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null,
+      applicationId
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Application submitted SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Send SMS when application is rejected
+ */
+const sendApplicationRejectedSMS = async (parentId, childName, rejectionReason, applicationId) => {
+  try {
+    const [[parent]] = await pool.execute(
+      'SELECT phone, first_name FROM users WHERE id = ?',
+      [parentId]
+    );
+
+    if (!parent || !parent.phone) {
+      return { success: false, error: 'Missing parent phone' };
+    }
+
+    const message = `🎓 Garden TVET: ${parent.first_name},
+
+❌ ICYIFUZO CYANZE: Icyifuzo cyo guhuza umwana ${childName} cyanze.
+
+📋 IMPAMVU: ${rejectionReason}
+
+🔄 ONGERA UGERAGEZE: Mwashobora kongera gusaba nyuma yo gukosora ibibazo byavuzwe.
+
+📞 HAMAGARA: Muhamagare ishuri kuri +250783407691 kugira ngo mubonane n'abakozi.
+
+Murakoze! 🙏`;
+
+    const smsResult = await sendSMS(parent.phone, message);
+
+    // Log notification
+    await pool.execute(`
+      INSERT INTO parent_notifications_log 
+      (parent_id, notification_type, message, phone_number, 
+       delivery_status, provider, message_id, application_id, created_at)
+      VALUES (?, 'application_rejected', ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      parentId, message, parent.phone,
+      smsResult.success ? 'sent' : 'failed',
+      smsResult.provider || 'unknown',
+      smsResult.messageId || null,
+      applicationId
+    ]);
+
+    return smsResult;
+  } catch (error) {
+    console.error('Application rejected SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONDUCT & DISCIPLINE NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Send SMS when conduct is removed
+ */
+const sendConductRemovalSMS = async (studentId, conductType, pointsDeducted, newScore, description) => {
+  try {
+    // Get student info
+    const [[student]] = await pool.execute(
+      'SELECT first_name, last_name FROM global_student_sheets WHERE id = ?',
+      [studentId]
+    );
+
+    if (!student) {
+      return { success: false, error: 'Student not found' };
+    }
+
+    // Get all linked parents
+    const [parents] = await pool.execute(`
+      SELECT DISTINCT u.id, u.phone, u.first_name
       FROM parent_child_links pcl
       JOIN users u ON pcl.parent_id = u.id
-      JOIN global_student_sheets gss ON pcl.student_id = gss.id
       WHERE pcl.student_id = ? AND pcl.status = 'active' AND u.phone IS NOT NULL
     `, [studentId]);
 
-    if (parents.length === 0) {
-      console.log(`No parents found for student ${studentId}`);
-      return { success: true, sent: 0, message: 'No parents to notify' };
-    }
-
-    let sentCount = 0;
-    const errors = [];
+    const results = [];
 
     for (const parent of parents) {
-      try {
-        const fullMessage = `🎓 GARDEN TVET SCHOOL 🎓\n\nMwaramutse ${parent.parent_name},\n\n${message}\n\n📚 Umwana: ${parent.student_first_name} ${parent.student_last_name}\n📝 Kode: ${parent.student_code}\n🎯 Umwuga: ${parent.trade_code} - Level ${parent.level_number}\n\n📞 Hamagara: +250 788 123 456\n📧 Email: info@gardentvet.rw\n\nIgihe: ${new Date().toLocaleString('rw-RW')}\n\n- Garden TVET School`;
+      const message = `🎓 Garden TVET: ${parent.first_name},
 
-        await db.execute(
-          'INSERT INTO sms_logs (phone, message, status, provider, sender_id, event_type, student_id, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [parent.phone, fullMessage, 'sent', 'africastalking', SENDER_ID, eventType, studentId, parent.id]
-        );
+⚠️ IGIHANO: Umwana ${student.first_name} ${student.last_name} yakiriye igihano.
 
-        sentCount++;
-        console.log(`📱 SMS sent to ${parent.parent_name} (${parent.phone}) for ${eventType}`);
-      } catch (err) {
-        errors.push({ parent: parent.parent_name, error: err.message });
-        console.error(`Failed to send SMS to ${parent.parent_name}:`, err);
-      }
+📋 AMAKURU:
+• Ubwoko: ${conductType}
+• Amanota yakuweho: ${pointsDeducted}
+• Amanota ashya: ${newScore}/40
+• Impamvu: ${description}
+
+👨‍👩‍👧‍👦 MUFASHE UMWANA: Muganire n'umwana mwanyu mukamwigisha imyitwarire myiza.
+
+📞 HAMAGARA: +250783407691 niba mufite ibibazo.
+
+Murakoze! 🙏`;
+
+      const smsResult = await sendSMS(parent.phone, message);
+      results.push({ parentId: parent.id, ...smsResult });
+
+      // Log notification
+      await pool.execute(`
+        INSERT INTO parent_notifications_log 
+        (parent_id, student_id, notification_type, message, phone_number, 
+         delivery_status, provider, message_id, created_at)
+        VALUES (?, ?, 'conduct_removal', ?, ?, ?, ?, ?, NOW())
+      `, [
+        parent.id, studentId, message, parent.phone,
+        smsResult.success ? 'sent' : 'failed',
+        smsResult.provider || 'unknown',
+        smsResult.messageId || null
+      ]);
     }
 
-    return {
-      success: true,
-      sent: sentCount,
-      total: parents.length,
-      errors: errors.length > 0 ? errors : null
-    };
+    return { success: true, results, parentsNotified: results.filter(r => r.success).length };
   } catch (error) {
-    console.error('Error in notifyParentsOfStudent:', error);
+    console.error('Conduct removal SMS error:', error);
     return { success: false, error: error.message };
   }
-}
+};
 
-// Conduct removal notification
-async function notifyConductRemoval(studentId, conductData) {
-  const message = `⚠️ IMYITWARIRE / CONDUCT ALERT ⚠️\n\n` +
-    `Umwana wawe yakiriye igihano ku myitwarire.\n\n` +
-    `📊 AMAKURU:\n` +
-    `- Amanota yavanweho: ${conductData.points_removed}/40\n` +
-    `- Amanota asigaye: ${conductData.remaining_score}/40\n` +
-    `- Icyiciro: ${conductData.grade || 'N/A'}\n` +
-    `- Impamvu: ${conductData.reason || 'N/A'}\n` +
-    `- Uwabikoreye: ${conductData.removed_by || 'Staff'}\n\n` +
-    `⚠️ Mwongere muganire n'umwana wanyu kugira ngo imyitwarire irusheho kuba myiza.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'conduct_removal');
-}
-
-// Leave approval notification
-async function notifyLeaveApproval(studentId, leaveData) {
-  const message = `✅ URUHUSHYA RWEMEJWE / LEAVE APPROVED ✅\n\n` +
-    `Uruhushya rw'umwana wanyu rwemejwe.\n\n` +
-    `📅 AMAKURU:\n` +
-    `- Itariki yo gutangira: ${leaveData.start_date}\n` +
-    `- Itariki yo kurangira: ${leaveData.end_date}\n` +
-    `- Iminsi: ${leaveData.days} day(s)\n` +
-    `- Impamvu: ${leaveData.reason || 'N/A'}\n` +
-    `- Uwemeje: ${leaveData.approved_by || 'Staff'}\n\n` +
-    `✅ Umwana ashobora kuva mu ishuri muri iyi minsi.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'leave_approval');
-}
-
-// Sick/Absent notification
-async function notifySickAbsent(studentId, healthData) {
-  const message = `🏥 UBUZIMA / HEALTH ALERT 🏥\n\n` +
-    `Umwana wanyu ${healthData.status === 'sick' ? 'arwaye' : 'ntiyitabye ku masomo'}.\n\n` +
-    `📋 AMAKURU:\n` +
-    `- Uko bimeze: ${healthData.status === 'sick' ? 'Arwaye' : 'Ntiyitabye'}\n` +
-    `- Itariki: ${healthData.date || new Date().toLocaleDateString()}\n` +
-    `- Ibisobanuro: ${healthData.description || 'N/A'}\n` +
-    `- Icyakozwe: ${healthData.action_taken || 'Yahawe ubufasha'}\n\n` +
-    `⚠️ Mwongere muhamagare ishuri kugira ngo mubone amakuru arambuye.`;
-
-  return await notifyParentsOfStudent(studentId, message, healthData.status === 'sick' ? 'sick' : 'absent');
-}
-
-// Grade update notification
-async function notifyGradeUpdate(studentId, gradeData) {
-  const message = `📊 AMANOTA MASHYA / NEW GRADES 📊\n\n` +
-    `Amanota mashya y'umwana wanyu yashyizwe.\n\n` +
-    `📚 AMAKURU:\n` +
-    `- Icyiciro: ${gradeData.subject || 'N/A'}\n` +
-    `- Amanota: ${gradeData.score}/${gradeData.total}\n` +
-    `- Ijanisha: ${gradeData.percentage}%\n` +
-    `- Icyiciro: ${gradeData.grade || 'N/A'}\n` +
-    `- Ikizamini: ${gradeData.exam_type || 'Assessment'}\n\n` +
-    `✅ Murebe amanota yose kuri portal yacu.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'grade_update');
-}
-
-// Fee reminder notification
-async function notifyFeeReminder(studentId, feeData) {
-  const message = `💰 AMAFARANGA / FEE REMINDER 💰\n\n` +
-    `Amafaranga y'ishuri y'umwana wanyu.\n\n` +
-    `💵 AMAKURU:\n` +
-    `- Amafaranga yose: ${feeData.total_amount} RWF\n` +
-    `- Yishyuwe: ${feeData.paid_amount} RWF\n` +
-    `- Asigaye: ${feeData.balance} RWF\n` +
-    `- Itariki yo kwishyura: ${feeData.due_date || 'N/A'}\n\n` +
-    `⚠️ Mwongere mwishyure amafaranga asigaye kugira ngo umwana akomeze kwiga neza.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'fee_reminder');
-}
-
-// Attendance alert notification
-async function notifyAttendanceAlert(studentId, attendanceData) {
-  const message = `📅 KWITABIRA AMASOMO / ATTENDANCE ALERT 📅\n\n` +
-    `Kwitabira amasomo kw'umwana wanyu.\n\n` +
-    `📊 AMAKURU:\n` +
-    `- Ijanisha yo kwitabira: ${attendanceData.percentage}%\n` +
-    `- Iminsi yitabye: ${attendanceData.present_days}\n` +
-    `- Iminsi yibuze: ${attendanceData.absent_days}\n` +
-    `- Icyumweru: ${attendanceData.week || 'This week'}\n\n` +
-    `${attendanceData.percentage < 75 ? '⚠️ Kwitabira kw\'umwana wanyu ni gike. Mwongere muganire na we.' : '✅ Umwana wanyu yitabira amasomo neza.'}`;
-
-  return await notifyParentsOfStudent(studentId, message, 'attendance_alert');
-}
-
-// Assignment notification
-async function notifyAssignment(studentId, assignmentData) {
-  const message = `📝 IBIKORWA BY'URUGO / ASSIGNMENT 📝\n\n` +
-    `Umwana wanyu afite ibikorwa bishya by'urugo.\n\n` +
-    `📚 AMAKURU:\n` +
-    `- Icyiciro: ${assignmentData.subject || 'N/A'}\n` +
-    `- Umutwe: ${assignmentData.title || 'N/A'}\n` +
-    `- Itariki yo gutanga: ${assignmentData.due_date || 'N/A'}\n` +
-    `- Uko bimeze: ${assignmentData.status || 'Pending'}\n\n` +
-    `✅ Mufashe umwana wanyu gukora ibikorwa bye neza.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'assignment');
-}
-
-// Exam schedule notification
-async function notifyExamSchedule(studentId, examData) {
-  const message = `📖 IKIZAMINI / EXAM SCHEDULE 📖\n\n` +
-    `Ikizamini cy'umwana wanyu kizatangira vuba.\n\n` +
-    `📅 AMAKURU:\n` +
-    `- Icyiciro: ${examData.subject || 'N/A'}\n` +
-    `- Itariki: ${examData.exam_date || 'N/A'}\n` +
-    `- Igihe: ${examData.time || 'N/A'}\n` +
-    `- Ubwoko: ${examData.exam_type || 'N/A'}\n\n` +
-    `✅ Mufashe umwana wanyu kwiga neza kugira ngo abone amanota meza.`;
-
-  return await notifyParentsOfStudent(studentId, message, 'exam_schedule');
-}
-
-// General announcement notification
-async function notifyAnnouncement(studentId, announcementData) {
-  const message = `📢 ITANGAZO / ANNOUNCEMENT 📢\n\n` +
-    `${announcementData.title || 'Itangazo rishya'}\n\n` +
-    `${announcementData.message}\n\n` +
-    `${announcementData.action_required ? '⚠️ Ibikorwa bikenewe: ' + announcementData.action_required : ''}`;
-
-  return await notifyParentsOfStudent(studentId, message, 'announcement');
-}
-
-// Welcome message for new parent registration
-async function sendWelcomeSMS(parentId, parentData) {
+/**
+ * Send SMS when leave is approved
+ */
+const sendLeaveApprovalSMS = async (studentId, leaveType, reason, startTime, endTime, approvedBy) => {
   try {
-    const message = `🎓 MURAKAZA NEZA KURI GARDEN TVET SCHOOL! 🎓\n\n` +
-      `Mwaramutse ${parentData.first_name} ${parentData.last_name},\n\n` +
-      `Murakoze kwiyandikisha kuri sisitemu yacu!\n\n` +
-      `📱 KONTI YANYU:\n` +
-      `- Telefoni: ${parentData.phone}\n` +
-      `- Email: ${parentData.email || 'N/A'}\n\n` +
-      `📋 INTAMBWE ZIKURIKIRA:\n` +
-      `1. Injira kuri portal yacu\n` +
-      `2. Uzuza ifishi yo gusaba guhuza umwana\n` +
-      `3. Tegereza kwemezwa na DOD\n` +
-      `4. Uzabona ubutumwa iyo byemejwe\n\n` +
-      `🔔 IBYIZA BY'IKORANABUHANGA:\n` +
-      `✓ Kureba amanota y'umwana\n` +
-      `✓ Kwitabira amasomo (attendance)\n` +
-      `✓ Imyitwarire (40/40 conduct system)\n` +
-      `✓ Amafaranga n'ibiciro\n` +
-      `✓ Ubutumwa bw'abarimu\n` +
-      `✓ Ibikorwa by'ishuri\n` +
-      `✓ Raporo z'umwana\n\n` +
-      `📞 TWANDIKIRE:\n` +
-      `Tel: +250 788 123 456\n` +
-      `Email: info@gardentvet.rw\n\n` +
-      `Murakoze guhitamo Garden TVET School!\n\n` +
-      `Igihe: ${new Date().toLocaleString('rw-RW')}\n\n` +
-      `- Garden TVET School`;
-
-    await db.execute(
-      'INSERT INTO sms_logs (phone, message, status, provider, sender_id, event_type, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
-      [parentData.phone, message, 'sent', 'africastalking', SENDER_ID, 'welcome', parentId]
+    // Get student info
+    const [[student]] = await pool.execute(
+      'SELECT first_name, last_name FROM global_student_sheets WHERE id = ?',
+      [studentId]
     );
 
-    console.log(`📱 Welcome SMS sent to ${parentData.first_name} ${parentData.last_name} at ${parentData.phone}`);
-    return { success: true };
+    if (!student) {
+      return { success: false, error: 'Student not found' };
+    }
+
+    // Get all linked parents
+    const [parents] = await pool.execute(`
+      SELECT DISTINCT u.id, u.phone, u.first_name
+      FROM parent_child_links pcl
+      JOIN users u ON pcl.parent_id = u.id
+      WHERE pcl.student_id = ? AND pcl.status = 'active' AND u.phone IS NOT NULL
+    `, [studentId]);
+
+    const results = [];
+
+    for (const parent of parents) {
+      const message = `🎓 Garden TVET: ${parent.first_name},
+
+✅ URUHUSHYA: Umwana ${student.first_name} ${student.last_name} yemerewe gusohoka.
+
+📋 AMAKURU:
+• Ubwoko: ${leaveType}
+• Impamvu: ${reason}
+• Igihe: ${startTime}${endTime && endTime !== startTime ? ' - ' + endTime : ''}
+• Byemejwe na: ${approvedBy}
+
+⚠️ MWIRINDE: Mwirinde umwana mwanyu akagera mu nzira nziza.
+
+📞 HAMAGARA: +250783407691 niba mufite ibibazo.
+
+Murakoze! 🙏`;
+
+      const smsResult = await sendSMS(parent.phone, message);
+      results.push({ parentId: parent.id, ...smsResult });
+
+      // Log notification
+      await pool.execute(`
+        INSERT INTO parent_notifications_log 
+        (parent_id, student_id, notification_type, message, phone_number, 
+         delivery_status, provider, message_id, created_at)
+        VALUES (?, ?, 'leave_approval', ?, ?, ?, ?, ?, NOW())
+      `, [
+        parent.id, studentId, message, parent.phone,
+        smsResult.success ? 'sent' : 'failed',
+        smsResult.provider || 'unknown',
+        smsResult.messageId || null
+      ]);
+    }
+
+    return { success: true, results, parentsNotified: results.filter(r => r.success).length };
   } catch (error) {
-    console.error('Error sending welcome SMS:', error);
+    console.error('Leave approval SMS error:', error);
     return { success: false, error: error.message };
   }
-}
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get SMS notification statistics
+ */
+const getSMSStats = async () => {
+  try {
+    const [[stats]] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_notifications,
+        SUM(CASE WHEN delivery_status = 'sent' THEN 1 ELSE 0 END) as sent,
+        SUM(CASE WHEN delivery_status = 'failed' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN delivery_status = 'pending' THEN 1 ELSE 0 END) as pending,
+        COUNT(DISTINCT parent_id) as unique_parents,
+        COUNT(DISTINCT student_id) as unique_students
+      FROM parent_notifications_log
+      WHERE DATE(created_at) = CURDATE()
+    `);
+
+    return { success: true, stats };
+  } catch (error) {
+    console.error('SMS stats error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Retry failed SMS notifications
+ */
+const retryFailedSMS = async (limit = 10) => {
+  try {
+    const [failedNotifications] = await pool.execute(`
+      SELECT * FROM parent_notifications_log 
+      WHERE delivery_status = 'failed' 
+      AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `, [limit]);
+
+    const results = [];
+
+    for (const notification of failedNotifications) {
+      const smsResult = await sendSMS(notification.phone_number, notification.message);
+      
+      if (smsResult.success) {
+        await pool.execute(`
+          UPDATE parent_notifications_log 
+          SET delivery_status = 'sent', provider = ?, message_id = ?, updated_at = NOW()
+          WHERE id = ?
+        `, [smsResult.provider, smsResult.messageId, notification.id]);
+      }
+
+      results.push({ notificationId: notification.id, ...smsResult });
+    }
+
+    return { success: true, results, retried: results.length };
+  } catch (error) {
+    console.error('Retry failed SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
 
 module.exports = {
-  notifyParentsOfStudent,
-  notifyConductRemoval,
-  notifyLeaveApproval,
-  notifySickAbsent,
-  notifyGradeUpdate,
-  notifyFeeReminder,
-  notifyAttendanceAlert,
-  notifyAssignment,
-  notifyExamSchedule,
-  notifyAnnouncement,
-  sendWelcomeSMS
+  sendLinkApprovalSMS,
+  sendManualLinkSMS,
+  sendApplicationSubmittedSMS,
+  sendApplicationRejectedSMS,
+  sendConductRemovalSMS,
+  sendLeaveApprovalSMS,
+  sendParentRegistrationSMS,
+  sendAutoLinkNotificationSMS,
+  getSMSStats,
+  retryFailedSMS
 };

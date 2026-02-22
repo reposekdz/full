@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import RealPaymentManagement from '@/components/RealPaymentManagement';
 
 interface Payment {
   id: number;
@@ -665,7 +666,7 @@ const ComprehensiveAccountantDashboard: React.FC = () => {
           </div>
         ) : (
           <>
-            {activeTab === 'payments' && renderPaymentsTab()}
+            {activeTab === 'payments' && <RealPaymentManagement />}
             {activeTab === 'expenses' && renderExpensesTab()}
             {activeTab === 'students' && renderStudentsTab()}
             {activeTab === 'sod-level4' && renderSodLevel4Tab()}

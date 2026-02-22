@@ -13,6 +13,11 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { sendSMS } = require('../utils/smsService');
+const { 
+  sendLinkApprovalSMS, 
+  sendApplicationSubmittedSMS, 
+  sendApplicationRejectedSMS 
+} = require('../services/parentNotificationService');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PARENT ENDPOINTS
@@ -37,6 +42,25 @@ router.post('/submit-application', authenticateToken, requireRole(['parent']), a
       return res.status(400).json({
         success: false,
         message: 'Uzuza amakuru yose: izina, irindi zina, igitsina, umwuga, n\'urwego'
+      });
+    }
+
+    // Check for duplicate application
+    const [[existing]] = await pool.execute(`
+      SELECT id FROM parent_linking_applications
+      WHERE parent_id = ? 
+      AND LOWER(child_first_name) = LOWER(?)
+      AND LOWER(child_last_name) = LOWER(?)
+      AND child_trade_code = ?
+      AND child_level_number = ?
+      AND status IN ('pending', 'approved')
+      LIMIT 1
+    `, [parentId, child_first_name, child_last_name, child_trade_code, child_level_number]);
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Warasabye guhuza n\'uyu mwana. Tegereza inyemezwa.'
       });
     }
 
@@ -75,13 +99,12 @@ router.post('/submit-application', authenticateToken, requireRole(['parent']), a
       WHERE role IN ('dod', 'dos', 'headmaster', 'admin') AND status = 'active'
     `, [child_first_name, child_last_name]);
 
-    // Send SMS to parent confirming application submission
-    const [[parentUser]] = await pool.execute('SELECT phone FROM users WHERE id = ?', [parentId]);
-    if (parentUser && parentUser.phone) {
-      await sendSMS(
-        parentUser.phone,
-        `Garden TVET: Icyifuzo cyo guhuza umwana ${child_first_name} ${child_last_name} cyoherejwe neza. Tegereza inyemezwa y'abakozi b'ishuri.`
-      );
+    // Send comprehensive SMS to parent confirming application submission
+    try {
+      await sendApplicationSubmittedSMS(parentId, child_first_name + ' ' + child_last_name, output.application_id);
+      console.log('✅ Application submitted SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS sending failed:', smsError);
     }
 
     res.json({
@@ -230,13 +253,12 @@ router.post('/submit-direct-linking', authenticateToken, requireRole(['parent'])
       WHERE role IN ('dod', 'dos', 'headmaster', 'admin') AND status = 'active'
     `, [student.first_name, student.last_name, student.student_code]);
 
-    // Send SMS to parent
-    const [[parentUser]] = await pool.execute('SELECT phone FROM users WHERE id = ?', [parentId]);
-    if (parentUser && parentUser.phone) {
-      await sendSMS(
-        parentUser.phone,
-        `Garden TVET: Icyifuzo cyo guhuza umwana ${student.first_name} ${student.last_name} (${student.student_code}) cyoherejwe neza. Tegereza inyemezwa y'abakozi b'ishuri.`
-      );
+    // Send comprehensive SMS to parent
+    try {
+      await sendApplicationSubmittedSMS(parentId, student.first_name + ' ' + student.last_name, result.insertId);
+      console.log('✅ Direct linking SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS sending failed:', smsError);
     }
 
     res.json({
@@ -290,40 +312,45 @@ router.get('/my-applications', authenticateToken, requireRole(['parent']), async
   }
 });
 
-// ─── Get My Linked Children ────────────────────────────────────────────────
-router.get('/my-children', authenticateToken, requireRole(['parent']), async (req, res) => {
+// ─── Delete Application (Parent can delete their own pending application) ────
+router.delete('/delete-application/:applicationId', authenticateToken, requireRole(['parent']), async (req, res) => {
   try {
+    const { applicationId } = req.params;
     const parentId = req.user.userId;
 
-    // Check if tables exist first
-    const [tables] = await pool.execute(`
-      SHOW TABLES LIKE 'parent_child_links'
-    `);
+    // Verify parent owns this application and it's pending
+    const [[app]] = await pool.execute(`
+      SELECT * FROM parent_linking_applications 
+      WHERE id = ? AND parent_id = ? AND status = 'pending'
+    `, [applicationId, parentId]);
 
-    if (tables.length === 0) {
-      // Table doesn't exist, return empty array
-      return res.json({
-        success: true,
-        children: [],
-        total: 0,
-        message: 'No linked children found. Please submit a linking request first.'
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found or cannot be deleted'
       });
     }
 
-    // Check if global_student_sheets exists
-    const [studentTables] = await pool.execute(`
-      SHOW TABLES LIKE 'global_student_sheets'
-    `);
+    // Delete the application
+    await pool.execute(`
+      DELETE FROM parent_linking_applications WHERE id = ?
+    `, [applicationId]);
 
-    if (studentTables.length === 0) {
-      return res.json({
-        success: true,
-        children: [],
-        total: 0,
-        message: 'Student database not available. Please contact administrator.'
-      });
-    }
+    res.json({
+      success: true,
+      message: 'Application deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete application error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
+// ─── Get My Linked Children ────────────────────────────────────────────────
+router.get('/my-children', authenticateToken, requireRole(['parent']), async (req, res) => {
+  const parentId = req.user.userId;
+  
+  try {
     const [children] = await pool.execute(`
       SELECT 
         pcl.*,
@@ -348,20 +375,17 @@ router.get('/my-children', authenticateToken, requireRole(['parent']), async (re
       ORDER BY gss.first_name, gss.last_name
     `, [parentId]);
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      children,
-      total: children.length
+      children: children || [],
+      total: (children || []).length
     });
   } catch (error) {
-    console.error('Get my children error:', error);
-    // Return empty array instead of error to prevent frontend crash
-    res.json({
+    console.error('Get my children error:', error.message);
+    return res.status(200).json({
       success: true,
       children: [],
-      total: 0,
-      message: 'No linked children found. Please submit a linking request first.',
-      error: error.message
+      total: 0
     });
   }
 });
@@ -690,6 +714,21 @@ router.post('/approve/:applicationId', authenticateToken, requireRole(['dod', 'd
     const staffName = `${req.user.first_name} ${req.user.last_name}`;
     const staffRole = req.user.role;
 
+    // Get application details first
+    const [[app]] = await pool.execute(`
+      SELECT pla.*, gss.first_name, gss.last_name, gss.student_code, gss.trade_name, gss.level_number
+      FROM parent_linking_applications pla
+      LEFT JOIN global_student_sheets gss ON pla.matched_student_id = gss.id
+      WHERE pla.id = ?
+    `, [applicationId]);
+
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
     // Call stored procedure
     await pool.execute(
       `CALL sp_approve_parent_linking_application(?, ?, ?, ?, @link_id, @success)`,
@@ -706,15 +745,7 @@ router.post('/approve/:applicationId', authenticateToken, requireRole(['dod', 'd
       });
     }
 
-    // Get application details for notification
-    const [[app]] = await pool.execute(`
-      SELECT pla.*, gss.first_name, gss.last_name
-      FROM parent_linking_applications pla
-      LEFT JOIN global_student_sheets gss ON pla.matched_student_id = gss.id
-      WHERE pla.id = ?
-    `, [applicationId]);
-
-    // Notify parent
+    // Notify parent in database
     await pool.execute(`
       INSERT INTO notifications (user_id, title, message, type, created_at)
       VALUES (?, 'Linking Request Approved', 
@@ -722,19 +753,25 @@ router.post('/approve/:applicationId', authenticateToken, requireRole(['dod', 'd
               'parent_link_approved', NOW())
     `, [app.parent_id, app.first_name, app.last_name]);
 
-    // Send SMS to parent confirming approval
-    const [[parentUser]] = await pool.execute('SELECT phone FROM users WHERE id = ?', [app.parent_id]);
-    if (parentUser && parentUser.phone) {
-      await sendSMS(
-        parentUser.phone,
-        `Garden TVET: Icyifuzo cyo guhuza umwana ${app.first_name} ${app.last_name} cyemejwe! Ubu ushobora kureba amakuru yabo yose.`
-      );
+    // Send comprehensive SMS to parent confirming approval
+    try {
+      await sendLinkApprovalSMS(app.parent_id, app.matched_student_id, applicationId);
+      console.log('✅ Link approval SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS sending failed:', smsError);
     }
 
     res.json({
       success: true,
-      message: 'Application approved successfully! Parent can now access child data.',
-      link_id: output.link_id
+      message: 'Application approved successfully! Parent notified via SMS.',
+      link_id: output.link_id,
+      sms_sent: parentUser && parentUser.phone ? true : false,
+      student_info: {
+        name: `${app.first_name} ${app.last_name}`,
+        code: app.student_code,
+        trade: app.trade_name,
+        level: app.level_number
+      }
     });
   } catch (error) {
     console.error('Approve application error:', error);
@@ -787,13 +824,12 @@ router.post('/reject/:applicationId', authenticateToken, requireRole(['dod', 'di
               'parent_link_rejected', NOW())
     `, [app.parent_id, rejection_reason]);
 
-    // Send SMS to parent about rejection
-    const [[parentUser]] = await pool.execute('SELECT phone FROM users WHERE id = ?', [app.parent_id]);
-    if (parentUser && parentUser.phone) {
-      await sendSMS(
-        parentUser.phone,
-        `Garden TVET: Icyifuzo cyo guhuza umwana cyanze. Impamvu: ${rejection_reason}`
-      );
+    // Send comprehensive SMS to parent about rejection
+    try {
+      await sendApplicationRejectedSMS(app.parent_id, app.child_first_name + ' ' + app.child_last_name, rejection_reason, applicationId);
+      console.log('✅ Rejection SMS sent to parent');
+    } catch (smsError) {
+      console.error('❌ SMS sending failed:', smsError);
     }
 
     res.json({

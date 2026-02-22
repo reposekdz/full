@@ -5,7 +5,7 @@
 export const GLOBAL_TRADES = [
   { id: 1, code: 'BDC', name: 'Building Construction', name_rw: 'Kubaka' },
   { id: 2, code: 'SOD', name: 'Software Development', name_rw: 'Gutegura Porogaramu' },
-  { id: 3, code: 'AUT', name: 'Automotive Technology', name_rw: 'Ikoranabuhanga rya Modoka' }
+  { id: 3, code: 'AUTO', name: 'Automotive Technology', name_rw: 'Ikoranabuhanga rya Modoka' }
 ];
 
 export const GLOBAL_LEVELS = [
@@ -14,12 +14,12 @@ export const GLOBAL_LEVELS = [
   { id: 'bdc_sod_4', level_number: 4, level_suffix: '', name: 'Level 4', display: 'Level 4', trade_codes: ['BDC', 'SOD'] },
   { id: 'bdc_sod_5', level_number: 5, level_suffix: '', name: 'Level 5', display: 'Level 5', trade_codes: ['BDC', 'SOD'] },
   
-  // AUT: Levels 3, 4A, 4B, 5A, 5B
-  { id: 'aut_3', level_number: 3, level_suffix: '', name: 'Level 3', display: 'Level 3', trade_codes: ['AUT'] },
-  { id: 'aut_4a', level_number: 4, level_suffix: 'A', name: 'Level 4A', display: 'Level 4A', trade_codes: ['AUT'] },
-  { id: 'aut_4b', level_number: 4, level_suffix: 'B', name: 'Level 4B', display: 'Level 4B', trade_codes: ['AUT'] },
-  { id: 'aut_5a', level_number: 5, level_suffix: 'A', name: 'Level 5A', display: 'Level 5A', trade_codes: ['AUT'] },
-  { id: 'aut_5b', level_number: 5, level_suffix: 'B', name: 'Level 5B', display: 'Level 5B', trade_codes: ['AUT'] }
+  // AUTO: Levels 3, 4A, 4B, 5A, 5B
+  { id: 'auto_3', level_number: 3, level_suffix: '', name: 'Level 3', display: 'Level 3', trade_codes: ['AUTO'] },
+  { id: 'auto_4a', level_number: 4, level_suffix: 'A', name: 'Level 4A', display: 'Level 4A', trade_codes: ['AUTO'] },
+  { id: 'auto_4b', level_number: 4, level_suffix: 'B', name: 'Level 4B', display: 'Level 4B', trade_codes: ['AUTO'] },
+  { id: 'auto_5a', level_number: 5, level_suffix: 'A', name: 'Level 5A', display: 'Level 5A', trade_codes: ['AUTO'] },
+  { id: 'auto_5b', level_number: 5, level_suffix: 'B', name: 'Level 5B', display: 'Level 5B', trade_codes: ['AUTO'] }
 ];
 
 export const getLevelsForTrade = (tradeCode: string) => {

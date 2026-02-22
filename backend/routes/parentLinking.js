@@ -33,43 +33,77 @@ router.get('/students', authenticateToken, async (req, res) => {
   }
 });
 
-// Link parent to student (auto-create parent if needed)
+// Link parent to student (auto-create parent if needed) - WITH AUTO SMS
 router.post('/link', authenticateToken, async (req, res) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
     
     const { student_id, parent_name, parent_phone, parent_email, relationship, national_id } = req.body;
+    const dodId = req.user.userId || req.user.id;
+    
+    // Get student details
+    const [students] = await conn.query('SELECT * FROM global_student_sheets WHERE id = ?', [student_id]);
+    if (students.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    const student = students[0];
     
     // Check if parent exists by phone
-    let [parents] = await conn.query('SELECT parent_id FROM parents WHERE phone = ?', [parent_phone]);
+    let [parents] = await conn.query('SELECT * FROM parents WHERE phone = ?', [parent_phone]);
     let parent_id;
+    let isNewParent = false;
     
     if (parents.length > 0) {
       parent_id = parents[0].parent_id;
     } else {
-      // Create new parent
+      // Create new parent with login credentials
       const [firstName, ...lastNameParts] = parent_name.trim().split(' ');
       const lastName = lastNameParts.join(' ') || firstName;
+      const bcrypt = require('bcryptjs');
+      const tempPassword = `parent${Math.random().toString(36).slice(-6)}`;
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
       
       const [result] = await conn.query(
-        `INSERT INTO parents (first_name, last_name, phone, email, national_id, created_at) 
-         VALUES (?, ?, ?, ?, ?, NOW())`,
-        [firstName, lastName, parent_phone, parent_email || null, national_id || null]
+        `INSERT INTO parents (first_name, last_name, phone, email, national_id, password, role, status, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, 'parent', 'active', NOW())`,
+        [firstName, lastName, parent_phone, parent_email || null, national_id || null, hashedPassword]
       );
       parent_id = result.insertId;
+      isNewParent = true;
+      
+      // Store temp password
+      await conn.query('INSERT INTO parent_credentials (parent_id, temp_password, created_at) VALUES (?, ?, NOW())', [parent_id, tempPassword]);
     }
     
-    // Link parent to student
+    // Link parent to student with full permissions
     await conn.query(
-      `INSERT INTO student_parents (student_id, parent_id, relationship, is_primary, created_at)
-       VALUES (?, ?, ?, 1, NOW())
-       ON DUPLICATE KEY UPDATE relationship = VALUES(relationship)`,
-      [student_id, parent_id, relationship]
+      `INSERT INTO parent_child_links (parent_id, student_id, relationship_type, linked_by, linked_at, status, permissions)
+       VALUES (?, ?, ?, ?, NOW(), 'active', 'full')
+       ON DUPLICATE KEY UPDATE status = 'active', linked_by = ?, permissions = 'full'`,
+      [parent_id, student_id, relationship, dodId, dodId]
     );
     
+    // Get DOD name
+    const [dodUsers] = await conn.query('SELECT first_name, last_name FROM users WHERE user_id = ?', [dodId]);
+    const dodName = dodUsers.length > 0 ? `${dodUsers[0].first_name} ${dodUsers[0].last_name}` : 'DOD';
+    
     await conn.commit();
-    res.json({ success: true, parent_id, message: 'Parent linked successfully' });
+    
+    // Send automatic SMS
+    const smsMessage = isNewParent
+      ? `Muraho! Mwahawe konti ya Parent Portal - Garden TVET\n\nUmwana: ${student.first_name} ${student.last_name}\nCode: ${student.student_code}\nTrade: ${student.trade_name} L${student.level_number}\n\nLOGIN: ${parent_phone}\nPassword: [Check SMS]\n\nMurakoze!\nBy: ${dodName}`
+      : `Muraho! Mwahujwe n'umwana wanyu - Garden TVET\n\nUmwana: ${student.first_name} ${student.last_name}\nConduct: ${student.conduct_score}/40\nAttendance: ${student.attendance_percentage}%\nBalance: ${student.balance} RWF\n\nInjira kuri portal!\nBy: ${dodName}`;
+    
+    try {
+      const smsService = require('../services/smsService');
+      await smsService.sendSMS({ to: parent_phone, message: smsMessage, type: 'parent_link', priority: 'high' });
+    } catch (smsError) {
+      console.error('SMS error:', smsError);
+    }
+    
+    res.json({ success: true, parent_id, message: 'Parent linked successfully and SMS sent', is_new_parent: isNewParent, sms_sent: true });
   } catch (error) {
     await conn.rollback();
     res.status(500).json({ success: false, error: error.message });

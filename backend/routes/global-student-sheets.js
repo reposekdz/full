@@ -7,7 +7,7 @@ const router = express.Router();
 const checkGlobalSheetsPermission = async (req, res, next) => {
   try {
     const userRole = req.user.role;
-    const allowedRoles = ['accountant', 'dos', 'dod', 'headmaster', 'teacher', 'advisor', 'stock_manager', 'matron', 'patron', 'admin'];
+    const allowedRoles = ['accountant', 'dos', 'dod', 'director_discipline', 'headmaster', 'teacher', 'advisor', 'stock_manager', 'matron', 'patron', 'admin'];
 
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
@@ -127,6 +127,45 @@ router.post('/save-marks', authenticateToken, async (req, res) => {
 // GLOBAL SHEETS VIEW ENDPOINTS (Existing)
 // ==========================================
 
+// TEST endpoint - Get AUTO students directly
+router.get('/test-auto', authenticateToken, async (req, res) => {
+  try {
+    const [students] = await pool.execute(`
+      SELECT student_code, first_name, last_name, level_suffix, level_number
+      FROM global_student_sheets
+      WHERE trade_code = 'AUTO' AND level_number = 5
+      ORDER BY level_suffix, student_code
+      LIMIT 20
+    `);
+    res.json({ success: true, count: students.length, students });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /suffixes - Get available suffixes for a trade/level combination
+router.get('/suffixes', authenticateToken, async (req, res) => {
+  try {
+    const { trade_code, level_number } = req.query;
+    
+    const [suffixes] = await pool.execute(`
+      SELECT DISTINCT level_suffix
+      FROM global_student_sheets
+      WHERE trade_code = ? AND level_number = ? AND status = 'active'
+      ORDER BY level_suffix ASC
+    `, [trade_code, level_number]);
+
+    const suffixList = suffixes.map(s => s.level_suffix || '').filter(s => s !== '');
+    
+    res.json({
+      success: true,
+      suffixes: suffixList
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message, suffixes: [] });
+  }
+});
+
 // GET /levels/:tradeCode - Get real levels for a trade from global_student_sheets
 router.get('/levels/:tradeCode', authenticateToken, async (req, res) => {
   try {
@@ -155,59 +194,63 @@ router.get('/students', authenticateToken, checkGlobalSheetsPermission, async (r
   try {
     const tradeId = req.query.trade_id;
     const levelId = req.query.level_id;
-    const levelSuffix = req.query.level_suffix || ''; // New: Support for 4A, 4B
+    const levelSuffix = req.query.level_suffix;
     const status = req.query.status;
     const search = req.query.search;
 
     let query = `
       SELECT
-        u.id as student_id,
-        u.first_name,
-        u.last_name,
-        u.serial_code as student_code,
-        u.level_suffix,
-        COALESCE(u.gender, 'M') as gender,
-        COALESCE(u.phone, '') as phone,
-        u.trade_code,
-        u.level as level_number,
-        COALESCE(u.status, 'active') as status
-      FROM users u
-      WHERE u.role = 'student'
+        student_id,
+        first_name,
+        last_name,
+        student_code,
+        level_suffix,
+        COALESCE(gender, 'M') as gender,
+        COALESCE(phone, '') as phone,
+        trade_code,
+        level_number,
+        COALESCE(status, 'active') as status,
+        COALESCE(conduct_score, 40) as conduct_score,
+        COALESCE(attendance_percentage, 100) as attendance_percentage
+      FROM global_student_sheets
+      WHERE 1=1
     `;
 
     const params = [];
 
     if (tradeId) {
-      query += ` AND u.trade_code = ?`;
+      query += ` AND trade_code = ?`;
       params.push(tradeId);
     }
     if (levelId) {
-      query += ` AND u.level = ?`;
+      query += ` AND level_number = ?`;
       params.push(levelId);
     }
-    if (levelSuffix) {
-      query += ` AND (u.level_suffix = ? OR u.level_suffix IS NULL)`;
+    // Only filter by suffix if explicitly provided
+    if (levelSuffix && levelSuffix !== '' && levelSuffix !== 'all') {
+      query += ` AND level_suffix = ?`;
       params.push(levelSuffix);
     }
 
     if (status) {
-      query += ' AND u.status = ?';
+      query += ' AND status = ?';
       params.push(status);
     }
 
     if (search) {
-      query += ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.serial_code LIKE ? OR u.email LIKE ?)';
+      query += ' AND (first_name LIKE ? OR last_name LIKE ? OR student_code LIKE ?)';
       const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+      params.push(searchTerm, searchTerm, searchTerm);
     }
 
-    query += ' ORDER BY u.last_name, u.first_name';
+    query += ' ORDER BY level_suffix, last_name, first_name';
 
     const [students] = await pool.execute(query, params);
 
     res.json({
       success: true,
       students,
+      count: students.length,
       userRole: req.user.role
     });
   } catch (error) {
@@ -229,6 +272,118 @@ router.post('/students/create', authenticateToken, checkGlobalSheetsPermission, 
     res.json({ success: true, message: 'Student created successfully', studentId: result.insertId });
   } catch (error) {
     console.error('Create student error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /add-student - Add new student (DOS/Headmaster only)
+router.post('/add-student', authenticateToken, async (req, res) => {
+  try {
+    const userRole = req.user.role;
+    const allowedRoles = ['director_study', 'headmaster', 'admin', 'director_discipline'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Only DOS/Headmaster can add students' });
+    }
+
+    const {
+      first_name, last_name, email, phone, gender, date_of_birth, address,
+      trade_code, level_number, level_suffix, student_code,
+      conduct_score, attendance_percentage, payment_status
+    } = req.body;
+
+    const [result] = await pool.execute(`
+      INSERT INTO global_student_sheets (
+        first_name, last_name, email, phone, gender, date_of_birth, address,
+        trade_code, level_number, level_suffix, student_code,
+        conduct_score, attendance_percentage, payment_status, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+    `, [
+      first_name, last_name, email || null, phone || null, gender, date_of_birth || null, address || null,
+      trade_code, level_number, level_suffix || '', student_code,
+      conduct_score || 40, attendance_percentage || 100, payment_status || 'pending'
+    ]);
+
+    res.json({ success: true, message: 'Student added successfully', studentId: result.insertId });
+  } catch (error) {
+    console.error('Add student error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /update-student - Update student information
+router.put('/update-student', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, first_name, last_name, email, phone, gender, address } = req.body;
+
+    const updates = [];
+    const params = [];
+
+    if (first_name) {
+      updates.push('first_name = ?');
+      params.push(first_name);
+    }
+    if (last_name) {
+      updates.push('last_name = ?');
+      params.push(last_name);
+    }
+    if (email !== undefined) {
+      updates.push('email = ?');
+      params.push(email);
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(phone);
+    }
+    if (gender) {
+      updates.push('gender = ?');
+      params.push(gender);
+    }
+    if (address !== undefined) {
+      updates.push('address = ?');
+      params.push(address);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    params.push(student_id);
+
+    await pool.execute(`
+      UPDATE global_student_sheets
+      SET ${updates.join(', ')}
+      WHERE student_id = ?
+    `, params);
+
+    res.json({ success: true, message: 'Student updated successfully' });
+  } catch (error) {
+    console.error('Update student error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /delete-student/:id - Delete student (DOS/Headmaster only)
+router.delete('/delete-student/:id', authenticateToken, async (req, res) => {
+  try {
+    const userRole = req.user.role;
+    const allowedRoles = ['director_study', 'headmaster', 'admin', 'director_discipline'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Only DOS/Headmaster can delete students' });
+    }
+
+    const studentId = req.params.id;
+
+    await pool.execute(`
+      UPDATE global_student_sheets
+      SET status = 'deleted'
+      WHERE student_id = ?
+    `, [studentId]);
+
+    res.json({ success: true, message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Delete student error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

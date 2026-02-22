@@ -1,0 +1,54 @@
+
+> school-management-backend@1.0.0 start
+> node server.js
+
+✅ Cron jobs initialized successfully!
+⚠️  Parent Dashboard - Not found
+⚠️  Teacher Portal Advanced - Not found
+⚠️  Stock Ultra Advanced - Not found
+✅ Fee reminder cron job scheduled
+(node:8488) Warning: Accessing non-existent property 'pool' of module exports inside circular dependency
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+================================================================================
+🎓 GARDEN TVET SCHOOL MANAGEMENT SYSTEM
+================================================================================
+🚀 Server: http://localhost:5000
+📊 Database: school_management
+🌍 Environment: production
+✅ Mounted 289 route modules
+
+📡 API Endpoints:
+   /api/auth                    - Authentication
+   /api/unified-integration     - 🌟 Master Integration API
+   /api/developers              - Developers Team
+   /api/leadership              - School Leadership
+   /api/trades                  - School Trades
+   /api/services                - School Services
+   /api/services-advanced       - Advanced Services & Coaches
+   /api/sports                  - Sports & Teams
+   /api/sports-players          - Players & Goals
+   /api/news                    - News Articles
+   /api/search                  - Global Search
+   /api/comprehensive-staff     - Staff Management
+   /api/student-applications    - Student Applications
+   /api/student-applications    - Student Applications
+   /api/locations               - Rwanda Location Data
+   /api/rwanda-locations        - Rwanda Provinces/Districts/Sectors/Cells/Villages
+   /api/advisor                 - Advisor Dashboard
+   /api/discipline-management   - DOD/Matron/Patron Management
+
+✅ All systems operational - Unified Integration Active
+================================================================================
+
+✅ Staff table ensured
+✅ Content tables ensured
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'
+Get my children error: Unknown column 'gss.overall_attendance_percentage' in 'field list'

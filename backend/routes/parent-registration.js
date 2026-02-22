@@ -8,6 +8,7 @@ const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendParentRegistrationSMS } = require('../services/parentNotificationService');
 
 // POST /api/parent-registration/register - Simple parent registration
 router.post('/register', async (req, res) => {
@@ -80,6 +81,14 @@ router.post('/register', async (req, res) => {
     }
 
     await connection.commit();
+
+    // Send welcome SMS automatically
+    try {
+      await sendParentRegistrationSMS(parentId);
+      console.log('✅ Welcome SMS sent to new parent:', phone);
+    } catch (smsError) {
+      console.error('❌ Welcome SMS failed:', smsError);
+    }
 
     // Generate token
     const token = jwt.sign(

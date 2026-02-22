@@ -482,7 +482,8 @@ app.use('/api/payments', require('./routes/payments-api')); mountedRoutes++;
 app.use('/api/sms', require('./routes/sms')); mountedRoutes++;
 
 // Advanced Payment System
-app.use('/api/payments', require('./routes/payments')); mountedRoutes++;
+app.use('/api/payments', require('./routes/payments-advanced')); mountedRoutes++;
+app.use('/api/payments-legacy', require('./routes/payments')); mountedRoutes++;
 
 // Parent Payment Portal - GT Bank, BPR, Equity Bank Integration
 app.use('/api/parent-payment-portal', require('./routes/parent-payment-portal')); mountedRoutes++;
@@ -718,6 +719,12 @@ app.use('/api/fee-payment', require('./routes/feePayment')); mountedRoutes++;
 
 // DOD Parent Management - Advanced System with Auto-Linking
 app.use('/api/dod-parent-management', require('./routes/dod-parent-management')); mountedRoutes++;
+
+// Parent System Routes (Complete System)
+app.use('/api/dod-parent-link', require('./routes/dodParentLink')); mountedRoutes++;
+app.use('/api/parent-dashboard', require('./routes/parentDashboard')); mountedRoutes++;
+app.use('/api/parent-payments', require('./routes/parentPayments')); mountedRoutes++;
+app.use('/api/parent-linking', require('./routes/parentLinking')); mountedRoutes++;
 
 // DOD Comprehensive Messaging - ALL Students (Not just Level 4 SOD)
 app.use('/api/dod-messaging', require('./routes/dod-messaging-comprehensive')); mountedRoutes++;

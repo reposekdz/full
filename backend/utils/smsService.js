@@ -15,14 +15,26 @@ const sendSMS = async (phoneNumber, message) => {
       const twilio = require('twilio');
       const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
       
-      await client.messages.create({
+      const result = await client.messages.create({
         body: message,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: formattedPhone
       });
       
-      console.log('✅ SMS sent via Twilio');
-      return { success: true, provider: 'twilio' };
+      console.log('✅ SMS sent via Twilio:', result.sid);
+      
+      // Log successful SMS to database
+      try {
+        const { pool } = require('../config/database');
+        await pool.execute(
+          'INSERT INTO sms_queue (phone_number, message, status, provider, message_id, sent_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [formattedPhone, message, 'sent', 'twilio', result.sid]
+        );
+      } catch (dbError) {
+        console.error('Failed to log SMS success:', dbError);
+      }
+      
+      return { success: true, provider: 'twilio', messageId: result.sid };
     }
 
     // Option 2: Africa's Talking (if configured)
@@ -36,36 +48,60 @@ const sendSMS = async (phoneNumber, message) => {
       const result = await sms.send({
         to: [formattedPhone],
         message: message,
-        from: process.env.AFRICASTALKING_SHORTCODE || 'SCHOOL'
+        from: process.env.AFRICASTALKING_SHORTCODE || 'GARDEN'
       });
       
-      console.log('✅ SMS sent via Africa\'s Talking');
-      return { success: true, provider: 'africastalking', result };
+      console.log('✅ SMS sent via Africa\'s Talking:', result);
+      
+      // Log successful SMS to database
+      try {
+        const { pool } = require('../config/database');
+        await pool.execute(
+          'INSERT INTO sms_queue (phone_number, message, status, provider, message_id, sent_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [formattedPhone, message, 'sent', 'africastalking', result.SMSMessageData?.Recipients?.[0]?.messageId || 'AT_' + Date.now()]
+        );
+      } catch (dbError) {
+        console.error('Failed to log SMS success:', dbError);
+      }
+      
+      return { success: true, provider: 'africastalking', result, messageId: result.SMSMessageData?.Recipients?.[0]?.messageId };
     }
 
     // Option 3: Generic HTTP SMS Gateway
     if (process.env.SMS_GATEWAY_URL) {
       const axios = require('axios');
       
-      await axios.post(process.env.SMS_GATEWAY_URL, {
+      const result = await axios.post(process.env.SMS_GATEWAY_URL, {
         phone: formattedPhone,
         message: message,
         api_key: process.env.SMS_GATEWAY_API_KEY
       });
       
-      console.log('✅ SMS sent via HTTP Gateway');
-      return { success: true, provider: 'http_gateway' };
+      console.log('✅ SMS sent via HTTP Gateway:', result.data);
+      
+      // Log successful SMS to database
+      try {
+        const { pool } = require('../config/database');
+        await pool.execute(
+          'INSERT INTO sms_queue (phone_number, message, status, provider, message_id, sent_at) VALUES (?, ?, ?, ?, ?, NOW())',
+          [formattedPhone, message, 'sent', 'http_gateway', result.data?.id || 'HTTP_' + Date.now()]
+        );
+      } catch (dbError) {
+        console.error('Failed to log SMS success:', dbError);
+      }
+      
+      return { success: true, provider: 'http_gateway', result: result.data };
     }
 
     // Fallback: Log to database for manual sending
     const { pool } = require('../config/database');
     await pool.execute(
-      'INSERT INTO sms_queue (phone_number, message, status) VALUES (?, ?, ?)',
-      [formattedPhone, message, 'pending']
+      'INSERT INTO sms_queue (message, sender_id, status, created_at) VALUES (?, ?, ?, NOW())',
+      [message, formattedPhone, 'pending']
     );
     
     console.log('⚠️ SMS queued for manual sending (no provider configured)');
-    return { success: true, provider: 'queued' };
+    return { success: true, provider: 'queued', messageId: 'QUEUED_' + Date.now() };
 
   } catch (error) {
     console.error('❌ SMS Error:', error.message);
@@ -74,8 +110,8 @@ const sendSMS = async (phoneNumber, message) => {
     try {
       const { pool } = require('../config/database');
       await pool.execute(
-        'INSERT INTO sms_queue (phone_number, message, status, error_message) VALUES (?, ?, ?, ?)',
-        [phoneNumber, message, 'failed', error.message]
+        'INSERT INTO sms_queue (message, sender_id, status, created_at) VALUES (?, ?, ?, NOW())',
+        [message, phoneNumber, 'failed']
       );
     } catch (dbError) {
       console.error('Failed to log SMS error:', dbError);
@@ -85,16 +121,20 @@ const sendSMS = async (phoneNumber, message) => {
   }
 };
 
-// Send bulk SMS
+// Send bulk SMS with enhanced tracking
 const sendBulkSMS = async (recipients) => {
   const results = [];
   
   for (const recipient of recipients) {
     const result = await sendSMS(recipient.phone, recipient.message);
-    results.push({ ...recipient, ...result });
+    results.push({ 
+      ...recipient, 
+      ...result,
+      timestamp: new Date().toISOString()
+    });
     
     // Add delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
   
   return results;
@@ -130,9 +170,94 @@ const markSMSSent = async (id) => {
   }
 };
 
+// Send parent registration welcome SMS
+const sendParentWelcomeSMS = async (parentPhone, parentName) => {
+  try {
+    const message = `🎓 Garden TVET: Murakaza neza ${parentName}!
+
+✅ KONTI YASHYIZWEHO: Konti yanyu ya mubyeyi yashyizweho neza!
+
+🔍 Mwashobora:
+• Gusaba guhuza n'abana banyu
+• Kureba amakuru y'abana
+• Kubona ubutumwa bw'ishuri
+• Gukurikirana inyigisho
+
+📱 Mwinjire muri sisitemu yacu kugira ngo mutangire!
+
+📞 Hamagara: +250783407691 niba mufite ibibazo.
+
+Murakoze guhitamo Garden TVET! 🙏`;
+    
+    return await sendSMS(parentPhone, message);
+  } catch (error) {
+    console.error('Parent welcome SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send automatic linking success SMS
+const sendAutoLinkSuccessSMS = async (parentPhone, parentName, studentName, studentCode, tradeCode, levelNumber) => {
+  try {
+    const message = `🎓 Garden TVET: Murakaza neza ${parentName}!
+
+🎉 MWAHUYE N'UMWANA: Mwahuye n'umwana ${studentName} neza!
+
+📋 Amakuru y'umwana:
+• Amazina: ${studentName}
+• Kode: ${studentCode}
+• Umwuga: ${tradeCode}
+• Urwego: ${levelNumber}
+
+🔍 Ubu mwashobora kureba:
+• Amanota n'ibizamini
+• Kwiga no kutabara
+• Imyitwarire (conduct)
+• Amafaranga (fees)
+• Ubutumwa bw'ishuri
+
+📱 Mwinjire muri sisitemu yacu kugira ngo mubone amakuru yose!
+
+Murakoze kubana natwe! 🙏`;
+    
+    return await sendSMS(parentPhone, message);
+  } catch (error) {
+    console.error('Auto link success SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send conduct removal notification SMS
+const sendConductRemovalSMS = async (parentPhone, studentName, conductType, pointsDeducted, newScore, description) => {
+  try {
+    const message = `Garden TVET: Umwana ${studentName} yakiriye igihano cya "${conductType}". Amanota ${pointsDeducted} yakuweho. Amanota ashya: ${newScore}/40. Impamvu: ${description}. Mufashe umwana mwanyu!`;
+    
+    return await sendSMS(parentPhone, message);
+  } catch (error) {
+    console.error('Conduct removal SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send leave approval SMS
+const sendLeaveApprovalSMS = async (parentPhone, studentName, leaveType, reason, startTime, endTime) => {
+  try {
+    const message = `Garden TVET: Umwana ${studentName} yemerewe gusohoka (${leaveType}). Impamvu: ${reason}. Igihe: ${startTime}${endTime && endTime !== startTime ? ' - ' + endTime : ''}. Mwirinde!`;
+    
+    return await sendSMS(parentPhone, message);
+  } catch (error) {
+    console.error('Leave approval SMS error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendSMS,
   sendBulkSMS,
   getSMSQueue,
-  markSMSSent
+  markSMSSent,
+  sendParentWelcomeSMS,
+  sendAutoLinkSuccessSMS,
+  sendConductRemovalSMS,
+  sendLeaveApprovalSMS
 };

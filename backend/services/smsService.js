@@ -1,370 +1,173 @@
 const africastalking = require('africastalking');
-const axios = require('axios');
-const { pool } = require('../config/database');
 
-const credentials = {
-  apiKey: process.env.AFRICATALKING_API_KEY,
-  username: process.env.AFRICATALKING_USERNAME
-};
+// Initialize Africa's Talking
+const AT = africastalking({
+  apiKey: process.env.AT_API_KEY || 'your_api_key_here',
+  username: process.env.AT_USERNAME || 'sandbox'
+});
 
-const AT = africastalking(credentials);
 const sms = AT.SMS;
 
-// Send SMS to single recipient
-async function sendSMS(to, message, senderId, metadata = {}) {
-  if (process.env.ENABLE_SMS_NOTIFICATIONS === 'false') {
-    console.log('SMS notifications are disabled in .env');
-    return { success: true, message: 'SMS disabled', simulated: true };
-  }
+// SMS Templates
+const templates = {
+  parent_link_new: (data) => `Muraho! Mwahawe konti ya Parent Portal - Garden TVET
+
+Umwana: ${data.student_name}
+Code: ${data.student_code}
+Trade: ${data.trade_name} - Level ${data.level}
+
+LOGIN:
+Phone: ${data.parent_phone}
+Password: ${data.temp_password}
+
+Injira kuri: portal.gardentvet.rw
+Murakoze!
+
+Linked by: ${data.linked_by}`,
+
+  parent_link_existing: (data) => `Muraho! Mwahujwe n'umwana wanyu - Garden TVET
+
+Umwana: ${data.student_name}
+Code: ${data.student_code}
+Trade: ${data.trade_name} - Level ${data.level}
+
+AMAKURU:
+✓ Conduct: ${data.conduct_score}/40
+✓ Attendance: ${data.attendance}%
+✓ Balance: ${data.balance} RWF
+
+Injira kuri portal mubone byose!
+By: ${data.linked_by}`,
+
+  payment_confirmation: (data) => `Payment Received! ✓
+
+Student: ${data.student_name}
+Amount: ${data.amount} RWF
+Method: ${data.payment_method}
+Receipt: ${data.receipt_number}
+
+Balance: ${data.new_balance} RWF
+
+Thank you! - Garden TVET`,
+
+  conduct_removed: (data) => `CONDUCT UPDATE
+
+Umwana: ${data.student_name}
+Points Lost: -${data.points_removed}
+New Score: ${data.new_score}/40
+Grade: ${data.grade}
+
+Reason: ${data.reason}
+By: ${data.removed_by}
+
+Garden TVET`,
+
+  leave_approved: (data) => `LEAVE APPROVED ✓
+
+Student: ${data.student_name}
+Dates: ${data.start_date} - ${data.end_date}
+Days: ${data.days}
+Reason: ${data.reason}
+
+Approved by: ${data.approved_by}
+Garden TVET`
+};
+
+// Send SMS function
+const sendSMS = async ({ to, message, type, priority = 'normal', metadata = {} }) => {
   try {
-    const phoneNumber = formatPhoneNumber(to);
-
-    const balanceCheck = await checkBalance();
-    if (!balanceCheck.success && process.env.NODE_ENV === 'production') {
-      return { success: false, error: 'Insufficient balance or API error' };
+    // Format phone number
+    let phone = to.toString().trim();
+    if (phone.startsWith('0')) {
+      phone = '+250' + phone.substring(1);
+    } else if (!phone.startsWith('+')) {
+      phone = '+250' + phone;
     }
 
-    const options = {
-      to: [phoneNumber],
-      message: message
-    };
+    console.log(`Sending SMS to ${phone}...`);
 
-    if (process.env.AFRICATALKING_SENDER_ID) {
-      options.from = process.env.AFRICATALKING_SENDER_ID;
-    }
-
-    const result = await sms.send(options);
-
-    await logMessage({
-      recipient: phoneNumber,
+    // Send via Africa's Talking
+    const result = await sms.send({
+      to: [phone],
       message: message,
-      senderId: senderId,
-      status: 'sent',
-      provider: 'africastalking_sms',
-      metadata: metadata,
-      response: JSON.stringify(result)
+      from: process.env.AT_SENDER_ID || 'GARDEN_TVET'
     });
+
+    console.log('SMS sent successfully:', result);
+
+    // Log to database
+    try {
+      const db = require('../config/database');
+      await db.query(
+        `INSERT INTO sms_logs (phone, message, type, priority, status, metadata, sent_at)
+         VALUES (?, ?, ?, ?, 'sent', ?, NOW())`,
+        [phone, message, type, priority, JSON.stringify(metadata)]
+      );
+    } catch (dbError) {
+      console.error('Failed to log SMS:', dbError);
+    }
 
     return {
       success: true,
-      data: result,
-      messageId: result.SMSMessageData?.Recipients?.[0]?.messageId
+      result,
+      phone,
+      message_id: result.SMSMessageData?.Recipients?.[0]?.messageId
     };
+
   } catch (error) {
-    await logMessage({
-      recipient: to,
-      message: message,
-      senderId: senderId,
-      status: 'failed',
-      provider: 'africastalking_sms',
-      metadata: metadata,
+    console.error('SMS send error:', error);
+
+    // Log failed SMS
+    try {
+      const db = require('../config/database');
+      await db.query(
+        `INSERT INTO sms_logs (phone, message, type, priority, status, error_message, sent_at)
+         VALUES (?, ?, ?, ?, 'failed', ?, NOW())`,
+        [to, message, type, priority, error.message]
+      );
+    } catch (dbError) {
+      console.error('Failed to log error:', dbError);
+    }
+
+    return {
+      success: false,
       error: error.message
-    });
-    return { success: false, error: error.message };
-  }
-}
-
-// Send WhatsApp message via Africa's Talking Content API
-async function sendWhatsApp(to, message, senderId, metadata = {}) {
-  if (process.env.ENABLE_SMS_NOTIFICATIONS === 'false') {
-    console.log('WhatsApp notifications are disabled in .env');
-    return { success: true, message: 'WhatsApp disabled', simulated: true };
-  }
-  try {
-    const phoneNumber = formatPhoneNumber(to);
-
-    // Using Africa's Talking Content API for WhatsApp
-    // The endpoint and structure might vary based on your specific AT account setup
-    const response = await axios.post(
-      'https://content.africastalking.com/v1/send',
-      {
-        username: credentials.username,
-        to: [phoneNumber],
-        message: message,
-        from: process.env.AFRICATALKING_WHATSAPP_CHANNEL || 'GARDEN_TSS'
-      },
-      {
-        headers: {
-          'apiKey': credentials.apiKey,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    await logMessage({
-      recipient: phoneNumber,
-      message: message,
-      senderId: senderId,
-      status: 'sent',
-      provider: 'africastalking_whatsapp',
-      metadata: metadata,
-      response: JSON.stringify(response.data)
-    });
-
-    return { success: true, data: response.data };
-  } catch (error) {
-    await logMessage({
-      recipient: to,
-      message: message,
-      senderId: senderId,
-      status: 'failed',
-      provider: 'africastalking_whatsapp',
-      metadata: metadata,
-      error: error.response?.data?.errorMessage || error.message
-    });
-    return { success: false, error: error.message };
-  }
-}
-
-// Send Universal Message (Smart logic: WhatsApp -> SMS fallback)
-async function sendUniversalMessage(to, message, senderId, metadata = {}) {
-  if (!isValidPhoneNumber(to)) {
-    console.error(`Invalid phone number: ${to}`);
-    return { success: false, error: 'Invalid phone number' };
-  }
-
-  const { preferredMethod = 'dual', hasSmartphone = false } = metadata;
-  const results = { whatsapp: null, sms: null };
-
-  if (hasSmartphone || preferredMethod === 'dual' || preferredMethod === 'whatsapp') {
-    results.whatsapp = await sendWhatsApp(to, message, senderId, metadata);
-    if (results.whatsapp.success && preferredMethod !== 'dual') {
-      return { success: true, method: 'whatsapp', results };
-    }
-  }
-
-  // If WhatsApp fails or preferred is SMS or dual, send SMS
-  if (!results.whatsapp?.success || preferredMethod === 'sms' || preferredMethod === 'dual') {
-    results.sms = await sendSMS(to, message, senderId, metadata);
-  }
-
-  return {
-    success: results.whatsapp?.success || results.sms?.success,
-    method: results.whatsapp?.success && results.sms?.success ? 'dual' : (results.whatsapp?.success ? 'whatsapp' : 'sms'),
-    results
-  };
-}
-
-// Send SMS using a template from the database
-async function sendTemplateSMS(to, templateId, variables, senderId, metadata = {}) {
-  try {
-    const [templates] = await pool.execute(
-      'SELECT template_content FROM sms_templates WHERE template_id = ? AND is_active = 1',
-      [templateId]
-    );
-
-    if (templates.length === 0) {
-      return { success: false, error: 'Template not found or inactive' };
-    }
-
-    let message = templates[0].template_content;
-
-    // Replace variables {{var_name}}
-    if (variables) {
-      Object.keys(variables).forEach(key => {
-        const regex = new RegExp(`{{${key}}}`, 'g');
-        message = message.replace(regex, variables[key] || '');
-      });
-    }
-
-    return await sendSMS(to, message, senderId, { ...metadata, templateId });
-  } catch (error) {
-    console.error('Send template SMS error:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Send bulk SMS
-async function sendBulkSMS(recipients, message, senderId, metadata = {}) {
-  try {
-    const phoneNumbers = recipients.map(formatPhoneNumber);
-
-    const options = {
-      to: phoneNumbers,
-      message: message,
-      enqueue: true
     };
-
-    if (process.env.AFRICATALKING_SENDER_ID) {
-      options.from = process.env.AFRICATALKING_SENDER_ID;
-    }
-
-    const result = await sms.send(options);
-
-    // Log each message
-    for (const recipient of phoneNumbers) {
-      await logMessage({
-        recipient: recipient,
-        message: message,
-        senderId: senderId,
-        status: 'sent',
-        provider: 'africastalking',
-        metadata: { ...metadata, bulk: true },
-        response: JSON.stringify(result)
-      });
-    }
-
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error.message };
   }
-}
+};
 
-// Check Africa's Talking balance
-async function checkBalance() {
-  try {
-    const application = AT.APPLICATION;
-    const balance = await application.fetchApplicationData();
-    return {
-      success: true,
-      balance: balance.UserData?.balance || 'Unknown'
-    };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// Format phone number to international format
-function formatPhoneNumber(phone) {
-  if (!phone) return null;
-  // Remove spaces and special characters
-  let cleaned = phone.replace(/[^0-9+]/g, '');
-
-  if (cleaned.length < 8) return null;
-
-  // Add country code if missing (Rwanda +250)
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('0')) {
-      cleaned = '+250' + cleaned.substring(1);
-    } else if (cleaned.startsWith('250')) {
-      cleaned = '+' + cleaned;
-    } else {
-      cleaned = '+250' + cleaned;
-    }
+// Send templated SMS
+const sendTemplatedSMS = async (templateName, data, phone) => {
+  const template = templates[templateName];
+  if (!template) {
+    throw new Error(`Template ${templateName} not found`);
   }
 
-  return cleaned;
-}
+  const message = template(data);
+  return sendSMS({
+    to: phone,
+    message,
+    type: templateName,
+    priority: 'high',
+    metadata: data
+  });
+};
 
-function isValidPhoneNumber(phone) {
-  const formatted = formatPhoneNumber(phone);
-  return formatted && formatted.length >= 10 && formatted.startsWith('+');
-}
-
-// Log message to database
-async function logMessage(data) {
-  try {
-    await pool.execute(
-      `INSERT INTO sms_messages 
-       (recipient, message, sender_id, status, provider, metadata, response, error, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        data.recipient,
-        data.message,
-        data.senderId,
-        data.status,
-        data.provider,
-        JSON.stringify(data.metadata || {}),
-        data.response || null,
-        data.error || null
-      ]
-    );
-  } catch (error) {
-    console.error('Failed to log message:', error);
+// Bulk SMS
+const sendBulkSMS = async (recipients) => {
+  const results = [];
+  for (const recipient of recipients) {
+    const result = await sendSMS(recipient);
+    results.push(result);
+    // Delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
-}
-
-// Get message history
-async function getMessageHistory(filters = {}) {
-  try {
-    let query = `
-      SELECT sm.*, 
-             CONCAT(s.first_name, ' ', s.last_name) as sender_name,
-             s.role as sender_role
-      FROM sms_messages sm
-      LEFT JOIN staff s ON sm.sender_id = s.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (filters.senderId) {
-      query += ' AND sm.sender_id = ?';
-      params.push(filters.senderId);
-    }
-
-    if (filters.recipient) {
-      query += ' AND sm.recipient = ?';
-      params.push(filters.recipient);
-    }
-
-    if (filters.status) {
-      query += ' AND sm.status = ?';
-      params.push(filters.status);
-    }
-
-    if (filters.dateFrom) {
-      query += ' AND sm.created_at >= ?';
-      params.push(filters.dateFrom);
-    }
-
-    if (filters.dateTo) {
-      query += ' AND sm.created_at <= ?';
-      params.push(filters.dateTo);
-    }
-
-    query += ' ORDER BY sm.created_at DESC LIMIT ?';
-    params.push(filters.limit || 100);
-
-    const [messages] = await pool.execute(query, params);
-    return { success: true, messages };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// Get SMS statistics
-async function getSMSStats(filters = {}) {
-  try {
-    let query = `
-      SELECT 
-        COUNT(*) as total_messages,
-        SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent_count,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-        COUNT(DISTINCT recipient) as unique_recipients,
-        COUNT(DISTINCT sender_id) as unique_senders
-      FROM sms_messages
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (filters.dateFrom) {
-      query += ' AND created_at >= ?';
-      params.push(filters.dateFrom);
-    }
-
-    if (filters.dateTo) {
-      query += ' AND created_at <= ?';
-      params.push(filters.dateTo);
-    }
-
-    const [stats] = await pool.execute(query, params);
-    return { success: true, stats: stats[0] };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
+  return results;
+};
 
 module.exports = {
   sendSMS,
-  sendWhatsApp,
-  sendUniversalMessage,
-  sendTemplateSMS,
+  sendTemplatedSMS,
   sendBulkSMS,
-  checkBalance,
-  formatPhoneNumber,
-  isValidPhoneNumber,
-  getMessageHistory,
-  getSMSStats
+  templates
 };
